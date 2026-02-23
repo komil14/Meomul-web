@@ -1,31 +1,34 @@
 import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { LOGIN_MEMBER_MUTATION } from "@/graphql/auth.gql";
-import { isAuthenticated, saveAuthSession } from "@/lib/auth/session";
+import { saveAuthSession } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { AuthMember, LoginMemberMutationVars } from "@/types/auth";
+import type { NextPageWithAuth } from "@/types/page";
 
 interface LoginMemberMutationData {
   loginMember: AuthMember;
 }
 
-export default function LoginPage() {
+const LoginPage: NextPageWithAuth = () => {
   const router = useRouter();
   const [memberNick, setMemberNick] = useState("");
   const [memberPassword, setMemberPassword] = useState("");
   const [errorText, setErrorText] = useState<string | null>(null);
 
+  const redirectTarget = useMemo(() => {
+    if (typeof router.query.next !== "string") {
+      return "/dashboard";
+    }
+
+    return router.query.next.startsWith("/") ? router.query.next : "/dashboard";
+  }, [router.query.next]);
+
   const [loginMember, { loading }] = useMutation<LoginMemberMutationData, LoginMemberMutationVars>(
     LOGIN_MEMBER_MUTATION,
   );
-
-  useEffect(() => {
-    if (isAuthenticated()) {
-      void router.replace("/dashboard");
-    }
-  }, [router]);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -48,18 +51,18 @@ export default function LoginPage() {
       }
 
       saveAuthSession(authMember);
-      await router.push("/dashboard");
+      await router.push(redirectTarget);
     } catch (error) {
       setErrorText(getErrorMessage(error));
     }
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
+    <main className="mx-auto flex w-full max-w-md flex-col justify-center">
       <h1 className="text-3xl font-semibold text-slate-900">Login</h1>
       <p className="mt-2 text-sm text-slate-600">Use your member nick and password to continue.</p>
 
-      <form className="mt-8 space-y-4" onSubmit={onSubmit}>
+      <form className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6" onSubmit={onSubmit}>
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">Member Nick</span>
           <input
@@ -104,4 +107,8 @@ export default function LoginPage() {
       </div>
     </main>
   );
-}
+};
+
+LoginPage.auth = { guestOnly: true };
+
+export default LoginPage;

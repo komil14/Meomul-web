@@ -1,17 +1,18 @@
 import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { SIGNUP_MEMBER_MUTATION } from "@/graphql/auth.gql";
-import { isAuthenticated, saveAuthSession } from "@/lib/auth/session";
+import { saveAuthSession } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { AuthMember, SignupMemberMutationVars } from "@/types/auth";
+import type { NextPageWithAuth } from "@/types/page";
 
 interface SignupMemberMutationData {
   signupMember: AuthMember;
 }
 
-export default function SignupPage() {
+const SignupPage: NextPageWithAuth = () => {
   const router = useRouter();
   const [memberNick, setMemberNick] = useState("");
   const [memberFullName, setMemberFullName] = useState("");
@@ -23,12 +24,6 @@ export default function SignupPage() {
   const [signupMember, { loading }] = useMutation<SignupMemberMutationData, SignupMemberMutationVars>(
     SIGNUP_MEMBER_MUTATION,
   );
-
-  useEffect(() => {
-    if (isAuthenticated()) {
-      void router.replace("/dashboard");
-    }
-  }, [router]);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,11 +62,11 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
+    <main className="mx-auto flex w-full max-w-md flex-col justify-center">
       <h1 className="text-3xl font-semibold text-slate-900">Create Account</h1>
-      <p className="mt-2 text-sm text-slate-600">Your account is created as an email user role by default.</p>
+      <p className="mt-2 text-sm text-slate-600">New registrations are created with USER role and EMAIL auth.</p>
 
-      <form className="mt-8 space-y-4" onSubmit={onSubmit}>
+      <form className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6" onSubmit={onSubmit}>
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">Member Nick</span>
           <input
@@ -146,4 +141,8 @@ export default function SignupPage() {
       </div>
     </main>
   );
-}
+};
+
+SignupPage.auth = { guestOnly: true };
+
+export default SignupPage;

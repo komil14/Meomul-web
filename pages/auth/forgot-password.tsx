@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { useState } from "react";
+import type { NextPageWithAuth } from "@/types/page";
 
-export default function ForgotPasswordPage() {
+const ForgotPasswordPage: NextPageWithAuth = () => {
   const [identifier, setIdentifier] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -11,13 +12,13 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
+    <main className="mx-auto flex w-full max-w-md flex-col justify-center">
       <h1 className="text-3xl font-semibold text-slate-900">Forgot Password</h1>
       <p className="mt-2 text-sm text-slate-600">
-        Backend password-reset API is not available yet. This page is a UI placeholder.
+        Backend reset-password API is not ready yet. This flow is currently a frontend placeholder.
       </p>
 
-      <form className="mt-8 space-y-4" onSubmit={onSubmit}>
+      <form className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6" onSubmit={onSubmit}>
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">Member Nick or Phone</span>
           <input
@@ -37,8 +38,8 @@ export default function ForgotPasswordPage() {
       </form>
 
       {submitted ? (
-        <p className="mt-4 text-sm text-amber-700">
-          Request captured for frontend flow. Connect this page once backend reset mutations are ready.
+        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Request captured in UI. Connect this page when backend password-reset mutations are available.
         </p>
       ) : null}
 
@@ -49,4 +50,8 @@ export default function ForgotPasswordPage() {
       </div>
     </main>
   );
-}
+};
+
+ForgotPasswordPage.auth = { guestOnly: true };
+
+export default ForgotPasswordPage;
