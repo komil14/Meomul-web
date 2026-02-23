@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import type { Socket } from "socket.io-client";
 import { useToast } from "@/components/ui/toast-provider";
 import {
   CLAIM_CHAT_MUTATION,
@@ -11,7 +12,8 @@ import {
   MARK_CHAT_MESSAGES_AS_READ_MUTATION,
   SEND_MESSAGE_MUTATION,
 } from "@/graphql/chat.gql";
-import { getSessionMember } from "@/lib/auth/session";
+import { getAccessToken, getSessionMember } from "@/lib/auth/session";
+import { createChatSocket } from "@/lib/socket/chat";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   ClaimChatMutationData,
@@ -40,6 +42,19 @@ const renderMessageBody = (message: MessageDto): string => {
   return message.content?.trim() || "";
 };
 
+interface SocketAck {
+  success: boolean;
+  error?: string;
+}
+
+interface ChatRoomEventPayload {
+  chatId: string;
+}
+
+interface TypingEventPayload extends ChatRoomEventPayload {
+  userId: string;
+}
+
 const ChatThreadPage: NextPageWithAuth = () => {
   const router = useRouter();
   const toast = useToast();
@@ -51,13 +66,20 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const chatId = typeof router.query.chatId === "string" ? router.query.chatId : "";
 
   const [messageInput, setMessageInput] = useState("");
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const lastMarkedKeyRef = useRef("");
+  const socketRef = useRef<Socket | null>(null);
+  const remoteTypingTimeoutRef = useRef<number | null>(null);
+  const localTypingTimeoutRef = useRef<number | null>(null);
+  const localTypingSentRef = useRef(false);
+  const socketJoinFailedRef = useRef(false);
 
   const { data, loading, error, refetch } = useQuery<GetChatQueryData, GetChatQueryVars>(GET_CHAT_QUERY, {
     skip: !chatId,
     variables: { chatId },
     fetchPolicy: "cache-and-network",
-    pollInterval: 5000,
+    pollInterval: 15000,
   });
 
   const [sendMessage, { loading: sending }] = useMutation<SendMessageMutationData, SendMessageMutationVars>(SEND_MESSAGE_MUTATION);
@@ -93,6 +115,176 @@ const ChatThreadPage: NextPageWithAuth = () => {
     });
   }, [chat, markRead, toast, unreadForMe]);
 
+  useEffect(() => {
+    if (!chatId) {
+      return;
+    }
+
+    const token = getAccessToken();
+    if (!token) {
+      return;
+    }
+
+    const socket = createChatSocket(token);
+    socketRef.current = socket;
+    socketJoinFailedRef.current = false;
+
+    const clearRemoteTyping = () => {
+      if (remoteTypingTimeoutRef.current) {
+        window.clearTimeout(remoteTypingTimeoutRef.current);
+        remoteTypingTimeoutRef.current = null;
+      }
+      setTypingUserId(null);
+    };
+
+    const onConnect = () => {
+      setSocketConnected(true);
+
+      socket.emit("authenticate", { token }, (authAck?: SocketAck) => {
+        if (!authAck?.success) {
+          if (!socketJoinFailedRef.current) {
+            toast.info(authAck?.error ?? "Chat realtime authentication failed. Using refresh fallback.");
+            socketJoinFailedRef.current = true;
+          }
+          return;
+        }
+
+        socket.emit("joinChat", { chatId }, (joinAck?: SocketAck) => {
+          if (!joinAck?.success && !socketJoinFailedRef.current) {
+            toast.info(joinAck?.error ?? "Chat realtime join failed. Using refresh fallback.");
+            socketJoinFailedRef.current = true;
+            return;
+          }
+          void refetch();
+        });
+      });
+    };
+
+    const onDisconnect = () => {
+      setSocketConnected(false);
+      clearRemoteTyping();
+    };
+
+    const onConnectError = () => {
+      setSocketConnected(false);
+    };
+
+    const onRoomEvent = (payload: ChatRoomEventPayload) => {
+      if (!payload?.chatId || payload.chatId !== chatId) {
+        return;
+      }
+      void refetch();
+    };
+
+    const onUserTyping = (payload: TypingEventPayload) => {
+      if (!payload?.chatId || payload.chatId !== chatId) {
+        return;
+      }
+      if (!payload.userId || payload.userId === member?._id) {
+        return;
+      }
+
+      setTypingUserId(payload.userId);
+      if (remoteTypingTimeoutRef.current) {
+        window.clearTimeout(remoteTypingTimeoutRef.current);
+      }
+      remoteTypingTimeoutRef.current = window.setTimeout(() => {
+        setTypingUserId(null);
+        remoteTypingTimeoutRef.current = null;
+      }, 2000);
+    };
+
+    const onUserStopTyping = (payload: TypingEventPayload) => {
+      if (!payload?.chatId || payload.chatId !== chatId) {
+        return;
+      }
+      if (!payload.userId || payload.userId === member?._id) {
+        return;
+      }
+      clearRemoteTyping();
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
+    socket.on("newMessage", onRoomEvent);
+    socket.on("chatClaimed", onRoomEvent);
+    socket.on("chatClosed", onRoomEvent);
+    socket.on("messagesRead", onRoomEvent);
+    socket.on("userTyping", onUserTyping);
+    socket.on("userStopTyping", onUserStopTyping);
+
+    return () => {
+      if (localTypingTimeoutRef.current) {
+        window.clearTimeout(localTypingTimeoutRef.current);
+        localTypingTimeoutRef.current = null;
+      }
+      if (localTypingSentRef.current) {
+        socket.emit("stopTyping", { chatId });
+        localTypingSentRef.current = false;
+      }
+      clearRemoteTyping();
+
+      socket.emit("leaveChat", { chatId });
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
+      socket.off("newMessage", onRoomEvent);
+      socket.off("chatClaimed", onRoomEvent);
+      socket.off("chatClosed", onRoomEvent);
+      socket.off("messagesRead", onRoomEvent);
+      socket.off("userTyping", onUserTyping);
+      socket.off("userStopTyping", onUserStopTyping);
+      socket.disconnect();
+      socketRef.current = null;
+      setSocketConnected(false);
+    };
+  }, [chatId, member?._id, refetch, toast]);
+
+  const stopTypingSignal = () => {
+    if (!chat) {
+      return;
+    }
+    if (!localTypingSentRef.current) {
+      return;
+    }
+
+    const socket = socketRef.current;
+    if (!socket) {
+      localTypingSentRef.current = false;
+      return;
+    }
+
+    socket.emit("stopTyping", { chatId: chat._id });
+    localTypingSentRef.current = false;
+  };
+
+  const scheduleStopTyping = () => {
+    if (localTypingTimeoutRef.current) {
+      window.clearTimeout(localTypingTimeoutRef.current);
+    }
+    localTypingTimeoutRef.current = window.setTimeout(() => {
+      stopTypingSignal();
+      localTypingTimeoutRef.current = null;
+    }, 1200);
+  };
+
+  const emitTypingSignal = () => {
+    if (!chat || !socketConnected) {
+      return;
+    }
+    const socket = socketRef.current;
+    if (!socket) {
+      return;
+    }
+
+    if (!localTypingSentRef.current) {
+      socket.emit("typing", { chatId: chat._id });
+      localTypingSentRef.current = true;
+    }
+    scheduleStopTyping();
+  };
+
   const canClaim = Boolean(chat && isAgent && !chat.assignedAgentId && chat.chatStatus !== "CLOSED");
   const canSend = Boolean(chat && chat.chatStatus !== "CLOSED");
   const canClose = Boolean(chat && chat.chatStatus !== "CLOSED");
@@ -119,6 +311,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
           },
         },
       });
+      stopTypingSignal();
       setMessageInput("");
     } catch (mutationError) {
       toast.error(getErrorMessage(mutationError));
@@ -203,6 +396,12 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 <p className="text-sm text-slate-600">Guest: {chat.guestId}</p>
                 <p className="text-sm text-slate-600">Assigned Agent: {chat.assignedAgentId || "Unassigned"}</p>
                 <p className="text-sm text-slate-600">Last message: {formatDateTime(chat.lastMessageAt)}</p>
+                <p className="text-sm text-slate-600">
+                  Realtime:{" "}
+                  <span className={socketConnected ? "font-semibold text-emerald-700" : "font-semibold text-slate-600"}>
+                    {socketConnected ? "Connected" : "Fallback polling"}
+                  </span>
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -269,6 +468,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 })}
               </div>
             )}
+            {typingUserId ? <p className="mt-2 text-xs text-slate-500">Someone is typing...</p> : null}
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -277,7 +477,18 @@ const ChatThreadPage: NextPageWithAuth = () => {
             <form onSubmit={onSendMessage} className="mt-3 space-y-3">
               <textarea
                 value={messageInput}
-                onChange={(event) => setMessageInput(event.target.value)}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setMessageInput(nextValue);
+                  if (!nextValue.trim()) {
+                    stopTypingSignal();
+                    return;
+                  }
+                  emitTypingSignal();
+                }}
+                onBlur={() => {
+                  stopTypingSignal();
+                }}
                 className="min-h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
                 placeholder="Type your message..."
                 disabled={!canSend || sending}
