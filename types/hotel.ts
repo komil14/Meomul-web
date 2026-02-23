@@ -2,7 +2,7 @@ export type HotelLocation =
   | "SEOUL"
   | "BUSAN"
   | "DAEGU"
-  | "DAEJEON"
+  | "DAEJON"
   | "GWANGJU"
   | "INCHEON"
   | "JEJU"
@@ -16,6 +16,32 @@ export type VerificationStatus = "PENDING" | "VERIFIED" | "REJECTED";
 export type BadgeLevel = "NONE" | "VERIFIED" | "SUPERHOST" | "INSPECTED";
 
 export type RoomType = "STANDARD" | "DELUXE" | "SUITE" | "FAMILY" | "PREMIUM" | "PENTHOUSE";
+export type StayPurpose = "BUSINESS" | "ROMANTIC" | "FAMILY" | "SOLO" | "STAYCATION" | "EVENT" | "MEDICAL" | "LONG_TERM";
+export type HotelAmenityKey =
+  | "workspace"
+  | "wifi"
+  | "meetingRoom"
+  | "coupleRoom"
+  | "romanticView"
+  | "privateBath"
+  | "familyRoom"
+  | "kidsFriendly"
+  | "playground"
+  | "pool"
+  | "spa"
+  | "roomService"
+  | "restaurant"
+  | "parking"
+  | "breakfast"
+  | "breakfastIncluded"
+  | "gym"
+  | "airportShuttle"
+  | "evCharging"
+  | "wheelchairAccessible"
+  | "elevator"
+  | "accessibleBathroom"
+  | "visualAlarms"
+  | "serviceAnimalsAllowed";
 
 export interface PaginationInput {
   page: number;
@@ -31,8 +57,24 @@ export interface PriceRangeInput {
 
 export interface HotelSearchInput {
   location?: HotelLocation;
+  dong?: string;
+  nearestSubway?: string;
+  subwayLines?: number[];
+  maxWalkingDistance?: number;
   hotelTypes?: HotelType[];
+  roomTypes?: RoomType[];
   priceRange?: PriceRangeInput;
+  starRatings?: number[];
+  minRating?: number;
+  amenities?: HotelAmenityKey[];
+  verifiedOnly?: boolean;
+  purpose?: StayPurpose;
+  checkInDate?: string;
+  checkOutDate?: string;
+  guestCount?: number;
+  petsAllowed?: boolean;
+  wheelchairAccessible?: boolean;
+  text?: string;
 }
 
 export interface MetaCounterDto {
@@ -224,6 +266,8 @@ export interface GetDashboardStatsQueryData {
 }
 
 export type ReviewStatus = "PENDING" | "APPROVED" | "FLAGGED" | "REMOVED";
+export type LikeGroup = "MEMBER" | "HOTEL" | "ARTICLE" | "REVIEW";
+export type DemandLevel = "LOW" | "MEDIUM" | "HIGH";
 
 export interface HotelResponseDto {
   responseText: string;
@@ -291,4 +335,107 @@ export interface GetRecommendedHotelsQueryData {
 
 export interface GetRecommendedHotelsQueryVars {
   limit?: number;
+}
+
+export interface HasLikedQueryData {
+  hasLiked: boolean;
+}
+
+export interface HasLikedQueryVars {
+  likeRefId: string;
+  likeGroup: LikeGroup;
+}
+
+export interface ToggleLikeMutationData {
+  toggleLike: {
+    liked: boolean;
+    likeCount: number;
+  };
+}
+
+export interface ToggleLikeMutationVars {
+  input: {
+    likeGroup: LikeGroup;
+    likeRefId: string;
+  };
+}
+
+export interface MarkHelpfulMutationData {
+  markHelpful: {
+    _id: string;
+    helpfulCount: number;
+  };
+}
+
+export interface MarkHelpfulMutationVars {
+  reviewId: string;
+}
+
+export interface DayPriceDto {
+  date: string;
+  price: number;
+  isWeekend: boolean;
+  demandLevel: DemandLevel;
+  localEvent?: string | null;
+  availableRooms?: number | null;
+}
+
+export interface PriceCalendarDto {
+  calendar: DayPriceDto[];
+  cheapestDate: {
+    date: string;
+    price: number;
+  };
+  mostExpensiveDate: {
+    date: string;
+    price: number;
+  };
+  averagePrice: number;
+  savings: number;
+}
+
+export interface GetPriceCalendarQueryData {
+  getPriceCalendar: PriceCalendarDto;
+}
+
+export interface GetPriceCalendarQueryVars {
+  input: {
+    roomId: string;
+    month?: string;
+  };
+}
+
+export interface PriceLockDto {
+  _id: string;
+  roomId: string;
+  lockedPrice: number;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface GetMyPriceLockQueryData {
+  getMyPriceLock: PriceLockDto | null;
+}
+
+export interface GetMyPriceLockQueryVars {
+  roomId: string;
+}
+
+export interface LockPriceMutationData {
+  lockPrice: PriceLockDto;
+}
+
+export interface LockPriceMutationVars {
+  input: {
+    roomId: string;
+    currentPrice: number;
+  };
+}
+
+export interface CancelPriceLockMutationData {
+  cancelPriceLock: boolean;
+}
+
+export interface CancelPriceLockMutationVars {
+  priceLockId: string;
 }

@@ -9,6 +9,11 @@ interface HotelOverviewHeroProps {
   reviewCountText: string;
   satisfactionText: string;
   cancellationPolicyText: string;
+  hotelLikeCount: number;
+  hotelLiked: boolean;
+  canToggleLike: boolean;
+  togglingLike: boolean;
+  onToggleLike: () => void;
 }
 
 export function HotelOverviewHero({
@@ -19,6 +24,11 @@ export function HotelOverviewHero({
   reviewCountText,
   satisfactionText,
   cancellationPolicyText,
+  hotelLikeCount,
+  hotelLiked,
+  canToggleLike,
+  togglingLike,
+  onToggleLike,
 }: HotelOverviewHeroProps) {
   return (
     <section id="overview" className="relative overflow-hidden rounded-3xl border border-slate-200">
@@ -38,12 +48,24 @@ export function HotelOverviewHero({
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{hotel.starRating} star</span>
                 <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{cancellationPolicyText}</span>
-                <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{hotel.hotelLikes.toLocaleString()} likes</span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{hotelLikeCount.toLocaleString()} likes</span>
                 {hotel.suitableFor.slice(0, 2).map((tag) => (
                   <span key={tag} className="rounded-full border border-white/35 bg-white/10 px-3 py-1 text-sm">
                     {tag}
                   </span>
                 ))}
+                {canToggleLike ? (
+                  <button
+                    type="button"
+                    onClick={onToggleLike}
+                    disabled={togglingLike}
+                    className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-sm transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {togglingLike ? "Saving..." : hotelLiked ? "Saved" : "Save hotel"}
+                  </button>
+                ) : (
+                  <span className="rounded-full border border-white/30 bg-white/5 px-3 py-1 text-sm text-slate-200/90">Login to save</span>
+                )}
               </div>
             </div>
 

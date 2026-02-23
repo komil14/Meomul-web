@@ -1,4 +1,4 @@
-import { useQuery } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
 import type { GetServerSideProps } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -13,24 +13,39 @@ import { HotelReviewsSection } from "@/components/hotels/detail/hotel-reviews-se
 import { HotelRoomsSection } from "@/components/hotels/detail/hotel-rooms-section";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
+  CANCEL_PRICE_LOCK_MUTATION,
+  GET_MY_PRICE_LOCK_QUERY,
   GET_HOTEL_QUERY,
   GET_HOTEL_REVIEWS_QUERY,
+  GET_PRICE_CALENDAR_QUERY,
   GET_RECOMMENDED_HOTELS_QUERY,
   GET_ROOMS_BY_HOTEL_QUERY,
+  HAS_LIKED_QUERY,
+  LOCK_PRICE_MUTATION,
+  MARK_HELPFUL_MUTATION,
   GET_SIMILAR_HOTELS_QUERY,
+  TOGGLE_LIKE_MUTATION,
   GET_TRENDING_BY_LOCATION_QUERY,
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
+  CancelPriceLockMutationData,
+  CancelPriceLockMutationVars,
   GetHotelQueryData,
   GetHotelQueryVars,
   GetHotelReviewsQueryData,
   GetHotelReviewsQueryVars,
+  GetMyPriceLockQueryData,
+  GetMyPriceLockQueryVars,
+  GetPriceCalendarQueryData,
+  GetPriceCalendarQueryVars,
   GetRecommendedHotelsQueryData,
   GetRecommendedHotelsQueryVars,
   GetRoomsByHotelQueryData,
   GetRoomsByHotelQueryVars,
+  HasLikedQueryData,
+  HasLikedQueryVars,
   GetSimilarHotelsQueryData,
   GetSimilarHotelsQueryVars,
   GetTrendingByLocationQueryData,
@@ -38,7 +53,13 @@ import type {
   HotelDetailItem,
   HotelListItem,
   HotelLocation,
+  LockPriceMutationData,
+  LockPriceMutationVars,
+  MarkHelpfulMutationData,
+  MarkHelpfulMutationVars,
   RoomListItem,
+  ToggleLikeMutationData,
+  ToggleLikeMutationVars,
 } from "@/types/hotel";
 
 const ROOM_PAGE_SIZE = 12;
@@ -98,6 +119,17 @@ const shortenText = (text: string, maxLength: number): string => {
 
 const canUsePersonalizedRecommendations = (memberType: string | undefined): boolean => {
   return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
+};
+
+const canUseMemberActions = (memberType: string | undefined): boolean => {
+  return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
+};
+
+const formatDateTime = (value: string): string => new Date(value).toLocaleString();
+
+const getMinutesUntil = (value: string): number => {
+  const diff = new Date(value).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / 60000));
 };
 
 const uniqueHotels = (hotels: HotelListItem[], excludeHotelId: string): HotelListItem[] => {
@@ -184,6 +216,11 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   const [adultCount, setAdultCount] = useState(2);
   const [shouldLoadDiscovery, setShouldLoadDiscovery] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
+  const [reviewActionError, setReviewActionError] = useState<string | null>(null);
+  const [generalActionError, setGeneralActionError] = useState<string | null>(null);
+  const [markingHelpfulReviewId, setMarkingHelpfulReviewId] = useState<string | null>(null);
+  const [helpfulCountOverrides, setHelpfulCountOverrides] = useState<Record<string, number>>({});
+  const [hotelLikeState, setHotelLikeState] = useState<{ liked: boolean; count: number } | null>(null);
   const todayDate = useMemo(() => formatDateInput(new Date()), []);
 
   const hotelId = useMemo(() => {
@@ -193,6 +230,10 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
 
     return "";
   }, [router.query.hotelId]);
+  const memberType = member?.memberType;
+  const canUseRecommendedQuery = canUsePersonalizedRecommendations(memberType);
+  const canUseLikeActions = canUseMemberActions(memberType);
+  const canUsePriceActions = canUseMemberActions(memberType);
 
   const {
     data: hotelData,
@@ -207,6 +248,23 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
 
   const hotel = hotelData?.getHotel ?? initialHotel;
   const trendingLocation = hotel?.hotelLocation;
+  const {
+    data: hotelLikedData,
+    error: hotelLikedError,
+  } = useQuery<HasLikedQueryData, HasLikedQueryVars>(HAS_LIKED_QUERY, {
+    skip: !hotelId || !canUseLikeActions,
+    variables: {
+      likeRefId: hotelId,
+      likeGroup: "HOTEL",
+    },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+  });
+
+  const [toggleLikeMutation, { loading: togglingHotelLike }] = useMutation<ToggleLikeMutationData, ToggleLikeMutationVars>(
+    TOGGLE_LIKE_MUTATION,
+  );
+  const [markHelpfulMutation] = useMutation<MarkHelpfulMutationData, MarkHelpfulMutationVars>(MARK_HELPFUL_MUTATION);
 
   const {
     data: roomsData,
@@ -226,6 +284,44 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     fetchPolicy: initialRooms.length > 0 ? "cache-first" : "cache-and-network",
     nextFetchPolicy: "cache-first",
   });
+
+  const priceCalendarMonth = useMemo(() => (checkInDate ? checkInDate.slice(0, 7) : todayDate.slice(0, 7)), [checkInDate, todayDate]);
+
+  const {
+    data: priceCalendarData,
+    loading: priceCalendarLoading,
+    error: priceCalendarError,
+  } = useQuery<GetPriceCalendarQueryData, GetPriceCalendarQueryVars>(GET_PRICE_CALENDAR_QUERY, {
+    skip: !selectedRoomId || !member,
+    variables: {
+      input: {
+        roomId: selectedRoomId,
+        month: priceCalendarMonth,
+      },
+    },
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
+  });
+
+  const {
+    data: myPriceLockData,
+    loading: myPriceLockLoading,
+    error: myPriceLockError,
+    refetch: refetchMyPriceLock,
+  } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
+    skip: !selectedRoomId || !canUsePriceActions,
+    variables: {
+      roomId: selectedRoomId,
+    },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+  });
+
+  const [lockPriceMutation, { loading: lockingPrice }] = useMutation<LockPriceMutationData, LockPriceMutationVars>(LOCK_PRICE_MUTATION);
+  const [cancelPriceLockMutation, { loading: cancellingPriceLock }] = useMutation<
+    CancelPriceLockMutationData,
+    CancelPriceLockMutationVars
+  >(CANCEL_PRICE_LOCK_MUTATION);
 
   const {
     data: reviewsData,
@@ -274,13 +370,12 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     nextFetchPolicy: "cache-first",
   });
 
-  const canLoadRecommended = canUsePersonalizedRecommendations(member?.memberType);
   const {
     data: recommendedData,
     loading: recommendedLoading,
     error: recommendedError,
   } = useQuery<GetRecommendedHotelsQueryData, GetRecommendedHotelsQueryVars>(GET_RECOMMENDED_HOTELS_QUERY, {
-    skip: !canLoadRecommended || !shouldLoadDiscovery,
+    skip: !canUseRecommendedQuery || !shouldLoadDiscovery,
     variables: {
       limit: CARD_LIST_LIMIT,
     },
@@ -365,6 +460,13 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     }
   }, [rooms, selectedRoomId]);
 
+  useEffect(() => {
+    setHotelLikeState(null);
+    setHelpfulCountOverrides({});
+    setReviewActionError(null);
+    setGeneralActionError(null);
+  }, [hotelId]);
+
   const selectedRoom = useMemo(() => rooms.find((room) => room._id === selectedRoomId) ?? null, [rooms, selectedRoomId]);
   const fromPrice = useMemo(() => {
     const prices = rooms.map((room) => room.basePrice).filter((price): price is number => typeof price === "number");
@@ -401,7 +503,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
       return [];
     }
     return Object.entries(hotel.amenities)
-      .filter(([, enabled]) => enabled)
+      .filter(([, enabled]) => enabled === true)
       .map(([key]) => amenityLabels[key as keyof HotelDetailItem["amenities"]] ?? key);
   }, [hotel]);
   const shortDescription = useMemo(
@@ -433,6 +535,102 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     return null;
   }, [adultCount, checkInDate, checkOutDate, selectedRoom]);
   const canContinueBooking = bookingValidationMessage === null && Boolean(selectedRoom);
+  const hotelLikeCount = hotelLikeState?.count ?? hotel?.hotelLikes ?? 0;
+  const hotelLiked = hotelLikeState?.liked ?? Boolean(hotelLikedData?.hasLiked);
+  const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
+  const lockMinutesLeft = activePriceLock ? getMinutesUntil(activePriceLock.expiresAt) : 0;
+
+  const handleToggleHotelLike = async (): Promise<void> => {
+    if (!hotelId || !canUseLikeActions) {
+      return;
+    }
+
+    setGeneralActionError(null);
+    try {
+      const response = await toggleLikeMutation({
+        variables: {
+          input: {
+            likeGroup: "HOTEL",
+            likeRefId: hotelId,
+          },
+        },
+      });
+
+      const payload = response.data?.toggleLike;
+      if (payload) {
+        setHotelLikeState({
+          liked: payload.liked,
+          count: payload.likeCount,
+        });
+      }
+    } catch (error) {
+      setGeneralActionError(getErrorMessage(error));
+    }
+  };
+
+  const handleMarkHelpful = async (reviewId: string): Promise<void> => {
+    if (!canUseLikeActions) {
+      return;
+    }
+
+    setReviewActionError(null);
+    setMarkingHelpfulReviewId(reviewId);
+
+    try {
+      const response = await markHelpfulMutation({
+        variables: { reviewId },
+      });
+
+      const updated = response.data?.markHelpful;
+      if (updated) {
+        setHelpfulCountOverrides((previous) => ({
+          ...previous,
+          [updated._id]: updated.helpfulCount,
+        }));
+      }
+    } catch (error) {
+      setReviewActionError(getErrorMessage(error));
+    } finally {
+      setMarkingHelpfulReviewId(null);
+    }
+  };
+
+  const handleLockPrice = async (): Promise<void> => {
+    if (!canUsePriceActions || !selectedRoom) {
+      return;
+    }
+
+    setGeneralActionError(null);
+    try {
+      await lockPriceMutation({
+        variables: {
+          input: {
+            roomId: selectedRoom._id,
+            currentPrice: selectedRoom.basePrice,
+          },
+        },
+      });
+      await refetchMyPriceLock();
+    } catch (error) {
+      setGeneralActionError(getErrorMessage(error));
+    }
+  };
+
+  const handleCancelPriceLock = async (): Promise<void> => {
+    if (!canUsePriceActions || !activePriceLock) {
+      return;
+    }
+
+    setGeneralActionError(null);
+    try {
+      await cancelPriceLockMutation({
+        variables: { priceLockId: activePriceLock._id },
+      });
+      await refetchMyPriceLock();
+    } catch (error) {
+      setGeneralActionError(getErrorMessage(error));
+    }
+  };
 
   if (!hotelId) {
     return (
@@ -466,6 +664,9 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
       </div>
 
       {hotelError ? <ErrorNotice message={getErrorMessage(hotelError)} /> : null}
+      {hotelLikedError ? <ErrorNotice message={getErrorMessage(hotelLikedError)} /> : null}
+      {myPriceLockError ? <ErrorNotice message={getErrorMessage(myPriceLockError)} /> : null}
+      {generalActionError ? <ErrorNotice message={generalActionError} /> : null}
 
       {hotelLoading && !hotel ? (
         <section className="rounded-3xl border border-slate-200 bg-white px-6 py-10 text-sm text-slate-600">
@@ -488,6 +689,11 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
           reviewCountText={reviewCountText}
           satisfactionText={satisfactionText}
           cancellationPolicyText={getPolicyText(hotel.cancellationPolicy)}
+          hotelLikeCount={hotelLikeCount}
+          hotelLiked={hotelLiked}
+          canToggleLike={canUseLikeActions}
+          togglingLike={togglingHotelLike}
+          onToggleLike={handleToggleHotelLike}
         />
       ) : null}
 
@@ -514,6 +720,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
             reviews={reviews}
             reviewsLoading={reviewsLoading}
             reviewsErrorMessage={reviewsError ? getErrorMessage(reviewsError) : null}
+            reviewActionErrorMessage={reviewActionError}
             reviewPage={reviewPage}
             reviewTotalPages={reviewTotalPages}
             reviewTotal={reviewTotal}
@@ -521,6 +728,10 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
             onNextPage={() => setReviewPage((prev) => Math.min(reviewTotalPages, prev + 1))}
             canGoPrev={reviewPage > 1}
             canGoNext={reviewPage < reviewTotalPages}
+            canMarkHelpful={canUseLikeActions}
+            markingHelpfulReviewId={markingHelpfulReviewId}
+            helpfulCountOverrides={helpfulCountOverrides}
+            onMarkHelpful={handleMarkHelpful}
           />
 
           <HotelLocationSection
@@ -552,7 +763,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
               layout="horizontal"
             />
 
-            {canLoadRecommended ? (
+            {canUseRecommendedQuery ? (
               <HotelListSection
                 title="Recommended for You"
                 description="Personalized suggestions based on your activity."
@@ -661,6 +872,76 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
                 Complete booking details
               </button>
             )}
+
+            <div className="mt-5 space-y-3 border-t border-slate-200 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Price insights ({priceCalendarMonth})</p>
+
+              {priceCalendarError ? <p className="text-xs text-amber-700">{getErrorMessage(priceCalendarError)}</p> : null}
+
+              {!member ? (
+                <p className="text-xs text-slate-500">Login to view monthly price trend.</p>
+              ) : priceCalendarLoading ? (
+                <p className="text-xs text-slate-500">Loading monthly price trend...</p>
+              ) : priceCalendarData?.getPriceCalendar ? (
+                <div className="grid gap-2 text-xs text-slate-700">
+                  <p className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                    Average: <span className="font-semibold">₩ {priceCalendarData.getPriceCalendar.averagePrice.toLocaleString()}</span>
+                  </p>
+                  <p className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                    Cheapest:{" "}
+                    <span className="font-semibold">
+                      {priceCalendarData.getPriceCalendar.cheapestDate.date} · ₩{" "}
+                      {priceCalendarData.getPriceCalendar.cheapestDate.price.toLocaleString()}
+                    </span>
+                  </p>
+                  <p className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                    Peak:{" "}
+                    <span className="font-semibold">
+                      {priceCalendarData.getPriceCalendar.mostExpensiveDate.date} · ₩{" "}
+                      {priceCalendarData.getPriceCalendar.mostExpensiveDate.price.toLocaleString()}
+                    </span>
+                  </p>
+                  <p className="text-slate-600">Potential savings this month: ₩ {priceCalendarData.getPriceCalendar.savings.toLocaleString()}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">Select a room to see monthly pricing.</p>
+              )}
+
+              {canUsePriceActions ? (
+                <>
+                  {myPriceLockLoading ? <p className="text-xs text-slate-500">Checking your active price lock...</p> : null}
+                  {activePriceLock ? (
+                    <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                      <p>
+                        Locked price: <span className="font-semibold">₩ {activePriceLock.lockedPrice.toLocaleString()}</span>
+                      </p>
+                      <p>
+                        Expires in <span className="font-semibold">{lockMinutesLeft} min</span> ({formatDateTime(activePriceLock.expiresAt)})
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleCancelPriceLock()}
+                        disabled={cancellingPriceLock}
+                        className="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-900 transition hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {cancellingPriceLock ? "Cancelling..." : "Cancel lock"}
+                      </button>
+                    </div>
+                  ) : selectedRoom ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleLockPrice()}
+                      disabled={lockingPrice}
+                      className="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {lockingPrice ? "Locking..." : `Lock ₩ ${selectedRoom.basePrice.toLocaleString()} for 30 min`}
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-xs text-slate-500">Login with USER/AGENT/ADMIN to use price lock.</p>
+              )}
+            </div>
           </section>
         </aside>
       </div>

@@ -270,3 +270,82 @@ export const GET_RECOMMENDED_HOTELS_QUERY = gql`
     }
   }
 `;
+
+export const HAS_LIKED_QUERY = gql`
+  query HasLiked($likeRefId: String!, $likeGroup: LikeGroup!) {
+    hasLiked(likeRefId: $likeRefId, likeGroup: $likeGroup)
+  }
+`;
+
+export const TOGGLE_LIKE_MUTATION = gql`
+  mutation ToggleLike($input: LikeInput!) {
+    toggleLike(input: $input) {
+      liked
+      likeCount
+    }
+  }
+`;
+
+export const MARK_HELPFUL_MUTATION = gql`
+  mutation MarkHelpful($reviewId: String!) {
+    markHelpful(reviewId: $reviewId) {
+      _id
+      helpfulCount
+    }
+  }
+`;
+
+export const GET_PRICE_CALENDAR_QUERY = gql`
+  query GetPriceCalendar($input: PriceCalendarInput!) {
+    getPriceCalendar(input: $input) {
+      averagePrice
+      savings
+      cheapestDate {
+        date
+        price
+      }
+      mostExpensiveDate {
+        date
+        price
+      }
+      calendar {
+        date
+        price
+        isWeekend
+        demandLevel
+        localEvent
+        availableRooms
+      }
+    }
+  }
+`;
+
+export const GET_MY_PRICE_LOCK_QUERY = gql`
+  query GetMyPriceLock($roomId: String!) {
+    getMyPriceLock(roomId: $roomId) {
+      _id
+      roomId
+      lockedPrice
+      expiresAt
+      createdAt
+    }
+  }
+`;
+
+export const LOCK_PRICE_MUTATION = gql`
+  mutation LockPrice($input: CreatePriceLockInput!) {
+    lockPrice(input: $input) {
+      _id
+      roomId
+      lockedPrice
+      expiresAt
+      createdAt
+    }
+  }
+`;
+
+export const CANCEL_PRICE_LOCK_MUTATION = gql`
+  mutation CancelPriceLock($priceLockId: String!) {
+    cancelPriceLock(priceLockId: $priceLockId)
+  }
+`;
