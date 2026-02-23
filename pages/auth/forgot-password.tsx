@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useState } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import type { NextPageWithAuth } from "@/types/page";
 
 const ForgotPasswordPage: NextPageWithAuth = () => {
@@ -14,9 +15,11 @@ const ForgotPasswordPage: NextPageWithAuth = () => {
   return (
     <main className="mx-auto flex w-full max-w-md flex-col justify-center">
       <h1 className="text-3xl font-semibold text-slate-900">Forgot Password</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Backend reset-password API is not ready yet. This flow is currently a frontend placeholder.
-      </p>
+      <ErrorNotice
+        className="mt-3"
+        tone="info"
+        message="Backend reset-password API is not ready yet. This flow is currently a frontend placeholder."
+      />
 
       <form className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6" onSubmit={onSubmit}>
         <label className="block">
@@ -38,9 +41,11 @@ const ForgotPasswordPage: NextPageWithAuth = () => {
       </form>
 
       {submitted ? (
-        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          Request captured in UI. Connect this page when backend password-reset mutations are available.
-        </p>
+        <ErrorNotice
+          className="mt-4"
+          tone="warn"
+          message="Request captured in UI. Connect this page when backend password-reset mutations are available."
+        />
       ) : null}
 
       <div className="mt-6 text-sm text-slate-600">
