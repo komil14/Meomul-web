@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CREATE_BOOKING_MUTATION } from "@/graphql/booking.gql";
 import { GET_HOTEL_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
@@ -57,10 +57,19 @@ const NewBookingPage: NextPageWithAuth = () => {
     return "";
   }, [router.query.roomId]);
 
+  const initialGuestIdFromQuery = useMemo(() => {
+    if (typeof router.query.guestId === "string") {
+      return router.query.guestId;
+    }
+
+    return "";
+  }, [router.query.guestId]);
+
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [guestCountInput, setGuestCountInput] = useState("1");
   const [quantityInput, setQuantityInput] = useState("1");
+  const [targetGuestId, setTargetGuestId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("AT_HOTEL");
   const [guestName, setGuestName] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
@@ -88,6 +97,12 @@ const NewBookingPage: NextPageWithAuth = () => {
     CreateBookingMutationVars
   >(CREATE_BOOKING_MUTATION);
 
+  useEffect(() => {
+    if (initialGuestIdFromQuery && !targetGuestId) {
+      setTargetGuestId(initialGuestIdFromQuery);
+    }
+  }, [initialGuestIdFromQuery, targetGuestId]);
+
   const hotel = hotelData?.getHotel;
   const room = roomData?.getRoom;
 
@@ -101,8 +116,9 @@ const NewBookingPage: NextPageWithAuth = () => {
   const estimatedSubtotal = effectivePrice * (quantity ?? 0) * Math.max(0, nights);
 
   const memberType = member?.memberType;
-  const canCreateBooking = memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
-  const isOperator = memberType === "ADMIN_OPERATOR";
+  const canCreateBooking =
+    memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
+  const isStaffCreator = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -115,6 +131,11 @@ const NewBookingPage: NextPageWithAuth = () => {
 
     if (!canCreateBooking) {
       setFormError("Your role cannot create booking with current backend policy.");
+      return;
+    }
+
+    if (isStaffCreator && !targetGuestId.trim()) {
+      setFormError("For staff booking, target guestId is required.");
       return;
     }
 
@@ -152,6 +173,7 @@ const NewBookingPage: NextPageWithAuth = () => {
       const response = await createBooking({
         variables: {
           input: {
+            ...(isStaffCreator ? { guestId: targetGuestId.trim() } : {}),
             hotelId,
             checkInDate: toDateTime(checkInDate),
             checkOutDate: toDateTime(checkOutDate),
@@ -204,18 +226,15 @@ const NewBookingPage: NextPageWithAuth = () => {
         <p className="mt-2 text-sm text-slate-600">Select dates, guests, quantity, and payment method.</p>
       </header>
 
-      {memberType === "AGENT" || memberType === "ADMIN" ? (
+      {isStaffCreator ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          Current backend creates booking under your own account. Booking for another user is not supported yet.
+          Staff flow is active. You must provide a target <code>guestId</code> (ACTIVE USER account).
         </div>
-      ) : null}
-
-      {isOperator ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          Current backend blocks `ADMIN_OPERATOR` from `createBooking`. You can manage payment/status on existing bookings but
-          cannot create a new booking yet.
+      ) : (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          User flow: booking will be created for your own account.
         </div>
-      ) : null}
+      )}
 
       {hotelError ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{getErrorMessage(hotelError)}</div>
@@ -252,6 +271,19 @@ const NewBookingPage: NextPageWithAuth = () => {
 
       <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
         <div className="grid gap-4 md:grid-cols-2">
+          {isStaffCreator ? (
+            <label className="block md:col-span-2">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Target guestId</span>
+              <input
+                value={targetGuestId}
+                onChange={(event) => setTargetGuestId(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                placeholder="Mongo member _id of target USER"
+                required
+              />
+            </label>
+          ) : null}
+
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">Check-in</span>
             <input

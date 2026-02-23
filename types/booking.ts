@@ -9,6 +9,7 @@ export interface BookedRoomInput {
 }
 
 export interface BookingInput {
+  guestId?: string;
   hotelId: string;
   checkInDate: string;
   checkOutDate: string;
