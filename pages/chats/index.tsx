@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { StatusPills } from "@/components/ui/status-pills";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_HOTEL_CHATS_QUERY, GET_MY_CHATS_QUERY, START_CHAT_MUTATION } from "@/graphql/chat.gql";
@@ -10,6 +11,7 @@ import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { showMutationError } from "@/lib/utils/toast";
 import type {
   ChatDto,
   ChatStatus,
@@ -237,7 +239,7 @@ const ChatsPage: NextPageWithAuth = () => {
       toast.success("Chat started.");
       void router.push(`/chats/${newChatId}`);
     } catch (mutationError) {
-      toast.error(getErrorMessage(mutationError));
+      showMutationError(toast, mutationError);
     }
   };
 
@@ -381,17 +383,9 @@ const ChatsPage: NextPageWithAuth = () => {
       {hotelsLoading ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">Loading hotel list...</section>
       ) : null}
-      {hotelsError ? (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          Hotel list error: {getErrorMessage(hotelsError)}
-        </section>
-      ) : null}
+      {hotelsError ? <ErrorNotice message={`Hotel list error: ${getErrorMessage(hotelsError)}`} /> : null}
 
-      {error ? (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {getErrorMessage(error)}
-        </section>
-      ) : null}
+      {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
       {loading && chats.length === 0 ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading chats...</section>

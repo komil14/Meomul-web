@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { CREATE_BOOKING_MUTATION, SEARCH_MEMBERS_FOR_BOOKING_QUERY } from "@/graphql/booking.gql";
 import { GET_HOTEL_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
@@ -261,12 +262,8 @@ const NewBookingPage: NextPageWithAuth = () => {
         </div>
       )}
 
-      {hotelError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{getErrorMessage(hotelError)}</div>
-      ) : null}
-      {roomError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{getErrorMessage(roomError)}</div>
-      ) : null}
+      {hotelError ? <ErrorNotice message={getErrorMessage(hotelError)} /> : null}
+      {roomError ? <ErrorNotice message={getErrorMessage(roomError)} /> : null}
 
       {hotelLoading || roomLoading ? (
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading booking context...</div>
@@ -310,7 +307,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                 <p className="md:col-span-2 text-sm text-slate-500">Searching users...</p>
               ) : null}
               {guestCandidatesError ? (
-                <p className="md:col-span-2 text-sm text-red-600">{getErrorMessage(guestCandidatesError)}</p>
+                <ErrorNotice className="md:col-span-2" message={getErrorMessage(guestCandidatesError)} />
               ) : null}
 
               {guestCandidates.length > 0 ? (
@@ -438,8 +435,8 @@ const NewBookingPage: NextPageWithAuth = () => {
           <p className="mt-1 text-xs text-slate-500">Final total is calculated on server (taxes, service fee, surcharges).</p>
         </div>
 
-        {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
-        {createError ? <p className="text-sm text-red-600">{getErrorMessage(createError)}</p> : null}
+        {formError ? <ErrorNotice message={formError} /> : null}
+        {createError ? <ErrorNotice message={getErrorMessage(createError)} /> : null}
 
         <button
           type="submit"

@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { Socket } from "socket.io-client";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
 import {
   CLAIM_CHAT_MUTATION,
@@ -15,6 +16,7 @@ import {
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import { createChatSocket } from "@/lib/socket/chat";
 import { getErrorMessage } from "@/lib/utils/error";
+import { showMutationError } from "@/lib/utils/toast";
 import type {
   ClaimChatMutationData,
   ClaimChatMutationVars,
@@ -111,7 +113,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
         chatId: chat._id,
       },
     }).catch((mutationError: unknown) => {
-      toast.error(getErrorMessage(mutationError));
+      showMutationError(toast, mutationError);
     });
   }, [chat, markRead, toast, unreadForMe]);
 
@@ -314,7 +316,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       stopTypingSignal();
       setMessageInput("");
     } catch (mutationError) {
-      toast.error(getErrorMessage(mutationError));
+      showMutationError(toast, mutationError);
     }
   };
 
@@ -334,7 +336,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       await refetch();
       toast.success("Chat claimed.");
     } catch (mutationError) {
-      toast.error(getErrorMessage(mutationError));
+      showMutationError(toast, mutationError);
     }
   };
 
@@ -352,7 +354,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       await refetch();
       toast.success("Chat closed.");
     } catch (mutationError) {
-      toast.error(getErrorMessage(mutationError));
+      showMutationError(toast, mutationError);
     }
   };
 
@@ -372,11 +374,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
         </Link>
       </div>
 
-      {error ? (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {getErrorMessage(error)}
-        </section>
-      ) : null}
+      {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
       {loading && !chat ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">

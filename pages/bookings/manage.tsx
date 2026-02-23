@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { StatusPills } from "@/components/ui/status-pills";
 import { useToast } from "@/components/ui/toast-provider";
 import {
@@ -14,6 +15,7 @@ import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { showMutationError } from "@/lib/utils/toast";
 import type {
   BookingListItem,
   BookingStatus,
@@ -294,7 +296,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       toast.success(`Booking ${booking.bookingCode} status updated to ${nextStatus}.`);
     } catch (error) {
       replacePatch(booking._id, previousPatch);
-      toast.error(getErrorMessage(error));
+      showMutationError(toast, error);
     } finally {
       setUpdating(setStatusUpdating, booking._id, false);
     }
@@ -346,7 +348,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       toast.success(`Payment updated for booking ${booking.bookingCode}.`);
     } catch (error) {
       replacePatch(booking._id, previousPatch);
-      toast.error(getErrorMessage(error));
+      showMutationError(toast, error);
     } finally {
       setUpdating(setPaymentUpdating, booking._id, false);
     }
@@ -392,7 +394,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       toast.success(`Booking ${booking.bookingCode} cancelled.`);
     } catch (error) {
       replacePatch(booking._id, previousPatch);
-      toast.error(getErrorMessage(error));
+      showMutationError(toast, error);
     } finally {
       setUpdating(setCancelUpdating, booking._id, false);
     }
@@ -451,16 +453,8 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       {hotelsLoading ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">Loading hotel list...</section>
       ) : null}
-      {hotelsError ? (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {getErrorMessage(hotelsError)}
-        </section>
-      ) : null}
-      {bookingsError ? (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {getErrorMessage(bookingsError)}
-        </section>
-      ) : null}
+      {hotelsError ? <ErrorNotice message={getErrorMessage(hotelsError)} /> : null}
+      {bookingsError ? <ErrorNotice message={getErrorMessage(bookingsError)} /> : null}
 
       {!selectedHotelId && !hotelsLoading ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">

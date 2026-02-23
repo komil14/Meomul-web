@@ -2,6 +2,7 @@ import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { CHECK_AUTH_QUERY } from "@/graphql/auth.gql";
 import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
@@ -127,7 +128,7 @@ const DashboardPage: NextPageWithAuth = () => {
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-lg font-semibold text-slate-900">Backend Auth Check</h2>
         {authLoading ? <p className="mt-2 text-sm text-slate-600">Verifying token against backend...</p> : null}
-        {authError ? <p className="mt-2 text-sm text-red-600">{getErrorMessage(authError)}</p> : null}
+        {authError ? <ErrorNotice className="mt-2" message={getErrorMessage(authError)} /> : null}
         {authData?.checkAuth ? <p className="mt-2 text-sm text-emerald-700">{authData.checkAuth}</p> : null}
       </section>
 
@@ -136,7 +137,7 @@ const DashboardPage: NextPageWithAuth = () => {
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Chat Inbox</h2>
             {unreadChatLoading ? <p className="mt-2 text-sm text-slate-600">Loading unread chat count...</p> : null}
-            {unreadChatError ? <p className="mt-2 text-sm text-red-600">{getErrorMessage(unreadChatError)}</p> : null}
+            {unreadChatError ? <ErrorNotice className="mt-2" message={getErrorMessage(unreadChatError)} /> : null}
             {!unreadChatLoading && !unreadChatError ? (
               <p className="mt-2 text-sm text-slate-700">
                 Unread chat messages:{" "}
@@ -162,7 +163,7 @@ const DashboardPage: NextPageWithAuth = () => {
             </Link>
           </div>
 
-          {userHotelsError ? <p className="text-sm text-red-600">{getErrorMessage(userHotelsError)}</p> : null}
+          {userHotelsError ? <ErrorNotice message={getErrorMessage(userHotelsError)} /> : null}
           {userHotelsLoading && userHotels.length === 0 ? <p className="text-sm text-slate-600">Loading hotels...</p> : null}
           {userHotels.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -183,7 +184,7 @@ const DashboardPage: NextPageWithAuth = () => {
             </div>
           </div>
 
-          {agentHotelsError ? <p className="text-sm text-red-600">{getErrorMessage(agentHotelsError)}</p> : null}
+          {agentHotelsError ? <ErrorNotice message={getErrorMessage(agentHotelsError)} /> : null}
           {agentHotelsLoading && agentHotels.length === 0 ? (
             <p className="text-sm text-slate-600">Loading your hotels...</p>
           ) : null}
@@ -207,7 +208,7 @@ const DashboardPage: NextPageWithAuth = () => {
             <p className="text-sm text-slate-600">Live operational metrics for platform health.</p>
           </div>
 
-          {dashboardStatsError ? <p className="text-sm text-red-600">{getErrorMessage(dashboardStatsError)}</p> : null}
+          {dashboardStatsError ? <ErrorNotice message={getErrorMessage(dashboardStatsError)} /> : null}
           {dashboardStatsLoading && !stats ? <p className="text-sm text-slate-600">Loading dashboard stats...</p> : null}
 
           {stats ? (

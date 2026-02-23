@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
 import {
   CANCEL_BOOKING_BY_OPERATOR_MUTATION,
@@ -11,6 +12,7 @@ import {
 } from "@/graphql/booking.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { showMutationError } from "@/lib/utils/toast";
 import type {
   BookingStatus,
   CancelBookingByOperatorMutationData,
@@ -111,7 +113,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
       setEvidenceRaw("");
       toast.success(`Booking ${booking.bookingCode} cancelled.`);
     } catch (mutationError) {
-      toast.error(getErrorMessage(mutationError));
+      showMutationError(toast, mutationError);
     }
   };
 
@@ -134,11 +136,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
         </Link>
       </div>
 
-      {error ? (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {getErrorMessage(error)}
-        </section>
-      ) : null}
+      {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
       {loading && !booking ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">

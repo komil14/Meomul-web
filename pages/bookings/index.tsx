@@ -1,6 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useMemo } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { StatusPills } from "@/components/ui/status-pills";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
@@ -90,11 +91,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
         />
       </section>
 
-      {error ? (
-        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {getErrorMessage(error)}
-        </section>
-      ) : null}
+      {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
       {loading && allBookings.length === 0 ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading bookings...</section>
