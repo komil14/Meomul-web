@@ -20,6 +20,17 @@ export interface PaginationInput {
   direction: 1 | -1;
 }
 
+export interface PriceRangeInput {
+  start?: number;
+  end?: number;
+}
+
+export interface HotelSearchInput {
+  location?: HotelLocation;
+  hotelTypes?: HotelType[];
+  priceRange?: PriceRangeInput;
+}
+
 export interface MetaCounterDto {
   total: number;
 }
@@ -45,6 +56,7 @@ export interface GetHotelsQueryData {
 
 export interface GetHotelsQueryVars {
   input: PaginationInput;
+  search?: HotelSearchInput;
 }
 
 export interface RoomListItem {

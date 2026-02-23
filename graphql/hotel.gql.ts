@@ -1,8 +1,8 @@
 import { gql } from "@apollo/client";
 
 export const GET_HOTELS_QUERY = gql`
-  query GetHotels($input: PaginationInput!) {
-    getHotels(input: $input) {
+  query GetHotels($input: PaginationInput!, $search: HotelSearchInput) {
+    getHotels(input: $input, search: $search) {
       list {
         _id
         hotelTitle
