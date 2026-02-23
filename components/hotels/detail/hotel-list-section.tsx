@@ -9,9 +9,20 @@ interface HotelListSectionProps {
   loading: boolean;
   loadingText: string;
   errorMessage: string | null;
+  layout?: "grid" | "horizontal";
 }
 
-export function HotelListSection({ title, description, hotels, loading, loadingText, errorMessage }: HotelListSectionProps) {
+export function HotelListSection({
+  title,
+  description,
+  hotels,
+  loading,
+  loadingText,
+  errorMessage,
+  layout = "grid",
+}: HotelListSectionProps) {
+  const isHorizontal = layout === "horizontal";
+
   return (
     <div className="space-y-4">
       <header>
@@ -24,11 +35,21 @@ export function HotelListSection({ title, description, hotels, loading, loadingT
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">{loadingText}</section>
       ) : null}
       {hotels.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {hotels.map((entry) => (
-            <HotelCard key={entry._id} hotel={entry} />
-          ))}
-        </div>
+        isHorizontal ? (
+          <div className="flex gap-4 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory">
+            {hotels.map((entry) => (
+              <div key={entry._id} className="min-w-[16rem] flex-[0_0_16rem] snap-start sm:min-w-[18rem] sm:flex-[0_0_18rem]">
+                <HotelCard hotel={entry} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {hotels.map((entry) => (
+              <HotelCard key={entry._id} hotel={entry} />
+            ))}
+          </div>
+        )
       ) : null}
     </div>
   );

@@ -523,6 +523,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
               loading={similarLoading}
               loadingText="Loading similar hotels..."
               errorMessage={similarError ? getErrorMessage(similarError) : null}
+              layout="horizontal"
             />
 
             <HotelListSection
@@ -532,6 +533,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
               loading={trendingLoading}
               loadingText="Loading location trends..."
               errorMessage={trendingError ? getErrorMessage(trendingError) : null}
+              layout="horizontal"
             />
 
             {canLoadRecommended ? (
@@ -542,6 +544,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
                 loading={recommendedLoading}
                 loadingText="Loading personalized recommendations..."
                 errorMessage={recommendedError ? getErrorMessage(recommendedError) : null}
+                layout="horizontal"
               />
             ) : null}
           </section>
