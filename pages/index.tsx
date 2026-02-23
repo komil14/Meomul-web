@@ -29,6 +29,12 @@ export default function HomePage() {
           Open dashboard
         </Link>
         <Link
+          href="/chats"
+          className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-800 transition hover:border-slate-500"
+        >
+          Open chats
+        </Link>
+        <Link
           href="/auth/login"
           className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-800 transition hover:border-slate-500"
         >

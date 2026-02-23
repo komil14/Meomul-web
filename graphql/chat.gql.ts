@@ -1,0 +1,116 @@
+import { gql } from "@apollo/client";
+
+const CHAT_MESSAGE_FIELDS = gql`
+  fragment ChatMessageFields on MessageDto {
+    senderId
+    senderType
+    messageType
+    content
+    imageUrl
+    fileUrl
+    read
+    timestamp
+  }
+`;
+
+const CHAT_FIELDS = gql`
+  fragment ChatFields on ChatDto {
+    _id
+    guestId
+    hotelId
+    bookingId
+    assignedAgentId
+    chatStatus
+    unreadGuestMessages
+    unreadAgentMessages
+    lastMessageAt
+    createdAt
+    updatedAt
+    messages {
+      ...ChatMessageFields
+    }
+  }
+  ${CHAT_MESSAGE_FIELDS}
+`;
+
+export const GET_MY_CHATS_QUERY = gql`
+  query GetMyChats($input: PaginationInput!) {
+    getMyChats(input: $input) {
+      list {
+        ...ChatFields
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+export const GET_HOTEL_CHATS_QUERY = gql`
+  query GetHotelChats($hotelId: String!, $input: PaginationInput!, $statusFilter: ChatStatus) {
+    getHotelChats(hotelId: $hotelId, input: $input, statusFilter: $statusFilter) {
+      list {
+        ...ChatFields
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+export const GET_CHAT_QUERY = gql`
+  query GetChat($chatId: String!) {
+    getChat(chatId: $chatId) {
+      ...ChatFields
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+export const START_CHAT_MUTATION = gql`
+  mutation StartChat($input: StartChatInput!) {
+    startChat(input: $input) {
+      ...ChatFields
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+export const SEND_MESSAGE_MUTATION = gql`
+  mutation SendMessage($input: SendMessageInput!) {
+    sendMessage(input: $input) {
+      ...ChatFields
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+export const MARK_CHAT_MESSAGES_AS_READ_MUTATION = gql`
+  mutation MarkChatMessagesAsRead($chatId: String!) {
+    markChatMessagesAsRead(chatId: $chatId) {
+      ...ChatFields
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+export const CLAIM_CHAT_MUTATION = gql`
+  mutation ClaimChat($input: ClaimChatInput!) {
+    claimChat(input: $input) {
+      ...ChatFields
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+export const CLOSE_CHAT_MUTATION = gql`
+  mutation CloseChat($chatId: String!) {
+    closeChat(chatId: $chatId) {
+      ...ChatFields
+    }
+  }
+  ${CHAT_FIELDS}
+`;

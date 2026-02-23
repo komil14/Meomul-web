@@ -8,6 +8,7 @@ const links = [
   { href: "/bookings/new", label: "New booking" },
   { href: "/bookings", label: "My bookings" },
   { href: "/bookings/manage", label: "Manage bookings" },
+  { href: "/chats", label: "Chats" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/auth/login", label: "Login" },
   { href: "/auth/signup", label: "Signup" },
