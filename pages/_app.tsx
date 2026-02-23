@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { SiteFrame } from "@/components/layout/site-frame";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { persistApolloCache } from "@/lib/apollo/cache-storage";
 import { createApolloClient } from "@/lib/apollo/client";
 import { resolveGuardRedirect } from "@/lib/auth/route-guard";
 import { getSessionMember } from "@/lib/auth/session";
@@ -61,6 +62,28 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
 
     setGuardState({ key: guardKey, ready: true });
   }, [Component.auth, guardKey, requiresGuard, router]);
+
+  useEffect(() => {
+    const persistNow = () => {
+      persistApolloCache(client.cache);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        persistNow();
+      }
+    };
+
+    const intervalId = window.setInterval(persistNow, 10000);
+    window.addEventListener("pagehide", persistNow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("pagehide", persistNow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [client]);
 
   const isGuardReady = guardState.key === guardKey && guardState.ready;
   const showGuardLoading = requiresGuard && !isGuardReady;

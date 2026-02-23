@@ -1,3 +1,4 @@
+import { clearPersistedApolloCache } from "@/lib/apollo/cache-storage";
 import type { AuthMember, SessionMember } from "@/types/auth";
 
 const ACCESS_TOKEN_KEY = "meomul.access_token";
@@ -36,6 +37,7 @@ export const saveAuthSession = (authMember: AuthMember): void => {
     return;
   }
 
+  clearPersistedApolloCache();
   const { accessToken, ...member } = authMember;
   window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   window.localStorage.setItem(MEMBER_KEY, JSON.stringify(member));
@@ -46,6 +48,7 @@ export const clearAuthSession = (): void => {
     return;
   }
 
+  clearPersistedApolloCache();
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(MEMBER_KEY);
 };

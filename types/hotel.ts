@@ -45,6 +45,16 @@ export interface HotelListItem {
   hotelImages: string[];
 }
 
+export interface HotelDetailItem extends HotelListItem {
+  hotelDesc: string;
+  starRating: number;
+  checkInTime: string;
+  checkOutTime: string;
+  suitableFor: string[];
+  petsAllowed: boolean;
+  smokingAllowed: boolean;
+}
+
 export interface HotelsDto {
   list: HotelListItem[];
   metaCounter: MetaCounterDto;
@@ -84,7 +94,7 @@ export interface GetRoomsByHotelQueryVars {
 }
 
 export interface GetHotelQueryData {
-  getHotel: HotelListItem;
+  getHotel: HotelDetailItem;
 }
 
 export interface GetHotelQueryVars {
@@ -120,4 +130,74 @@ export interface DashboardStatsDto {
 
 export interface GetDashboardStatsQueryData {
   getDashboardStats: DashboardStatsDto;
+}
+
+export type ReviewStatus = "PENDING" | "APPROVED" | "FLAGGED" | "REMOVED";
+
+export interface HotelResponseDto {
+  responseText: string;
+  respondedBy: string;
+  respondedAt: string;
+}
+
+export interface ReviewDto {
+  _id: string;
+  reviewerId: string;
+  bookingId: string;
+  hotelId: string;
+  overallRating: number;
+  cleanlinessRating: number;
+  locationRating: number;
+  serviceRating: number;
+  amenitiesRating: number;
+  valueRating: number;
+  reviewTitle?: string | null;
+  reviewText: string;
+  guestPhotos: string[];
+  helpfulCount: number;
+  reviewStatus: ReviewStatus;
+  verifiedStay: boolean;
+  stayDate: string;
+  createdAt: string;
+  hotelResponse?: HotelResponseDto | null;
+}
+
+export interface ReviewsDto {
+  list: ReviewDto[];
+  metaCounter: MetaCounterDto;
+}
+
+export interface GetHotelReviewsQueryData {
+  getHotelReviews: ReviewsDto;
+}
+
+export interface GetHotelReviewsQueryVars {
+  hotelId: string;
+  input: PaginationInput;
+}
+
+export interface GetSimilarHotelsQueryData {
+  getSimilarHotels: HotelListItem[];
+}
+
+export interface GetSimilarHotelsQueryVars {
+  hotelId: string;
+  limit?: number;
+}
+
+export interface GetTrendingByLocationQueryData {
+  getTrendingByLocation: HotelListItem[];
+}
+
+export interface GetTrendingByLocationQueryVars {
+  location: HotelLocation;
+  limit?: number;
+}
+
+export interface GetRecommendedHotelsQueryData {
+  getRecommendedHotels: HotelListItem[];
+}
+
+export interface GetRecommendedHotelsQueryVars {
+  limit?: number;
 }
