@@ -1,12 +1,16 @@
 import { useQuery } from "@apollo/client/react";
 import type { GetServerSideProps } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HotelCard } from "@/components/hotels/hotel-card";
-import { RoomCard } from "@/components/hotels/room-card";
 import { createApolloClient } from "@/lib/apollo/client";
+import { HotelFeaturesSection } from "@/components/hotels/detail/hotel-features-section";
+import { HotelGallerySection } from "@/components/hotels/detail/hotel-gallery-section";
+import { HotelListSection } from "@/components/hotels/detail/hotel-list-section";
+import { HotelLocationSection } from "@/components/hotels/detail/hotel-location-section";
+import { HotelOverviewHero } from "@/components/hotels/detail/hotel-overview-hero";
+import { HotelReviewsSection } from "@/components/hotels/detail/hotel-reviews-section";
+import { HotelRoomsSection } from "@/components/hotels/detail/hotel-rooms-section";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   GET_HOTEL_QUERY,
@@ -53,8 +57,6 @@ const amenityLabels: Record<keyof HotelDetailItem["amenities"], string> = {
   kidsFriendly: "Kids Friendly",
   wheelchairAccessible: "Wheelchair Accessible",
 };
-
-const formatDate = (value: string): string => new Date(value).toLocaleDateString();
 
 const asPercent = (rating: number): string => `${Math.round((rating / 5) * 100)}%`;
 
@@ -394,6 +396,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     () => (reviewTotal > 0 ? reviewTotal.toLocaleString() : reviewsLoading ? "..." : "0"),
     [reviewTotal, reviewsLoading],
   );
+  const satisfactionText = useMemo(() => (hotel ? asPercent(hotel.hotelRating) : "0%"), [hotel]);
   const minCheckOutDate = useMemo(() => (checkInDate ? addDays(checkInDate, 1) : addDays(todayDate, 1)), [checkInDate, todayDate]);
   const bookingValidationMessage = useMemo(() => {
     if (!selectedRoom) {
@@ -461,375 +464,85 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
       ) : null}
 
       {hotel ? (
-        <section id="overview" className="relative overflow-hidden rounded-3xl border border-slate-200">
-          {heroImage ? (
-            <Image src={heroImage} alt={hotel.hotelTitle} fill priority sizes="100vw" className="absolute inset-0 h-full w-full object-cover" />
-          ) : null}
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-slate-900/70 to-cyan-900/50" />
-          <div className="relative p-6 text-slate-100 sm:p-8 lg:p-12">
-            <div className="grid gap-6 lg:min-h-[37rem] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-              <div className="flex flex-col justify-between gap-7">
-                <div className="space-y-5">
-                  <p className="inline-flex rounded-full border border-white/35 bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
-                    {hotel.hotelLocation} · {hotel.hotelType}
-                  </p>
-                  <h1 className="max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl lg:text-6xl">{hotel.hotelTitle}</h1>
-                  <p className="max-w-2xl text-base leading-7 text-slate-100/90">{shortDescription}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{hotel.starRating} star</span>
-                    <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{getPolicyText(hotel.cancellationPolicy)}</span>
-                    <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{hotel.hotelLikes.toLocaleString()} likes</span>
-                    {hotel.suitableFor.slice(0, 2).map((tag) => (
-                      <span key={tag} className="rounded-full border border-white/35 bg-white/10 px-3 py-1 text-sm">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <article className="rounded-2xl border border-white/35 bg-white/20 px-4 py-4 backdrop-blur-sm">
-                    <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Guest rating</p>
-                    <p className="mt-2 text-4xl font-semibold leading-none">{hotel.hotelRating.toFixed(1)}</p>
-                    <p className="mt-2 text-xs text-slate-200">out of 5.0</p>
-                  </article>
-                  <article className="rounded-2xl border border-white/35 bg-white/20 px-4 py-4 backdrop-blur-sm">
-                    <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Reviews</p>
-                    <p className="mt-2 text-4xl font-semibold leading-none">{reviewCountText}</p>
-                    <p className="mt-2 text-xs text-slate-200">verified stays</p>
-                  </article>
-                  <article className="rounded-2xl border border-white/35 bg-white/20 px-4 py-4 backdrop-blur-sm">
-                    <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Satisfaction</p>
-                    <p className="mt-2 text-4xl font-semibold leading-none">{asPercent(hotel.hotelRating)}</p>
-                    <p className="mt-2 text-xs text-slate-200">average score</p>
-                  </article>
-                </div>
-              </div>
-
-              <aside className="flex flex-col gap-4 rounded-3xl border border-white/35 bg-white/15 p-4 backdrop-blur-sm transition duration-500 hover:-translate-y-0.5 lg:p-5">
-                {secondaryImage ? (
-                  <Image
-                    src={secondaryImage}
-                    alt={`${hotel.hotelTitle} preview`}
-                    width={1200}
-                    height={800}
-                    sizes="(min-width: 1024px) 34vw, 100vw"
-                    className="h-60 w-full rounded-2xl object-cover lg:h-72"
-                  />
-                ) : null}
-                <div className="grid gap-2 text-sm">
-                  <p className="rounded-lg bg-white/15 px-3 py-2">Check-in: {hotel.checkInTime}</p>
-                  <p className="rounded-lg bg-white/15 px-3 py-2">Check-out: {hotel.checkOutTime}</p>
-                  <p className="rounded-lg bg-white/15 px-3 py-2">
-                    {hotel.petsAllowed ? "Pets allowed" : "No pets"} · {hotel.smokingAllowed ? "Smoking allowed" : "Non-smoking"}
-                  </p>
-                </div>
-                <a
-                  href="#reviews"
-                  className="inline-flex w-full justify-center rounded-xl border border-white/50 bg-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/30"
-                >
-                  Jump to guest reviews
-                </a>
-              </aside>
-            </div>
-          </div>
-        </section>
+        <HotelOverviewHero
+          hotel={hotel}
+          heroImage={heroImage}
+          secondaryImage={secondaryImage}
+          shortDescription={shortDescription}
+          reviewCountText={reviewCountText}
+          satisfactionText={satisfactionText}
+          cancellationPolicyText={getPolicyText(hotel.cancellationPolicy)}
+        />
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
         <div className="space-y-8">
-          <section id="gallery" className="space-y-4">
-            <header>
-              <h2 className="text-2xl font-semibold text-slate-900">Gallery</h2>
-              <p className="text-sm text-slate-600">A quick visual tour of this property.</p>
-            </header>
+          <HotelGallerySection images={galleryImages} />
 
-            {galleryImages.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {galleryImages.map((image, index) => (
-                  <div
-                    key={`${image}-${index}`}
-                    className={`group overflow-hidden rounded-2xl border border-slate-200 bg-white ${
-                      index % 5 === 0 ? "sm:col-span-2" : ""
-                    }`}
-                  >
-                    <Image
-                      src={image}
-                      alt={`Hotel gallery ${index + 1}`}
-                      width={1200}
-                      height={800}
-                      sizes="(min-width: 1024px) 24vw, (min-width: 640px) 48vw, 100vw"
-                      className="h-56 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-                No gallery images available yet.
-              </section>
-            )}
-          </section>
+          <HotelFeaturesSection
+            fromPrice={fromPrice}
+            cancellationPolicyText={getPolicyText(hotel.cancellationPolicy)}
+            address={hotel.detailedLocation.address}
+            nearestSubway={hotel.detailedLocation.nearestSubway}
+            activeAmenities={activeAmenities}
+          />
 
-          <section id="features" className="space-y-4">
-            <header>
-              <h2 className="text-2xl font-semibold text-slate-900">Features</h2>
-              <p className="text-sm text-slate-600">Amenities and policies designed for comfort.</p>
-            </header>
+          <HotelRoomsSection
+            rooms={rooms}
+            roomsLoading={roomsLoading}
+            roomsErrorMessage={roomsError ? getErrorMessage(roomsError) : null}
+            hotelId={hotelId}
+          />
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <article className="rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">From</p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
-                  ₩ {fromPrice > 0 ? fromPrice.toLocaleString() : "-"}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">per room/night</p>
-              </article>
-              <article className="rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Cancellation</p>
-                <p className="mt-1 text-base font-semibold text-slate-900">{getPolicyText(hotel?.cancellationPolicy ?? "MODERATE")}</p>
-              </article>
-              <article className="rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Address</p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{hotel?.detailedLocation.address ?? "-"}</p>
-              </article>
-              <article className="rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Nearby Subway</p>
-                <p className="mt-1 text-sm font-medium text-slate-900">{hotel?.detailedLocation.nearestSubway || "Not specified"}</p>
-              </article>
-            </div>
+          <HotelReviewsSection
+            reviews={reviews}
+            reviewsLoading={reviewsLoading}
+            reviewsErrorMessage={reviewsError ? getErrorMessage(reviewsError) : null}
+            reviewPage={reviewPage}
+            reviewTotalPages={reviewTotalPages}
+            reviewTotal={reviewTotal}
+            onPrevPage={() => setReviewPage((prev) => Math.max(1, prev - 1))}
+            onNextPage={() => setReviewPage((prev) => Math.min(reviewTotalPages, prev + 1))}
+            canGoPrev={reviewPage > 1}
+            canGoNext={reviewPage < reviewTotalPages}
+          />
 
-            {activeAmenities.length > 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <p className="text-sm font-semibold text-slate-900">Top amenities</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {activeAmenities.map((amenity) => (
-                    <span key={amenity} className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                      {amenity}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </section>
-
-          <section id="rooms" className="space-y-4">
-            <header>
-              <h2 className="text-2xl font-semibold text-slate-900">Rooms</h2>
-              <p className="text-sm text-slate-600">Available options and pricing for this property.</p>
-            </header>
-
-            {roomsError ? <ErrorNotice message={getErrorMessage(roomsError)} /> : null}
-
-            {roomsLoading && rooms.length === 0 ? (
-              <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading rooms...</section>
-            ) : null}
-
-            {!roomsLoading && rooms.length === 0 ? (
-              <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-                No rooms found for this hotel.
-              </section>
-            ) : null}
-
-            {rooms.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {rooms.map((room) => (
-                  <RoomCard key={room._id} room={room} hotelId={hotelId} />
-                ))}
-              </div>
-            ) : null}
-          </section>
-
-          <section id="reviews" className="space-y-4">
-            <header>
-              <h2 className="text-2xl font-semibold text-slate-900">Reviews</h2>
-              <p className="text-sm text-slate-600">Verified and recent guest feedback for this hotel.</p>
-            </header>
-
-            {reviewsError ? <ErrorNotice message={getErrorMessage(reviewsError)} /> : null}
-
-            {reviewsLoading && reviews.length === 0 ? (
-              <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading reviews...</section>
-            ) : null}
-
-            {!reviewsLoading && reviews.length === 0 ? (
-              <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-                No reviews yet for this hotel.
-              </section>
-            ) : null}
-
-            {reviews.length > 0 ? (
-              <>
-                <div className="space-y-3">
-                  {reviews.map((review) => (
-                    <article key={review._id} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{review.reviewTitle || "Guest review"}</p>
-                          <p className="text-xs text-slate-500">{formatDate(review.createdAt)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-slate-900">{review.overallRating.toFixed(1)} / 5</p>
-                          <p className="text-xs text-slate-500">Verified stay: {review.verifiedStay ? "Yes" : "No"}</p>
-                        </div>
-                      </div>
-
-                      <p className="text-sm leading-6 text-slate-700">{review.reviewText}</p>
-
-                      <div className="grid gap-2 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-3">
-                        <p>Cleanliness: {asPercent(review.cleanlinessRating)}</p>
-                        <p>Location: {asPercent(review.locationRating)}</p>
-                        <p>Service: {asPercent(review.serviceRating)}</p>
-                        <p>Amenities: {asPercent(review.amenitiesRating)}</p>
-                        <p>Value: {asPercent(review.valueRating)}</p>
-                        <p>Helpful: {review.helpfulCount.toLocaleString()}</p>
-                      </div>
-
-                      {review.hotelResponse ? (
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                          <p className="font-medium text-slate-900">Hotel response</p>
-                          <p className="mt-1">{review.hotelResponse.responseText}</p>
-                          <p className="mt-1 text-xs text-slate-500">{formatDate(review.hotelResponse.respondedAt)}</p>
-                        </div>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-
-                <footer className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
-                  <p className="text-slate-600">
-                    Page {reviewPage} / {reviewTotalPages} · Total reviews: {reviewTotal.toLocaleString()}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setReviewPage((prev) => Math.max(1, prev - 1))}
-                      disabled={reviewPage <= 1}
-                      className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setReviewPage((prev) => Math.min(reviewTotalPages, prev + 1))}
-                      disabled={reviewPage >= reviewTotalPages}
-                      className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </footer>
-              </>
-            ) : null}
-          </section>
-
-          <section id="location" ref={locationSectionRef} className="space-y-4">
-            <header>
-              <h2 className="text-2xl font-semibold text-slate-900">Location</h2>
-              <p className="text-sm text-slate-600">Where you will stay and nearby transit context.</p>
-            </header>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
-                <p>
-                  <span className="font-semibold text-slate-900">Address:</span> {hotel.detailedLocation.address}
-                </p>
-                <p>
-                  <span className="font-semibold text-slate-900">District:</span> {hotel.detailedLocation.district || "-"}
-                </p>
-                <p>
-                  <span className="font-semibold text-slate-900">Nearest subway:</span> {hotel.detailedLocation.nearestSubway || "-"}
-                </p>
-                <p>
-                  <span className="font-semibold text-slate-900">Walking distance:</span>{" "}
-                  {hotel.detailedLocation.walkingDistance != null ? `${hotel.detailedLocation.walkingDistance} min` : "-"}
-                </p>
-              </div>
-              <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-                {shouldLoadMap ? (
-                  <iframe
-                    title={`${hotel.hotelTitle} map`}
-                    src={getMapEmbedLink(hotel)}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    className="h-72 w-full"
-                    allowFullScreen
-                  />
-                ) : (
-                  <div className="flex h-72 items-center justify-center bg-slate-100 text-sm text-slate-600">Map loading...</div>
-                )}
-              </div>
-              <a
-                href={getMapLink(hotel)}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-4 inline-flex rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
-              >
-                Open on map
-              </a>
-            </div>
-          </section>
+          <HotelLocationSection
+            hotel={hotel}
+            mapSectionRef={locationSectionRef}
+            shouldLoadMap={shouldLoadMap}
+            mapEmbedUrl={getMapEmbedLink(hotel)}
+            mapUrl={getMapLink(hotel)}
+          />
 
           <section ref={discoverySectionRef} className="space-y-6">
-            <div className="space-y-4">
-              <header>
-                <h2 className="text-2xl font-semibold text-slate-900">Similar Hotels</h2>
-                <p className="text-sm text-slate-600">Properties with matching location, type, and demand profile.</p>
-              </header>
+            <HotelListSection
+              title="Similar Hotels"
+              description="Properties with matching location, type, and demand profile."
+              hotels={similarHotels}
+              loading={similarLoading}
+              loadingText="Loading similar hotels..."
+              errorMessage={similarError ? getErrorMessage(similarError) : null}
+            />
 
-              {similarError ? <ErrorNotice message={getErrorMessage(similarError)} /> : null}
-              {similarLoading && similarHotels.length === 0 ? (
-                <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading similar hotels...</section>
-              ) : null}
-              {similarHotels.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {similarHotels.map((entry) => (
-                    <HotelCard key={entry._id} hotel={entry} />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="space-y-4">
-              <header>
-                <h2 className="text-2xl font-semibold text-slate-900">Trending in {hotel.hotelLocation}</h2>
-                <p className="text-sm text-slate-600">Most active hotels in this location right now.</p>
-              </header>
-
-              {trendingError ? <ErrorNotice message={getErrorMessage(trendingError)} /> : null}
-              {trendingLoading && trendingHotels.length === 0 ? (
-                <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading location trends...</section>
-              ) : null}
-              {trendingHotels.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {trendingHotels.map((entry) => (
-                    <HotelCard key={entry._id} hotel={entry} />
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            <HotelListSection
+              title={`Trending in ${hotel.hotelLocation}`}
+              description="Most active hotels in this location right now."
+              hotels={trendingHotels}
+              loading={trendingLoading}
+              loadingText="Loading location trends..."
+              errorMessage={trendingError ? getErrorMessage(trendingError) : null}
+            />
 
             {canLoadRecommended ? (
-              <div className="space-y-4">
-                <header>
-                  <h2 className="text-2xl font-semibold text-slate-900">Recommended for You</h2>
-                  <p className="text-sm text-slate-600">Personalized suggestions based on your activity.</p>
-                </header>
-
-                {recommendedError ? <ErrorNotice message={getErrorMessage(recommendedError)} /> : null}
-                {recommendedLoading && recommendedHotels.length === 0 ? (
-                  <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-                    Loading personalized recommendations...
-                  </section>
-                ) : null}
-                {recommendedHotels.length > 0 ? (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {recommendedHotels.map((entry) => (
-                      <HotelCard key={entry._id} hotel={entry} />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+              <HotelListSection
+                title="Recommended for You"
+                description="Personalized suggestions based on your activity."
+                hotels={recommendedHotels}
+                loading={recommendedLoading}
+                loadingText="Loading personalized recommendations..."
+                errorMessage={recommendedError ? getErrorMessage(recommendedError) : null}
+              />
             ) : null}
           </section>
         </div>
