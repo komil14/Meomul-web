@@ -1,9 +1,12 @@
 import { useQuery } from "@apollo/client/react";
+import type { GetServerSideProps } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { RoomCard } from "@/components/hotels/room-card";
+import { createApolloClient } from "@/lib/apollo/client";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   GET_HOTEL_QUERY,
@@ -31,6 +34,7 @@ import type {
   HotelDetailItem,
   HotelListItem,
   HotelLocation,
+  RoomListItem,
 } from "@/types/hotel";
 
 const ROOM_PAGE_SIZE = 12;
@@ -53,6 +57,19 @@ const amenityLabels: Record<keyof HotelDetailItem["amenities"], string> = {
 const formatDate = (value: string): string => new Date(value).toLocaleDateString();
 
 const asPercent = (rating: number): string => `${Math.round((rating / 5) * 100)}%`;
+
+const formatDateInput = (value: Date): string => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const addDays = (dateInput: string, days: number): string => {
+  const base = new Date(`${dateInput}T00:00:00`);
+  base.setDate(base.getDate() + days);
+  return formatDateInput(base);
+};
 
 const shortenText = (text: string, maxLength: number): string => {
   if (text.length <= maxLength) {
@@ -131,15 +148,25 @@ const buildBookingHref = (
   };
 };
 
-export default function HotelDetailPage() {
+interface HotelDetailPageProps {
+  initialHotel: HotelDetailItem | null;
+  initialRooms: RoomListItem[];
+}
+
+export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDetailPageProps) {
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
+  const discoverySectionRef = useRef<HTMLElement | null>(null);
+  const locationSectionRef = useRef<HTMLElement | null>(null);
 
   const [reviewPage, setReviewPage] = useState(1);
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [adultCount, setAdultCount] = useState(2);
+  const [shouldLoadDiscovery, setShouldLoadDiscovery] = useState(false);
+  const [shouldLoadMap, setShouldLoadMap] = useState(false);
+  const todayDate = useMemo(() => formatDateInput(new Date()), []);
 
   const hotelId = useMemo(() => {
     if (typeof router.query.hotelId === "string") {
@@ -156,10 +183,11 @@ export default function HotelDetailPage() {
   } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
     skip: !hotelId,
     variables: { hotelId },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: initialHotel ? "cache-first" : "cache-and-network",
+    nextFetchPolicy: "cache-first",
   });
 
-  const hotel = hotelData?.getHotel;
+  const hotel = hotelData?.getHotel ?? initialHotel;
   const trendingLocation = hotel?.hotelLocation;
 
   const {
@@ -177,7 +205,8 @@ export default function HotelDetailPage() {
         direction: -1,
       },
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: initialRooms.length > 0 ? "cache-first" : "cache-and-network",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -196,6 +225,7 @@ export default function HotelDetailPage() {
       },
     },
     fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -203,12 +233,13 @@ export default function HotelDetailPage() {
     loading: similarLoading,
     error: similarError,
   } = useQuery<GetSimilarHotelsQueryData, GetSimilarHotelsQueryVars>(GET_SIMILAR_HOTELS_QUERY, {
-    skip: !hotelId,
+    skip: !hotelId || !shouldLoadDiscovery,
     variables: {
       hotelId,
       limit: CARD_LIST_LIMIT,
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -216,12 +247,13 @@ export default function HotelDetailPage() {
     loading: trendingLoading,
     error: trendingError,
   } = useQuery<GetTrendingByLocationQueryData, GetTrendingByLocationQueryVars>(GET_TRENDING_BY_LOCATION_QUERY, {
-    skip: !trendingLocation,
+    skip: !trendingLocation || !shouldLoadDiscovery,
     variables: {
       location: (trendingLocation ?? "SEOUL") as HotelLocation,
       limit: CARD_LIST_LIMIT,
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const canLoadRecommended = canUsePersonalizedRecommendations(member?.memberType);
@@ -230,50 +262,158 @@ export default function HotelDetailPage() {
     loading: recommendedLoading,
     error: recommendedError,
   } = useQuery<GetRecommendedHotelsQueryData, GetRecommendedHotelsQueryVars>(GET_RECOMMENDED_HOTELS_QUERY, {
-    skip: !canLoadRecommended,
+    skip: !canLoadRecommended || !shouldLoadDiscovery,
     variables: {
       limit: CARD_LIST_LIMIT,
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
-  const rooms = useMemo(() => roomsData?.getRoomsByHotel.list ?? [], [roomsData?.getRoomsByHotel.list]);
+  const rooms = useMemo(() => roomsData?.getRoomsByHotel?.list ?? initialRooms, [initialRooms, roomsData?.getRoomsByHotel?.list]);
   const reviews = reviewsData?.getHotelReviews.list ?? [];
   const reviewTotal = reviewsData?.getHotelReviews.metaCounter.total ?? 0;
   const reviewTotalPages = Math.max(1, Math.ceil(reviewTotal / REVIEW_PAGE_SIZE));
+
+  useEffect(() => {
+    if (shouldLoadDiscovery) {
+      return;
+    }
+
+    const fallbackTimer = window.setTimeout(() => {
+      setShouldLoadDiscovery(true);
+    }, 1500);
+
+    return () => window.clearTimeout(fallbackTimer);
+  }, [shouldLoadDiscovery]);
+
+  useEffect(() => {
+    if (shouldLoadDiscovery) {
+      return;
+    }
+
+    const target = discoverySectionRef.current;
+    if (!target || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoadDiscovery(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "400px 0px" },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [shouldLoadDiscovery]);
+
+  useEffect(() => {
+    if (shouldLoadMap) {
+      return;
+    }
+
+    const target = locationSectionRef.current;
+    if (!target || typeof IntersectionObserver === "undefined") {
+      setShouldLoadMap(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoadMap(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px 0px" },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [shouldLoadMap]);
 
   useEffect(() => {
     if (rooms.length === 0) {
       return;
     }
 
-    if (!selectedRoomId || !rooms.some((room) => room._id === selectedRoomId)) {
-      setSelectedRoomId(rooms[0]._id);
+    const firstRoomId = rooms[0]?._id;
+    if (firstRoomId && (!selectedRoomId || !rooms.some((room) => room._id === selectedRoomId))) {
+      setSelectedRoomId(firstRoomId);
     }
   }, [rooms, selectedRoomId]);
 
-  const selectedRoom = rooms.find((room) => room._id === selectedRoomId) ?? null;
-  const fromPrice = rooms.length > 0 ? Math.min(...rooms.map((room) => room.basePrice)) : 0;
+  const selectedRoom = useMemo(() => rooms.find((room) => room._id === selectedRoomId) ?? null, [rooms, selectedRoomId]);
+  const fromPrice = useMemo(() => {
+    const prices = rooms.map((room) => room.basePrice).filter((price): price is number => typeof price === "number");
+    return prices.length > 0 ? Math.min(...prices) : 0;
+  }, [rooms]);
 
-  const similarHotels = uniqueHotels(similarData?.getSimilarHotels ?? [], hotelId);
-  const trendingHotels = uniqueHotels(trendingData?.getTrendingByLocation ?? [], hotelId);
-  const recommendedHotels = uniqueHotels(recommendedData?.getRecommendedHotels ?? [], hotelId);
+  const similarHotels = useMemo(
+    () => (shouldLoadDiscovery ? uniqueHotels(similarData?.getSimilarHotels ?? [], hotelId) : []),
+    [hotelId, shouldLoadDiscovery, similarData?.getSimilarHotels],
+  );
+  const trendingHotels = useMemo(
+    () => (shouldLoadDiscovery ? uniqueHotels(trendingData?.getTrendingByLocation ?? [], hotelId) : []),
+    [hotelId, shouldLoadDiscovery, trendingData?.getTrendingByLocation],
+  );
+  const recommendedHotels = useMemo(
+    () => (shouldLoadDiscovery ? uniqueHotels(recommendedData?.getRecommendedHotels ?? [], hotelId) : []),
+    [hotelId, recommendedData?.getRecommendedHotels, shouldLoadDiscovery],
+  );
 
-  const heroImage = hotel?.hotelImages[0] ?? rooms[0]?.roomImages[0] ?? "";
-  const secondaryImage = hotel?.hotelImages[1] ?? heroImage;
-  const galleryImages = hotel
-    ? hotel.hotelImages.length > 2
-      ? hotel.hotelImages.slice(2)
-      : hotel.hotelImages
-    : [];
+  const heroImage = useMemo(() => hotel?.hotelImages[0] ?? rooms[0]?.roomImages[0] ?? "", [hotel?.hotelImages, rooms]);
+  const secondaryImage = useMemo(() => hotel?.hotelImages[1] ?? heroImage, [heroImage, hotel?.hotelImages]);
+  const galleryImages = useMemo(() => {
+    if (!hotel) {
+      return [];
+    }
+    if (hotel.hotelImages.length > 2) {
+      return hotel.hotelImages.slice(2);
+    }
+    return hotel.hotelImages;
+  }, [hotel]);
 
-  const activeAmenities = hotel
-    ? Object.entries(hotel.amenities)
-        .filter(([, enabled]) => enabled)
-        .map(([key]) => amenityLabels[key as keyof HotelDetailItem["amenities"]])
-    : [];
-  const shortDescription = hotel ? shortenText(hotel.hotelDesc || "No hotel description provided yet.", 190) : "";
-  const reviewCountText = reviewTotal > 0 ? reviewTotal.toLocaleString() : reviewsLoading ? "..." : "0";
+  const activeAmenities = useMemo(() => {
+    if (!hotel) {
+      return [];
+    }
+    return Object.entries(hotel.amenities)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => amenityLabels[key as keyof HotelDetailItem["amenities"]]);
+  }, [hotel]);
+  const shortDescription = useMemo(
+    () => (hotel ? shortenText(hotel.hotelDesc || "No hotel description provided yet.", 190) : ""),
+    [hotel],
+  );
+  const reviewCountText = useMemo(
+    () => (reviewTotal > 0 ? reviewTotal.toLocaleString() : reviewsLoading ? "..." : "0"),
+    [reviewTotal, reviewsLoading],
+  );
+  const minCheckOutDate = useMemo(() => (checkInDate ? addDays(checkInDate, 1) : addDays(todayDate, 1)), [checkInDate, todayDate]);
+  const bookingValidationMessage = useMemo(() => {
+    if (!selectedRoom) {
+      return "Select a room first.";
+    }
+    if (selectedRoom.availableRooms <= 0) {
+      return "Selected room is sold out.";
+    }
+    if (!checkInDate || !checkOutDate) {
+      return "Choose check-in and check-out dates.";
+    }
+    if (checkOutDate <= checkInDate) {
+      return "Check-out must be after check-in.";
+    }
+    if (adultCount < 1) {
+      return "Adult count must be at least 1.";
+    }
+    return null;
+  }, [adultCount, checkInDate, checkOutDate, selectedRoom]);
+  const canContinueBooking = bookingValidationMessage === null && Boolean(selectedRoom);
 
   if (!hotelId) {
     return (
@@ -323,7 +463,7 @@ export default function HotelDetailPage() {
       {hotel ? (
         <section id="overview" className="relative overflow-hidden rounded-3xl border border-slate-200">
           {heroImage ? (
-            <img src={heroImage} alt={hotel.hotelTitle} className="absolute inset-0 h-full w-full object-cover" />
+            <Image src={heroImage} alt={hotel.hotelTitle} fill priority sizes="100vw" className="absolute inset-0 h-full w-full object-cover" />
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-slate-900/70 to-cyan-900/50" />
           <div className="relative p-6 text-slate-100 sm:p-8 lg:p-12">
@@ -368,7 +508,14 @@ export default function HotelDetailPage() {
 
               <aside className="flex flex-col gap-4 rounded-3xl border border-white/35 bg-white/15 p-4 backdrop-blur-sm transition duration-500 hover:-translate-y-0.5 lg:p-5">
                 {secondaryImage ? (
-                  <img src={secondaryImage} alt={`${hotel.hotelTitle} preview`} className="h-60 w-full rounded-2xl object-cover lg:h-72" />
+                  <Image
+                    src={secondaryImage}
+                    alt={`${hotel.hotelTitle} preview`}
+                    width={1200}
+                    height={800}
+                    sizes="(min-width: 1024px) 34vw, 100vw"
+                    className="h-60 w-full rounded-2xl object-cover lg:h-72"
+                  />
                 ) : null}
                 <div className="grid gap-2 text-sm">
                   <p className="rounded-lg bg-white/15 px-3 py-2">Check-in: {hotel.checkInTime}</p>
@@ -406,9 +553,12 @@ export default function HotelDetailPage() {
                       index % 5 === 0 ? "sm:col-span-2" : ""
                     }`}
                   >
-                    <img
+                    <Image
                       src={image}
                       alt={`Hotel gallery ${index + 1}`}
+                      width={1200}
+                      height={800}
+                      sizes="(min-width: 1024px) 24vw, (min-width: 640px) 48vw, 100vw"
                       className="h-56 w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                     />
                   </div>
@@ -573,7 +723,7 @@ export default function HotelDetailPage() {
             ) : null}
           </section>
 
-          <section id="location" className="space-y-4">
+          <section id="location" ref={locationSectionRef} className="space-y-4">
             <header>
               <h2 className="text-2xl font-semibold text-slate-900">Location</h2>
               <p className="text-sm text-slate-600">Where you will stay and nearby transit context.</p>
@@ -596,14 +746,18 @@ export default function HotelDetailPage() {
                 </p>
               </div>
               <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
-                <iframe
-                  title={`${hotel.hotelTitle} map`}
-                  src={getMapEmbedLink(hotel)}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  className="h-72 w-full"
-                  allowFullScreen
-                />
+                {shouldLoadMap ? (
+                  <iframe
+                    title={`${hotel.hotelTitle} map`}
+                    src={getMapEmbedLink(hotel)}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="h-72 w-full"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="flex h-72 items-center justify-center bg-slate-100 text-sm text-slate-600">Map loading...</div>
+                )}
               </div>
               <a
                 href={getMapLink(hotel)}
@@ -616,7 +770,7 @@ export default function HotelDetailPage() {
             </div>
           </section>
 
-          <section className="space-y-6">
+          <section ref={discoverySectionRef} className="space-y-6">
             <div className="space-y-4">
               <header>
                 <h2 className="text-2xl font-semibold text-slate-900">Similar Hotels</h2>
@@ -710,7 +864,14 @@ export default function HotelDetailPage() {
                   <input
                     type="date"
                     value={checkInDate}
-                    onChange={(event) => setCheckInDate(event.target.value)}
+                    min={todayDate}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      setCheckInDate(nextValue);
+                      if (checkOutDate && checkOutDate <= nextValue) {
+                        setCheckOutDate("");
+                      }
+                    }}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
                   />
                 </label>
@@ -719,6 +880,7 @@ export default function HotelDetailPage() {
                   <input
                     type="date"
                     value={checkOutDate}
+                    min={minCheckOutDate}
                     onChange={(event) => setCheckOutDate(event.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
                   />
@@ -747,7 +909,11 @@ export default function HotelDetailPage() {
               </div>
             ) : null}
 
-            {selectedRoom ? (
+            {bookingValidationMessage ? (
+              <p className="mt-3 text-xs font-medium text-amber-700">{bookingValidationMessage}</p>
+            ) : null}
+
+            {canContinueBooking && selectedRoom ? (
               <Link
                 href={buildBookingHref(hotelId, selectedRoom._id, checkInDate, checkOutDate, adultCount)}
                 className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
@@ -760,7 +926,7 @@ export default function HotelDetailPage() {
                 disabled
                 className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600"
               >
-                Select a room first
+                Complete booking details
               </button>
             )}
           </section>
@@ -769,3 +935,56 @@ export default function HotelDetailPage() {
     </main>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<HotelDetailPageProps> = async (context) => {
+  const rawHotelId = context.params?.hotelId;
+  const hotelId = Array.isArray(rawHotelId) ? rawHotelId[0] : rawHotelId;
+
+  if (!hotelId) {
+    return { notFound: true };
+  }
+
+  const client = createApolloClient();
+
+  try {
+    const [hotelResult, roomsResult] = await Promise.all([
+      client.query<GetHotelQueryData, GetHotelQueryVars>({
+        query: GET_HOTEL_QUERY,
+        variables: { hotelId },
+        fetchPolicy: "no-cache",
+      }),
+      client.query<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>({
+        query: GET_ROOMS_BY_HOTEL_QUERY,
+        variables: {
+          hotelId,
+          input: {
+            page: 1,
+            limit: ROOM_PAGE_SIZE,
+            sort: "createdAt",
+            direction: -1,
+          },
+        },
+        fetchPolicy: "no-cache",
+      }),
+    ]);
+
+    const serverHotel = hotelResult.data?.getHotel ?? null;
+    if (!serverHotel) {
+      return { notFound: true };
+    }
+
+    return {
+      props: {
+        initialHotel: serverHotel,
+        initialRooms: roomsResult.data?.getRoomsByHotel.list ?? [],
+      },
+    };
+  } catch {
+    return {
+      props: {
+        initialHotel: null,
+        initialRooms: [],
+      },
+    };
+  }
+};
