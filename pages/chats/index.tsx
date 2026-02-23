@@ -108,13 +108,21 @@ const ChatsPage: NextPageWithAuth = () => {
     [],
   );
 
-  const { data: agentHotelsData } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(GET_AGENT_HOTELS_QUERY, {
+  const {
+    data: agentHotelsData,
+    loading: agentHotelsLoading,
+    error: agentHotelsError,
+  } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(GET_AGENT_HOTELS_QUERY, {
     skip: !isAgent,
     variables: { input: hotelsInput },
     fetchPolicy: "cache-and-network",
   });
 
-  const { data: publicHotelsData } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
+  const {
+    data: publicHotelsData,
+    loading: publicHotelsLoading,
+    error: publicHotelsError,
+  } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
     skip: !(isStaff || isUser),
     variables: { input: hotelsInput },
     fetchPolicy: "cache-and-network",
@@ -128,7 +136,21 @@ const ChatsPage: NextPageWithAuth = () => {
     return publicHotelsData?.getHotels.list ?? [];
   }, [agentHotelsData?.getAgentHotels.list, isAgent, publicHotelsData?.getHotels.list]);
 
-  const selectedHotelId = hotelIdFromQuery || availableHotels[0]?._id || "";
+  const [manualStaffHotelId, setManualStaffHotelId] = useState("");
+  const [startHotelIdFromList, setStartHotelIdFromList] = useState("");
+  const [startManualHotelId, setStartManualHotelId] = useState("");
+
+  useEffect(() => {
+    if (!isStaff) {
+      return;
+    }
+    if (!hotelIdFromQuery) {
+      return;
+    }
+    setManualStaffHotelId(hotelIdFromQuery);
+  }, [hotelIdFromQuery, isStaff]);
+
+  const selectedHotelId = isStaff ? hotelIdFromQuery || manualStaffHotelId.trim() || availableHotels[0]?._id || "" : "";
 
   useEffect(() => {
     if (!router.isReady || !isStaff || hotelIdFromQuery || availableHotels.length === 0) {
@@ -147,19 +169,31 @@ const ChatsPage: NextPageWithAuth = () => {
     void router.replace({ pathname: "/chats", query }, undefined, { shallow: true });
   }, [availableHotels, hotelIdFromQuery, isStaff, page, router, statusFilter]);
 
-  const { data: myChatsData, loading: myChatsLoading, error: myChatsError } = useQuery<GetMyChatsQueryData, GetMyChatsQueryVars>(
-    GET_MY_CHATS_QUERY,
-    {
-      skip: !isUser,
-      variables: { input: listInput },
-      fetchPolicy: "cache-and-network",
-    },
-  );
+  useEffect(() => {
+    if (!isUser) {
+      return;
+    }
+    if (startHotelIdFromList || startManualHotelId || availableHotels.length === 0) {
+      return;
+    }
+    setStartHotelIdFromList(availableHotels[0]._id);
+  }, [availableHotels, isUser, startHotelIdFromList, startManualHotelId]);
 
-  const { data: hotelChatsData, loading: hotelChatsLoading, error: hotelChatsError } = useQuery<
-    GetHotelChatsQueryData,
-    GetHotelChatsQueryVars
-  >(GET_HOTEL_CHATS_QUERY, {
+  const {
+    data: myChatsData,
+    loading: myChatsLoading,
+    error: myChatsError,
+  } = useQuery<GetMyChatsQueryData, GetMyChatsQueryVars>(GET_MY_CHATS_QUERY, {
+    skip: !isUser,
+    variables: { input: listInput },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const {
+    data: hotelChatsData,
+    loading: hotelChatsLoading,
+    error: hotelChatsError,
+  } = useQuery<GetHotelChatsQueryData, GetHotelChatsQueryVars>(GET_HOTEL_CHATS_QUERY, {
     skip: !isStaff || !selectedHotelId,
     variables: {
       hotelId: selectedHotelId,
@@ -170,19 +204,8 @@ const ChatsPage: NextPageWithAuth = () => {
   });
 
   const [startChat, { loading: startingChat }] = useMutation<StartChatMutationData, StartChatMutationVars>(START_CHAT_MUTATION);
-  const [startHotelId, setStartHotelId] = useState("");
   const [startBookingId, setStartBookingId] = useState("");
   const [startMessage, setStartMessage] = useState("");
-
-  useEffect(() => {
-    if (!isUser) {
-      return;
-    }
-    if (startHotelId || availableHotels.length === 0) {
-      return;
-    }
-    setStartHotelId(availableHotels[0]._id);
-  }, [availableHotels, isUser, startHotelId]);
 
   const chats = isStaff ? (hotelChatsData?.getHotelChats.list ?? []) : (myChatsData?.getMyChats.list ?? []);
   const total = isStaff ? (hotelChatsData?.getHotelChats.metaCounter.total ?? 0) : (myChatsData?.getMyChats.metaCounter.total ?? 0);
@@ -190,6 +213,9 @@ const ChatsPage: NextPageWithAuth = () => {
 
   const loading = isStaff ? hotelChatsLoading : myChatsLoading;
   const error = isStaff ? hotelChatsError : myChatsError;
+
+  const hotelsLoading = isAgent ? agentHotelsLoading : publicHotelsLoading;
+  const hotelsError = isAgent ? agentHotelsError : publicHotelsError;
 
   const pushQuery = (next: { hotelId?: string; status?: ChatStatus | "ALL"; page?: number }) => {
     const query: Record<string, string> = {};
@@ -220,10 +246,10 @@ const ChatsPage: NextPageWithAuth = () => {
   const submitStartChat = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const hotelId = startHotelId.trim();
+    const hotelId = (startHotelIdFromList || startManualHotelId).trim();
     const initialMessage = startMessage.trim();
     if (!hotelId) {
-      toast.error("Hotel is required.");
+      toast.error("Hotel is required. Select one or enter hotelId manually.");
       return;
     }
     if (!initialMessage) {
@@ -242,14 +268,14 @@ const ChatsPage: NextPageWithAuth = () => {
         },
       });
 
-      const chatId = response.data?.startChat._id;
-      if (!chatId) {
+      const newChatId = response.data?.startChat._id;
+      if (!newChatId) {
         toast.error("Chat started but chat id was missing.");
         return;
       }
 
       toast.success("Chat started.");
-      void router.push(`/chats/${chatId}`);
+      void router.push(`/chats/${newChatId}`);
     } catch (mutationError) {
       toast.error(getErrorMessage(mutationError));
     }
@@ -274,20 +300,51 @@ const ChatsPage: NextPageWithAuth = () => {
               <span className="mb-2 block text-sm font-medium text-slate-700">Hotel</span>
               <select
                 value={selectedHotelId}
-                onChange={(event) => pushQuery({ hotelId: event.target.value, page: 1 })}
+                onChange={(event) => {
+                  setManualStaffHotelId(event.target.value);
+                  pushQuery({ hotelId: event.target.value, page: 1 });
+                }}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
                 disabled={availableHotels.length === 0}
               >
-                {availableHotels.length === 0 ? <option value="">No hotels available</option> : null}
+                {availableHotels.length === 0 ? <option value="">No hotels in list</option> : null}
                 {availableHotels.map((hotel) => (
                   <option key={hotel._id} value={hotel._id}>
                     {hotel.hotelTitle} ({hotel.hotelLocation})
                   </option>
                 ))}
               </select>
+              <p className="mt-2 text-xs text-slate-500">If list is empty, enter hotelId manually below.</p>
             </label>
+
             <div>
-              <p className="mb-2 block text-sm font-medium text-slate-700">Status</p>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Manual hotelId</span>
+                <div className="flex gap-2">
+                  <input
+                    value={manualStaffHotelId}
+                    onChange={(event) => setManualStaffHotelId(event.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                    placeholder="Paste hotel _id"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const manualId = manualStaffHotelId.trim();
+                      if (!manualId) {
+                        toast.error("Enter hotelId first.");
+                        return;
+                      }
+                      pushQuery({ hotelId: manualId, page: 1 });
+                    }}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </label>
+
+              <p className="mb-2 mt-4 block text-sm font-medium text-slate-700">Status</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -321,12 +378,11 @@ const ChatsPage: NextPageWithAuth = () => {
           <h2 className="text-lg font-semibold text-slate-900">Start New Chat</h2>
           <form onSubmit={submitStartChat} className="mt-3 grid gap-3 md:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Hotel</span>
+              <span className="mb-2 block text-sm font-medium text-slate-700">Hotel (from list)</span>
               <select
-                value={startHotelId}
-                onChange={(event) => setStartHotelId(event.target.value)}
+                value={startHotelIdFromList}
+                onChange={(event) => setStartHotelIdFromList(event.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                required
               >
                 <option value="">Select hotel</option>
                 {availableHotels.map((hotel) => (
@@ -335,6 +391,16 @@ const ChatsPage: NextPageWithAuth = () => {
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Manual hotelId (fallback)</span>
+              <input
+                value={startManualHotelId}
+                onChange={(event) => setStartManualHotelId(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                placeholder="Paste hotel _id if list empty"
+              />
             </label>
 
             <label className="block">
@@ -369,6 +435,15 @@ const ChatsPage: NextPageWithAuth = () => {
         </section>
       ) : null}
 
+      {hotelsLoading ? (
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">Loading hotel list...</section>
+      ) : null}
+      {hotelsError ? (
+        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          Hotel list error: {getErrorMessage(hotelsError)}
+        </section>
+      ) : null}
+
       {error ? (
         <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {getErrorMessage(error)}
@@ -380,9 +455,7 @@ const ChatsPage: NextPageWithAuth = () => {
       ) : null}
 
       {!loading && !error && chats.length === 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-          No chats found.
-        </section>
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">No chats found.</section>
       ) : null}
 
       {chats.length > 0 ? (
