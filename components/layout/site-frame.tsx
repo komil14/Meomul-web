@@ -4,9 +4,10 @@ import type { PropsWithChildren } from "react";
 
 const links = [
   { href: "/", label: "Home" },
+  { href: "/hotels", label: "Hotels" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/auth/login", label: "Login" },
   { href: "/auth/signup", label: "Signup" },
-  { href: "/dashboard", label: "Dashboard" },
 ] as const;
 
 const isActive = (pathname: string, href: string): boolean => {
