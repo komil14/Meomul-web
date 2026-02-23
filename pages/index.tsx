@@ -17,6 +17,12 @@ export default function HomePage() {
           Browse hotels
         </Link>
         <Link
+          href="/bookings/new"
+          className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-800 transition hover:border-slate-500"
+        >
+          Start booking
+        </Link>
+        <Link
           href="/dashboard"
           className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-800 transition hover:border-slate-500"
         >

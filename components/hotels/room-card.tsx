@@ -1,11 +1,15 @@
+import Link from "next/link";
 import type { RoomListItem } from "@/types/hotel";
 
 interface RoomCardProps {
   room: RoomListItem;
+  hotelId?: string;
 }
 
-export function RoomCard({ room }: RoomCardProps) {
+export function RoomCard({ room, hotelId }: RoomCardProps) {
   const coverImage = room.roomImages[0];
+  const displayPrice =
+    room.lastMinuteDeal && room.lastMinuteDeal.isActive ? room.lastMinuteDeal.dealPrice : room.basePrice;
 
   return (
     <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -25,9 +29,17 @@ export function RoomCard({ room }: RoomCardProps) {
           {room.roomType} · {room.roomStatus}
         </p>
         <div className="flex items-center justify-between text-sm text-slate-700">
-          <span>₩ {room.basePrice.toLocaleString()}</span>
+          <span>₩ {displayPrice.toLocaleString()}</span>
           <span>{room.availableRooms} left</span>
         </div>
+        {hotelId ? (
+          <Link
+            href={`/bookings/new?hotelId=${hotelId}&roomId=${room._id}`}
+            className="inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
+          >
+            Book this room
+          </Link>
+        ) : null}
       </div>
     </article>
   );

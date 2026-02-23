@@ -33,17 +33,49 @@ export const GET_HOTEL_QUERY = gql`
   }
 `;
 
+export const GET_ROOM_QUERY = gql`
+  query GetRoom($roomId: String!) {
+    getRoom(roomId: $roomId) {
+      _id
+      hotelId
+      roomName
+      roomType
+      roomStatus
+      basePrice
+      maxOccupancy
+      availableRooms
+      roomImages
+      lastMinuteDeal {
+        isActive
+        dealPrice
+        originalPrice
+        discountPercent
+        validUntil
+      }
+    }
+  }
+`;
+
 export const GET_ROOMS_BY_HOTEL_QUERY = gql`
   query GetRoomsByHotel($hotelId: String!, $input: PaginationInput!) {
     getRoomsByHotel(hotelId: $hotelId, input: $input) {
       list {
         _id
+        hotelId
         roomName
         roomType
         basePrice
+        maxOccupancy
         availableRooms
         roomImages
         roomStatus
+        lastMinuteDeal {
+          isActive
+          dealPrice
+          originalPrice
+          discountPercent
+          validUntil
+        }
       }
       metaCounter {
         total

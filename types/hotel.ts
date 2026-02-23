@@ -61,12 +61,21 @@ export interface GetHotelsQueryVars {
 
 export interface RoomListItem {
   _id: string;
+  hotelId: string;
   roomName: string;
   roomType: RoomType;
   basePrice: number;
   availableRooms: number;
   roomImages: string[];
   roomStatus: string;
+  maxOccupancy: number;
+  lastMinuteDeal?: {
+    isActive: boolean;
+    dealPrice: number;
+    originalPrice: number;
+    discountPercent: number;
+    validUntil: string;
+  } | null;
 }
 
 export interface RoomsDto {
@@ -89,6 +98,14 @@ export interface GetHotelQueryData {
 
 export interface GetHotelQueryVars {
   hotelId: string;
+}
+
+export interface GetRoomQueryData {
+  getRoom: RoomListItem;
+}
+
+export interface GetRoomQueryVars {
+  roomId: string;
 }
 
 export interface GetAgentHotelsQueryData {
