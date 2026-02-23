@@ -110,8 +110,7 @@ const NewBookingPage: NextPageWithAuth = () => {
   const quantity = parsePositiveInt(quantityInput);
 
   const nights = diffNights(checkInDate, checkOutDate);
-  const effectivePrice =
-    room?.lastMinuteDeal && room.lastMinuteDeal.isActive ? room.lastMinuteDeal.dealPrice : room?.basePrice ?? 0;
+  const effectivePrice = room?.basePrice ?? 0;
 
   const estimatedSubtotal = effectivePrice * (quantity ?? 0) * Math.max(0, nights);
 
@@ -139,11 +138,6 @@ const NewBookingPage: NextPageWithAuth = () => {
       return;
     }
 
-    if (room.hotelId !== hotelId) {
-      setFormError("Room does not belong to selected hotel.");
-      return;
-    }
-
     if (!guestCount || !quantity) {
       setFormError("Guest count and room quantity must be positive integers.");
       return;
@@ -161,11 +155,6 @@ const NewBookingPage: NextPageWithAuth = () => {
 
     if (room.availableRooms < quantity) {
       setFormError(`Only ${room.availableRooms} room(s) currently available.`);
-      return;
-    }
-
-    if (guestCount > room.maxOccupancy * quantity) {
-      setFormError(`Max occupancy exceeded. This booking supports up to ${room.maxOccupancy * quantity} guests.`);
       return;
     }
 
@@ -260,9 +249,7 @@ const NewBookingPage: NextPageWithAuth = () => {
           <article className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="text-lg font-semibold text-slate-900">Room</h2>
             <p className="mt-2 text-sm text-slate-700">{room.roomName}</p>
-            <p className="text-sm text-slate-600">
-              {room.roomType} · max {room.maxOccupancy} guest(s)
-            </p>
+            <p className="text-sm text-slate-600">{room.roomType}</p>
             <p className="mt-2 text-sm text-slate-700">Available: {room.availableRooms}</p>
             <p className="text-sm text-slate-700">Price per night: ₩ {effectivePrice.toLocaleString()}</p>
           </article>
