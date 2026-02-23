@@ -195,6 +195,11 @@ const MyBookingsPage: NextPageWithAuth = () => {
                   Created: <span className="font-semibold">{formatDate(booking.createdAt)}</span>
                 </p>
               </div>
+              <div className="mt-3">
+                <Link href={`/bookings/${booking._id}`} className="text-sm font-semibold text-slate-700 underline underline-offset-4">
+                  View details
+                </Link>
+              </div>
             </article>
           ))}
         </section>

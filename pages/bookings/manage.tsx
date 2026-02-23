@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useToast } from "@/components/ui/toast-provider";
 import {
+  CANCEL_BOOKING_BY_OPERATOR_MUTATION,
   GET_AGENT_BOOKINGS_QUERY,
   UPDATE_BOOKING_STATUS_MUTATION,
   UPDATE_PAYMENT_STATUS_MUTATION,
@@ -15,6 +16,8 @@ import { getErrorMessage } from "@/lib/utils/error";
 import type {
   BookingListItem,
   BookingStatus,
+  CancelBookingByOperatorMutationData,
+  CancelBookingByOperatorMutationVars,
   GetAgentBookingsQueryData,
   GetAgentBookingsQueryVars,
   PaginationInput,
@@ -70,6 +73,13 @@ const parseStatus = (value: string | string[] | undefined): BookingStatus | "ALL
   }
 
   return "ALL";
+};
+
+const parseEvidencePhotos = (value: string): string[] => {
+  return value
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
 };
 
 const getStatusOptions = (currentStatus: BookingStatus): BookingStatus[] => {
@@ -187,13 +197,20 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const [updatePaymentStatus] = useMutation<UpdatePaymentStatusMutationData, UpdatePaymentStatusMutationVars>(
     UPDATE_PAYMENT_STATUS_MUTATION,
   );
+  const [cancelBookingByOperator] = useMutation<
+    CancelBookingByOperatorMutationData,
+    CancelBookingByOperatorMutationVars
+  >(CANCEL_BOOKING_BY_OPERATOR_MUTATION);
 
   const [statusDrafts, setStatusDrafts] = useState<Record<string, BookingStatus>>({});
   const [paymentStatusDrafts, setPaymentStatusDrafts] = useState<Record<string, PaymentStatus>>({});
   const [paidAmountDrafts, setPaidAmountDrafts] = useState<Record<string, string>>({});
+  const [cancelReasonDrafts, setCancelReasonDrafts] = useState<Record<string, string>>({});
+  const [cancelEvidenceDrafts, setCancelEvidenceDrafts] = useState<Record<string, string>>({});
   const [optimisticPatches, setOptimisticPatches] = useState<Record<string, OptimisticPatch>>({});
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
   const [paymentUpdating, setPaymentUpdating] = useState<Record<string, boolean>>({});
+  const [cancelUpdating, setCancelUpdating] = useState<Record<string, boolean>>({});
 
   const setUpdating = (
     setter: Dispatch<SetStateAction<Record<string, boolean>>>,
@@ -378,6 +395,52 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     }
   };
 
+  const handleOperatorCancel = async (booking: BookingListItem) => {
+    if (booking.bookingStatus !== "PENDING" && booking.bookingStatus !== "CONFIRMED") {
+      toast.info("Only PENDING or CONFIRMED bookings can be cancelled.");
+      return;
+    }
+
+    const reason = (cancelReasonDrafts[booking._id] ?? "").trim();
+    if (reason.length < 5 || reason.length > 500) {
+      toast.error("Cancellation reason must be between 5 and 500 characters.");
+      return;
+    }
+
+    const evidencePhotos = parseEvidencePhotos(cancelEvidenceDrafts[booking._id] ?? "");
+    const previousPatch = optimisticPatches[booking._id];
+    applyPatch(booking._id, { bookingStatus: "CANCELLED" });
+    setUpdating(setCancelUpdating, booking._id, true);
+
+    try {
+      await cancelBookingByOperator({
+        variables: {
+          bookingId: booking._id,
+          reason,
+          evidencePhotos: evidencePhotos.length > 0 ? evidencePhotos : undefined,
+        },
+      });
+      await refetchBookings();
+      clearPatchFields(booking._id, ["bookingStatus"]);
+      setCancelReasonDrafts((prev) => {
+        const next = { ...prev };
+        delete next[booking._id];
+        return next;
+      });
+      setCancelEvidenceDrafts((prev) => {
+        const next = { ...prev };
+        delete next[booking._id];
+        return next;
+      });
+      toast.success(`Booking ${booking.bookingCode} cancelled.`);
+    } catch (error) {
+      replacePatch(booking._id, previousPatch);
+      toast.error(getErrorMessage(error));
+    } finally {
+      setUpdating(setCancelUpdating, booking._id, false);
+    }
+  };
+
   const hotelsLoading = canAccess && (agentHotelsLoading || publicHotelsLoading);
   const hotelsError = agentHotelsError ?? publicHotelsError;
 
@@ -387,7 +450,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Operations</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900">Staff Booking Management</h1>
-          <p className="mt-2 text-sm text-slate-600">Manage booking state and payment state per hotel.</p>
+          <p className="mt-2 text-sm text-slate-600">Manage booking state, payment, and cancellation per hotel.</p>
         </div>
         <Link
           href="/bookings/new"
@@ -490,6 +553,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
             const canUpdatePayment =
               !paymentLocked &&
               (selectedPaymentStatus !== booking.paymentStatus || Number(paidAmountInput) !== booking.paidAmount);
+            const canCancel = booking.bookingStatus === "PENDING" || booking.bookingStatus === "CONFIRMED";
 
             return (
               <article key={booking._id} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
@@ -500,6 +564,13 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                     <p className="mt-1 text-sm text-slate-600">
                       {formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
                     </p>
+                    {memberType !== "ADMIN_OPERATOR" ? (
+                      <p className="mt-1">
+                        <Link href={`/bookings/${booking._id}`} className="text-xs font-semibold text-slate-700 underline underline-offset-4">
+                          View details
+                        </Link>
+                      </p>
+                    ) : null}
                   </div>
                   <div className="text-right text-sm text-slate-700">
                     <p>Total: ₩ {booking.totalPrice.toLocaleString()}</p>
@@ -585,6 +656,44 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                       <p className="text-xs text-slate-500">Payment updates are blocked for CANCELLED/NO_SHOW bookings.</p>
                     ) : null}
                   </div>
+                </div>
+
+                <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-800">Operator Cancellation</p>
+                  <textarea
+                    value={cancelReasonDrafts[booking._id] ?? ""}
+                    onChange={(event) =>
+                      setCancelReasonDrafts((prev) => ({
+                        ...prev,
+                        [booking._id]: event.target.value,
+                      }))
+                    }
+                    className="min-h-20 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                    placeholder="Cancellation reason (required)"
+                    disabled={!canCancel}
+                  />
+                  <textarea
+                    value={cancelEvidenceDrafts[booking._id] ?? ""}
+                    onChange={(event) =>
+                      setCancelEvidenceDrafts((prev) => ({
+                        ...prev,
+                        [booking._id]: event.target.value,
+                      }))
+                    }
+                    className="min-h-16 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                    placeholder="Evidence URLs (optional, one per line)"
+                    disabled={!canCancel}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleOperatorCancel(booking);
+                    }}
+                    disabled={!canCancel || Boolean(cancelUpdating[booking._id])}
+                    className="rounded-md bg-rose-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {cancelUpdating[booking._id] ? "Cancelling..." : "Cancel booking"}
+                  </button>
                 </div>
               </article>
             );

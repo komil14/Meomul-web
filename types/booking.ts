@@ -1,6 +1,7 @@
 export type PaymentMethod = "AT_HOTEL" | "CREDIT_CARD" | "DEBIT_CARD" | "KAKAOPAY" | "NAVERPAY" | "TOSS";
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED" | "NO_SHOW";
 export type PaymentStatus = "PENDING" | "PARTIAL" | "PAID" | "FAILED" | "REFUNDED";
+export type CancellationFlow = "GUEST" | "OPERATOR";
 
 export interface PaginationInput {
   page: number;
@@ -61,6 +62,21 @@ export interface BookingDto {
   rooms: BookedRoomDto[];
 }
 
+export interface BookingDetailDto extends BookingDto {
+  paidAmount: number;
+  adultCount: number;
+  childCount: number;
+  specialRequests?: string | null;
+  guestId: string;
+  hotelId: string;
+  createdAt: string;
+  cancellationDate?: string | null;
+  cancellationFlow?: CancellationFlow | null;
+  cancellationReason?: string | null;
+  refundAmount?: number | null;
+  refundDate?: string | null;
+}
+
 export interface CreateBookingMutationData {
   createBooking: BookingDto;
 }
@@ -106,6 +122,14 @@ export interface GetAgentBookingsQueryVars {
   input: PaginationInput;
 }
 
+export interface GetBookingQueryData {
+  getBooking: BookingDetailDto;
+}
+
+export interface GetBookingQueryVars {
+  bookingId: string;
+}
+
 export interface UpdateBookingStatusMutationData {
   updateBookingStatus: BookingListItem;
 }
@@ -123,6 +147,26 @@ export interface UpdatePaymentStatusMutationVars {
   bookingId: string;
   paymentStatus: PaymentStatus;
   paidAmount: number;
+}
+
+export interface CancelBookingMutationData {
+  cancelBooking: BookingDetailDto;
+}
+
+export interface CancelBookingMutationVars {
+  bookingId: string;
+  reason: string;
+  evidencePhotos?: string[];
+}
+
+export interface CancelBookingByOperatorMutationData {
+  cancelBookingByOperator: BookingDetailDto;
+}
+
+export interface CancelBookingByOperatorMutationVars {
+  bookingId: string;
+  reason: string;
+  evidencePhotos?: string[];
 }
 
 export interface BookingGuestCandidate {
