@@ -2,6 +2,7 @@ import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { LOGIN_MEMBER_MUTATION } from "@/graphql/auth.gql";
 import { saveAuthSession } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
@@ -86,7 +87,7 @@ const LoginPage: NextPageWithAuth = () => {
           />
         </label>
 
-        {errorText ? <p className="text-sm text-red-600">{errorText}</p> : null}
+        {errorText ? <ErrorNotice message={errorText} /> : null}
 
         <button
           type="submit"

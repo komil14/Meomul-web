@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { RoomCard } from "@/components/hotels/room-card";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_HOTEL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -72,11 +73,7 @@ export default function HotelDetailPage() {
         </Link>
       </div>
 
-      {hotelError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {getErrorMessage(hotelError)}
-        </div>
-      ) : null}
+      {hotelError ? <ErrorNotice message={getErrorMessage(hotelError)} /> : null}
 
       {hotelLoading && !hotel ? (
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading hotel...</div>
@@ -114,11 +111,7 @@ export default function HotelDetailPage() {
           </div>
         </header>
 
-        {roomsError ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {getErrorMessage(roomsError)}
-          </div>
-        ) : null}
+        {roomsError ? <ErrorNotice message={getErrorMessage(roomsError)} /> : null}
 
         {roomsLoading && rooms.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading rooms...</div>

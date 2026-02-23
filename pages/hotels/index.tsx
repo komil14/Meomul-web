@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -273,14 +274,16 @@ export default function HotelsPage() {
           </div>
         </fieldset>
 
-        {hasPriceRangeError ? <p className="mt-3 text-sm text-red-600">Min price must be less than or equal to max price.</p> : null}
+        {hasPriceRangeError ? (
+          <ErrorNotice
+            className="mt-3"
+            tone="warn"
+            message="Min price must be less than or equal to max price."
+          />
+        ) : null}
       </section>
 
-      {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {getErrorMessage(error)}
-        </div>
-      ) : null}
+      {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
       {loading && hotels.length === 0 ? (
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading hotels...</div>
