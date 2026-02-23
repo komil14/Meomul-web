@@ -37,15 +37,6 @@ const ROOM_PAGE_SIZE = 12;
 const REVIEW_PAGE_SIZE = 5;
 const CARD_LIST_LIMIT = 6;
 
-const SECTION_LINKS: Array<{ id: string; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "gallery", label: "Gallery" },
-  { id: "features", label: "Features" },
-  { id: "rooms", label: "Rooms" },
-  { id: "reviews", label: "Reviews" },
-  { id: "location", label: "Location" },
-];
-
 const amenityLabels: Record<keyof HotelDetailItem["amenities"], string> = {
   wifi: "Fast Wi-Fi",
   parking: "Parking",
@@ -104,6 +95,14 @@ const getMapLink = (hotel: HotelDetailItem): string => {
     return `https://maps.google.com/?q=${lat},${lng}`;
   }
   return `https://maps.google.com/?q=${encodeURIComponent(hotel.detailedLocation.address)}`;
+};
+
+const getMapEmbedLink = (hotel: HotelDetailItem): string => {
+  const { lat, lng } = hotel.detailedLocation.coordinates;
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+  }
+  return `https://maps.google.com/maps?q=${encodeURIComponent(hotel.detailedLocation.address)}&z=15&output=embed`;
 };
 
 const buildBookingHref = (
@@ -305,17 +304,6 @@ export default function HotelDetailPage() {
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
           Back to hotels
         </Link>
-        <nav className="flex flex-wrap gap-2">
-          {SECTION_LINKS.map((link) => (
-            <a
-              key={link.id}
-              href={`#${link.id}`}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-500"
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
       </div>
 
       {hotelError ? <ErrorNotice message={getErrorMessage(hotelError)} /> : null}
@@ -606,6 +594,16 @@ export default function HotelDetailPage() {
                   <span className="font-semibold text-slate-900">Walking distance:</span>{" "}
                   {hotel.detailedLocation.walkingDistance != null ? `${hotel.detailedLocation.walkingDistance} min` : "-"}
                 </p>
+              </div>
+              <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+                <iframe
+                  title={`${hotel.hotelTitle} map`}
+                  src={getMapEmbedLink(hotel)}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="h-72 w-full"
+                  allowFullScreen
+                />
               </div>
               <a
                 href={getMapLink(hotel)}

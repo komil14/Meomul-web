@@ -8,7 +8,8 @@
     "build": "next build",
     "build:turbo": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "codegen:backend-types": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
     "@apollo/client": "^4.1.5",
@@ -21,6 +22,8 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@graphql-codegen/cli": "^6.1.2",
+    "@graphql-codegen/typescript": "^5.0.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
