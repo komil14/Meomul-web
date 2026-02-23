@@ -2,11 +2,17 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { CREATE_BOOKING_MUTATION } from "@/graphql/booking.gql";
+import { CREATE_BOOKING_MUTATION, SEARCH_MEMBERS_FOR_BOOKING_QUERY } from "@/graphql/booking.gql";
 import { GET_HOTEL_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
-import type { CreateBookingMutationData, CreateBookingMutationVars, PaymentMethod } from "@/types/booking";
+import type {
+  CreateBookingMutationData,
+  CreateBookingMutationVars,
+  PaymentMethod,
+  SearchMembersForBookingQueryData,
+  SearchMembersForBookingQueryVars,
+} from "@/types/booking";
 import type { GetHotelQueryData, GetHotelQueryVars, GetRoomQueryData, GetRoomQueryVars } from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
 
@@ -70,6 +76,8 @@ const NewBookingPage: NextPageWithAuth = () => {
   const [guestCountInput, setGuestCountInput] = useState("1");
   const [quantityInput, setQuantityInput] = useState("1");
   const [targetGuestId, setTargetGuestId] = useState("");
+  const [guestKeyword, setGuestKeyword] = useState("");
+  const [debouncedGuestKeyword, setDebouncedGuestKeyword] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("AT_HOTEL");
   const [guestName, setGuestName] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
@@ -92,6 +100,24 @@ const NewBookingPage: NextPageWithAuth = () => {
     fetchPolicy: "cache-and-network",
   });
 
+  const memberType = member?.memberType;
+  const canCreateBooking =
+    memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
+  const isStaffCreator = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
+
+  const {
+    data: guestCandidatesData,
+    loading: guestCandidatesLoading,
+    error: guestCandidatesError,
+  } = useQuery<SearchMembersForBookingQueryData, SearchMembersForBookingQueryVars>(SEARCH_MEMBERS_FOR_BOOKING_QUERY, {
+    skip: !isStaffCreator || debouncedGuestKeyword.length < 2,
+    variables: {
+      keyword: debouncedGuestKeyword,
+      limit: 8,
+    },
+    fetchPolicy: "network-only",
+  });
+
   const [createBooking, { loading: creating, data: createdBookingData, error: createError }] = useMutation<
     CreateBookingMutationData,
     CreateBookingMutationVars
@@ -103,8 +129,23 @@ const NewBookingPage: NextPageWithAuth = () => {
     }
   }, [initialGuestIdFromQuery, targetGuestId]);
 
+  useEffect(() => {
+    if (!isStaffCreator) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setDebouncedGuestKeyword(guestKeyword.trim());
+    }, 250);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [guestKeyword, isStaffCreator]);
+
   const hotel = hotelData?.getHotel;
   const room = roomData?.getRoom;
+  const guestCandidates = guestCandidatesData?.searchMembersForBooking ?? [];
 
   const guestCount = parsePositiveInt(guestCountInput);
   const quantity = parsePositiveInt(quantityInput);
@@ -113,11 +154,6 @@ const NewBookingPage: NextPageWithAuth = () => {
   const effectivePrice = room?.basePrice ?? 0;
 
   const estimatedSubtotal = effectivePrice * (quantity ?? 0) * Math.max(0, nights);
-
-  const memberType = member?.memberType;
-  const canCreateBooking =
-    memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
-  const isStaffCreator = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -217,7 +253,7 @@ const NewBookingPage: NextPageWithAuth = () => {
 
       {isStaffCreator ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          Staff flow is active. You must provide a target <code>guestId</code> (ACTIVE USER account).
+          Staff flow is active. Search and select a target user, or enter <code>guestId</code> manually.
         </div>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -259,16 +295,60 @@ const NewBookingPage: NextPageWithAuth = () => {
       <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
         <div className="grid gap-4 md:grid-cols-2">
           {isStaffCreator ? (
-            <label className="block md:col-span-2">
-              <span className="mb-2 block text-sm font-medium text-slate-700">Target guestId</span>
-              <input
-                value={targetGuestId}
-                onChange={(event) => setTargetGuestId(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                placeholder="Mongo member _id of target USER"
-                required
-              />
-            </label>
+            <>
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Search target user</span>
+                <input
+                  value={guestKeyword}
+                  onChange={(event) => setGuestKeyword(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                  placeholder="Search by nick, full name, or phone"
+                />
+              </label>
+
+              {guestCandidatesLoading ? (
+                <p className="md:col-span-2 text-sm text-slate-500">Searching users...</p>
+              ) : null}
+              {guestCandidatesError ? (
+                <p className="md:col-span-2 text-sm text-red-600">{getErrorMessage(guestCandidatesError)}</p>
+              ) : null}
+
+              {guestCandidates.length > 0 ? (
+                <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Candidates</p>
+                  <div className="grid gap-2">
+                    {guestCandidates.map((candidate) => (
+                      <button
+                        key={candidate._id}
+                        type="button"
+                        onClick={() => {
+                          setTargetGuestId(candidate._id);
+                          setGuestKeyword(`${candidate.memberNick} (${candidate.memberPhone})`);
+                        }}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm transition hover:border-slate-500"
+                      >
+                        <p className="font-medium text-slate-900">{candidate.memberNick}</p>
+                        <p className="text-slate-600">
+                          {candidate.memberFullName || "No full name"} · {candidate.memberPhone}
+                        </p>
+                        <p className="text-xs text-slate-500">ID: {candidate._id}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Target guestId (manual fallback)</span>
+                <input
+                  value={targetGuestId}
+                  onChange={(event) => setTargetGuestId(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                  placeholder="Mongo member _id of target USER"
+                  required
+                />
+              </label>
+            </>
           ) : null}
 
           <label className="block">

@@ -55,3 +55,19 @@ export interface CreateBookingMutationData {
 export interface CreateBookingMutationVars {
   input: BookingInput;
 }
+
+export interface BookingGuestCandidate {
+  _id: string;
+  memberNick: string;
+  memberFullName?: string | null;
+  memberPhone: string;
+}
+
+export interface SearchMembersForBookingQueryData {
+  searchMembersForBooking: BookingGuestCandidate[];
+}
+
+export interface SearchMembersForBookingQueryVars {
+  keyword: string;
+  limit?: number;
+}
