@@ -5,7 +5,9 @@ import type { PropsWithChildren } from "react";
 const links = [
   { href: "/", label: "Home" },
   { href: "/hotels", label: "Hotels" },
-  { href: "/bookings/new", label: "Book" },
+  { href: "/bookings/new", label: "New booking" },
+  { href: "/bookings", label: "My bookings" },
+  { href: "/bookings/manage", label: "Manage bookings" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/auth/login", label: "Login" },
   { href: "/auth/signup", label: "Signup" },

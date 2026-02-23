@@ -5,6 +5,7 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { SiteFrame } from "@/components/layout/site-frame";
+import { ToastProvider } from "@/components/ui/toast-provider";
 import { createApolloClient } from "@/lib/apollo/client";
 import { resolveGuardRedirect } from "@/lib/auth/route-guard";
 import { getSessionMember } from "@/lib/auth/session";
@@ -66,17 +67,19 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
 
   return (
     <ApolloProvider client={client}>
-      <div className={`${manrope.variable} ${spaceGrotesk.variable}`}>
-        <SiteFrame>
-          {showGuardLoading ? (
-            <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-slate-200 bg-white/80">
-              <p className="text-sm font-medium text-slate-600">Checking access...</p>
-            </div>
-          ) : (
-            <Component {...pageProps} />
-          )}
-        </SiteFrame>
-      </div>
+      <ToastProvider>
+        <div className={`${manrope.variable} ${spaceGrotesk.variable}`}>
+          <SiteFrame>
+            {showGuardLoading ? (
+              <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-slate-200 bg-white/80">
+                <p className="text-sm font-medium text-slate-600">Checking access...</p>
+              </div>
+            ) : (
+              <Component {...pageProps} />
+            )}
+          </SiteFrame>
+        </div>
+      </ToastProvider>
     </ApolloProvider>
   );
 }

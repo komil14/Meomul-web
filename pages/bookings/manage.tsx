@@ -1,0 +1,626 @@
+import { useMutation, useQuery } from "@apollo/client/react";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { useEffect, useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  GET_AGENT_BOOKINGS_QUERY,
+  UPDATE_BOOKING_STATUS_MUTATION,
+  UPDATE_PAYMENT_STATUS_MUTATION,
+} from "@/graphql/booking.gql";
+import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
+import { getSessionMember } from "@/lib/auth/session";
+import { getErrorMessage } from "@/lib/utils/error";
+import type {
+  BookingListItem,
+  BookingStatus,
+  GetAgentBookingsQueryData,
+  GetAgentBookingsQueryVars,
+  PaginationInput,
+  PaymentStatus,
+  UpdateBookingStatusMutationData,
+  UpdateBookingStatusMutationVars,
+  UpdatePaymentStatusMutationData,
+  UpdatePaymentStatusMutationVars,
+} from "@/types/booking";
+import type {
+  GetAgentHotelsQueryData,
+  GetAgentHotelsQueryVars,
+  GetHotelsQueryData,
+  GetHotelsQueryVars,
+  HotelListItem,
+} from "@/types/hotel";
+import type { NextPageWithAuth } from "@/types/page";
+
+const PAGE_LIMIT = 10;
+const HOTEL_LIST_LIMIT = 200;
+const BOOKING_STATUSES: BookingStatus[] = ["PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED", "NO_SHOW"];
+const PAYMENT_UPDATE_OPTIONS: PaymentStatus[] = ["PENDING", "PARTIAL", "PAID", "FAILED"];
+
+const STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+  PENDING: ["CONFIRMED"],
+  CONFIRMED: ["CHECKED_IN", "NO_SHOW"],
+  CHECKED_IN: ["CHECKED_OUT"],
+  CHECKED_OUT: [],
+  CANCELLED: [],
+  NO_SHOW: [],
+};
+
+const parsePage = (value: string | string[] | undefined): number => {
+  if (typeof value !== "string") {
+    return 1;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return 1;
+  }
+
+  return parsed;
+};
+
+const parseStatus = (value: string | string[] | undefined): BookingStatus | "ALL" => {
+  if (typeof value !== "string") {
+    return "ALL";
+  }
+
+  if (BOOKING_STATUSES.includes(value as BookingStatus)) {
+    return value as BookingStatus;
+  }
+
+  return "ALL";
+};
+
+const getStatusOptions = (currentStatus: BookingStatus): BookingStatus[] => {
+  const nextStatuses = STATUS_TRANSITIONS[currentStatus];
+  return [currentStatus, ...nextStatuses];
+};
+
+const formatDate = (value: string): string => new Date(value).toLocaleDateString();
+
+interface OptimisticPatch {
+  bookingStatus?: BookingStatus;
+  paymentStatus?: PaymentStatus;
+  paidAmount?: number;
+}
+
+const StaffBookingManagementPage: NextPageWithAuth = () => {
+  const router = useRouter();
+  const toast = useToast();
+  const member = useMemo(() => getSessionMember(), []);
+  const memberType = member?.memberType;
+  const isAgent = memberType === "AGENT";
+  const canAccess = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
+
+  const page = parsePage(router.query.page);
+  const statusFilter = parseStatus(router.query.status);
+  const hotelIdFromQuery = typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+
+  const hotelListInput = useMemo<GetAgentHotelsQueryVars["input"]>(
+    () => ({
+      page: 1,
+      limit: HOTEL_LIST_LIMIT,
+      sort: "createdAt",
+      direction: -1,
+    }),
+    [],
+  );
+
+  const { data: agentHotelsData, loading: agentHotelsLoading, error: agentHotelsError } = useQuery<
+    GetAgentHotelsQueryData,
+    GetAgentHotelsQueryVars
+  >(GET_AGENT_HOTELS_QUERY, {
+    skip: !isAgent,
+    variables: {
+      input: hotelListInput,
+    },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const { data: publicHotelsData, loading: publicHotelsLoading, error: publicHotelsError } = useQuery<
+    GetHotelsQueryData,
+    GetHotelsQueryVars
+  >(GET_HOTELS_QUERY, {
+    skip: !canAccess || isAgent,
+    variables: {
+      input: hotelListInput,
+    },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const availableHotels = useMemo<HotelListItem[]>(() => {
+    if (isAgent) {
+      return agentHotelsData?.getAgentHotels.list ?? [];
+    }
+
+    return publicHotelsData?.getHotels.list ?? [];
+  }, [agentHotelsData?.getAgentHotels.list, isAgent, publicHotelsData?.getHotels.list]);
+
+  const selectedHotelId = hotelIdFromQuery || availableHotels[0]?._id || "";
+
+  useEffect(() => {
+    if (!router.isReady || hotelIdFromQuery || availableHotels.length === 0) {
+      return;
+    }
+
+    const query: Record<string, string> = {
+      hotelId: availableHotels[0]._id,
+    };
+    if (statusFilter !== "ALL") {
+      query.status = statusFilter;
+    }
+    if (page > 1) {
+      query.page = String(page);
+    }
+
+    void router.replace({ pathname: "/bookings/manage", query }, undefined, { shallow: true });
+  }, [availableHotels, hotelIdFromQuery, page, router, statusFilter]);
+
+  const bookingInput = useMemo<PaginationInput>(
+    () => ({
+      page,
+      limit: PAGE_LIMIT,
+      sort: "createdAt",
+      direction: -1,
+    }),
+    [page],
+  );
+
+  const {
+    data: bookingsData,
+    loading: bookingsLoading,
+    error: bookingsError,
+    refetch: refetchBookings,
+  } = useQuery<GetAgentBookingsQueryData, GetAgentBookingsQueryVars>(GET_AGENT_BOOKINGS_QUERY, {
+    skip: !selectedHotelId,
+    variables: {
+      hotelId: selectedHotelId,
+      input: bookingInput,
+    },
+    fetchPolicy: "cache-and-network",
+  });
+
+  const [updateBookingStatus] = useMutation<UpdateBookingStatusMutationData, UpdateBookingStatusMutationVars>(
+    UPDATE_BOOKING_STATUS_MUTATION,
+  );
+  const [updatePaymentStatus] = useMutation<UpdatePaymentStatusMutationData, UpdatePaymentStatusMutationVars>(
+    UPDATE_PAYMENT_STATUS_MUTATION,
+  );
+
+  const [statusDrafts, setStatusDrafts] = useState<Record<string, BookingStatus>>({});
+  const [paymentStatusDrafts, setPaymentStatusDrafts] = useState<Record<string, PaymentStatus>>({});
+  const [paidAmountDrafts, setPaidAmountDrafts] = useState<Record<string, string>>({});
+  const [optimisticPatches, setOptimisticPatches] = useState<Record<string, OptimisticPatch>>({});
+  const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
+  const [paymentUpdating, setPaymentUpdating] = useState<Record<string, boolean>>({});
+
+  const setUpdating = (
+    setter: Dispatch<SetStateAction<Record<string, boolean>>>,
+    bookingId: string,
+    value: boolean,
+  ) => {
+    setter((prev) => {
+      const next = { ...prev };
+      if (value) {
+        next[bookingId] = true;
+      } else {
+        delete next[bookingId];
+      }
+      return next;
+    });
+  };
+
+  const replacePatch = (bookingId: string, patch?: OptimisticPatch) => {
+    setOptimisticPatches((prev) => {
+      const next = { ...prev };
+      if (!patch || Object.keys(patch).length === 0) {
+        delete next[bookingId];
+      } else {
+        next[bookingId] = patch;
+      }
+      return next;
+    });
+  };
+
+  const applyPatch = (bookingId: string, patch: OptimisticPatch) => {
+    setOptimisticPatches((prev) => ({
+      ...prev,
+      [bookingId]: {
+        ...prev[bookingId],
+        ...patch,
+      },
+    }));
+  };
+
+  const clearPatchFields = (bookingId: string, fields: Array<keyof OptimisticPatch>) => {
+    setOptimisticPatches((prev) => {
+      const existing = prev[bookingId];
+      if (!existing) {
+        return prev;
+      }
+
+      const nextPatch: OptimisticPatch = { ...existing };
+      fields.forEach((field) => {
+        delete nextPatch[field];
+      });
+
+      const next = { ...prev };
+      if (Object.keys(nextPatch).length === 0) {
+        delete next[bookingId];
+      } else {
+        next[bookingId] = nextPatch;
+      }
+      return next;
+    });
+  };
+
+  const sourceBookings = bookingsData?.getAgentBookings.list ?? [];
+  const mergedBookings = sourceBookings.map((booking) => {
+    const patch = optimisticPatches[booking._id];
+    if (!patch) {
+      return booking;
+    }
+
+    return {
+      ...booking,
+      ...patch,
+    };
+  });
+  const visibleBookings =
+    statusFilter === "ALL" ? mergedBookings : mergedBookings.filter((booking) => booking.bookingStatus === statusFilter);
+
+  const total = bookingsData?.getAgentBookings.metaCounter.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
+
+  const pushQuery = (next: { hotelId?: string; status?: BookingStatus | "ALL"; page?: number }) => {
+    const query: Record<string, string> = {};
+    const nextHotelId = next.hotelId ?? selectedHotelId;
+    const nextStatus = next.status ?? statusFilter;
+    const nextPage = next.page ?? page;
+
+    if (nextHotelId) {
+      query.hotelId = nextHotelId;
+    }
+    if (nextStatus !== "ALL") {
+      query.status = nextStatus;
+    }
+    if (nextPage > 1) {
+      query.page = String(nextPage);
+    }
+
+    void router.push({ pathname: "/bookings/manage", query }, undefined, { shallow: true });
+  };
+
+  const handleStatusUpdate = async (booking: BookingListItem) => {
+    const nextStatus = statusDrafts[booking._id] ?? booking.bookingStatus;
+    if (nextStatus === booking.bookingStatus) {
+      toast.info(`Booking ${booking.bookingCode} already has status ${nextStatus}.`);
+      return;
+    }
+
+    const previousPatch = optimisticPatches[booking._id];
+    applyPatch(booking._id, { bookingStatus: nextStatus });
+    setUpdating(setStatusUpdating, booking._id, true);
+
+    try {
+      await updateBookingStatus({
+        variables: {
+          bookingId: booking._id,
+          status: nextStatus,
+        },
+      });
+      await refetchBookings();
+      clearPatchFields(booking._id, ["bookingStatus"]);
+      setStatusDrafts((prev) => {
+        const next = { ...prev };
+        delete next[booking._id];
+        return next;
+      });
+      toast.success(`Booking ${booking.bookingCode} status updated to ${nextStatus}.`);
+    } catch (error) {
+      replacePatch(booking._id, previousPatch);
+      toast.error(getErrorMessage(error));
+    } finally {
+      setUpdating(setStatusUpdating, booking._id, false);
+    }
+  };
+
+  const handlePaymentUpdate = async (booking: BookingListItem) => {
+    const nextPaymentStatus = paymentStatusDrafts[booking._id] ?? booking.paymentStatus;
+    if (nextPaymentStatus === "REFUNDED") {
+      toast.info("Use cancellation flow to mark bookings as refunded.");
+      return;
+    }
+
+    const paidAmountRaw = paidAmountDrafts[booking._id] ?? String(booking.paidAmount);
+    const nextPaidAmount = Number(paidAmountRaw);
+    if (!Number.isInteger(nextPaidAmount) || nextPaidAmount < 0) {
+      toast.error("Paid amount must be a non-negative integer.");
+      return;
+    }
+
+    if (nextPaymentStatus === booking.paymentStatus && nextPaidAmount === booking.paidAmount) {
+      toast.info(`Payment values are unchanged for booking ${booking.bookingCode}.`);
+      return;
+    }
+
+    const previousPatch = optimisticPatches[booking._id];
+    applyPatch(booking._id, { paymentStatus: nextPaymentStatus, paidAmount: nextPaidAmount });
+    setUpdating(setPaymentUpdating, booking._id, true);
+
+    try {
+      await updatePaymentStatus({
+        variables: {
+          bookingId: booking._id,
+          paymentStatus: nextPaymentStatus,
+          paidAmount: nextPaidAmount,
+        },
+      });
+      await refetchBookings();
+      clearPatchFields(booking._id, ["paymentStatus", "paidAmount"]);
+      setPaymentStatusDrafts((prev) => {
+        const next = { ...prev };
+        delete next[booking._id];
+        return next;
+      });
+      setPaidAmountDrafts((prev) => {
+        const next = { ...prev };
+        delete next[booking._id];
+        return next;
+      });
+      toast.success(`Payment updated for booking ${booking.bookingCode}.`);
+    } catch (error) {
+      replacePatch(booking._id, previousPatch);
+      toast.error(getErrorMessage(error));
+    } finally {
+      setUpdating(setPaymentUpdating, booking._id, false);
+    }
+  };
+
+  const hotelsLoading = canAccess && (agentHotelsLoading || publicHotelsLoading);
+  const hotelsError = agentHotelsError ?? publicHotelsError;
+
+  return (
+    <main className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Operations</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Staff Booking Management</h1>
+          <p className="mt-2 text-sm text-slate-600">Manage booking state and payment state per hotel.</p>
+        </div>
+        <Link
+          href="/bookings/new"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
+        >
+          Create booking
+        </Link>
+      </header>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Hotel</span>
+            <select
+              value={selectedHotelId}
+              onChange={(event) => pushQuery({ hotelId: event.target.value, page: 1 })}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+              disabled={availableHotels.length === 0}
+            >
+              {availableHotels.length === 0 ? <option value="">No hotels available</option> : null}
+              {availableHotels.map((hotel) => (
+                <option key={hotel._id} value={hotel._id}>
+                  {hotel.hotelTitle} ({hotel.hotelLocation})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div>
+            <p className="mb-2 block text-sm font-medium text-slate-700">Status Filter</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => pushQuery({ status: "ALL", page: 1 })}
+                className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
+                  statusFilter === "ALL" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700"
+                }`}
+              >
+                ALL
+              </button>
+              {BOOKING_STATUSES.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => pushQuery({ status, page: 1 })}
+                  className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
+                    statusFilter === status ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700"
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {hotelsLoading ? (
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">Loading hotel list...</section>
+      ) : null}
+      {hotelsError ? (
+        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {getErrorMessage(hotelsError)}
+        </section>
+      ) : null}
+      {bookingsError ? (
+        <section className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {getErrorMessage(bookingsError)}
+        </section>
+      ) : null}
+
+      {!selectedHotelId && !hotelsLoading ? (
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+          No hotel selected. Add/select a hotel to manage bookings.
+        </section>
+      ) : null}
+
+      {bookingsLoading && sourceBookings.length === 0 ? (
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading bookings...</section>
+      ) : null}
+
+      {!bookingsLoading && !bookingsError && selectedHotelId && visibleBookings.length === 0 ? (
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+          No bookings found for this hotel/filter.
+        </section>
+      ) : null}
+
+      {visibleBookings.length > 0 ? (
+        <section className="grid gap-4">
+          {visibleBookings.map((booking) => {
+            const statusOptions = getStatusOptions(booking.bookingStatus);
+            const selectedStatus = statusDrafts[booking._id] ?? booking.bookingStatus;
+            const selectedPaymentStatus = paymentStatusDrafts[booking._id] ?? booking.paymentStatus;
+            const paidAmountInput = paidAmountDrafts[booking._id] ?? String(booking.paidAmount);
+            const paymentOptions = PAYMENT_UPDATE_OPTIONS.includes(selectedPaymentStatus)
+              ? PAYMENT_UPDATE_OPTIONS
+              : [selectedPaymentStatus, ...PAYMENT_UPDATE_OPTIONS];
+            const canUpdateStatus = statusOptions.length > 1 && selectedStatus !== booking.bookingStatus;
+            const paymentLocked = booking.bookingStatus === "CANCELLED" || booking.bookingStatus === "NO_SHOW";
+            const canUpdatePayment =
+              !paymentLocked &&
+              (selectedPaymentStatus !== booking.paymentStatus || Number(paidAmountInput) !== booking.paidAmount);
+
+            return (
+              <article key={booking._id} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Booking</p>
+                    <h2 className="mt-1 text-lg font-semibold text-slate-900">{booking.bookingCode}</h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
+                    </p>
+                  </div>
+                  <div className="text-right text-sm text-slate-700">
+                    <p>Total: ₩ {booking.totalPrice.toLocaleString()}</p>
+                    <p>Paid: ₩ {booking.paidAmount.toLocaleString()}</p>
+                    <p className="font-mono text-xs text-slate-500">Guest: {booking.guestId}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-semibold text-slate-800">Booking Status</p>
+                    <select
+                      value={selectedStatus}
+                      onChange={(event) =>
+                        setStatusDrafts((prev) => ({
+                          ...prev,
+                          [booking._id]: event.target.value as BookingStatus,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                    >
+                      {statusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleStatusUpdate(booking);
+                      }}
+                      disabled={!canUpdateStatus || Boolean(statusUpdating[booking._id])}
+                      className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {statusUpdating[booking._id] ? "Updating..." : "Update status"}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-semibold text-slate-800">Payment Status</p>
+                    <select
+                      value={selectedPaymentStatus}
+                      onChange={(event) =>
+                        setPaymentStatusDrafts((prev) => ({
+                          ...prev,
+                          [booking._id]: event.target.value as PaymentStatus,
+                        }))
+                      }
+                      disabled={paymentLocked}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2 disabled:opacity-60"
+                    >
+                      {paymentOptions.map((paymentStatus) => (
+                        <option key={paymentStatus} value={paymentStatus}>
+                          {paymentStatus}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={paidAmountInput}
+                      onChange={(event) =>
+                        setPaidAmountDrafts((prev) => ({
+                          ...prev,
+                          [booking._id]: event.target.value.replace(/[^\d]/g, ""),
+                        }))
+                      }
+                      inputMode="numeric"
+                      disabled={paymentLocked}
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2 disabled:opacity-60"
+                      placeholder="Paid amount"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handlePaymentUpdate(booking);
+                      }}
+                      disabled={!canUpdatePayment || paymentLocked || Boolean(paymentUpdating[booking._id])}
+                      className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {paymentUpdating[booking._id] ? "Updating..." : "Update payment"}
+                    </button>
+                    {paymentLocked ? (
+                      <p className="text-xs text-slate-500">Payment updates are blocked for CANCELLED/NO_SHOW bookings.</p>
+                    ) : null}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      ) : null}
+
+      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+        <p className="text-slate-600">
+          Page {page} / {totalPages} · Total records: {total.toLocaleString()}
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => pushQuery({ page: page - 1 })}
+            disabled={page <= 1}
+            className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => pushQuery({ page: page + 1 })}
+            disabled={page >= totalPages}
+            className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </footer>
+    </main>
+  );
+};
+
+StaffBookingManagementPage.auth = {
+  roles: ["AGENT", "ADMIN", "ADMIN_OPERATOR"],
+};
+
+export default StaffBookingManagementPage;
