@@ -70,6 +70,10 @@ export interface GetChatQueryVars {
   chatId: string;
 }
 
+export interface GetMyUnreadChatCountQueryData {
+  getMyUnreadChatCount: number;
+}
+
 export interface StartChatInput {
   hotelId: string;
   initialMessage: string;

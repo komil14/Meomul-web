@@ -70,6 +70,12 @@ export const GET_CHAT_QUERY = gql`
   ${CHAT_FIELDS}
 `;
 
+export const GET_MY_UNREAD_CHAT_COUNT_QUERY = gql`
+  query GetMyUnreadChatCount {
+    getMyUnreadChatCount
+  }
+`;
+
 export const START_CHAT_MUTATION = gql`
   mutation StartChat($input: StartChatInput!) {
     startChat(input: $input) {

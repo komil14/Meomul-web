@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { CHECK_AUTH_QUERY } from "@/graphql/auth.gql";
+import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
 import {
   GET_AGENT_HOTELS_QUERY,
   GET_DASHBOARD_STATS_QUERY,
@@ -12,6 +13,7 @@ import {
 import { clearAuthSession, getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { CheckAuthQueryData } from "@/types/auth";
+import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
 import type {
   GetAgentHotelsQueryData,
   GetAgentHotelsQueryVars,
@@ -85,6 +87,16 @@ const DashboardPage: NextPageWithAuth = () => {
     fetchPolicy: "network-only",
   });
 
+  const {
+    data: unreadChatData,
+    loading: unreadChatLoading,
+    error: unreadChatError,
+  } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
+    skip: !member,
+    fetchPolicy: "network-only",
+    pollInterval: 10000,
+  });
+
   const logout = async () => {
     clearAuthSession();
     await router.push("/auth/login");
@@ -117,6 +129,25 @@ const DashboardPage: NextPageWithAuth = () => {
         {authLoading ? <p className="mt-2 text-sm text-slate-600">Verifying token against backend...</p> : null}
         {authError ? <p className="mt-2 text-sm text-red-600">{getErrorMessage(authError)}</p> : null}
         {authData?.checkAuth ? <p className="mt-2 text-sm text-emerald-700">{authData.checkAuth}</p> : null}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Chat Inbox</h2>
+            {unreadChatLoading ? <p className="mt-2 text-sm text-slate-600">Loading unread chat count...</p> : null}
+            {unreadChatError ? <p className="mt-2 text-sm text-red-600">{getErrorMessage(unreadChatError)}</p> : null}
+            {!unreadChatLoading && !unreadChatError ? (
+              <p className="mt-2 text-sm text-slate-700">
+                Unread chat messages:{" "}
+                <span className="font-semibold">{(unreadChatData?.getMyUnreadChatCount ?? 0).toLocaleString()}</span>
+              </p>
+            ) : null}
+          </div>
+          <Link href="/chats" className="text-sm font-semibold text-slate-700 underline underline-offset-4">
+            Open chats
+          </Link>
+        </div>
       </section>
 
       {isUser ? (

@@ -1,6 +1,12 @@
+import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useEffect, useMemo, useRef } from "react";
 import type { PropsWithChildren } from "react";
+import { useToast } from "@/components/ui/toast-provider";
+import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
+import { getSessionMember } from "@/lib/auth/session";
+import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
 
 const links = [
   { href: "/", label: "Home" },
@@ -24,6 +30,33 @@ const isActive = (pathname: string, href: string): boolean => {
 
 export function SiteFrame({ children }: PropsWithChildren) {
   const router = useRouter();
+  const toast = useToast();
+  const member = useMemo(() => getSessionMember(), []);
+  const canTrackUnread = Boolean(member);
+  const previousUnreadRef = useRef<number | null>(null);
+
+  const { data: unreadData } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
+    skip: !canTrackUnread,
+    fetchPolicy: "network-only",
+    pollInterval: 10000,
+  });
+
+  const unreadCount = unreadData?.getMyUnreadChatCount ?? 0;
+
+  useEffect(() => {
+    if (!canTrackUnread) {
+      previousUnreadRef.current = null;
+      return;
+    }
+
+    const previousUnread = previousUnreadRef.current;
+    if (previousUnread !== null && unreadCount > previousUnread && router.pathname !== "/chats/[chatId]") {
+      const delta = unreadCount - previousUnread;
+      toast.info(delta === 1 ? "You have 1 new chat message." : `You have ${delta} new chat messages.`);
+    }
+
+    previousUnreadRef.current = unreadCount;
+  }, [canTrackUnread, router.pathname, toast, unreadCount]);
 
   return (
     <div className="min-h-screen">
@@ -35,6 +68,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
           <nav className="flex flex-wrap items-center gap-1">
             {links.map((link) => {
               const active = isActive(router.pathname, link.href);
+              const showUnreadBadge = link.href === "/chats" && unreadCount > 0;
 
               return (
                 <Link
@@ -44,7 +78,18 @@ export function SiteFrame({ children }: PropsWithChildren) {
                     active ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   }`}
                 >
-                  {link.label}
+                  <span className="inline-flex items-center gap-2">
+                    {link.label}
+                    {showUnreadBadge ? (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                          active ? "bg-white text-slate-900" : "bg-slate-900 text-white"
+                        }`}
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    ) : null}
+                  </span>
                 </Link>
               );
             })}
