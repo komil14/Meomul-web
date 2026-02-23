@@ -11,6 +11,9 @@ export type HotelLocation =
 
 export type HotelType = "HOTEL" | "MOTEL" | "RESORT" | "GUESTHOUSE" | "HANOK" | "PENSION";
 export type CancellationPolicy = "FLEXIBLE" | "MODERATE" | "STRICT";
+export type HotelStatus = "PENDING" | "ACTIVE" | "INACTIVE" | "SUSPENDED" | "DELETE";
+export type VerificationStatus = "PENDING" | "VERIFIED" | "REJECTED";
+export type BadgeLevel = "NONE" | "VERIFIED" | "SUPERHOST" | "INSPECTED";
 
 export type RoomType = "STANDARD" | "DELUXE" | "SUITE" | "FAMILY" | "PREMIUM" | "PENTHOUSE";
 
@@ -47,7 +50,19 @@ export interface HotelListItem {
 }
 
 export interface HotelDetailItem extends HotelListItem {
+  memberId: string;
   hotelDesc: string;
+  hotelStatus: HotelStatus;
+  verificationStatus: VerificationStatus;
+  badgeLevel: BadgeLevel;
+  hotelRank: number;
+  hotelReviews: number;
+  hotelViews: number;
+  warningStrikes: number;
+  safeStayCertified: boolean;
+  ageRestriction: number;
+  maxPetWeight?: number | null;
+  hotelVideos: string[];
   starRating: number;
   checkInTime: string;
   checkOutTime: string;
@@ -55,10 +70,24 @@ export interface HotelDetailItem extends HotelListItem {
   petsAllowed: boolean;
   smokingAllowed: boolean;
   cancellationPolicy: CancellationPolicy;
+  flexibleCheckIn: {
+    enabled: boolean;
+    times: string[];
+    fee: number;
+  };
+  flexibleCheckOut: {
+    enabled: boolean;
+    times: string[];
+    fee: number;
+  };
   detailedLocation: {
     address: string;
+    city: HotelLocation;
     district?: string | null;
+    dong?: string | null;
     nearestSubway?: string | null;
+    subwayExit?: string | null;
+    subwayLines?: number[] | null;
     walkingDistance?: number | null;
     coordinates: {
       lat: number;
@@ -67,8 +96,11 @@ export interface HotelDetailItem extends HotelListItem {
   };
   amenities: {
     wifi: boolean;
+    wifiSpeed?: number | null;
     parking: boolean;
+    parkingFee: number;
     breakfast: boolean;
+    breakfastIncluded: boolean;
     roomService: boolean;
     gym: boolean;
     pool: boolean;
@@ -76,7 +108,42 @@ export interface HotelDetailItem extends HotelListItem {
     familyRoom: boolean;
     kidsFriendly: boolean;
     wheelchairAccessible: boolean;
+    elevator: boolean;
+    accessibleBathroom: boolean;
+    visualAlarms: boolean;
+    serviceAnimalsAllowed: boolean;
+    airportShuttle: boolean;
+    evCharging: boolean;
+    playground: boolean;
+    meetingRoom: boolean;
+    privateBath: boolean;
+    restaurant: boolean;
+    spa: boolean;
+    coupleRoom: boolean;
+    romanticView: boolean;
   };
+  safetyFeatures: {
+    fireSafety: boolean;
+    securityCameras: boolean;
+    frontDesk24h: boolean;
+    roomSafe: boolean;
+    femaleOnlyFloors: boolean;
+    wellLitParking: boolean;
+  };
+  verificationDocs: {
+    businessLicense?: string | null;
+    touristLicense?: string | null;
+    propertyOwnership?: string | null;
+  };
+  strikeHistory: Array<{
+    date: string;
+    reason: string;
+    bookingId: string;
+  }>;
+  lastInspectionDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
 }
 
 export interface HotelsDto {

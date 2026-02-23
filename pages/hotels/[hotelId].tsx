@@ -45,10 +45,13 @@ const ROOM_PAGE_SIZE = 12;
 const REVIEW_PAGE_SIZE = 5;
 const CARD_LIST_LIMIT = 6;
 
-const amenityLabels: Record<keyof HotelDetailItem["amenities"], string> = {
+const amenityLabels: Partial<Record<keyof HotelDetailItem["amenities"], string>> = {
   wifi: "Fast Wi-Fi",
+  wifiSpeed: "High-speed Wi-Fi",
   parking: "Parking",
+  parkingFee: "Paid Parking",
   breakfast: "Breakfast",
+  breakfastIncluded: "Breakfast Included",
   roomService: "Room Service",
   gym: "Gym",
   pool: "Pool",
@@ -56,6 +59,19 @@ const amenityLabels: Record<keyof HotelDetailItem["amenities"], string> = {
   familyRoom: "Family Room",
   kidsFriendly: "Kids Friendly",
   wheelchairAccessible: "Wheelchair Accessible",
+  elevator: "Elevator",
+  accessibleBathroom: "Accessible Bathroom",
+  visualAlarms: "Visual Alarms",
+  serviceAnimalsAllowed: "Service Animals Allowed",
+  airportShuttle: "Airport Shuttle",
+  evCharging: "EV Charging",
+  playground: "Playground",
+  meetingRoom: "Meeting Room",
+  privateBath: "Private Bath",
+  restaurant: "Restaurant",
+  spa: "Spa",
+  coupleRoom: "Couple Room",
+  romanticView: "Romantic View",
 };
 
 const asPercent = (rating: number): string => `${Math.round((rating / 5) * 100)}%`;
@@ -386,7 +402,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     }
     return Object.entries(hotel.amenities)
       .filter(([, enabled]) => enabled)
-      .map(([key]) => amenityLabels[key as keyof HotelDetailItem["amenities"]]);
+      .map(([key]) => amenityLabels[key as keyof HotelDetailItem["amenities"]] ?? key);
   }, [hotel]);
   const shortDescription = useMemo(
     () => (hotel ? shortenText(hotel.hotelDesc || "No hotel description provided yet.", 190) : ""),

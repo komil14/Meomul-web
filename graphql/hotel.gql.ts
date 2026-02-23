@@ -23,12 +23,24 @@ export const GET_HOTEL_QUERY = gql`
   query GetHotel($hotelId: String!) {
     getHotel(hotelId: $hotelId) {
       _id
+      memberId
       hotelTitle
       hotelLocation
       hotelType
+      hotelStatus
+      verificationStatus
+      badgeLevel
       hotelRating
+      hotelRank
+      hotelReviews
+      hotelViews
       hotelLikes
+      warningStrikes
+      safeStayCertified
+      ageRestriction
+      maxPetWeight
       hotelImages
+      hotelVideos
       hotelDesc
       starRating
       checkInTime
@@ -37,10 +49,24 @@ export const GET_HOTEL_QUERY = gql`
       petsAllowed
       smokingAllowed
       cancellationPolicy
+      flexibleCheckIn {
+        enabled
+        times
+        fee
+      }
+      flexibleCheckOut {
+        enabled
+        times
+        fee
+      }
       detailedLocation {
         address
+        city
         district
+        dong
         nearestSubway
+        subwayExit
+        subwayLines
         walkingDistance
         coordinates {
           lat
@@ -49,8 +75,11 @@ export const GET_HOTEL_QUERY = gql`
       }
       amenities {
         wifi
+        wifiSpeed
         parking
+        parkingFee
         breakfast
+        breakfastIncluded
         roomService
         gym
         pool
@@ -58,7 +87,42 @@ export const GET_HOTEL_QUERY = gql`
         familyRoom
         kidsFriendly
         wheelchairAccessible
+        elevator
+        accessibleBathroom
+        visualAlarms
+        serviceAnimalsAllowed
+        airportShuttle
+        evCharging
+        playground
+        meetingRoom
+        privateBath
+        restaurant
+        spa
+        coupleRoom
+        romanticView
       }
+      safetyFeatures {
+        fireSafety
+        securityCameras
+        frontDesk24h
+        roomSafe
+        femaleOnlyFloors
+        wellLitParking
+      }
+      verificationDocs {
+        businessLicense
+        touristLicense
+        propertyOwnership
+      }
+      strikeHistory {
+        date
+        reason
+        bookingId
+      }
+      lastInspectionDate
+      createdAt
+      updatedAt
+      deletedAt
     }
   }
 `;
