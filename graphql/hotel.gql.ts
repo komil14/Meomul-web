@@ -36,6 +36,29 @@ export const GET_HOTEL_QUERY = gql`
       suitableFor
       petsAllowed
       smokingAllowed
+      cancellationPolicy
+      detailedLocation {
+        address
+        district
+        nearestSubway
+        walkingDistance
+        coordinates {
+          lat
+          lng
+        }
+      }
+      amenities {
+        wifi
+        parking
+        breakfast
+        roomService
+        gym
+        pool
+        workspace
+        familyRoom
+        kidsFriendly
+        wheelchairAccessible
+      }
     }
   }
 `;

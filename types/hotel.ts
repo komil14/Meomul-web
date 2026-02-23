@@ -10,6 +10,7 @@ export type HotelLocation =
   | "GANGNEUNG";
 
 export type HotelType = "HOTEL" | "MOTEL" | "RESORT" | "GUESTHOUSE" | "HANOK" | "PENSION";
+export type CancellationPolicy = "FLEXIBLE" | "MODERATE" | "STRICT";
 
 export type RoomType = "STANDARD" | "DELUXE" | "SUITE" | "FAMILY" | "PREMIUM" | "PENTHOUSE";
 
@@ -53,6 +54,29 @@ export interface HotelDetailItem extends HotelListItem {
   suitableFor: string[];
   petsAllowed: boolean;
   smokingAllowed: boolean;
+  cancellationPolicy: CancellationPolicy;
+  detailedLocation: {
+    address: string;
+    district?: string | null;
+    nearestSubway?: string | null;
+    walkingDistance?: number | null;
+    coordinates: {
+      lat: number;
+      lng: number;
+    };
+  };
+  amenities: {
+    wifi: boolean;
+    parking: boolean;
+    breakfast: boolean;
+    roomService: boolean;
+    gym: boolean;
+    pool: boolean;
+    workspace: boolean;
+    familyRoom: boolean;
+    kidsFriendly: boolean;
+    wheelchairAccessible: boolean;
+  };
 }
 
 export interface HotelsDto {
