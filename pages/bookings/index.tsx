@@ -1,8 +1,9 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { useMemo } from "react";
+import { StatusPills } from "@/components/ui/status-pills";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
+import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   BookingListItem,
@@ -33,37 +34,13 @@ const paymentToneClass: Record<BookingListItem["paymentStatus"], string> = {
   REFUNDED: "border-slate-200 bg-slate-100 text-slate-700",
 };
 
-const parsePage = (value: string | string[] | undefined): number => {
-  if (typeof value !== "string") {
-    return 1;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    return 1;
-  }
-
-  return parsed;
-};
-
-const parseStatus = (value: string | string[] | undefined): BookingStatus | "ALL" => {
-  if (typeof value !== "string") {
-    return "ALL";
-  }
-
-  if (BOOKING_STATUSES.includes(value as BookingStatus)) {
-    return value as BookingStatus;
-  }
-
-  return "ALL";
-};
-
 const formatDate = (value: string): string => new Date(value).toLocaleDateString();
 
 const MyBookingsPage: NextPageWithAuth = () => {
-  const router = useRouter();
-  const page = parsePage(router.query.page);
-  const statusFilter = parseStatus(router.query.status);
+  const { page, statusFilter, pushQuery } = usePaginationQueryState<BookingStatus>({
+    pathname: "/bookings",
+    statusValues: BOOKING_STATUSES,
+  });
 
   const paginationInput = useMemo<PaginationInput>(
     () => ({
@@ -88,18 +65,6 @@ const MyBookingsPage: NextPageWithAuth = () => {
   const total = data?.getMyBookings.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
-  const pushQuery = (nextPage: number, nextStatus: BookingStatus | "ALL") => {
-    const query: Record<string, string> = {};
-    if (nextPage > 1) {
-      query.page = String(nextPage);
-    }
-    if (nextStatus !== "ALL") {
-      query.status = nextStatus;
-    }
-
-    void router.push({ pathname: "/bookings", query }, undefined, { shallow: true });
-  };
-
   return (
     <main className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -117,30 +82,12 @@ const MyBookingsPage: NextPageWithAuth = () => {
       </header>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-2 text-sm font-medium text-slate-600">Status:</span>
-          <button
-            type="button"
-            onClick={() => pushQuery(1, "ALL")}
-            className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
-              statusFilter === "ALL" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700"
-            }`}
-          >
-            ALL
-          </button>
-          {BOOKING_STATUSES.map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => pushQuery(1, status)}
-              className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
-                statusFilter === status ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
+        <StatusPills
+          label="Status"
+          options={BOOKING_STATUSES}
+          selected={statusFilter}
+          onSelect={(nextStatus) => pushQuery({ page: 1, status: nextStatus as BookingStatus | "ALL" })}
+        />
       </section>
 
       {error ? (
@@ -212,7 +159,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => pushQuery(page - 1, statusFilter)}
+            onClick={() => pushQuery({ page: page - 1 })}
             disabled={page <= 1}
             className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -220,7 +167,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
           </button>
           <button
             type="button"
-            onClick={() => pushQuery(page + 1, statusFilter)}
+            onClick={() => pushQuery({ page: page + 1 })}
             disabled={page >= totalPages}
             className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >

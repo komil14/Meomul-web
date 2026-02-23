@@ -3,9 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { StatusPills } from "@/components/ui/status-pills";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_HOTEL_CHATS_QUERY, GET_MY_CHATS_QUERY, START_CHAT_MUTATION } from "@/graphql/chat.gql";
 import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
+import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -31,31 +33,6 @@ import type { NextPageWithAuth } from "@/types/page";
 const PAGE_LIMIT = 15;
 const HOTEL_LIST_LIMIT = 200;
 const CHAT_STATUSES: ChatStatus[] = ["WAITING", "ACTIVE", "CLOSED"];
-
-const parsePage = (value: string | string[] | undefined): number => {
-  if (typeof value !== "string") {
-    return 1;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    return 1;
-  }
-
-  return parsed;
-};
-
-const parseStatus = (value: string | string[] | undefined): ChatStatus | "ALL" => {
-  if (typeof value !== "string") {
-    return "ALL";
-  }
-
-  if (CHAT_STATUSES.includes(value as ChatStatus)) {
-    return value as ChatStatus;
-  }
-
-  return "ALL";
-};
 
 const formatDateTime = (value: string): string => new Date(value).toLocaleString();
 
@@ -83,10 +60,11 @@ const ChatsPage: NextPageWithAuth = () => {
   const isUser = memberType === "USER";
   const isAgent = memberType === "AGENT";
   const isStaff = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
-
-  const page = parsePage(router.query.page);
-  const statusFilter = parseStatus(router.query.status);
-  const hotelIdFromQuery = typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+  const { page, statusFilter, getParam, pushQuery, replaceQuery } = usePaginationQueryState<ChatStatus>({
+    pathname: "/chats",
+    statusValues: CHAT_STATUSES,
+  });
+  const hotelIdFromQuery = getParam("hotelId");
 
   const listInput = useMemo<PaginationInput>(
     () => ({
@@ -153,21 +131,14 @@ const ChatsPage: NextPageWithAuth = () => {
   const selectedHotelId = isStaff ? hotelIdFromQuery || manualStaffHotelId.trim() || availableHotels[0]?._id || "" : "";
 
   useEffect(() => {
-    if (!router.isReady || !isStaff || hotelIdFromQuery || availableHotels.length === 0) {
+    if (!isStaff || hotelIdFromQuery || availableHotels.length === 0) {
       return;
     }
 
-    const query: Record<string, string> = {
-      hotelId: availableHotels[0]._id,
-    };
-    if (statusFilter !== "ALL") {
-      query.status = statusFilter;
-    }
-    if (page > 1) {
-      query.page = String(page);
-    }
-    void router.replace({ pathname: "/chats", query }, undefined, { shallow: true });
-  }, [availableHotels, hotelIdFromQuery, isStaff, page, router, statusFilter]);
+    replaceQuery({
+      extra: { hotelId: availableHotels[0]._id },
+    });
+  }, [availableHotels, hotelIdFromQuery, isStaff, replaceQuery]);
 
   useEffect(() => {
     if (!isUser) {
@@ -217,23 +188,12 @@ const ChatsPage: NextPageWithAuth = () => {
   const hotelsLoading = isAgent ? agentHotelsLoading : publicHotelsLoading;
   const hotelsError = isAgent ? agentHotelsError : publicHotelsError;
 
-  const pushQuery = (next: { hotelId?: string; status?: ChatStatus | "ALL"; page?: number }) => {
-    const query: Record<string, string> = {};
-    const nextHotelId = next.hotelId ?? selectedHotelId;
-    const nextStatus = next.status ?? statusFilter;
-    const nextPage = next.page ?? page;
-
-    if (isStaff && nextHotelId) {
-      query.hotelId = nextHotelId;
-    }
-    if (nextStatus !== "ALL") {
-      query.status = nextStatus;
-    }
-    if (nextPage > 1) {
-      query.page = String(nextPage);
-    }
-
-    void router.push({ pathname: "/chats", query }, undefined, { shallow: true });
+  const pushChatsQuery = (next: { hotelId?: string; status?: ChatStatus | "ALL"; page?: number }) => {
+    pushQuery({
+      page: next.page,
+      status: next.status,
+      extra: isStaff ? { hotelId: next.hotelId ?? selectedHotelId } : undefined,
+    });
   };
 
   const unreadForMe = (chat: ChatDto): number => {
@@ -302,7 +262,7 @@ const ChatsPage: NextPageWithAuth = () => {
                 value={selectedHotelId}
                 onChange={(event) => {
                   setManualStaffHotelId(event.target.value);
-                  pushQuery({ hotelId: event.target.value, page: 1 });
+                  pushChatsQuery({ hotelId: event.target.value, page: 1 });
                 }}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
                 disabled={availableHotels.length === 0}
@@ -335,7 +295,7 @@ const ChatsPage: NextPageWithAuth = () => {
                         toast.error("Enter hotelId first.");
                         return;
                       }
-                      pushQuery({ hotelId: manualId, page: 1 });
+                      pushChatsQuery({ hotelId: manualId, page: 1 });
                     }}
                     className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
                   >
@@ -345,29 +305,12 @@ const ChatsPage: NextPageWithAuth = () => {
               </label>
 
               <p className="mb-2 mt-4 block text-sm font-medium text-slate-700">Status</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => pushQuery({ status: "ALL", page: 1 })}
-                  className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
-                    statusFilter === "ALL" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700"
-                  }`}
-                >
-                  ALL
-                </button>
-                {CHAT_STATUSES.map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => pushQuery({ status, page: 1 })}
-                    className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
-                      statusFilter === status ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700"
-                    }`}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
+              <StatusPills
+                label="Status"
+                options={CHAT_STATUSES}
+                selected={statusFilter}
+                onSelect={(nextStatus) => pushChatsQuery({ status: nextStatus as ChatStatus | "ALL", page: 1 })}
+              />
             </div>
           </div>
         </section>
@@ -492,7 +435,7 @@ const ChatsPage: NextPageWithAuth = () => {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => pushQuery({ page: page - 1 })}
+            onClick={() => pushChatsQuery({ page: page - 1 })}
             disabled={page <= 1}
             className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -500,7 +443,7 @@ const ChatsPage: NextPageWithAuth = () => {
           </button>
           <button
             type="button"
-            onClick={() => pushQuery({ page: page + 1 })}
+            onClick={() => pushChatsQuery({ page: page + 1 })}
             disabled={page >= totalPages}
             className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >

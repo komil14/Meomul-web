@@ -1,8 +1,8 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import { StatusPills } from "@/components/ui/status-pills";
 import { useToast } from "@/components/ui/toast-provider";
 import {
   CANCEL_BOOKING_BY_OPERATOR_MUTATION,
@@ -11,6 +11,7 @@ import {
   UPDATE_PAYMENT_STATUS_MUTATION,
 } from "@/graphql/booking.gql";
 import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
+import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -50,31 +51,6 @@ const STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   NO_SHOW: [],
 };
 
-const parsePage = (value: string | string[] | undefined): number => {
-  if (typeof value !== "string") {
-    return 1;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    return 1;
-  }
-
-  return parsed;
-};
-
-const parseStatus = (value: string | string[] | undefined): BookingStatus | "ALL" => {
-  if (typeof value !== "string") {
-    return "ALL";
-  }
-
-  if (BOOKING_STATUSES.includes(value as BookingStatus)) {
-    return value as BookingStatus;
-  }
-
-  return "ALL";
-};
-
 const parseEvidencePhotos = (value: string): string[] => {
   return value
     .split(/[\n,]/)
@@ -96,16 +72,16 @@ interface OptimisticPatch {
 }
 
 const StaffBookingManagementPage: NextPageWithAuth = () => {
-  const router = useRouter();
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
   const memberType = member?.memberType;
   const isAgent = memberType === "AGENT";
   const canAccess = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
-
-  const page = parsePage(router.query.page);
-  const statusFilter = parseStatus(router.query.status);
-  const hotelIdFromQuery = typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+  const { page, statusFilter, getParam, pushQuery, replaceQuery } = usePaginationQueryState<BookingStatus>({
+    pathname: "/bookings/manage",
+    statusValues: BOOKING_STATUSES,
+  });
+  const hotelIdFromQuery = getParam("hotelId");
 
   const hotelListInput = useMemo<GetAgentHotelsQueryVars["input"]>(
     () => ({
@@ -150,22 +126,14 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const selectedHotelId = hotelIdFromQuery || availableHotels[0]?._id || "";
 
   useEffect(() => {
-    if (!router.isReady || hotelIdFromQuery || availableHotels.length === 0) {
+    if (hotelIdFromQuery || availableHotels.length === 0) {
       return;
     }
 
-    const query: Record<string, string> = {
-      hotelId: availableHotels[0]._id,
-    };
-    if (statusFilter !== "ALL") {
-      query.status = statusFilter;
-    }
-    if (page > 1) {
-      query.page = String(page);
-    }
-
-    void router.replace({ pathname: "/bookings/manage", query }, undefined, { shallow: true });
-  }, [availableHotels, hotelIdFromQuery, page, router, statusFilter]);
+    replaceQuery({
+      extra: { hotelId: availableHotels[0]._id },
+    });
+  }, [availableHotels, hotelIdFromQuery, replaceQuery]);
 
   const bookingInput = useMemo<PaginationInput>(
     () => ({
@@ -290,23 +258,12 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const total = bookingsData?.getAgentBookings.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
-  const pushQuery = (next: { hotelId?: string; status?: BookingStatus | "ALL"; page?: number }) => {
-    const query: Record<string, string> = {};
-    const nextHotelId = next.hotelId ?? selectedHotelId;
-    const nextStatus = next.status ?? statusFilter;
-    const nextPage = next.page ?? page;
-
-    if (nextHotelId) {
-      query.hotelId = nextHotelId;
-    }
-    if (nextStatus !== "ALL") {
-      query.status = nextStatus;
-    }
-    if (nextPage > 1) {
-      query.page = String(nextPage);
-    }
-
-    void router.push({ pathname: "/bookings/manage", query }, undefined, { shallow: true });
+  const pushManageQuery = (next: { hotelId?: string; status?: BookingStatus | "ALL"; page?: number }) => {
+    pushQuery({
+      page: next.page,
+      status: next.status,
+      extra: { hotelId: next.hotelId ?? selectedHotelId },
+    });
   };
 
   const handleStatusUpdate = async (booking: BookingListItem) => {
@@ -466,7 +423,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
             <span className="mb-2 block text-sm font-medium text-slate-700">Hotel</span>
             <select
               value={selectedHotelId}
-              onChange={(event) => pushQuery({ hotelId: event.target.value, page: 1 })}
+              onChange={(event) => pushManageQuery({ hotelId: event.target.value, page: 1 })}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
               disabled={availableHotels.length === 0}
             >
@@ -481,29 +438,12 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
           <div>
             <p className="mb-2 block text-sm font-medium text-slate-700">Status Filter</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => pushQuery({ status: "ALL", page: 1 })}
-                className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
-                  statusFilter === "ALL" ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700"
-                }`}
-              >
-                ALL
-              </button>
-              {BOOKING_STATUSES.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => pushQuery({ status, page: 1 })}
-                  className={`rounded-md border px-3 py-1.5 text-sm font-medium ${
-                    statusFilter === status ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 text-slate-700"
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
-            </div>
+            <StatusPills
+              label="Status"
+              options={BOOKING_STATUSES}
+              selected={statusFilter}
+              onSelect={(nextStatus) => pushManageQuery({ status: nextStatus as BookingStatus | "ALL", page: 1 })}
+            />
           </div>
         </div>
       </section>
@@ -708,7 +648,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => pushQuery({ page: page - 1 })}
+            onClick={() => pushManageQuery({ page: page - 1 })}
             disabled={page <= 1}
             className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -716,7 +656,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
           </button>
           <button
             type="button"
-            onClick={() => pushQuery({ page: page + 1 })}
+            onClick={() => pushManageQuery({ page: page + 1 })}
             disabled={page >= totalPages}
             className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
