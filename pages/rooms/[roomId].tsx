@@ -431,12 +431,12 @@ export default function RoomDetailPage() {
       day: `${defaults.day} p-0`,
       day_button:
         `${defaults.day_button} price-day-button h-12 w-12 rounded-2xl border border-slate-200 bg-white/95 text-slate-700 transition duration-300 hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-lg`,
-      selected: "border-slate-900 bg-slate-900 text-white shadow-[0_0_0_1px_rgba(15,23,42,0.45)]",
-      range_start: "border-slate-900 bg-slate-900 text-white",
-      range_middle: "border-slate-200 bg-slate-100 text-slate-900",
-      range_end: "border-slate-900 bg-slate-900 text-white",
-      today: "ring-2 ring-emerald-300",
-      focused: "ring-2 ring-sky-300",
+      selected: "border-sky-900 bg-sky-900 text-white shadow-[0_0_0_1px_rgba(3,105,161,0.45)]",
+      range_start: "border-sky-900 bg-sky-900 text-white",
+      range_middle: "border-sky-200 bg-sky-100 text-sky-900",
+      range_end: "border-sky-900 bg-sky-900 text-white",
+      today: "ring-2 ring-cyan-300",
+      focused: "ring-2 ring-sky-400",
       disabled: "opacity-45",
       outside: "opacity-35",
       hidden: "opacity-0",
@@ -678,12 +678,12 @@ export default function RoomDetailPage() {
                   <p className="text-[11px] text-slate-500">2-month cinematic price board</p>
                 </div>
                 <div className="sticky top-2 z-20 mb-3 flex flex-wrap gap-1.5 rounded-lg border border-slate-200/90 bg-white/90 p-2 text-[10px] text-slate-600 backdrop-blur">
-                  <span className="rounded-full border border-emerald-300/80 bg-emerald-50 px-2 py-0.5">Best price</span>
-                  <span className="rounded-full border border-rose-300/80 bg-rose-50 px-2 py-0.5">Peak price</span>
+                  <span className="rounded-full border border-cyan-300/80 bg-cyan-50 px-2 py-0.5 text-cyan-900">Best price</span>
+                  <span className="rounded-full border border-sky-300/80 bg-sky-50 px-2 py-0.5 text-sky-900">Peak price</span>
                   <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5">Sold out</span>
                   <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5">Date + price in each cell</span>
                   {hoveredDateKey && hoveredDay ? (
-                    <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 font-semibold text-sky-800">
+                    <span className="rounded-full border border-sky-400 bg-sky-50 px-2 py-0.5 font-semibold text-sky-900">
                       {hoveredDateKey} · ₩ {hoveredDay.price.toLocaleString()}
                     </span>
                   ) : (
@@ -698,10 +698,10 @@ export default function RoomDetailPage() {
                           entry.status === "blocked"
                             ? "bg-slate-300"
                             : entry.status === "hot"
-                              ? "bg-rose-500"
+                              ? "bg-sky-600"
                               : entry.status === "warm"
-                                ? "bg-amber-400"
-                                : "bg-emerald-400";
+                                ? "bg-sky-400"
+                                : "bg-cyan-400";
                         const isDisabled = entry.status === "blocked";
                         return (
                           <button
@@ -723,15 +723,15 @@ export default function RoomDetailPage() {
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-slate-500">
                       <span className="inline-flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                        <span className="h-2 w-2 rounded-full bg-cyan-400" />
                         Open
                       </span>
                       <span className="inline-flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-amber-400" />
+                        <span className="h-2 w-2 rounded-full bg-sky-400" />
                         Medium demand
                       </span>
                       <span className="inline-flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-rose-500" />
+                        <span className="h-2 w-2 rounded-full bg-sky-600" />
                         High demand
                       </span>
                       <span className="inline-flex items-center gap-1">
