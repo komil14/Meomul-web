@@ -2,7 +2,7 @@ import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { DayPicker, getDefaultClassNames, type DateRange } from "react-day-picker";
+import { DayButton as DefaultDayButton, DayPicker, getDefaultClassNames, type DateRange, type DayButtonProps } from "react-day-picker";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_HOTEL_QUERY, GET_PRICE_CALENDAR_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
@@ -104,6 +104,72 @@ const formatIsoDate = (value: string): string => {
   return value.slice(0, 10);
 };
 
+const addMonthsToMonthKey = (monthKey: string, monthsToAdd: number): string => {
+  const [yearPart, monthPart] = monthKey.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    return monthKey;
+  }
+  const next = new Date(year, month - 1 + monthsToAdd, 1);
+  return toMonthKey(next);
+};
+
+const formatCompactKrw = (price: number): string => {
+  if (!Number.isFinite(price)) {
+    return "-";
+  }
+  if (price >= 1_000_000) {
+    return `${(price / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
+  }
+  if (price >= 1_000) {
+    return `${Math.round(price / 1_000)}k`;
+  }
+  return `${Math.round(price)}`;
+};
+
+const PriceDayButton = ({
+  day,
+  modifiers,
+  price,
+  onHover,
+  ...buttonProps
+}: DayButtonProps & {
+  price?: DayPriceDto;
+  onHover?: (dateKey: string | null) => void;
+}) => {
+  const dateKey = formatDateInput(day.date);
+  const isUnavailable = Boolean(price) && !isCalendarDayBookable(price);
+  const priceLabel = !price ? "n/a" : isUnavailable ? "sold" : `₩${formatCompactKrw(price.price)}`;
+
+  return (
+    <DefaultDayButton
+      {...buttonProps}
+      day={day}
+      modifiers={modifiers}
+      onMouseEnter={(event) => {
+        buttonProps.onMouseEnter?.(event);
+        onHover?.(dateKey);
+      }}
+      onMouseLeave={(event) => {
+        buttonProps.onMouseLeave?.(event);
+        onHover?.(null);
+      }}
+      onFocus={(event) => {
+        buttonProps.onFocus?.(event);
+        onHover?.(dateKey);
+      }}
+      onBlur={(event) => {
+        buttonProps.onBlur?.(event);
+        onHover?.(null);
+      }}
+    >
+      <span className="price-day-number">{day.date.getDate()}</span>
+      <span className={`price-day-meta ${isUnavailable ? "is-unavailable" : ""}`}>{priceLabel}</span>
+    </DefaultDayButton>
+  );
+};
+
 export default function RoomDetailPage() {
   const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
@@ -119,6 +185,8 @@ export default function RoomDetailPage() {
   const todayMonth = useMemo(() => todayDate.slice(0, 7), [todayDate]);
   const [calendarMonth, setCalendarMonth] = useState(todayMonth);
   const [calendarByMonth, setCalendarByMonth] = useState<Record<string, DayPriceDto[]>>({});
+  const [hoveredDateKey, setHoveredDateKey] = useState<string | null>(null);
+  const nextCalendarMonth = useMemo(() => addMonthsToMonthKey(calendarMonth, 1), [calendarMonth]);
 
   const roomId = useMemo(() => {
     if (typeof router.query.roomId === "string") {
@@ -155,6 +223,21 @@ export default function RoomDetailPage() {
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
+  const {
+    data: nextPriceCalendarData,
+    loading: nextPriceCalendarLoading,
+    error: nextPriceCalendarError,
+  } = useQuery<GetPriceCalendarQueryData, GetPriceCalendarQueryVars>(GET_PRICE_CALENDAR_QUERY, {
+    skip: !isHydrated || !roomId,
+    variables: {
+      input: {
+        roomId,
+        month: nextCalendarMonth,
+      },
+    },
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
+  });
 
   const { data: hotelData, error: hotelError } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
     skip: !isHydrated || !roomHotelId,
@@ -178,6 +261,7 @@ export default function RoomDetailPage() {
     setCalendarMonth(todayMonth);
     setCheckInDate("");
     setCheckOutDate("");
+    setHoveredDateKey(null);
   }, [roomId, todayMonth]);
 
   useEffect(() => {
@@ -194,6 +278,20 @@ export default function RoomDetailPage() {
       [calendarMonth]: calendar,
     }));
   }, [calendarMonth, priceCalendarData]);
+  useEffect(() => {
+    const calendar = nextPriceCalendarData?.getPriceCalendar.calendar;
+    if (!calendar || calendar.length === 0) {
+      return;
+    }
+    if (calendar[0]?.date.slice(0, 7) !== nextCalendarMonth) {
+      return;
+    }
+
+    setCalendarByMonth((previous) => ({
+      ...previous,
+      [nextCalendarMonth]: calendar,
+    }));
+  }, [nextCalendarMonth, nextPriceCalendarData]);
 
   const availabilityByDate = useMemo(() => {
     const map = new Map<string, DayPriceDto>();
@@ -205,10 +303,17 @@ export default function RoomDetailPage() {
     return map;
   }, [calendarByMonth]);
 
-  const visibleMonthCalendar = useMemo(() => calendarByMonth[calendarMonth] ?? [], [calendarByMonth, calendarMonth]);
+  const visibleWindowCalendar = useMemo(
+    () => [...(calendarByMonth[calendarMonth] ?? []), ...(calendarByMonth[nextCalendarMonth] ?? [])],
+    [calendarByMonth, calendarMonth, nextCalendarMonth],
+  );
 
   const hasCalendarAvailability = availabilityByDate.size > 0;
-  const calendarMonthLabel = useMemo(() => formatMonthLabel(calendarMonth), [calendarMonth]);
+  const calendarMonthLabel = useMemo(
+    () => `${formatMonthLabel(calendarMonth)} · ${formatMonthLabel(nextCalendarMonth)}`,
+    [calendarMonth, nextCalendarMonth],
+  );
+  const hoveredDay = useMemo(() => (hoveredDateKey ? availabilityByDate.get(hoveredDateKey) : undefined), [availabilityByDate, hoveredDateKey]);
 
   useEffect(() => {
     if (!checkInDate) {
@@ -250,8 +355,27 @@ export default function RoomDetailPage() {
   }, [adultCount, availabilityByDate, checkInDate, checkOutDate, hasCalendarAvailability, room]);
 
   const canContinueBooking = bookingValidationMessage === null && Boolean(roomHotelId) && Boolean(room);
-  const cheapestDateKey = priceCalendarData?.getPriceCalendar.cheapestDate.date ?? "";
-  const peakDateKey = priceCalendarData?.getPriceCalendar.mostExpensiveDate.date ?? "";
+  const cheapestDateKey = useMemo(() => {
+    const availableDays = visibleWindowCalendar.filter((day) => isCalendarDayBookable(day));
+    if (availableDays.length === 0) {
+      return "";
+    }
+    return availableDays.reduce((lowest, current) => (current.price < lowest.price ? current : lowest)).date;
+  }, [visibleWindowCalendar]);
+  const peakDateKey = useMemo(() => {
+    const availableDays = visibleWindowCalendar.filter((day) => isCalendarDayBookable(day));
+    if (availableDays.length === 0) {
+      return "";
+    }
+    return availableDays.reduce((highest, current) => (current.price > highest.price ? current : highest)).date;
+  }, [visibleWindowCalendar]);
+  const averageVisiblePrice = useMemo(() => {
+    const availableDays = visibleWindowCalendar.filter((day) => isCalendarDayBookable(day));
+    if (availableDays.length === 0) {
+      return 0;
+    }
+    return Math.round(availableDays.reduce((sum, day) => sum + day.price, 0) / availableDays.length);
+  }, [visibleWindowCalendar]);
   const selectedRange = useMemo<DateRange | undefined>(() => {
     if (!checkInDate) {
       return undefined;
@@ -273,8 +397,8 @@ export default function RoomDetailPage() {
   }, [calendarMonth]);
 
   const availabilityPulse = useMemo(() => {
-    const maxAvailable = Math.max(...visibleMonthCalendar.map((day) => day.availableRooms ?? 0), 1);
-    return visibleMonthCalendar.map((day) => {
+    const maxAvailable = Math.max(...visibleWindowCalendar.map((day) => day.availableRooms ?? 0), 1);
+    return visibleWindowCalendar.map((day) => {
       const available = day.availableRooms ?? 0;
       const ratio = Math.max(0.08, available / maxAvailable);
       const status =
@@ -287,15 +411,15 @@ export default function RoomDetailPage() {
         status,
       };
     });
-  }, [visibleMonthCalendar]);
+  }, [visibleWindowCalendar]);
 
   const dayPickerClassNames = useMemo(() => {
     const defaults = getDefaultClassNames();
     return {
       ...defaults,
       root: `${defaults.root} w-full`,
-      months: `${defaults.months} w-full`,
-      month: `${defaults.month} w-full`,
+      months: `${defaults.months} grid min-w-[44rem] grid-cols-2 gap-4`,
+      month: `${defaults.month} rounded-2xl border border-white/70 bg-white/80 p-3 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.85)] backdrop-blur`,
       month_caption: `${defaults.month_caption} mb-3`,
       caption_label: `${defaults.caption_label} text-sm font-semibold uppercase tracking-[0.12em] text-slate-700`,
       nav: `${defaults.nav} gap-2`,
@@ -305,18 +429,27 @@ export default function RoomDetailPage() {
       weekday: `${defaults.weekday} text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500`,
       month_grid: `${defaults.month_grid} w-full border-separate border-spacing-1`,
       day: `${defaults.day} p-0`,
-      day_button: `${defaults.day_button} h-9 w-9 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-sm`,
-      selected: "border-slate-900 bg-slate-900 text-white",
+      day_button:
+        `${defaults.day_button} price-day-button h-12 w-12 rounded-2xl border border-slate-200 bg-white/95 text-slate-700 transition duration-300 hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-lg`,
+      selected: "border-slate-900 bg-slate-900 text-white shadow-[0_0_0_1px_rgba(15,23,42,0.45)]",
       range_start: "border-slate-900 bg-slate-900 text-white",
-      range_middle: "border-slate-200 bg-slate-200 text-slate-900",
+      range_middle: "border-slate-200 bg-slate-100 text-slate-900",
       range_end: "border-slate-900 bg-slate-900 text-white",
       today: "ring-2 ring-emerald-300",
       focused: "ring-2 ring-sky-300",
-      disabled: "opacity-35",
-      outside: "opacity-20",
+      disabled: "opacity-45",
+      outside: "opacity-35",
       hidden: "opacity-0",
     };
   }, []);
+  const dayPickerComponents = useMemo(
+    () => ({
+      DayButton: (props: DayButtonProps) => (
+        <PriceDayButton {...props} price={availabilityByDate.get(formatDateInput(props.day.date))} onHover={setHoveredDateKey} />
+      ),
+    }),
+    [availabilityByDate],
+  );
 
   const disabledDays = useMemo(
     () => (date: Date): boolean => {
@@ -382,6 +515,8 @@ export default function RoomDetailPage() {
     }
     handleSelectCalendarDate(formatDateInput(date));
   };
+  const calendarLoadInProgress = priceCalendarLoading || nextPriceCalendarLoading;
+  const calendarLoadError = priceCalendarError ?? nextPriceCalendarError;
 
   return (
     <main className="space-y-6">
@@ -538,9 +673,22 @@ export default function RoomDetailPage() {
               </label>
 
               <div className="calendar-shell rounded-xl border border-slate-200 bg-white p-3">
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">{calendarMonthLabel}</p>
-                  <p className="text-[11px] text-slate-500">Pulse availability board</p>
+                  <p className="text-[11px] text-slate-500">2-month cinematic price board</p>
+                </div>
+                <div className="sticky top-2 z-20 mb-3 flex flex-wrap gap-1.5 rounded-lg border border-slate-200/90 bg-white/90 p-2 text-[10px] text-slate-600 backdrop-blur">
+                  <span className="rounded-full border border-emerald-300/80 bg-emerald-50 px-2 py-0.5">Best price</span>
+                  <span className="rounded-full border border-rose-300/80 bg-rose-50 px-2 py-0.5">Peak price</span>
+                  <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5">Sold out</span>
+                  <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5">Date + price in each cell</span>
+                  {hoveredDateKey && hoveredDay ? (
+                    <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 font-semibold text-sky-800">
+                      {hoveredDateKey} · ₩ {hoveredDay.price.toLocaleString()}
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5">Hover a date to preview exact rate</span>
+                  )}
                 </div>
                 {availabilityPulse.length > 0 ? (
                   <div className="mb-3 rounded-lg border border-slate-200 bg-white/80 p-2">
@@ -593,30 +741,35 @@ export default function RoomDetailPage() {
                     </div>
                   </div>
                 ) : null}
-                <DayPicker
-                  animate
-                  mode="range"
-                  selected={selectedRange}
-                  month={calendarMonthDate}
-                  onMonthChange={(month) => setCalendarMonth(toMonthKey(month))}
-                  onDayClick={handleSelectCalendarDay}
-                  disabled={disabledDays}
-                  modifiers={{
-                    cheap: (date) => formatDateInput(date) === cheapestDateKey,
-                    peak: (date) => formatDateInput(date) === peakDateKey,
-                  }}
-                  modifiersClassNames={{
-                    cheap: "rdp-day-cheap",
-                    peak: "rdp-day-peak",
-                  }}
-                  classNames={dayPickerClassNames}
-                  showOutsideDays
-                />
-                {priceCalendarLoading && visibleMonthCalendar.length === 0 ? (
+                <div className="overflow-x-auto pb-1">
+                  <DayPicker
+                    animate
+                    mode="range"
+                    selected={selectedRange}
+                    month={calendarMonthDate}
+                    numberOfMonths={2}
+                    pagedNavigation
+                    onMonthChange={(month) => setCalendarMonth(toMonthKey(month))}
+                    onDayClick={handleSelectCalendarDay}
+                    disabled={disabledDays}
+                    modifiers={{
+                      cheap: (date) => formatDateInput(date) === cheapestDateKey,
+                      peak: (date) => formatDateInput(date) === peakDateKey,
+                    }}
+                    modifiersClassNames={{
+                      cheap: "rdp-day-cheap",
+                      peak: "rdp-day-peak",
+                    }}
+                    components={dayPickerComponents}
+                    classNames={dayPickerClassNames}
+                    showOutsideDays
+                  />
+                </div>
+                {calendarLoadInProgress && visibleWindowCalendar.length === 0 ? (
                   <p className="mt-2 text-[11px] text-slate-500">Loading availability...</p>
                 ) : null}
-                {priceCalendarError && visibleMonthCalendar.length === 0 ? (
-                  <p className="mt-2 text-[11px] text-amber-700">{getErrorMessage(priceCalendarError)}</p>
+                {calendarLoadError && visibleWindowCalendar.length === 0 ? (
+                  <p className="mt-2 text-[11px] text-amber-700">{getErrorMessage(calendarLoadError)}</p>
                 ) : null}
                 <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
                   <span className="inline-flex items-center gap-1">
@@ -634,18 +787,27 @@ export default function RoomDetailPage() {
                 </div>
               </div>
 
-              {priceCalendarData?.getPriceCalendar ? (
+              {visibleWindowCalendar.length > 0 ? (
                 <div className="grid gap-2 text-xs text-slate-700">
                   <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-                    Average: <span className="font-semibold">₩ {priceCalendarData.getPriceCalendar.averagePrice.toLocaleString()}</span>
+                    Average (2 months): <span className="font-semibold">₩ {averageVisiblePrice.toLocaleString()}</span>
                   </p>
-                  <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-                    Cheapest:{" "}
-                    <span className="font-semibold">
-                      {priceCalendarData.getPriceCalendar.cheapestDate.date} · ₩{" "}
-                      {priceCalendarData.getPriceCalendar.cheapestDate.price.toLocaleString()}
-                    </span>
-                  </p>
+                  {cheapestDateKey ? (
+                    <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                      Cheapest:{" "}
+                      <span className="font-semibold">
+                        {cheapestDateKey} · ₩ {availabilityByDate.get(cheapestDateKey)?.price.toLocaleString()}
+                      </span>
+                    </p>
+                  ) : null}
+                  {peakDateKey ? (
+                    <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                      Peak:{" "}
+                      <span className="font-semibold">
+                        {peakDateKey} · ₩ {availabilityByDate.get(peakDateKey)?.price.toLocaleString()}
+                      </span>
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 

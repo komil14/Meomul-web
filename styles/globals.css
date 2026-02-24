@@ -70,13 +70,66 @@ body {
 
 .calendar-shell .rdp-root {
   --rdp-accent-color: #0f172a;
-  --rdp-day-width: 2.2rem;
-  --rdp-day-height: 2.2rem;
+  --rdp-day-width: 3rem;
+  --rdp-day-height: 3rem;
   --rdp-range_middle-background-color: #e2e8f0;
 }
 
 .calendar-shell .rdp-day_button {
   backdrop-filter: blur(4px);
+}
+
+.calendar-shell .price-day-button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transform-origin: center;
+}
+
+.calendar-shell .price-day-number {
+  display: block;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.calendar-shell .price-day-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 220ms ease, background-color 220ms ease, color 220ms ease;
+}
+
+.calendar-shell .price-day-meta.is-unavailable {
+  background: rgba(148, 163, 184, 0.25);
+  color: #64748b;
+}
+
+.calendar-shell .rdp-day:not(.rdp-disabled) .price-day-button:hover {
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.24), 0 10px 24px -14px rgba(15, 23, 42, 0.75), 0 0 18px rgba(14, 165, 233, 0.25);
+  animation: day-glow 1.8s ease-in-out infinite;
+}
+
+.calendar-shell .rdp-day:not(.rdp-disabled) .price-day-button:hover .price-day-meta {
+  transform: translateY(-1px);
+  background: rgba(14, 165, 233, 0.18);
+  color: #0c4a6e;
+}
+
+.calendar-shell .rdp-day_button[aria-selected="true"] .price-day-meta {
+  background: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
 }
 
 .calendar-shell .rdp-day-cheap .rdp-day_button:not([aria-selected="true"]) {
@@ -95,6 +148,13 @@ body {
   transform: translateY(-2px) scale(1.05);
 }
 
+@media (max-width: 720px) {
+  .calendar-shell .rdp-root {
+    --rdp-day-width: 2.75rem;
+    --rdp-day-height: 2.75rem;
+  }
+}
+
 @keyframes calendar-shift {
   0% {
     transform: translate3d(0, 0, 0) rotate(0deg);
@@ -104,5 +164,17 @@ body {
   }
   100% {
     transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+}
+
+@keyframes day-glow {
+  0% {
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2), 0 10px 24px -14px rgba(15, 23, 42, 0.72), 0 0 12px rgba(14, 165, 233, 0.22);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.26), 0 12px 28px -12px rgba(15, 23, 42, 0.8), 0 0 20px rgba(56, 189, 248, 0.34);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2), 0 10px 24px -14px rgba(15, 23, 42, 0.72), 0 0 12px rgba(14, 165, 233, 0.22);
   }
 }
