@@ -328,7 +328,8 @@ const PriceDayButton = ({
   const isRangeEnd = Boolean(modifiers.range_end);
   const isRangeMiddle = Boolean(modifiers.range_middle);
   const isDisabled = Boolean(modifiers.disabled);
-  const isEdgeSelected = isSelected || isRangeStart || isRangeEnd;
+  const isSingleSelected = isSelected && !isRangeStart && !isRangeEnd && !isRangeMiddle;
+  const isEdgeSelected = isSingleSelected || isRangeStart || isRangeEnd;
 
   return (
     <DefaultDayButton
@@ -337,7 +338,7 @@ const PriceDayButton = ({
       modifiers={modifiers}
       className={[
         buttonProps.className,
-        "group inline-flex flex-col items-center justify-center gap-0.5",
+        "group inline-flex flex-col items-center justify-center gap-0 overflow-hidden",
         !isDisabled ? "hover:shadow-[0_0_0_1px_rgba(14,165,233,0.24),0_10px_24px_-14px_rgba(15,23,42,0.75),0_0_18px_rgba(59,130,246,0.25)]" : "",
       ]
         .filter(Boolean)
@@ -366,9 +367,9 @@ const PriceDayButton = ({
         className={[
           "inline-flex min-w-7 items-center justify-center rounded-full px-1 py-[1px] text-[8px] leading-none font-bold transition",
           isUnavailable ? "bg-slate-300/60 text-slate-500" : "",
-          !isUnavailable && isEdgeSelected ? "border border-sky-300/60 bg-slate-50 text-sky-900" : "",
-          !isUnavailable && !isEdgeSelected && isRangeMiddle ? "border border-slate-300/50 bg-white/90 text-slate-800" : "",
-          !isUnavailable && !isEdgeSelected && !isRangeMiddle ? "bg-slate-900/10 text-slate-600 group-hover:-translate-y-0.5 group-hover:bg-sky-100 group-hover:text-sky-800" : "",
+          !isUnavailable && isEdgeSelected ? "border border-violet-200/70 bg-white/95 text-violet-900" : "",
+          !isUnavailable && !isEdgeSelected && isRangeMiddle ? "bg-white/85 text-slate-700" : "",
+          !isUnavailable && !isEdgeSelected && !isRangeMiddle ? "bg-slate-900/10 text-slate-600 group-hover:-translate-y-0.5 group-hover:bg-violet-100 group-hover:text-violet-800" : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -608,23 +609,6 @@ export default function RoomDetailPage() {
     return new Date(year, month - 1, 1);
   }, [calendarMonth]);
 
-  const availabilityPulse = useMemo(() => {
-    const maxAvailable = Math.max(...visibleWindowCalendar.map((day) => day.availableRooms ?? 0), 1);
-    return visibleWindowCalendar.map((day) => {
-      const available = day.availableRooms ?? 0;
-      const ratio = Math.max(0.08, available / maxAvailable);
-      const status =
-        day.localEvent === "Closed" || available <= 0 ? "blocked" : day.demandLevel === "HIGH" ? "hot" : day.demandLevel === "MEDIUM" ? "warm" : "open";
-
-      return {
-        date: day.date,
-        day: Number(day.date.slice(8, 10)),
-        ratio,
-        status,
-      };
-    });
-  }, [visibleWindowCalendar]);
-
   const dayPickerClassNames = useMemo(() => {
     const defaults = getDefaultClassNames();
     return {
@@ -642,11 +626,11 @@ export default function RoomDetailPage() {
       month_grid: `${defaults.month_grid} w-full border-separate border-spacing-[2px]`,
       day: `${defaults.day} p-0`,
       day_button:
-        `${defaults.day_button} h-9 w-9 rounded-xl border border-slate-200 bg-white/95 text-slate-700 backdrop-blur-[4px] transition duration-300 hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-lg sm:h-10 sm:w-10`,
-      selected: "border-sky-900 bg-sky-900 text-white shadow-[0_0_0_1px_rgba(3,105,161,0.45)]",
-      range_start: "border-sky-900 bg-sky-900 text-white",
-      range_middle: "border-sky-200 bg-sky-100 text-sky-900",
-      range_end: "border-sky-900 bg-sky-900 text-white",
+        `${defaults.day_button} h-11 w-10 rounded-xl border border-slate-200 bg-white/95 text-slate-700 backdrop-blur-[4px] transition duration-300 hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-lg sm:h-11 sm:w-11`,
+      selected: "border-slate-300 bg-white/95 text-slate-700",
+      range_start: "border-violet-700 bg-violet-700 text-white shadow-[0_0_0_1px_rgba(109,40,217,0.35)]",
+      range_middle: "border-violet-100 bg-violet-50 text-violet-900",
+      range_end: "border-violet-700 bg-violet-700 text-white shadow-[0_0_0_1px_rgba(109,40,217,0.35)]",
       today: "ring-2 ring-cyan-300",
       focused: "ring-2 ring-sky-400",
       disabled: "opacity-45",
@@ -1051,73 +1035,32 @@ export default function RoomDetailPage() {
                       </div>
                     </div>
                     </div>
-                    <div className="mb-3 flex flex-wrap gap-1.5 rounded-lg border border-slate-200/90 bg-white/90 p-2 text-[10px] text-slate-600 backdrop-blur">
-                    <span className="rounded-full border border-cyan-300/80 bg-cyan-50 px-2 py-0.5 text-cyan-900">Best price</span>
-                    <span className="rounded-full border border-sky-300/80 bg-sky-50 px-2 py-0.5 text-sky-900">Peak price</span>
-                    <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5">Sold out</span>
-                    <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5">Date + price in each cell</span>
-                    {hoveredDateKey && hoveredDay ? (
-                      <span className="rounded-full border border-sky-400 bg-sky-50 px-2 py-0.5 font-semibold text-sky-900">
-                        {hoveredDateKey} · ₩ {hoveredDay.price.toLocaleString()}
-                      </span>
-                    ) : (
-                      <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5">Hover a date to preview exact rate</span>
-                    )}
+                    <div className="mb-3 rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50 to-cyan-50 p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-700">Live Date Preview</p>
+                      {hoveredDateKey && hoveredDay ? (
+                        <div className="mt-1.5 flex items-end justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{hoveredDateKey}</p>
+                            <p className="text-xs text-slate-600">
+                              {isCalendarDayBookable(hoveredDay)
+                                ? `${hoveredDay.availableRooms ?? 0} room(s) left · ${hoveredDay.demandLevel.toLowerCase()} demand`
+                                : "Unavailable for booking"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Nightly Price</p>
+                            <p className="text-xl font-bold text-sky-900">₩ {hoveredDay.price.toLocaleString()}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-1.5 rounded-lg border border-sky-200 bg-white/80 px-3 py-2 text-xs text-slate-600">
+                          Hover a date to preview exact nightly price and availability.
+                        </div>
+                      )}
                     </div>
-                    {availabilityPulse.length > 0 ? (
-                      <div className="mb-3 rounded-lg border border-slate-200 bg-white/80 p-2">
-                      <div className="flex items-end gap-[3px] overflow-x-auto pb-1">
-                        {availabilityPulse.map((entry) => {
-                          const statusClassName =
-                            entry.status === "blocked"
-                              ? "bg-slate-300"
-                              : entry.status === "hot"
-                                ? "bg-sky-600"
-                                : entry.status === "warm"
-                                  ? "bg-sky-400"
-                                  : "bg-cyan-400";
-                          const isDisabled = entry.status === "blocked";
-                          return (
-                            <button
-                              key={entry.date}
-                              type="button"
-                              disabled={isDisabled}
-                              onClick={() => handleSelectCalendarDate(entry.date)}
-                              className="group inline-flex min-w-5 flex-col items-center gap-1 disabled:cursor-not-allowed disabled:opacity-45"
-                              title={entry.date}
-                            >
-                              <span
-                                className={`w-3 rounded-full transition-all duration-300 group-hover:-translate-y-0.5 group-hover:scale-105 ${statusClassName}`}
-                                style={{ height: `${Math.round(12 + entry.ratio * 24)}px` }}
-                              />
-                              <span className="text-[9px] font-semibold text-slate-500">{entry.day}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-slate-500">
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-2 w-2 rounded-full bg-cyan-400" />
-                          Open
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-2 w-2 rounded-full bg-sky-400" />
-                          Medium demand
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-2 w-2 rounded-full bg-sky-600" />
-                          High demand
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-2 w-2 rounded-full bg-slate-300" />
-                          Unavailable
-                        </span>
-                      </div>
-                      </div>
-                    ) : null}
                     <div className="overflow-x-auto pb-1">
                       <DayPicker
-                      animate
+                      key={calendarMonth}
                       mode="range"
                       selected={selectedRange}
                       month={calendarMonthDate}
@@ -1132,14 +1075,14 @@ export default function RoomDetailPage() {
                       }}
                       modifiersClassNames={{
                         cheap:
-                          "[&>button]:border-cyan-400 [&>button]:bg-gradient-to-b [&>button]:from-cyan-50 [&>button]:to-cyan-100 [&>button]:text-cyan-900",
+                          "[&>button:not([aria-selected='true'])]:border-cyan-400 [&>button:not([aria-selected='true'])]:bg-gradient-to-b [&>button:not([aria-selected='true'])]:from-cyan-50 [&>button:not([aria-selected='true'])]:to-cyan-100 [&>button:not([aria-selected='true'])]:text-cyan-900",
                         peak:
-                          "[&>button]:border-sky-400 [&>button]:bg-gradient-to-b [&>button]:from-blue-50 [&>button]:to-blue-100 [&>button]:text-blue-900",
+                          "[&>button:not([aria-selected='true'])]:border-sky-400 [&>button:not([aria-selected='true'])]:bg-gradient-to-b [&>button:not([aria-selected='true'])]:from-blue-50 [&>button:not([aria-selected='true'])]:to-blue-100 [&>button:not([aria-selected='true'])]:text-blue-900",
                       }}
                       components={dayPickerComponents}
                       classNames={dayPickerClassNames}
                       style={dayPickerStyle}
-                      showOutsideDays
+                      fixedWeeks
                       />
                     </div>
                     {calendarLoadInProgress && visibleWindowCalendar.length === 0 ? (
