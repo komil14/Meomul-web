@@ -15,6 +15,7 @@ import {
   LOCK_PRICE_MUTATION,
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { useRoomLiveViewers } from "@/lib/hooks/use-room-live-viewers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   CancelPriceLockMutationData,
@@ -520,6 +521,10 @@ export default function RoomDetailPage() {
   const coverImage = room?.roomImages[0] ?? "";
   const galleryImages = room?.roomImages.slice(1) ?? [];
   const deal = room?.lastMinuteDeal;
+  const { viewerCount: liveViewerCount, connected: isLiveViewConnected } = useRoomLiveViewers({
+    roomId,
+    initialCount: 0,
+  });
   const sameTypeViewOptions = useMemo(() => {
     if (!room) {
       return [] as Array<{ viewType: ViewType; roomId: string }>;
@@ -869,11 +874,11 @@ export default function RoomDetailPage() {
             { label: "Room Size", value: `${room.roomSize} m²`, icon: "size" as const },
             { label: "Inventory", value: `${room.availableRooms}/${room.totalRooms} ready`, icon: "inventory" as const },
             { label: "Weekend Add-on", value: `₩ ${room.weekendSurcharge.toLocaleString()}`, icon: "surcharge" as const },
-            { label: "Live Interest", value: `${room.currentViewers} viewers`, icon: "eyes" as const },
+            { label: "Live Interest", value: `${liveViewerCount} viewer${liveViewerCount === 1 ? "" : "s"}`, icon: "eyes" as const },
             { label: "Updated", value: formatIsoDate(room.updatedAt), icon: "clock" as const },
           ]
         : [],
-    [room],
+    [liveViewerCount, room],
   );
   const roomHeroHighlights = useMemo(
     () =>
@@ -1052,6 +1057,9 @@ export default function RoomDetailPage() {
                     </article>
                   ))}
                 </div>
+                <p className="text-xs text-slate-500">
+                  Live viewer tracking: {isLiveViewConnected ? "connected" : "reconnecting..."}
+                </p>
 
                 <div className="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm">
                   <div className="mb-4">
