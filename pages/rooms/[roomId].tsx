@@ -313,6 +313,9 @@ export default function RoomDetailPage() {
     () => `${formatMonthLabel(calendarMonth)} · ${formatMonthLabel(nextCalendarMonth)}`,
     [calendarMonth, nextCalendarMonth],
   );
+  const canMoveToPreviousMonth = calendarMonth > todayMonth;
+  const previousMonthKey = useMemo(() => addMonthsToMonthKey(calendarMonth, -1), [calendarMonth]);
+  const nextMonthKey = useMemo(() => addMonthsToMonthKey(calendarMonth, 1), [calendarMonth]);
   const hoveredDay = useMemo(() => (hoveredDateKey ? availabilityByDate.get(hoveredDateKey) : undefined), [availabilityByDate, hoveredDateKey]);
 
   useEffect(() => {
@@ -428,9 +431,9 @@ export default function RoomDetailPage() {
       month: `${defaults.month} rounded-2xl border border-white/70 bg-white/80 p-3 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.85)] backdrop-blur`,
       month_caption: `${defaults.month_caption} mb-3`,
       caption_label: `${defaults.caption_label} text-sm font-semibold uppercase tracking-[0.12em] text-slate-700`,
-      nav: `${defaults.nav} gap-2`,
-      button_previous: `${defaults.button_previous} h-8 w-8 rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500`,
-      button_next: `${defaults.button_next} h-8 w-8 rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500`,
+      nav: "hidden",
+      button_previous: "hidden",
+      button_next: "hidden",
       weekdays: `${defaults.weekdays} border-b border-slate-200 pb-1`,
       weekday: `${defaults.weekday} text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500`,
       month_grid: `${defaults.month_grid} w-full border-separate border-spacing-1`,
@@ -683,7 +686,26 @@ export default function RoomDetailPage() {
               <div className="calendar-shell rounded-xl border border-slate-200 bg-white p-3">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">{calendarMonthLabel}</p>
-                  <p className="text-[11px] text-slate-500">2-month cinematic price board</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[11px] text-slate-500">2-month cinematic price board</p>
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setCalendarMonth(previousMonthKey)}
+                        disabled={!canMoveToPreviousMonth}
+                        className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCalendarMonth(nextMonthKey)}
+                        className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-slate-500"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="sticky top-2 z-20 mb-3 flex flex-wrap gap-1.5 rounded-lg border border-slate-200/90 bg-white/90 p-2 text-[10px] text-slate-600 backdrop-blur">
                   <span className="rounded-full border border-cyan-300/80 bg-cyan-50 px-2 py-0.5 text-cyan-900">Best price</span>
