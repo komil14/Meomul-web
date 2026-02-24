@@ -19,7 +19,13 @@ interface HotelReviewsSectionProps {
   onMarkHelpful: (reviewId: string) => void;
 }
 
-const formatDate = (value: string): string => new Date(value).toLocaleDateString();
+const formatDate = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+  return date.toISOString().slice(0, 10);
+};
 const asPercent = (rating: number): string => `${Math.round((rating / 5) * 100)}%`;
 
 export function HotelReviewsSection({

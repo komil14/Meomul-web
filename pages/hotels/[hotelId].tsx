@@ -205,7 +205,7 @@ interface HotelDetailPageProps {
 
 export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDetailPageProps) {
   const router = useRouter();
-  const member = useMemo(() => getSessionMember(), []);
+  const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
   const discoverySectionRef = useRef<HTMLElement | null>(null);
   const locationSectionRef = useRef<HTMLElement | null>(null);
 
@@ -234,6 +234,10 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   const canUseRecommendedQuery = canUsePersonalizedRecommendations(memberType);
   const canUseLikeActions = canUseMemberActions(memberType);
   const canUsePriceActions = canUseMemberActions(memberType);
+
+  useEffect(() => {
+    setMember(getSessionMember());
+  }, []);
 
   const {
     data: hotelData,
