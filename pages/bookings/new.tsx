@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { CREATE_BOOKING_MUTATION, SEARCH_MEMBERS_FOR_BOOKING_QUERY } from "@/graphql/booking.gql";
-import { GET_HOTEL_CONTEXT_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
+import { GET_HOTEL_CONTEXT_QUERY, GET_MY_PRICE_LOCK_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -14,7 +14,14 @@ import type {
   SearchMembersForBookingQueryData,
   SearchMembersForBookingQueryVars,
 } from "@/types/booking";
-import type { GetHotelContextQueryData, GetHotelContextQueryVars, GetRoomQueryData, GetRoomQueryVars } from "@/types/hotel";
+import type {
+  GetHotelContextQueryData,
+  GetHotelContextQueryVars,
+  GetMyPriceLockQueryData,
+  GetMyPriceLockQueryVars,
+  GetRoomQueryData,
+  GetRoomQueryVars,
+} from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
 
 const PAYMENT_METHODS: PaymentMethod[] = ["AT_HOTEL", "CREDIT_CARD", "DEBIT_CARD", "KAKAOPAY", "NAVERPAY", "TOSS"];
@@ -132,6 +139,15 @@ const NewBookingPage: NextPageWithAuth = () => {
   const canCreateBooking =
     memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
   const isStaffCreator = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
+  const {
+    data: priceLockData,
+    loading: priceLockLoading,
+    error: priceLockError,
+  } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
+    skip: !roomId || isStaffCreator,
+    variables: { roomId },
+    fetchPolicy: "cache-and-network",
+  });
 
   const {
     data: guestCandidatesData,
@@ -197,7 +213,25 @@ const NewBookingPage: NextPageWithAuth = () => {
   const maxAdultsByQuantity = roomCapacity * (quantity ?? 1);
 
   const nights = diffNights(checkInDate, checkOutDate);
-  const effectivePrice = room?.basePrice ?? 0;
+  const activePriceLock = !isStaffCreator ? priceLockData?.getMyPriceLock ?? null : null;
+  const effectivePrice = useMemo(() => {
+    if (activePriceLock?.lockedPrice) {
+      return activePriceLock.lockedPrice;
+    }
+    if (room?.lastMinuteDeal?.isActive) {
+      return room.lastMinuteDeal.dealPrice;
+    }
+    return room?.basePrice ?? 0;
+  }, [activePriceLock?.lockedPrice, room?.basePrice, room?.lastMinuteDeal?.dealPrice, room?.lastMinuteDeal?.isActive]);
+  const effectivePriceSource = useMemo(() => {
+    if (activePriceLock?.lockedPrice) {
+      return "PRICE_LOCK";
+    }
+    if (room?.lastMinuteDeal?.isActive) {
+      return "LAST_MINUTE_DEAL";
+    }
+    return "BASE_RATE";
+  }, [activePriceLock?.lockedPrice, room?.lastMinuteDeal?.isActive]);
 
   const estimatedSubtotal = effectivePrice * (quantity ?? 0) * Math.max(0, nights);
 
@@ -321,8 +355,9 @@ const NewBookingPage: NextPageWithAuth = () => {
 
       {hotelError ? <ErrorNotice message={getErrorMessage(hotelError)} /> : null}
       {roomError ? <ErrorNotice message={getErrorMessage(roomError)} /> : null}
+      {priceLockError ? <ErrorNotice message={getErrorMessage(priceLockError)} /> : null}
 
-      {hotelLoading || roomLoading ? (
+      {hotelLoading || roomLoading || priceLockLoading ? (
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading booking context...</div>
       ) : null}
 
@@ -342,6 +377,14 @@ const NewBookingPage: NextPageWithAuth = () => {
             <p className="text-sm text-slate-600">{room.roomType}</p>
             <p className="mt-2 text-sm text-slate-700">Available: {room.availableRooms}</p>
             <p className="text-sm text-slate-700">Price per night: ₩ {effectivePrice.toLocaleString()}</p>
+            <p className="text-xs text-slate-500">
+              Rate source:{" "}
+              {effectivePriceSource === "PRICE_LOCK"
+                ? "Price lock"
+                : effectivePriceSource === "LAST_MINUTE_DEAL"
+                  ? "Last-minute deal"
+                  : "Base rate"}
+            </p>
           </article>
         </section>
       ) : null}
@@ -405,56 +448,56 @@ const NewBookingPage: NextPageWithAuth = () => {
             </>
           ) : null}
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Check-in</span>
-                <input
-                  type="date"
-                  min={todayDate}
-                  value={checkInDate}
-                  onChange={(event) => setCheckInDate(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                  required
-                />
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Check-in</span>
+            <input
+              type="date"
+              min={todayDate}
+              value={checkInDate}
+              onChange={(event) => setCheckInDate(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+              required
+            />
           </label>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Check-out</span>
-                <input
-                  type="date"
-                  min={checkInDate || todayDate}
-                  value={checkOutDate}
-                  onChange={(event) => setCheckOutDate(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                  required
-                />
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Check-out</span>
+            <input
+              type="date"
+              min={checkInDate || todayDate}
+              value={checkOutDate}
+              onChange={(event) => setCheckOutDate(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+              required
+            />
           </label>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Guest count</span>
-                <input
-                  value={guestCountInput}
-                  onChange={(event) => setGuestCountInput(event.target.value.replace(/\D/g, ""))}
-                  inputMode="numeric"
-                  aria-describedby="guest-capacity-hint"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                  required
-                />
-                <p id="guest-capacity-hint" className="mt-1 text-xs text-slate-500">
-                  Capacity: up to {maxAdultsByQuantity} adult(s) ({roomCapacity} per room)
-                </p>
-              </label>
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Guest count</span>
+            <input
+              value={guestCountInput}
+              onChange={(event) => setGuestCountInput(event.target.value.replace(/\D/g, ""))}
+              inputMode="numeric"
+              aria-describedby="guest-capacity-hint"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+              required
+            />
+            <p id="guest-capacity-hint" className="mt-1 text-xs text-slate-500">
+              Capacity: up to {maxAdultsByQuantity} adult(s) ({roomCapacity} per room)
+            </p>
+          </label>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Room quantity</span>
-                <input
-                  value={quantityInput}
-                  onChange={(event) => setQuantityInput(event.target.value.replace(/\D/g, ""))}
-                  inputMode="numeric"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                  required
-                />
-                {room ? <p className="mt-1 text-xs text-slate-500">Max available now: {room.availableRooms}</p> : null}
-              </label>
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Room quantity</span>
+            <input
+              value={quantityInput}
+              onChange={(event) => setQuantityInput(event.target.value.replace(/\D/g, ""))}
+              inputMode="numeric"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+              required
+            />
+            {room ? <p className="mt-1 text-xs text-slate-500">Max available now: {room.availableRooms}</p> : null}
+          </label>
 
           <label className="block md:col-span-2">
             <span className="mb-2 block text-sm font-medium text-slate-700">Payment method</span>
