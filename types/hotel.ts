@@ -464,6 +464,10 @@ export interface GetMyPriceLockQueryVars {
   roomId: string;
 }
 
+export interface GetMyPriceLocksQueryData {
+  getMyPriceLocks: PriceLockDto[];
+}
+
 export interface LockPriceMutationData {
   lockPrice: PriceLockDto;
 }

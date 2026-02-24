@@ -8,6 +8,7 @@ import {
   CANCEL_PRICE_LOCK_MUTATION,
   GET_HOTEL_CONTEXT_QUERY,
   GET_MY_PRICE_LOCK_QUERY,
+  GET_MY_PRICE_LOCKS_QUERY,
   GET_PRICE_CALENDAR_QUERY,
   GET_ROOM_QUERY,
   GET_ROOMS_BY_HOTEL_QUERY,
@@ -470,7 +471,6 @@ export default function RoomDetailPage() {
     data: myPriceLockData,
     loading: myPriceLockLoading,
     error: myPriceLockError,
-    refetch: refetchMyPriceLock,
   } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
     skip: !isHydrated || !roomId || !canLockPrice,
     variables: {
@@ -777,6 +777,7 @@ export default function RoomDetailPage() {
   const calendarLoadError = priceCalendarError;
   const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
   const lockMinutesLeft = activePriceLock ? getMinutesUntil(activePriceLock.expiresAt) : 0;
+  const showBottomLockBar = canLockPrice && canLockCurrentRoom && !myPriceLockLoading && !activePriceLock && !lockingPrice;
 
   const handleLockPrice = async (): Promise<void> => {
     if (!canLockPrice || !room) {
@@ -792,8 +793,12 @@ export default function RoomDetailPage() {
             currentPrice: room.basePrice,
           },
         },
+        refetchQueries: [
+          { query: GET_MY_PRICE_LOCK_QUERY, variables: { roomId: room._id } },
+          { query: GET_MY_PRICE_LOCKS_QUERY },
+        ],
+        awaitRefetchQueries: true,
       });
-      await refetchMyPriceLock();
     } catch (error) {
       setLockActionError(getErrorMessage(error));
     }
@@ -808,8 +813,12 @@ export default function RoomDetailPage() {
     try {
       await cancelPriceLockMutation({
         variables: { priceLockId: activePriceLock._id },
+        refetchQueries: [
+          { query: GET_MY_PRICE_LOCK_QUERY, variables: { roomId: activePriceLock.roomId } },
+          { query: GET_MY_PRICE_LOCKS_QUERY },
+        ],
+        awaitRefetchQueries: true,
       });
-      await refetchMyPriceLock();
     } catch (error) {
       setLockActionError(getErrorMessage(error));
     }
@@ -859,7 +868,7 @@ export default function RoomDetailPage() {
   );
 
   return (
-    <main className="space-y-6">
+    <main className={showBottomLockBar ? "space-y-6 pb-28 sm:pb-32" : "space-y-6"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
           Back to hotels
@@ -1278,6 +1287,25 @@ export default function RoomDetailPage() {
               </aside>
             </div>
           </section>
+
+          {showBottomLockBar ? (
+            <section className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-12px_28px_-18px_rgba(15,23,42,0.65)] backdrop-blur">
+              <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Price lock ready</p>
+                  <p className="text-sm font-semibold text-slate-900">Lock ₩ {room.basePrice.toLocaleString()} for 30 minutes</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleLockPrice()}
+                  disabled={lockingPrice}
+                  className="inline-flex shrink-0 items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {lockingPrice ? "Locking..." : "Lock price"}
+                </button>
+              </div>
+            </section>
+          ) : null}
         </>
       ) : null}
     </main>

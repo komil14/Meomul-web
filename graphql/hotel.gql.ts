@@ -365,6 +365,18 @@ export const GET_MY_PRICE_LOCK_QUERY = gql`
   }
 `;
 
+export const GET_MY_PRICE_LOCKS_QUERY = gql`
+  query GetMyPriceLocks {
+    getMyPriceLocks {
+      _id
+      roomId
+      lockedPrice
+      expiresAt
+      createdAt
+    }
+  }
+`;
+
 export const LOCK_PRICE_MUTATION = gql`
   mutation LockPrice($input: CreatePriceLockInput!) {
     lockPrice(input: $input) {

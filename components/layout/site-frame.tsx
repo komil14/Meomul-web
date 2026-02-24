@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef } from "react";
 import type { PropsWithChildren } from "react";
+import { PriceLockFab } from "@/components/layout/price-lock-fab";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
 import { getSessionMember } from "@/lib/auth/session";
@@ -97,6 +98,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
         </div>
       </header>
       <div className="mx-auto w-full max-w-6xl px-6 py-10">{children}</div>
+      <PriceLockFab />
     </div>
   );
 }
