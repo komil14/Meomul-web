@@ -19,6 +19,7 @@ export interface BookingValidationInput {
   hasHotel: boolean;
   hasRoom: boolean;
   guestCount: number | null;
+  childCount?: number | null;
   quantity: number | null;
   roomStatus?: string;
   roomMaxOccupancy?: number;
@@ -36,6 +37,19 @@ export const parsePositiveInt = (value: string): number | null => {
 
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+};
+
+export const parseNonNegativeInt = (value: string): number | null => {
+  if (value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
     return null;
   }
 
@@ -89,14 +103,18 @@ export const getBookingValidationMessage = (input: BookingValidationInput): stri
   if (!input.guestCount || !input.quantity) {
     return "Guest count and room quantity must be positive integers.";
   }
+  if (input.childCount != null && input.childCount < 0) {
+    return "Child count cannot be negative.";
+  }
   if (input.roomStatus !== "AVAILABLE") {
     return `Room is currently ${(input.roomStatus ?? "unavailable").toLowerCase()} and cannot be booked.`;
   }
   if (typeof input.roomAvailableRooms === "number" && input.quantity > input.roomAvailableRooms) {
     return `Only ${input.roomAvailableRooms} room(s) currently available.`;
   }
-  if (typeof input.roomMaxOccupancy === "number" && input.guestCount > input.roomMaxOccupancy * input.quantity) {
-    return `Guest count exceeds room capacity (${input.roomMaxOccupancy} x ${input.quantity} room(s)).`;
+  const totalGuests = input.guestCount + (input.childCount ?? 0);
+  if (typeof input.roomMaxOccupancy === "number" && totalGuests > input.roomMaxOccupancy * input.quantity) {
+    return `Total guests exceed room capacity (${input.roomMaxOccupancy} x ${input.quantity} room(s)).`;
   }
   if (!input.checkInDate || !input.checkOutDate) {
     return "Please select check-in and check-out dates.";

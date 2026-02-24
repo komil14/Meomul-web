@@ -4,6 +4,7 @@ import {
   formatTodayDate,
   getBookingValidationMessage,
   isDateKey,
+  parseNonNegativeInt,
   parsePositiveInt,
   resolveEffectiveNightPrice,
 } from "../lib/booking/booking-rules";
@@ -21,6 +22,20 @@ describe("booking-rules", () => {
       expect(parsePositiveInt("-1")).toBeNull();
       expect(parsePositiveInt("2.5")).toBeNull();
       expect(parsePositiveInt("abc")).toBeNull();
+    });
+  });
+
+  describe("parseNonNegativeInt", () => {
+    it("accepts zero and positive integer", () => {
+      expect(parseNonNegativeInt("0")).toBe(0);
+      expect(parseNonNegativeInt("2")).toBe(2);
+    });
+
+    it("returns null for invalid values", () => {
+      expect(parseNonNegativeInt("")).toBeNull();
+      expect(parseNonNegativeInt("-1")).toBeNull();
+      expect(parseNonNegativeInt("1.5")).toBeNull();
+      expect(parseNonNegativeInt("abc")).toBeNull();
     });
   });
 
@@ -93,6 +108,7 @@ describe("booking-rules", () => {
       hasHotel: true,
       hasRoom: true,
       guestCount: 2,
+      childCount: 0,
       quantity: 1,
       roomStatus: "AVAILABLE",
       roomMaxOccupancy: 2,
@@ -131,10 +147,23 @@ describe("booking-rules", () => {
         getBookingValidationMessage({
           ...baseInput,
           guestCount: 5,
+          childCount: 0,
           roomMaxOccupancy: 2,
           quantity: 2,
         }),
-      ).toContain("exceeds room capacity");
+      ).toContain("exceed room capacity");
+    });
+
+    it("rejects when adults + children exceed capacity", () => {
+      expect(
+        getBookingValidationMessage({
+          ...baseInput,
+          guestCount: 2,
+          childCount: 2,
+          roomMaxOccupancy: 3,
+          quantity: 1,
+        }),
+      ).toContain("exceed room capacity");
     });
 
     it("rejects past check-in", () => {

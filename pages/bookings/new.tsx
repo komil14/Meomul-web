@@ -11,6 +11,7 @@ import {
   formatTodayDate,
   getBookingValidationMessage,
   isDateKey,
+  parseNonNegativeInt,
   parsePositiveInt,
   resolveEffectiveNightPrice,
   toDateTime,
@@ -86,11 +87,14 @@ const NewBookingPage: NextPageWithAuth = () => {
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [guestCountInput, setGuestCountInput] = useState("1");
+  const [childCountInput, setChildCountInput] = useState("0");
   const [quantityInput, setQuantityInput] = useState("1");
   const [targetGuestId, setTargetGuestId] = useState("");
   const [guestKeyword, setGuestKeyword] = useState("");
   const [debouncedGuestKeyword, setDebouncedGuestKeyword] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("AT_HOTEL");
+  const [earlyCheckIn, setEarlyCheckIn] = useState(false);
+  const [lateCheckOut, setLateCheckOut] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -184,10 +188,13 @@ const NewBookingPage: NextPageWithAuth = () => {
   const guestCandidates = guestCandidatesData?.searchMembersForBooking ?? [];
 
   const guestCount = parsePositiveInt(guestCountInput);
+  const childCount = parseNonNegativeInt(childCountInput);
   const quantity = parsePositiveInt(quantityInput);
   const todayDate = useMemo(() => formatTodayDate(), []);
   const roomCapacity = room?.maxOccupancy ?? 1;
   const maxAdultsByQuantity = roomCapacity * (quantity ?? 1);
+  const maxChildrenByCurrentAdults = Math.max(0, maxAdultsByQuantity - (guestCount ?? 1));
+  const totalGuests = (guestCount ?? 0) + (childCount ?? 0);
 
   const nights = diffNights(checkInDate, checkOutDate);
   const activePriceLock = !isStaffCreator ? priceLockData?.getMyPriceLock ?? null : null;
@@ -205,6 +212,8 @@ const NewBookingPage: NextPageWithAuth = () => {
   const effectivePriceSource: EffectiveRateSource = effectiveRate.source;
 
   const estimatedSubtotal = effectivePrice * (quantity ?? 0) * Math.max(0, nights);
+  const estimatedTimeFees = (earlyCheckIn ? 30000 : 0) + (lateCheckOut ? 30000 : 0);
+  const estimatedKnownTotal = estimatedSubtotal + estimatedTimeFees;
   const maxQuantity = room?.availableRooms && room.availableRooms > 0 ? room.availableRooms : 1;
 
   useEffect(() => {
@@ -229,6 +238,15 @@ const NewBookingPage: NextPageWithAuth = () => {
       setGuestCountInput(String(Math.max(1, maxAdultsByQuantity)));
     }
   }, [guestCountInput, maxAdultsByQuantity]);
+  useEffect(() => {
+    const parsedChildren = parseNonNegativeInt(childCountInput);
+    if (parsedChildren == null) {
+      return;
+    }
+    if (parsedChildren > maxChildrenByCurrentAdults) {
+      setChildCountInput(String(maxChildrenByCurrentAdults));
+    }
+  }, [childCountInput, maxChildrenByCurrentAdults]);
 
   const bookingValidationMessage = useMemo(() => {
     return getBookingValidationMessage({
@@ -240,6 +258,7 @@ const NewBookingPage: NextPageWithAuth = () => {
       hasHotel: Boolean(hotel),
       hasRoom: Boolean(room),
       guestCount,
+      childCount,
       quantity,
       roomStatus: room?.roomStatus,
       roomMaxOccupancy: room?.maxOccupancy,
@@ -253,6 +272,7 @@ const NewBookingPage: NextPageWithAuth = () => {
     canCreateBooking,
     checkInDate,
     checkOutDate,
+    childCount,
     guestCount,
     hotel,
     hotelId,
@@ -278,6 +298,10 @@ const NewBookingPage: NextPageWithAuth = () => {
       setFormError("Booking context is incomplete. Please refresh and try again.");
       return;
     }
+    if (childCount == null) {
+      setFormError("Child count must be a non-negative integer.");
+      return;
+    }
 
     try {
       const response = await createBooking({
@@ -288,9 +312,11 @@ const NewBookingPage: NextPageWithAuth = () => {
             checkInDate: toDateTime(checkInDate),
             checkOutDate: toDateTime(checkOutDate),
             adultCount: guestCount,
-            childCount: 0,
+            childCount,
             paymentMethod,
             specialRequests: specialRequests || undefined,
+            earlyCheckIn,
+            lateCheckOut,
             rooms: [
               {
                 roomId,
@@ -368,6 +394,7 @@ const NewBookingPage: NextPageWithAuth = () => {
             <h2 className="text-lg font-semibold text-slate-900">Room</h2>
             <p className="mt-2 text-sm text-slate-700">{room.roomName}</p>
             <p className="text-sm text-slate-600">{room.roomType}</p>
+            <p className="text-sm text-slate-600">{room.viewType} view</p>
             <p className="mt-2 text-sm text-slate-700">Available: {room.availableRooms}</p>
             <p className="text-sm text-slate-700">Price per night: ₩ {effectivePrice.toLocaleString()}</p>
             <p className="text-xs text-slate-500">
@@ -479,8 +506,23 @@ const NewBookingPage: NextPageWithAuth = () => {
               required
             />
             <p id="guest-capacity-hint" className="mt-1 text-xs text-slate-500">
-              Capacity: up to {maxAdultsByQuantity} adult(s) ({roomCapacity} per room)
+              Capacity: up to {maxAdultsByQuantity} total guest(s) ({roomCapacity} per room)
             </p>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">Child count</span>
+            <input
+              type="number"
+              value={childCountInput}
+              onChange={(event) => setChildCountInput(event.target.value.replace(/\D/g, ""))}
+              inputMode="numeric"
+              min={0}
+              max={String(Math.max(0, maxChildrenByCurrentAdults))}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+              required
+            />
+            <p className="mt-1 text-xs text-slate-500">Current total guests: {totalGuests}</p>
           </label>
 
           <label className="block">
@@ -513,6 +555,27 @@ const NewBookingPage: NextPageWithAuth = () => {
             </select>
           </label>
 
+          <div className="grid gap-2 md:col-span-2 md:grid-cols-2">
+            <label className="flex items-center justify-between rounded-lg border border-slate-300 bg-slate-50 px-3 py-2">
+              <span className="text-sm text-slate-700">Early check-in (+₩ 30,000)</span>
+              <input
+                type="checkbox"
+                checked={earlyCheckIn}
+                onChange={(event) => setEarlyCheckIn(event.target.checked)}
+                className="h-4 w-4 accent-slate-900"
+              />
+            </label>
+            <label className="flex items-center justify-between rounded-lg border border-slate-300 bg-slate-50 px-3 py-2">
+              <span className="text-sm text-slate-700">Late check-out (+₩ 30,000)</span>
+              <input
+                type="checkbox"
+                checked={lateCheckOut}
+                onChange={(event) => setLateCheckOut(event.target.checked)}
+                className="h-4 w-4 accent-slate-900"
+              />
+            </label>
+          </div>
+
           <label className="block md:col-span-2">
             <span className="mb-2 block text-sm font-medium text-slate-700">Guest name (optional)</span>
             <input
@@ -537,6 +600,12 @@ const NewBookingPage: NextPageWithAuth = () => {
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
           <p>
             Estimated subtotal: <span className="font-semibold">₩ {estimatedSubtotal.toLocaleString()}</span>
+          </p>
+          <p className="mt-1">
+            Early/Late fees (known): <span className="font-semibold">₩ {estimatedTimeFees.toLocaleString()}</span>
+          </p>
+          <p className="mt-1">
+            Estimated known total: <span className="font-semibold">₩ {estimatedKnownTotal.toLocaleString()}</span>
           </p>
           <p className="mt-1 text-xs text-slate-500">Final total is calculated on server (taxes, service fee, surcharges).</p>
           <p className="mt-1 text-xs text-slate-500">

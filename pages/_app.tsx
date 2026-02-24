@@ -1,5 +1,4 @@
 import "@/styles/globals.css";
-import "react-day-picker/style.css";
 import type { AppProps } from "next/app";
 import { ApolloProvider } from "@apollo/client/react";
 import { Manrope, Space_Grotesk } from "next/font/google";

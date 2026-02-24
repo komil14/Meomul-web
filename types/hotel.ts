@@ -209,6 +209,7 @@ export interface RoomListItem {
   _id: string;
   roomName: string;
   roomType: RoomType;
+  viewType: ViewType;
   basePrice: number;
   availableRooms: number;
   roomImages: string[];

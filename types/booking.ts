@@ -32,6 +32,8 @@ export interface BookingInput {
   paymentMethod: PaymentMethod;
   rooms: BookedRoomInput[];
   specialRequests?: string;
+  earlyCheckIn?: boolean;
+  lateCheckOut?: boolean;
 }
 
 export interface BookedRoomDto {

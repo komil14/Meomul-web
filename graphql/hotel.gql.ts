@@ -180,6 +180,7 @@ export const GET_ROOMS_BY_HOTEL_QUERY = gql`
         _id
         roomName
         roomType
+        viewType
         basePrice
         availableRooms
         roomImages
