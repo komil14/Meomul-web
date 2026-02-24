@@ -131,12 +131,33 @@ export const GET_ROOM_QUERY = gql`
   query GetRoom($roomId: String!) {
     getRoom(roomId: $roomId) {
       _id
+      hotelId
       roomName
       roomType
+      roomNumber
+      roomDesc
+      maxOccupancy
+      bedType
+      bedCount
       roomStatus
       basePrice
+      weekendSurcharge
+      roomSize
+      viewType
+      roomAmenities
+      totalRooms
       availableRooms
+      currentViewers
+      lastMinuteDeal {
+        isActive
+        discountPercent
+        originalPrice
+        dealPrice
+        validUntil
+      }
       roomImages
+      createdAt
+      updatedAt
     }
   }
 `;

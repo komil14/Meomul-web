@@ -30,14 +30,22 @@ export function RoomCard({ room, hotelId }: RoomCardProps) {
           <span>₩ {room.basePrice.toLocaleString()}</span>
           <span>{room.availableRooms} left</span>
         </div>
-        {hotelId ? (
+        <div className="flex items-center gap-2">
           <Link
-            href={`/bookings/new?hotelId=${hotelId}&roomId=${room._id}`}
-            className="inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
+            href={`/rooms/${room._id}`}
+            className="inline-flex rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-500"
           >
-            Book this room
+            View details
           </Link>
-        ) : null}
+          {hotelId ? (
+            <Link
+              href={`/bookings/new?hotelId=${hotelId}&roomId=${room._id}`}
+              className="inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
+            >
+              Book this room
+            </Link>
+          ) : null}
+        </div>
       </div>
     </article>
   );

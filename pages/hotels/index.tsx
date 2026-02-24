@@ -1,7 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
@@ -165,6 +165,11 @@ const toggleNumberCsv = (current: number[], value: number, checked: boolean): st
 
 export default function HotelsPage() {
   const router = useRouter();
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const page = useMemo(() => {
     const parsed = parseInteger(toSingle(router.query.page), 1);
@@ -736,17 +741,21 @@ export default function HotelsPage() {
 
       {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
-      {loading && hotels.length === 0 ? (
+      {!isHydrated ? (
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading hotels...</div>
       ) : null}
 
-      {!loading && hotels.length === 0 ? (
+      {isHydrated && loading && hotels.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading hotels...</div>
+      ) : null}
+
+      {isHydrated && !loading && hotels.length === 0 ? (
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
           No hotels found for current filters.
         </div>
       ) : null}
 
-      {hotels.length > 0 ? (
+      {isHydrated && hotels.length > 0 ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {hotels.map((hotel) => (

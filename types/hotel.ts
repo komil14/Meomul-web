@@ -16,6 +16,9 @@ export type VerificationStatus = "PENDING" | "VERIFIED" | "REJECTED";
 export type BadgeLevel = "NONE" | "VERIFIED" | "SUPERHOST" | "INSPECTED";
 
 export type RoomType = "STANDARD" | "DELUXE" | "SUITE" | "FAMILY" | "PREMIUM" | "PENTHOUSE";
+export type RoomStatus = "AVAILABLE" | "BOOKED" | "MAINTENANCE" | "INACTIVE";
+export type BedType = "SINGLE" | "DOUBLE" | "QUEEN" | "KING" | "TWIN";
+export type ViewType = "CITY" | "OCEAN" | "MOUNTAIN" | "GARDEN" | "NONE";
 export type StayPurpose = "BUSINESS" | "ROMANTIC" | "FAMILY" | "SOLO" | "STAYCATION" | "EVENT" | "MEDICAL" | "LONG_TERM";
 export type HotelAmenityKey =
   | "workspace"
@@ -209,7 +212,31 @@ export interface RoomListItem {
   basePrice: number;
   availableRooms: number;
   roomImages: string[];
-  roomStatus: string;
+  roomStatus: RoomStatus;
+}
+
+export interface RoomDetailItem extends RoomListItem {
+  hotelId: string;
+  roomNumber?: string | null;
+  roomDesc: string;
+  maxOccupancy: number;
+  bedType: BedType;
+  bedCount: number;
+  weekendSurcharge: number;
+  roomSize: number;
+  viewType: ViewType;
+  roomAmenities: string[];
+  totalRooms: number;
+  currentViewers: number;
+  lastMinuteDeal?: {
+    isActive: boolean;
+    discountPercent: number;
+    originalPrice: number;
+    dealPrice: number;
+    validUntil: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RoomsDto {
@@ -235,7 +262,7 @@ export interface GetHotelQueryVars {
 }
 
 export interface GetRoomQueryData {
-  getRoom: RoomListItem;
+  getRoom: RoomDetailItem;
 }
 
 export interface GetRoomQueryVars {

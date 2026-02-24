@@ -50,6 +50,7 @@ import type {
   GetSimilarHotelsQueryVars,
   GetTrendingByLocationQueryData,
   GetTrendingByLocationQueryVars,
+  DayPriceDto,
   HotelDetailItem,
   HotelListItem,
   HotelLocation,
@@ -65,6 +66,7 @@ import type {
 const ROOM_PAGE_SIZE = 12;
 const REVIEW_PAGE_SIZE = 5;
 const CARD_LIST_LIMIT = 6;
+const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"] as const;
 
 const amenityLabels: Partial<Record<keyof HotelDetailItem["amenities"], string>> = {
   wifi: "Fast Wi-Fi",
@@ -108,6 +110,89 @@ const addDays = (dateInput: string, days: number): string => {
   const base = new Date(`${dateInput}T00:00:00`);
   base.setDate(base.getDate() + days);
   return formatDateInput(base);
+};
+
+const addMonthsToMonthKey = (monthKey: string, months: number): string => {
+  const [yearPart, monthPart] = monthKey.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    return monthKey;
+  }
+
+  const date = new Date(Date.UTC(year, month - 1 + months, 1, 0, 0, 0, 0));
+  const nextYear = date.getUTCFullYear();
+  const nextMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${nextYear}-${nextMonth}`;
+};
+
+const buildMonthGrid = (monthKey: string): Array<string | null> => {
+  const [yearPart, monthPart] = monthKey.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    return [];
+  }
+
+  const firstWeekDay = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month, 0, 0, 0, 0, 0)).getUTCDate();
+  const grid: Array<string | null> = [];
+
+  for (let i = 0; i < firstWeekDay; i += 1) {
+    grid.push(null);
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    grid.push(`${monthKey}-${String(day).padStart(2, "0")}`);
+  }
+
+  return grid;
+};
+
+const formatMonthLabel = (monthKey: string): string => {
+  const [yearPart, monthPart] = monthKey.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    return monthKey;
+  }
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthLabel = monthNames[month - 1] ?? String(month);
+  return `${monthLabel} ${year}`;
+};
+
+const buildStayDates = (checkInDate: string, checkOutDate: string): string[] => {
+  if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
+    return [];
+  }
+
+  const dates: string[] = [];
+  let cursor = checkInDate;
+  while (cursor < checkOutDate) {
+    dates.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+
+  return dates;
+};
+
+const isCalendarDayBookable = (day: DayPriceDto | undefined): boolean => {
+  if (!day) {
+    return false;
+  }
+  if (day.localEvent === "Closed") {
+    return false;
+  }
+  return (day.availableRooms ?? 0) > 0;
+};
+
+const isStayRangeAvailable = (checkInDate: string, checkOutDate: string, availabilityByDate: Map<string, DayPriceDto>): boolean => {
+  const stayDates = buildStayDates(checkInDate, checkOutDate);
+  if (stayDates.length === 0) {
+    return false;
+  }
+
+  return stayDates.every((date) => isCalendarDayBookable(availabilityByDate.get(date)));
 };
 
 const shortenText = (text: string, maxLength: number): string => {
@@ -222,6 +307,9 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   const [helpfulCountOverrides, setHelpfulCountOverrides] = useState<Record<string, number>>({});
   const [hotelLikeState, setHotelLikeState] = useState<{ liked: boolean; count: number } | null>(null);
   const todayDate = useMemo(() => formatDateInput(new Date()), []);
+  const todayMonth = useMemo(() => todayDate.slice(0, 7), [todayDate]);
+  const [calendarMonth, setCalendarMonth] = useState(todayMonth);
+  const [calendarByMonth, setCalendarByMonth] = useState<Record<string, DayPriceDto[]>>({});
 
   const hotelId = useMemo(() => {
     if (typeof router.query.hotelId === "string") {
@@ -289,18 +377,16 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     nextFetchPolicy: "cache-first",
   });
 
-  const priceCalendarMonth = useMemo(() => (checkInDate ? checkInDate.slice(0, 7) : todayDate.slice(0, 7)), [checkInDate, todayDate]);
-
   const {
     data: priceCalendarData,
     loading: priceCalendarLoading,
     error: priceCalendarError,
   } = useQuery<GetPriceCalendarQueryData, GetPriceCalendarQueryVars>(GET_PRICE_CALENDAR_QUERY, {
-    skip: !selectedRoomId || !member,
+    skip: !selectedRoomId,
     variables: {
       input: {
         roomId: selectedRoomId,
-        month: priceCalendarMonth,
+        month: calendarMonth,
       },
     },
     fetchPolicy: "cache-first",
@@ -471,6 +557,32 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     setGeneralActionError(null);
   }, [hotelId]);
 
+  useEffect(() => {
+    if (!selectedRoomId) {
+      return;
+    }
+
+    setCalendarByMonth({});
+    setCalendarMonth(todayMonth);
+    setCheckInDate("");
+    setCheckOutDate("");
+  }, [selectedRoomId, todayMonth]);
+
+  useEffect(() => {
+    const calendar = priceCalendarData?.getPriceCalendar.calendar;
+    if (!calendar || calendar.length === 0) {
+      return;
+    }
+    if (calendar[0]?.date.slice(0, 7) !== calendarMonth) {
+      return;
+    }
+
+    setCalendarByMonth((previous) => ({
+      ...previous,
+      [calendarMonth]: calendar,
+    }));
+  }, [calendarMonth, priceCalendarData]);
+
   const selectedRoom = useMemo(() => rooms.find((room) => room._id === selectedRoomId) ?? null, [rooms, selectedRoomId]);
   const fromPrice = useMemo(() => {
     const prices = rooms.map((room) => room.basePrice).filter((price): price is number => typeof price === "number");
@@ -519,7 +631,23 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     [reviewTotal, reviewsLoading],
   );
   const satisfactionText = useMemo(() => (hotel ? asPercent(hotel.hotelRating) : "0%"), [hotel]);
-  const minCheckOutDate = useMemo(() => (checkInDate ? addDays(checkInDate, 1) : addDays(todayDate, 1)), [checkInDate, todayDate]);
+  const availabilityByDate = useMemo(() => {
+    const map = new Map<string, DayPriceDto>();
+    Object.values(calendarByMonth)
+      .flat()
+      .forEach((day) => {
+        map.set(day.date, day);
+      });
+    return map;
+  }, [calendarByMonth]);
+  const monthGrid = useMemo(() => buildMonthGrid(calendarMonth), [calendarMonth]);
+  const visibleMonthCalendar = useMemo(() => calendarByMonth[calendarMonth] ?? [], [calendarByMonth, calendarMonth]);
+  const hasCalendarAvailability = availabilityByDate.size > 0;
+  const maxCalendarMonth = useMemo(() => addMonthsToMonthKey(todayMonth, 11), [todayMonth]);
+  const canGoPrevCalendarMonth = calendarMonth > todayMonth;
+  const canGoNextCalendarMonth = calendarMonth < maxCalendarMonth;
+  const calendarMonthLabel = useMemo(() => formatMonthLabel(calendarMonth), [calendarMonth]);
+
   const bookingValidationMessage = useMemo(() => {
     if (!selectedRoom) {
       return "Select a room first.";
@@ -533,16 +661,85 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     if (checkOutDate <= checkInDate) {
       return "Check-out must be after check-in.";
     }
+    if (hasCalendarAvailability && !isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)) {
+      return "One or more selected nights are unavailable.";
+    }
     if (adultCount < 1) {
       return "Adult count must be at least 1.";
     }
     return null;
-  }, [adultCount, checkInDate, checkOutDate, selectedRoom]);
+  }, [adultCount, availabilityByDate, checkInDate, checkOutDate, hasCalendarAvailability, selectedRoom]);
   const canContinueBooking = bookingValidationMessage === null && Boolean(selectedRoom);
   const hotelLikeCount = hotelLikeState?.count ?? hotel?.hotelLikes ?? 0;
   const hotelLiked = hotelLikeState?.liked ?? Boolean(hotelLikedData?.hasLiked);
   const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
   const lockMinutesLeft = activePriceLock ? getMinutesUntil(activePriceLock.expiresAt) : 0;
+  const visibleCalendarByDate = useMemo(() => {
+    const map = new Map<string, DayPriceDto>();
+    visibleMonthCalendar.forEach((day) => {
+      map.set(day.date, day);
+    });
+    return map;
+  }, [visibleMonthCalendar]);
+
+  useEffect(() => {
+    if (!checkInDate) {
+      return;
+    }
+
+    const checkInDay = availabilityByDate.get(checkInDate);
+    if (hasCalendarAvailability && (!checkInDay || !isCalendarDayBookable(checkInDay))) {
+      setCheckInDate("");
+      setCheckOutDate("");
+      return;
+    }
+
+    if (checkOutDate && hasCalendarAvailability && !isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)) {
+      setCheckOutDate("");
+    }
+  }, [availabilityByDate, checkInDate, checkOutDate, hasCalendarAvailability]);
+
+  const handleSelectCalendarDate = (date: string): void => {
+    if (date < todayDate) {
+      return;
+    }
+
+    const day = availabilityByDate.get(date);
+    const isBookableDay = isCalendarDayBookable(day);
+
+    if (!checkInDate) {
+      if (!isBookableDay) {
+        return;
+      }
+      setCheckInDate(date);
+      setCheckOutDate("");
+      return;
+    }
+
+    if (checkOutDate) {
+      if (!isBookableDay) {
+        return;
+      }
+      setCheckInDate(date);
+      setCheckOutDate("");
+      return;
+    }
+
+    if (date <= checkInDate) {
+      if (!isBookableDay) {
+        return;
+      }
+      setCheckInDate(date);
+      setCheckOutDate("");
+      return;
+    }
+
+    if (!isStayRangeAvailable(checkInDate, date, availabilityByDate)) {
+      return;
+    }
+
+    setCheckOutDate(date);
+  };
 
   const handleToggleHotelLike = async (): Promise<void> => {
     if (!hotelId || !canUseLikeActions) {
@@ -806,32 +1003,102 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
               </label>
 
               <div className="grid grid-cols-2 gap-2">
-                <label className="block">
+                <div>
                   <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Check-in</span>
-                  <input
-                    type="date"
-                    value={checkInDate}
-                    min={todayDate}
-                    onChange={(event) => {
-                      const nextValue = event.target.value;
-                      setCheckInDate(nextValue);
-                      if (checkOutDate && checkOutDate <= nextValue) {
-                        setCheckOutDate("");
-                      }
-                    }}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                  />
-                </label>
-                <label className="block">
+                  <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900">
+                    {checkInDate || "Select date"}
+                  </div>
+                </div>
+                <div>
                   <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Check-out</span>
-                  <input
-                    type="date"
-                    value={checkOutDate}
-                    min={minCheckOutDate}
-                    onChange={(event) => setCheckOutDate(event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                  />
-                </label>
+                  <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900">
+                    {checkOutDate || "Select date"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth((previous) => addMonthsToMonthKey(previous, -1))}
+                    disabled={!canGoPrevCalendarMonth}
+                    className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 transition enabled:hover:border-slate-400 enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Prev
+                  </button>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">{calendarMonthLabel}</p>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth((previous) => addMonthsToMonthKey(previous, 1))}
+                    disabled={!canGoNextCalendarMonth}
+                    className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 transition enabled:hover:border-slate-400 enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+
+                <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  {WEEKDAY_LABELS.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+
+                <div className="mt-1 grid grid-cols-7 gap-1">
+                  {monthGrid.map((date, index) => {
+                    if (!date) {
+                      return <span key={`empty-${calendarMonth}-${String(index)}`} className="h-8 rounded-md bg-transparent" />;
+                    }
+
+                    const day = visibleCalendarByDate.get(date) ?? availabilityByDate.get(date);
+                    const isBookableDay = isCalendarDayBookable(day);
+                    const isPastDate = date < todayDate;
+                    const isSelectedCheckIn = checkInDate === date;
+                    const isSelectedCheckOut = checkOutDate === date;
+                    const isInSelectedRange = Boolean(checkInDate && checkOutDate && date > checkInDate && date < checkOutDate);
+
+                    let isSelectable = false;
+                    if (!isPastDate) {
+                      if (!checkInDate || checkOutDate || date <= checkInDate) {
+                        isSelectable = isBookableDay;
+                      } else {
+                        isSelectable = isStayRangeAvailable(checkInDate, date, availabilityByDate);
+                      }
+                    }
+
+                    const baseClassName =
+                      "h-8 rounded-md border text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400";
+                    let stateClassName = "border-slate-200 bg-white text-slate-700 enabled:hover:border-slate-400 enabled:hover:bg-slate-100";
+                    if (isSelectedCheckIn || isSelectedCheckOut) {
+                      stateClassName = "border-slate-900 bg-slate-900 text-white";
+                    } else if (isInSelectedRange) {
+                      stateClassName = "border-slate-300 bg-slate-200 text-slate-900";
+                    } else if (!isSelectable) {
+                      stateClassName = "border-slate-200 bg-slate-100 text-slate-300";
+                    }
+
+                    return (
+                      <button
+                        key={date}
+                        type="button"
+                        disabled={!isSelectable}
+                        onClick={() => handleSelectCalendarDate(date)}
+                        className={`${baseClassName} ${stateClassName}`}
+                        aria-label={`Select ${date}`}
+                      >
+                        {Number(date.slice(8, 10))}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {priceCalendarLoading && visibleMonthCalendar.length === 0 ? (
+                  <p className="mt-2 text-[11px] text-slate-500">Loading availability...</p>
+                ) : null}
+                {priceCalendarError && visibleMonthCalendar.length === 0 ? (
+                  <p className="mt-2 text-[11px] text-amber-700">{getErrorMessage(priceCalendarError)}</p>
+                ) : null}
+                <p className="mt-2 text-[11px] text-slate-500">Unavailable nights are disabled.</p>
               </div>
 
               <label className="block">
@@ -878,7 +1145,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
             )}
 
             <div className="mt-5 space-y-3 border-t border-slate-200 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Price insights ({priceCalendarMonth})</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Price insights ({calendarMonth})</p>
 
               {priceCalendarError ? <p className="text-xs text-amber-700">{getErrorMessage(priceCalendarError)}</p> : null}
 
