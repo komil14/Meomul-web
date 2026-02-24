@@ -356,7 +356,8 @@ const PriceDayButton = ({
   const isDisabled = Boolean(modifiers.disabled);
   const isSingleSelected = isSelected && !isRangeStart && !isRangeEnd && !isRangeMiddle;
   const isEdgeSelected = isSingleSelected || isRangeStart || isRangeEnd;
-  const isInSelectedRange = isEdgeSelected || isRangeMiddle;
+  const isMiddleSelected = isRangeMiddle && !isEdgeSelected;
+  const isInSelectedRange = isEdgeSelected || isMiddleSelected;
   const isBookable = !isUnavailable && !isDisabled;
 
   return (
@@ -367,7 +368,8 @@ const PriceDayButton = ({
       className={[
         buttonProps.className,
         "group inline-flex flex-col items-center justify-center gap-0 overflow-hidden",
-        isInSelectedRange ? "!border-black !bg-black !text-white shadow-[0_1px_0_rgba(255,255,255,0.05)_inset]" : "",
+        isEdgeSelected ? "!border-indigo-600 !bg-indigo-600 !text-white shadow-[0_1px_0_rgba(255,255,255,0.08)_inset]" : "",
+        isMiddleSelected ? "!border-slate-300 !bg-slate-200 !text-slate-900" : "",
         !isInSelectedRange && isUnavailable ? "border-slate-200 bg-slate-100 text-slate-400" : "",
         !isInSelectedRange && isBookable ? "hover:border-slate-500 hover:bg-slate-50 hover:shadow-sm" : "",
       ]
@@ -390,14 +392,19 @@ const PriceDayButton = ({
         onHover?.(null);
       }}
     >
-      <span className={`block text-[11px] leading-none font-bold transition ${isInSelectedRange ? "text-white drop-shadow-sm" : "text-slate-700"}`}>
+      <span
+        className={`block text-[11px] leading-none font-bold transition ${
+          isEdgeSelected ? "text-white drop-shadow-sm" : isMiddleSelected ? "text-slate-900" : "text-slate-700"
+        }`}
+      >
         {day.date.getDate()}
       </span>
       <span
         className={[
           "inline-flex min-w-7 items-center justify-center rounded-full px-1 py-[1px] text-[8px] leading-none font-bold transition",
           isUnavailable ? "bg-slate-300/70 text-slate-500" : "",
-          !isUnavailable && isInSelectedRange ? "border border-white/35 bg-white/15 text-white" : "",
+          !isUnavailable && isEdgeSelected ? "border border-indigo-200/60 bg-indigo-400/35 text-white" : "",
+          !isUnavailable && isMiddleSelected ? "border border-slate-400 bg-slate-300 text-slate-800" : "",
           !isUnavailable && !isInSelectedRange ? "bg-slate-900/10 text-slate-600" : "",
         ]
           .filter(Boolean)
@@ -455,6 +462,7 @@ export default function RoomDetailPage() {
     data: priceCalendarData,
     loading: priceCalendarLoading,
     error: priceCalendarError,
+    refetch: refetchPriceCalendar,
   } = useQuery<GetPriceCalendarQueryData, GetPriceCalendarQueryVars>(GET_PRICE_CALENDAR_QUERY, {
     skip: !isHydrated || !roomId,
     variables: {
@@ -463,8 +471,10 @@ export default function RoomDetailPage() {
         month: calendarMonth,
       },
     },
-    fetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
+    notifyOnNetworkStatusChange: true,
+    pollInterval: 60000,
   });
 
   const {
@@ -555,6 +565,32 @@ export default function RoomDetailPage() {
       [calendarMonth]: calendar,
     }));
   }, [calendarMonth, priceCalendarData]);
+
+  useEffect(() => {
+    if (!isHydrated || !roomId) {
+      return;
+    }
+
+    const refreshCalendar = (): void => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void refetchPriceCalendar({
+        input: {
+          roomId,
+          month: calendarMonth,
+        },
+      });
+    };
+
+    window.addEventListener("focus", refreshCalendar);
+    document.addEventListener("visibilitychange", refreshCalendar);
+    return () => {
+      window.removeEventListener("focus", refreshCalendar);
+      document.removeEventListener("visibilitychange", refreshCalendar);
+    };
+  }, [calendarMonth, isHydrated, refetchPriceCalendar, roomId]);
 
   const availabilityByDate = useMemo(() => {
     const map = new Map<string, DayPriceDto>();
@@ -695,7 +731,7 @@ export default function RoomDetailPage() {
   const dayPickerStyle = useMemo(
     () =>
       ({
-        "--rdp-accent-color": "#0f172a",
+        "--rdp-accent-color": "#4f46e5",
         "--rdp-range_middle-background-color": "#e2e8f0",
       }) as CSSProperties,
     [],
@@ -1227,7 +1263,7 @@ export default function RoomDetailPage() {
                     ) : null}
                     <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
                       <span className="inline-flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-black" />
+                        <span className="h-2 w-2 rounded-full bg-indigo-600" />
                         Selected range
                       </span>
                       <span className="inline-flex items-center gap-1">
