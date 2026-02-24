@@ -521,10 +521,7 @@ export default function RoomDetailPage() {
   const coverImage = room?.roomImages[0] ?? "";
   const galleryImages = room?.roomImages.slice(1) ?? [];
   const deal = room?.lastMinuteDeal;
-  const { viewerCount: liveViewerCount, connected: isLiveViewConnected } = useRoomLiveViewers({
-    roomId,
-    initialCount: 0,
-  });
+  const { viewerCount: liveViewerCount, connected: isLiveViewConnected } = useRoomLiveViewers({ roomId });
   const sameTypeViewOptions = useMemo(() => {
     if (!room) {
       return [] as Array<{ viewType: ViewType; roomId: string }>;

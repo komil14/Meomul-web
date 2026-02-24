@@ -4,7 +4,6 @@ import { createRoomViewersSocket } from "@/lib/socket/room-viewers";
 
 interface UseRoomLiveViewersInput {
   roomId: string;
-  initialCount: number;
 }
 
 interface UseRoomLiveViewersResult {
@@ -67,14 +66,14 @@ const extractCount = (payload: ViewerCountPayload | null | undefined): number | 
   return null;
 };
 
-export const useRoomLiveViewers = ({ roomId, initialCount }: UseRoomLiveViewersInput): UseRoomLiveViewersResult => {
-  const [viewerCount, setViewerCount] = useState<number>(toSafeCount(initialCount));
+export const useRoomLiveViewers = ({ roomId }: UseRoomLiveViewersInput): UseRoomLiveViewersResult => {
+  const [viewerCount, setViewerCount] = useState<number>(0);
   const [connected, setConnected] = useState(false);
   const joinedRef = useRef(false);
 
   useEffect(() => {
-    setViewerCount(toSafeCount(initialCount));
-  }, [initialCount, roomId]);
+    setViewerCount(0);
+  }, [roomId]);
 
   useEffect(() => {
     if (!roomId) {
