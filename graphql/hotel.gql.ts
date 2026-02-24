@@ -19,6 +19,17 @@ export const GET_HOTELS_QUERY = gql`
   }
 `;
 
+export const GET_HOTEL_CONTEXT_QUERY = gql`
+  query GetHotelContext($hotelId: String!) {
+    getHotel(hotelId: $hotelId) {
+      _id
+      hotelTitle
+      hotelLocation
+      hotelType
+    }
+  }
+`;
+
 export const GET_HOTEL_QUERY = gql`
   query GetHotel($hotelId: String!) {
     getHotel(hotelId: $hotelId) {

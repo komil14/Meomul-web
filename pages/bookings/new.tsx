@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { CREATE_BOOKING_MUTATION, SEARCH_MEMBERS_FOR_BOOKING_QUERY } from "@/graphql/booking.gql";
-import { GET_HOTEL_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
+import { GET_HOTEL_CONTEXT_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -14,7 +14,7 @@ import type {
   SearchMembersForBookingQueryData,
   SearchMembersForBookingQueryVars,
 } from "@/types/booking";
-import type { GetHotelQueryData, GetHotelQueryVars, GetRoomQueryData, GetRoomQueryVars } from "@/types/hotel";
+import type { GetHotelContextQueryData, GetHotelContextQueryVars, GetRoomQueryData, GetRoomQueryVars } from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
 
 const PAYMENT_METHODS: PaymentMethod[] = ["AT_HOTEL", "CREDIT_CARD", "DEBIT_CARD", "KAKAOPAY", "NAVERPAY", "TOSS"];
@@ -43,6 +43,14 @@ const diffNights = (checkInDate: string, checkOutDate: string): number => {
 };
 
 const toDateTime = (date: string): string => `${date}T00:00:00.000Z`;
+const isDateKey = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
+const formatTodayDate = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 const NewBookingPage: NextPageWithAuth = () => {
   const router = useRouter();
@@ -71,6 +79,25 @@ const NewBookingPage: NextPageWithAuth = () => {
 
     return "";
   }, [router.query.guestId]);
+  const initialCheckInDateFromQuery = useMemo(() => {
+    if (typeof router.query.checkInDate === "string" && isDateKey(router.query.checkInDate)) {
+      return router.query.checkInDate;
+    }
+    return "";
+  }, [router.query.checkInDate]);
+  const initialCheckOutDateFromQuery = useMemo(() => {
+    if (typeof router.query.checkOutDate === "string" && isDateKey(router.query.checkOutDate)) {
+      return router.query.checkOutDate;
+    }
+    return "";
+  }, [router.query.checkOutDate]);
+  const initialAdultCountFromQuery = useMemo(() => {
+    if (typeof router.query.adultCount !== "string") {
+      return "";
+    }
+    const parsed = parsePositiveInt(router.query.adultCount);
+    return parsed ? String(parsed) : "";
+  }, [router.query.adultCount]);
 
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
@@ -86,8 +113,8 @@ const NewBookingPage: NextPageWithAuth = () => {
 
   const [createdBookingCode, setCreatedBookingCode] = useState<string | null>(null);
 
-  const { data: hotelData, loading: hotelLoading, error: hotelError } = useQuery<GetHotelQueryData, GetHotelQueryVars>(
-    GET_HOTEL_QUERY,
+  const { data: hotelData, loading: hotelLoading, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(
+    GET_HOTEL_CONTEXT_QUERY,
     {
       skip: !hotelId,
       variables: { hotelId },
@@ -129,6 +156,21 @@ const NewBookingPage: NextPageWithAuth = () => {
       setTargetGuestId(initialGuestIdFromQuery);
     }
   }, [initialGuestIdFromQuery, targetGuestId]);
+  useEffect(() => {
+    if (initialCheckInDateFromQuery && !checkInDate) {
+      setCheckInDate(initialCheckInDateFromQuery);
+    }
+  }, [checkInDate, initialCheckInDateFromQuery]);
+  useEffect(() => {
+    if (initialCheckOutDateFromQuery && !checkOutDate) {
+      setCheckOutDate(initialCheckOutDateFromQuery);
+    }
+  }, [checkOutDate, initialCheckOutDateFromQuery]);
+  useEffect(() => {
+    if (initialAdultCountFromQuery && guestCountInput === "1") {
+      setGuestCountInput(initialAdultCountFromQuery);
+    }
+  }, [guestCountInput, initialAdultCountFromQuery]);
 
   useEffect(() => {
     if (!isStaffCreator) {
@@ -150,6 +192,9 @@ const NewBookingPage: NextPageWithAuth = () => {
 
   const guestCount = parsePositiveInt(guestCountInput);
   const quantity = parsePositiveInt(quantityInput);
+  const todayDate = useMemo(() => formatTodayDate(), []);
+  const roomCapacity = room?.maxOccupancy ?? 1;
+  const maxAdultsByQuantity = roomCapacity * (quantity ?? 1);
 
   const nights = diffNights(checkInDate, checkOutDate);
   const effectivePrice = room?.basePrice ?? 0;
@@ -179,9 +224,21 @@ const NewBookingPage: NextPageWithAuth = () => {
       setFormError("Guest count and room quantity must be positive integers.");
       return;
     }
+    if (room.roomStatus !== "AVAILABLE") {
+      setFormError(`Room is currently ${room.roomStatus.toLowerCase()} and cannot be booked.`);
+      return;
+    }
+    if (guestCount > room.maxOccupancy * quantity) {
+      setFormError(`Guest count exceeds room capacity (${room.maxOccupancy} x ${quantity} room(s)).`);
+      return;
+    }
 
     if (!checkInDate || !checkOutDate) {
       setFormError("Please select check-in and check-out dates.");
+      return;
+    }
+    if (checkInDate < todayDate) {
+      setFormError("Check-in date cannot be in the past.");
       return;
     }
 
@@ -348,49 +405,56 @@ const NewBookingPage: NextPageWithAuth = () => {
             </>
           ) : null}
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Check-in</span>
-            <input
-              type="date"
-              value={checkInDate}
-              onChange={(event) => setCheckInDate(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-              required
-            />
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Check-in</span>
+                <input
+                  type="date"
+                  min={todayDate}
+                  value={checkInDate}
+                  onChange={(event) => setCheckInDate(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                  required
+                />
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Check-out</span>
-            <input
-              type="date"
-              value={checkOutDate}
-              onChange={(event) => setCheckOutDate(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-              required
-            />
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Check-out</span>
+                <input
+                  type="date"
+                  min={checkInDate || todayDate}
+                  value={checkOutDate}
+                  onChange={(event) => setCheckOutDate(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                  required
+                />
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Guest count</span>
-            <input
-              value={guestCountInput}
-              onChange={(event) => setGuestCountInput(event.target.value.replace(/\D/g, ""))}
-              inputMode="numeric"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-              required
-            />
-          </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Guest count</span>
+                <input
+                  value={guestCountInput}
+                  onChange={(event) => setGuestCountInput(event.target.value.replace(/\D/g, ""))}
+                  inputMode="numeric"
+                  aria-describedby="guest-capacity-hint"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                  required
+                />
+                <p id="guest-capacity-hint" className="mt-1 text-xs text-slate-500">
+                  Capacity: up to {maxAdultsByQuantity} adult(s) ({roomCapacity} per room)
+                </p>
+              </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Room quantity</span>
-            <input
-              value={quantityInput}
-              onChange={(event) => setQuantityInput(event.target.value.replace(/\D/g, ""))}
-              inputMode="numeric"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-              required
-            />
-          </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-slate-700">Room quantity</span>
+                <input
+                  value={quantityInput}
+                  onChange={(event) => setQuantityInput(event.target.value.replace(/\D/g, ""))}
+                  inputMode="numeric"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                  required
+                />
+                {room ? <p className="mt-1 text-xs text-slate-500">Max available now: {room.availableRooms}</p> : null}
+              </label>
 
           <label className="block md:col-span-2">
             <span className="mb-2 block text-sm font-medium text-slate-700">Payment method</span>

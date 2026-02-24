@@ -261,6 +261,21 @@ export interface GetHotelQueryVars {
   hotelId: string;
 }
 
+export interface HotelContextItem {
+  _id: string;
+  hotelTitle: string;
+  hotelLocation: HotelLocation;
+  hotelType: HotelType;
+}
+
+export interface GetHotelContextQueryData {
+  getHotel: HotelContextItem;
+}
+
+export interface GetHotelContextQueryVars {
+  hotelId: string;
+}
+
 export interface GetRoomQueryData {
   getRoom: RoomDetailItem;
 }

@@ -4,12 +4,12 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { DayButton as DefaultDayButton, DayPicker, getDefaultClassNames, type DateRange, type DayButtonProps } from "react-day-picker";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { GET_HOTEL_QUERY, GET_PRICE_CALENDAR_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
+import { GET_HOTEL_CONTEXT_QUERY, GET_PRICE_CALENDAR_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   DayPriceDto,
-  GetHotelQueryData,
-  GetHotelQueryVars,
+  GetHotelContextQueryData,
+  GetHotelContextQueryVars,
   GetPriceCalendarQueryData,
   GetPriceCalendarQueryVars,
   GetRoomQueryData,
@@ -239,7 +239,7 @@ export default function RoomDetailPage() {
     nextFetchPolicy: "cache-first",
   });
 
-  const { data: hotelData, error: hotelError } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
+  const { data: hotelData, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
     skip: !isHydrated || !roomHotelId,
     variables: {
       hotelId: roomHotelId,
@@ -336,8 +336,14 @@ export default function RoomDetailPage() {
     if (!room) {
       return "Room is not ready.";
     }
+    if (room.roomStatus !== "AVAILABLE") {
+      return `Room is currently ${room.roomStatus.toLowerCase()} and cannot be booked.`;
+    }
     if (room.availableRooms <= 0) {
       return "This room is currently sold out.";
+    }
+    if (adultCount > room.maxOccupancy) {
+      return `This room accepts up to ${room.maxOccupancy} adult(s).`;
     }
     if (!checkInDate || !checkOutDate) {
       return "Choose check-in and check-out dates.";
@@ -665,7 +671,9 @@ export default function RoomDetailPage() {
                   value={String(adultCount)}
                   onChange={(event) => {
                     const parsed = Number(event.target.value.replace(/\D/g, ""));
-                    setAdultCount(Number.isInteger(parsed) && parsed > 0 ? parsed : 1);
+                    const normalized = Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+                    const clamped = room ? Math.min(normalized, Math.max(1, room.maxOccupancy)) : normalized;
+                    setAdultCount(clamped);
                   }}
                   inputMode="numeric"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
