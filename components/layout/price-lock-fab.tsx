@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { CANCEL_PRICE_LOCK_MUTATION, GET_MY_PRICE_LOCKS_QUERY } from "@/graphql/hotel.gql";
+import { CANCEL_PRICE_LOCK_MUTATION, GET_MY_PRICE_LOCK_QUERY, GET_MY_PRICE_LOCKS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -31,7 +31,7 @@ export function PriceLockFab() {
   const member = useMemo(() => (isHydrated ? getSessionMember() : null), [isHydrated]);
   const canUse = canUsePriceLock(member?.memberType);
 
-  const { data, loading, refetch } = useQuery<GetMyPriceLocksQueryData>(GET_MY_PRICE_LOCKS_QUERY, {
+  const { data, loading } = useQuery<GetMyPriceLocksQueryData>(GET_MY_PRICE_LOCKS_QUERY, {
     skip: !isHydrated || !canUse,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
@@ -69,8 +69,14 @@ export function PriceLockFab() {
     setActionError(null);
     setCancellingId(lock._id);
     try {
-      await cancelPriceLockMutation({ variables: { priceLockId: lock._id } });
-      await refetch();
+      await cancelPriceLockMutation({
+        variables: { priceLockId: lock._id },
+        refetchQueries: [
+          { query: GET_MY_PRICE_LOCKS_QUERY },
+          { query: GET_MY_PRICE_LOCK_QUERY, variables: { roomId: lock.roomId } },
+        ],
+        awaitRefetchQueries: true,
+      });
     } catch (error) {
       setActionError(getErrorMessage(error));
     } finally {
@@ -78,7 +84,7 @@ export function PriceLockFab() {
     }
   };
 
-  if (!isHydrated || !canUse || (!loading && activeLocks.length === 0)) {
+  if (!isHydrated || !canUse) {
     return null;
   }
 
@@ -101,7 +107,7 @@ export function PriceLockFab() {
               Nearest expires in {formatCountdown(nearestRemaining)}
             </p>
           ) : (
-            <p className="mt-2 text-xs text-slate-500">No active locks right now.</p>
+            <p className="mt-2 text-xs text-slate-500">{loading ? "Checking active locks..." : "No active locks right now."}</p>
           )}
           {actionError ? <p className="mt-2 text-xs font-medium text-rose-600">{actionError}</p> : null}
           <div className="mt-3 max-h-60 space-y-2 overflow-y-auto">
@@ -143,7 +149,7 @@ export function PriceLockFab() {
         type="button"
         onClick={() => setIsOpen((previous) => !previous)}
         className={`fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 flex-col items-center justify-center rounded-full text-white shadow-2xl transition hover:scale-[1.02] ${
-          isAlert ? "bg-rose-600 hover:bg-rose-500" : "bg-slate-900 hover:bg-slate-700"
+          isAlert ? "bg-rose-600 hover:bg-rose-500" : activeLocks.length > 0 ? "bg-slate-900 hover:bg-slate-700" : "bg-sky-700 hover:bg-sky-600"
         }`}
         aria-label="Open price lock status"
       >
@@ -151,7 +157,7 @@ export function PriceLockFab() {
           <rect x="5" y="11" width="14" height="9" rx="2" />
           <path d="M8 11V8a4 4 0 118 0v3" />
         </svg>
-        <span className="mt-0.5 text-[10px] font-semibold">{nearestLock ? formatCountdown(nearestRemaining) : "..."}</span>
+        <span className="mt-0.5 text-[10px] font-semibold">{nearestLock ? formatCountdown(nearestRemaining) : "Idle"}</span>
       </button>
     </>
   );
