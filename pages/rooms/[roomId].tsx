@@ -2,6 +2,7 @@ import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
+import { DayPicker, getDefaultClassNames, type DateRange } from "react-day-picker";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_HOTEL_QUERY, GET_PRICE_CALENDAR_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
@@ -15,8 +16,6 @@ import type {
   GetRoomQueryVars,
 } from "@/types/hotel";
 
-const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"] as const;
-
 const formatDateInput = (value: Date): string => {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, "0");
@@ -28,42 +27,6 @@ const addDays = (dateInput: string, days: number): string => {
   const base = new Date(`${dateInput}T00:00:00`);
   base.setDate(base.getDate() + days);
   return formatDateInput(base);
-};
-
-const addMonthsToMonthKey = (monthKey: string, months: number): string => {
-  const [yearPart, monthPart] = monthKey.split("-");
-  const year = Number(yearPart);
-  const month = Number(monthPart);
-  if (!Number.isInteger(year) || !Number.isInteger(month)) {
-    return monthKey;
-  }
-
-  const date = new Date(Date.UTC(year, month - 1 + months, 1, 0, 0, 0, 0));
-  const nextYear = date.getUTCFullYear();
-  const nextMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${nextYear}-${nextMonth}`;
-};
-
-const buildMonthGrid = (monthKey: string): Array<string | null> => {
-  const [yearPart, monthPart] = monthKey.split("-");
-  const year = Number(yearPart);
-  const month = Number(monthPart);
-  if (!Number.isInteger(year) || !Number.isInteger(month)) {
-    return [];
-  }
-
-  const firstWeekDay = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0)).getUTCDay();
-  const daysInMonth = new Date(Date.UTC(year, month, 0, 0, 0, 0, 0)).getUTCDate();
-  const grid: Array<string | null> = [];
-
-  for (let i = 0; i < firstWeekDay; i += 1) {
-    grid.push(null);
-  }
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    grid.push(`${monthKey}-${String(day).padStart(2, "0")}`);
-  }
-
-  return grid;
 };
 
 const formatMonthLabel = (monthKey: string): string => {
@@ -132,6 +95,8 @@ const buildBookingHref = (hotelId: string, roomId: string, checkInDate: string, 
   };
 };
 
+const toMonthKey = (value: Date): string => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
+
 const formatIsoDate = (value: string): string => {
   if (!value) {
     return "-";
@@ -142,10 +107,18 @@ const formatIsoDate = (value: string): string => {
 export default function RoomDetailPage() {
   const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
+  const [checkInDate, setCheckInDate] = useState("");
+  const [checkOutDate, setCheckOutDate] = useState("");
+  const [adultCount, setAdultCount] = useState(2);
 
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
+  const todayDate = useMemo(() => formatDateInput(new Date()), []);
+  const todayMonth = useMemo(() => todayDate.slice(0, 7), [todayDate]);
+  const [calendarMonth, setCalendarMonth] = useState(todayMonth);
+  const [calendarByMonth, setCalendarByMonth] = useState<Record<string, DayPriceDto[]>>({});
 
   const roomId = useMemo(() => {
     if (typeof router.query.roomId === "string") {
@@ -167,6 +140,22 @@ export default function RoomDetailPage() {
   const room = roomData?.getRoom;
   const roomHotelId = room?.hotelId ?? "";
 
+  const {
+    data: priceCalendarData,
+    loading: priceCalendarLoading,
+    error: priceCalendarError,
+  } = useQuery<GetPriceCalendarQueryData, GetPriceCalendarQueryVars>(GET_PRICE_CALENDAR_QUERY, {
+    skip: !isHydrated || !roomId,
+    variables: {
+      input: {
+        roomId,
+        month: calendarMonth,
+      },
+    },
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
+  });
+
   const { data: hotelData, error: hotelError } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
     skip: !isHydrated || !roomHotelId,
     variables: {
@@ -179,6 +168,220 @@ export default function RoomDetailPage() {
   const coverImage = room?.roomImages[0] ?? "";
   const galleryImages = room?.roomImages.slice(1) ?? [];
   const deal = room?.lastMinuteDeal;
+
+  useEffect(() => {
+    if (!roomId) {
+      return;
+    }
+
+    setCalendarByMonth({});
+    setCalendarMonth(todayMonth);
+    setCheckInDate("");
+    setCheckOutDate("");
+  }, [roomId, todayMonth]);
+
+  useEffect(() => {
+    const calendar = priceCalendarData?.getPriceCalendar.calendar;
+    if (!calendar || calendar.length === 0) {
+      return;
+    }
+    if (calendar[0]?.date.slice(0, 7) !== calendarMonth) {
+      return;
+    }
+
+    setCalendarByMonth((previous) => ({
+      ...previous,
+      [calendarMonth]: calendar,
+    }));
+  }, [calendarMonth, priceCalendarData]);
+
+  const availabilityByDate = useMemo(() => {
+    const map = new Map<string, DayPriceDto>();
+    Object.values(calendarByMonth)
+      .flat()
+      .forEach((day) => {
+        map.set(day.date, day);
+      });
+    return map;
+  }, [calendarByMonth]);
+
+  const visibleMonthCalendar = useMemo(() => calendarByMonth[calendarMonth] ?? [], [calendarByMonth, calendarMonth]);
+
+  const hasCalendarAvailability = availabilityByDate.size > 0;
+  const calendarMonthLabel = useMemo(() => formatMonthLabel(calendarMonth), [calendarMonth]);
+
+  useEffect(() => {
+    if (!checkInDate) {
+      return;
+    }
+
+    const checkInDay = availabilityByDate.get(checkInDate);
+    if (hasCalendarAvailability && (!checkInDay || !isCalendarDayBookable(checkInDay))) {
+      setCheckInDate("");
+      setCheckOutDate("");
+      return;
+    }
+
+    if (checkOutDate && hasCalendarAvailability && !isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)) {
+      setCheckOutDate("");
+    }
+  }, [availabilityByDate, checkInDate, checkOutDate, hasCalendarAvailability]);
+
+  const bookingValidationMessage = useMemo(() => {
+    if (!room) {
+      return "Room is not ready.";
+    }
+    if (room.availableRooms <= 0) {
+      return "This room is currently sold out.";
+    }
+    if (!checkInDate || !checkOutDate) {
+      return "Choose check-in and check-out dates.";
+    }
+    if (checkOutDate <= checkInDate) {
+      return "Check-out must be after check-in.";
+    }
+    if (hasCalendarAvailability && !isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)) {
+      return "One or more selected nights are unavailable.";
+    }
+    if (adultCount < 1) {
+      return "Adult count must be at least 1.";
+    }
+    return null;
+  }, [adultCount, availabilityByDate, checkInDate, checkOutDate, hasCalendarAvailability, room]);
+
+  const canContinueBooking = bookingValidationMessage === null && Boolean(roomHotelId) && Boolean(room);
+  const cheapestDateKey = priceCalendarData?.getPriceCalendar.cheapestDate.date ?? "";
+  const peakDateKey = priceCalendarData?.getPriceCalendar.mostExpensiveDate.date ?? "";
+  const selectedRange = useMemo<DateRange | undefined>(() => {
+    if (!checkInDate) {
+      return undefined;
+    }
+    return {
+      from: new Date(`${checkInDate}T00:00:00`),
+      ...(checkOutDate ? { to: new Date(`${checkOutDate}T00:00:00`) } : {}),
+    };
+  }, [checkInDate, checkOutDate]);
+
+  const calendarMonthDate = useMemo(() => {
+    const [yearPart, monthPart] = calendarMonth.split("-");
+    const year = Number(yearPart);
+    const month = Number(monthPart);
+    if (!Number.isInteger(year) || !Number.isInteger(month)) {
+      return new Date();
+    }
+    return new Date(year, month - 1, 1);
+  }, [calendarMonth]);
+
+  const availabilityPulse = useMemo(() => {
+    const maxAvailable = Math.max(...visibleMonthCalendar.map((day) => day.availableRooms ?? 0), 1);
+    return visibleMonthCalendar.map((day) => {
+      const available = day.availableRooms ?? 0;
+      const ratio = Math.max(0.08, available / maxAvailable);
+      const status =
+        day.localEvent === "Closed" || available <= 0 ? "blocked" : day.demandLevel === "HIGH" ? "hot" : day.demandLevel === "MEDIUM" ? "warm" : "open";
+
+      return {
+        date: day.date,
+        day: Number(day.date.slice(8, 10)),
+        ratio,
+        status,
+      };
+    });
+  }, [visibleMonthCalendar]);
+
+  const dayPickerClassNames = useMemo(() => {
+    const defaults = getDefaultClassNames();
+    return {
+      ...defaults,
+      root: `${defaults.root} w-full`,
+      months: `${defaults.months} w-full`,
+      month: `${defaults.month} w-full`,
+      month_caption: `${defaults.month_caption} mb-3`,
+      caption_label: `${defaults.caption_label} text-sm font-semibold uppercase tracking-[0.12em] text-slate-700`,
+      nav: `${defaults.nav} gap-2`,
+      button_previous: `${defaults.button_previous} h-8 w-8 rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500`,
+      button_next: `${defaults.button_next} h-8 w-8 rounded-full border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500`,
+      weekdays: `${defaults.weekdays} border-b border-slate-200 pb-1`,
+      weekday: `${defaults.weekday} text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500`,
+      month_grid: `${defaults.month_grid} w-full border-separate border-spacing-1`,
+      day: `${defaults.day} p-0`,
+      day_button: `${defaults.day_button} h-9 w-9 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-sm`,
+      selected: "border-slate-900 bg-slate-900 text-white",
+      range_start: "border-slate-900 bg-slate-900 text-white",
+      range_middle: "border-slate-200 bg-slate-200 text-slate-900",
+      range_end: "border-slate-900 bg-slate-900 text-white",
+      today: "ring-2 ring-emerald-300",
+      focused: "ring-2 ring-sky-300",
+      disabled: "opacity-35",
+      outside: "opacity-20",
+      hidden: "opacity-0",
+    };
+  }, []);
+
+  const disabledDays = useMemo(
+    () => (date: Date): boolean => {
+      const dateKey = formatDateInput(date);
+      if (dateKey < todayDate) {
+        return true;
+      }
+
+      if (!checkInDate || checkOutDate || dateKey <= checkInDate) {
+        return !isCalendarDayBookable(availabilityByDate.get(dateKey));
+      }
+
+      return !isStayRangeAvailable(checkInDate, dateKey, availabilityByDate);
+    },
+    [availabilityByDate, checkInDate, checkOutDate, todayDate],
+  );
+
+  const handleSelectCalendarDate = (date: string): void => {
+    if (date < todayDate) {
+      return;
+    }
+
+    const day = availabilityByDate.get(date);
+    const isBookableDay = isCalendarDayBookable(day);
+
+    if (!checkInDate) {
+      if (!isBookableDay) {
+        return;
+      }
+      setCheckInDate(date);
+      setCheckOutDate("");
+      return;
+    }
+
+    if (checkOutDate) {
+      if (!isBookableDay) {
+        return;
+      }
+      setCheckInDate(date);
+      setCheckOutDate("");
+      return;
+    }
+
+    if (date <= checkInDate) {
+      if (!isBookableDay) {
+        return;
+      }
+      setCheckInDate(date);
+      setCheckOutDate("");
+      return;
+    }
+
+    if (!isStayRangeAvailable(checkInDate, date, availabilityByDate)) {
+      return;
+    }
+
+    setCheckOutDate(date);
+  };
+
+  const handleSelectCalendarDay = (date: Date | undefined): void => {
+    if (!date) {
+      return;
+    }
+    handleSelectCalendarDate(formatDateInput(date));
+  };
 
   return (
     <main className="space-y-6">
@@ -305,14 +508,169 @@ export default function RoomDetailPage() {
               </div>
             ) : null}
 
-            {roomHotelId ? (
-              <div className="mt-6 flex flex-wrap items-center gap-2">
+            <div className="mt-6 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Check-in</span>
+                  <div className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900">
+                    {checkInDate || "Select date"}
+                  </div>
+                </div>
+                <div>
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Check-out</span>
+                  <div className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900">
+                    {checkOutDate || "Select date"}
+                  </div>
+                </div>
+              </div>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Adults</span>
+                <input
+                  value={String(adultCount)}
+                  onChange={(event) => {
+                    const parsed = Number(event.target.value.replace(/\D/g, ""));
+                    setAdultCount(Number.isInteger(parsed) && parsed > 0 ? parsed : 1);
+                  }}
+                  inputMode="numeric"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
+                />
+              </label>
+
+              <div className="calendar-shell rounded-xl border border-slate-200 bg-white p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">{calendarMonthLabel}</p>
+                  <p className="text-[11px] text-slate-500">Pulse availability board</p>
+                </div>
+                {availabilityPulse.length > 0 ? (
+                  <div className="mb-3 rounded-lg border border-slate-200 bg-white/80 p-2">
+                    <div className="flex items-end gap-[3px] overflow-x-auto pb-1">
+                      {availabilityPulse.map((entry) => {
+                        const statusClassName =
+                          entry.status === "blocked"
+                            ? "bg-slate-300"
+                            : entry.status === "hot"
+                              ? "bg-rose-500"
+                              : entry.status === "warm"
+                                ? "bg-amber-400"
+                                : "bg-emerald-400";
+                        const isDisabled = entry.status === "blocked";
+                        return (
+                          <button
+                            key={entry.date}
+                            type="button"
+                            disabled={isDisabled}
+                            onClick={() => handleSelectCalendarDate(entry.date)}
+                            className="pulse-day inline-flex min-w-5 flex-col items-center gap-1 disabled:cursor-not-allowed disabled:opacity-45"
+                            title={entry.date}
+                          >
+                            <span
+                              className={`w-3 rounded-full transition-all duration-300 ${statusClassName}`}
+                              style={{ height: `${Math.round(12 + entry.ratio * 24)}px` }}
+                            />
+                            <span className="text-[9px] font-semibold text-slate-500">{entry.day}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-slate-500">
+                      <span className="inline-flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                        Open
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-amber-400" />
+                        Medium demand
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-rose-500" />
+                        High demand
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-slate-300" />
+                        Unavailable
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+                <DayPicker
+                  animate
+                  mode="range"
+                  selected={selectedRange}
+                  month={calendarMonthDate}
+                  onMonthChange={(month) => setCalendarMonth(toMonthKey(month))}
+                  onDayClick={handleSelectCalendarDay}
+                  disabled={disabledDays}
+                  modifiers={{
+                    cheap: (date) => formatDateInput(date) === cheapestDateKey,
+                    peak: (date) => formatDateInput(date) === peakDateKey,
+                  }}
+                  modifiersClassNames={{
+                    cheap: "rdp-day-cheap",
+                    peak: "rdp-day-peak",
+                  }}
+                  classNames={dayPickerClassNames}
+                  showOutsideDays
+                />
+                {priceCalendarLoading && visibleMonthCalendar.length === 0 ? (
+                  <p className="mt-2 text-[11px] text-slate-500">Loading availability...</p>
+                ) : null}
+                {priceCalendarError && visibleMonthCalendar.length === 0 ? (
+                  <p className="mt-2 text-[11px] text-amber-700">{getErrorMessage(priceCalendarError)}</p>
+                ) : null}
+                <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-slate-900" />
+                    Selected
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-slate-300" />
+                    In range
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-slate-200" />
+                    Disabled unavailable
+                  </span>
+                </div>
+              </div>
+
+              {priceCalendarData?.getPriceCalendar ? (
+                <div className="grid gap-2 text-xs text-slate-700">
+                  <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                    Average: <span className="font-semibold">₩ {priceCalendarData.getPriceCalendar.averagePrice.toLocaleString()}</span>
+                  </p>
+                  <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
+                    Cheapest:{" "}
+                    <span className="font-semibold">
+                      {priceCalendarData.getPriceCalendar.cheapestDate.date} · ₩{" "}
+                      {priceCalendarData.getPriceCalendar.cheapestDate.price.toLocaleString()}
+                    </span>
+                  </p>
+                </div>
+              ) : null}
+
+              {bookingValidationMessage ? <p className="text-xs font-medium text-amber-700">{bookingValidationMessage}</p> : null}
+
+              {canContinueBooking && roomHotelId ? (
                 <Link
-                  href={`/bookings/new?hotelId=${roomHotelId}&roomId=${room._id}`}
-                  className="inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  href={buildBookingHref(roomHotelId, room._id, checkInDate, checkOutDate, adultCount)}
+                  className="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
                 >
-                  Book this room
+                  Continue to booking
                 </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex w-full items-center justify-center rounded-lg bg-slate-300 px-4 py-2 text-sm font-semibold text-slate-600"
+                >
+                  Complete booking details
+                </button>
+              )}
+            </div>
+
+            {roomHotelId ? (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Link
                   href={`/hotels/${roomHotelId}`}
                   className="inline-flex rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
