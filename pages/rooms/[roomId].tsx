@@ -3,9 +3,134 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { GET_HOTEL_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
+import { GET_HOTEL_QUERY, GET_PRICE_CALENDAR_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
-import type { GetHotelQueryData, GetHotelQueryVars, GetRoomQueryData, GetRoomQueryVars } from "@/types/hotel";
+import type {
+  DayPriceDto,
+  GetHotelQueryData,
+  GetHotelQueryVars,
+  GetPriceCalendarQueryData,
+  GetPriceCalendarQueryVars,
+  GetRoomQueryData,
+  GetRoomQueryVars,
+} from "@/types/hotel";
+
+const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"] as const;
+
+const formatDateInput = (value: Date): string => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const addDays = (dateInput: string, days: number): string => {
+  const base = new Date(`${dateInput}T00:00:00`);
+  base.setDate(base.getDate() + days);
+  return formatDateInput(base);
+};
+
+const addMonthsToMonthKey = (monthKey: string, months: number): string => {
+  const [yearPart, monthPart] = monthKey.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    return monthKey;
+  }
+
+  const date = new Date(Date.UTC(year, month - 1 + months, 1, 0, 0, 0, 0));
+  const nextYear = date.getUTCFullYear();
+  const nextMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${nextYear}-${nextMonth}`;
+};
+
+const buildMonthGrid = (monthKey: string): Array<string | null> => {
+  const [yearPart, monthPart] = monthKey.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    return [];
+  }
+
+  const firstWeekDay = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month, 0, 0, 0, 0, 0)).getUTCDate();
+  const grid: Array<string | null> = [];
+
+  for (let i = 0; i < firstWeekDay; i += 1) {
+    grid.push(null);
+  }
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    grid.push(`${monthKey}-${String(day).padStart(2, "0")}`);
+  }
+
+  return grid;
+};
+
+const formatMonthLabel = (monthKey: string): string => {
+  const [yearPart, monthPart] = monthKey.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    return monthKey;
+  }
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthLabel = monthNames[month - 1] ?? String(month);
+  return `${monthLabel} ${year}`;
+};
+
+const buildStayDates = (checkInDate: string, checkOutDate: string): string[] => {
+  if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
+    return [];
+  }
+
+  const dates: string[] = [];
+  let cursor = checkInDate;
+  while (cursor < checkOutDate) {
+    dates.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+
+  return dates;
+};
+
+const isCalendarDayBookable = (day: DayPriceDto | undefined): boolean => {
+  if (!day) {
+    return false;
+  }
+  if (day.localEvent === "Closed") {
+    return false;
+  }
+  return (day.availableRooms ?? 0) > 0;
+};
+
+const isStayRangeAvailable = (checkInDate: string, checkOutDate: string, availabilityByDate: Map<string, DayPriceDto>): boolean => {
+  const stayDates = buildStayDates(checkInDate, checkOutDate);
+  if (stayDates.length === 0) {
+    return false;
+  }
+  return stayDates.every((date) => isCalendarDayBookable(availabilityByDate.get(date)));
+};
+
+const buildBookingHref = (hotelId: string, roomId: string, checkInDate: string, checkOutDate: string, adults: number) => {
+  const query: Record<string, string> = {
+    hotelId,
+    roomId,
+    adultCount: String(adults),
+  };
+
+  if (checkInDate) {
+    query.checkInDate = checkInDate;
+  }
+  if (checkOutDate) {
+    query.checkOutDate = checkOutDate;
+  }
+
+  return {
+    pathname: "/bookings/new",
+    query,
+  };
+};
 
 const formatIsoDate = (value: string): string => {
   if (!value) {
