@@ -234,55 +234,93 @@ const NewBookingPage: NextPageWithAuth = () => {
   }, [activePriceLock?.lockedPrice, room?.lastMinuteDeal?.isActive]);
 
   const estimatedSubtotal = effectivePrice * (quantity ?? 0) * Math.max(0, nights);
+  const maxQuantity = room?.availableRooms && room.availableRooms > 0 ? room.availableRooms : 1;
+
+  useEffect(() => {
+    if (!room) {
+      return;
+    }
+    const parsedQty = parsePositiveInt(quantityInput);
+    if (!parsedQty) {
+      return;
+    }
+    if (room.availableRooms > 0 && parsedQty > room.availableRooms) {
+      setQuantityInput(String(room.availableRooms));
+    }
+  }, [quantityInput, room]);
+
+  useEffect(() => {
+    const parsedGuests = parsePositiveInt(guestCountInput);
+    if (!parsedGuests) {
+      return;
+    }
+    if (parsedGuests > maxAdultsByQuantity) {
+      setGuestCountInput(String(Math.max(1, maxAdultsByQuantity)));
+    }
+  }, [guestCountInput, maxAdultsByQuantity]);
+
+  const bookingValidationMessage = useMemo(() => {
+    if (!hotelId || !roomId) {
+      return "Missing booking context.";
+    }
+    if (!canCreateBooking) {
+      return "Your role cannot create booking with current backend policy.";
+    }
+    if (!hotel || !room) {
+      return "Loading booking context...";
+    }
+    if (isStaffCreator && !targetGuestId.trim()) {
+      return "For staff booking, target guestId is required.";
+    }
+    if (!guestCount || !quantity) {
+      return "Guest count and room quantity must be positive integers.";
+    }
+    if (room.roomStatus !== "AVAILABLE") {
+      return `Room is currently ${room.roomStatus.toLowerCase()} and cannot be booked.`;
+    }
+    if (quantity > room.availableRooms) {
+      return `Only ${room.availableRooms} room(s) currently available.`;
+    }
+    if (guestCount > room.maxOccupancy * quantity) {
+      return `Guest count exceeds room capacity (${room.maxOccupancy} x ${quantity} room(s)).`;
+    }
+    if (!checkInDate || !checkOutDate) {
+      return "Please select check-in and check-out dates.";
+    }
+    if (checkInDate < todayDate) {
+      return "Check-in date cannot be in the past.";
+    }
+    if (nights < 1) {
+      return "Check-out date must be after check-in date.";
+    }
+    return null;
+  }, [
+    canCreateBooking,
+    checkInDate,
+    checkOutDate,
+    guestCount,
+    hotel,
+    hotelId,
+    isStaffCreator,
+    nights,
+    quantity,
+    room,
+    roomId,
+    targetGuestId,
+    todayDate,
+  ]);
+  const canSubmitBooking = !creating && bookingValidationMessage === null;
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
 
-    if (!hotelId || !roomId || !hotel || !room) {
-      setFormError("Missing hotel/room context. Please start from the room list.");
+    if (bookingValidationMessage) {
+      setFormError(bookingValidationMessage);
       return;
     }
-
-    if (!canCreateBooking) {
-      setFormError("Your role cannot create booking with current backend policy.");
-      return;
-    }
-
-    if (isStaffCreator && !targetGuestId.trim()) {
-      setFormError("For staff booking, target guestId is required.");
-      return;
-    }
-
-    if (!guestCount || !quantity) {
-      setFormError("Guest count and room quantity must be positive integers.");
-      return;
-    }
-    if (room.roomStatus !== "AVAILABLE") {
-      setFormError(`Room is currently ${room.roomStatus.toLowerCase()} and cannot be booked.`);
-      return;
-    }
-    if (guestCount > room.maxOccupancy * quantity) {
-      setFormError(`Guest count exceeds room capacity (${room.maxOccupancy} x ${quantity} room(s)).`);
-      return;
-    }
-
-    if (!checkInDate || !checkOutDate) {
-      setFormError("Please select check-in and check-out dates.");
-      return;
-    }
-    if (checkInDate < todayDate) {
-      setFormError("Check-in date cannot be in the past.");
-      return;
-    }
-
-    if (nights < 1) {
-      setFormError("Check-out date must be after check-in date.");
-      return;
-    }
-
-    if (room.availableRooms < quantity) {
-      setFormError(`Only ${room.availableRooms} room(s) currently available.`);
+    if (!hotel || !room || !guestCount || !quantity) {
+      setFormError("Booking context is incomplete. Please refresh and try again.");
       return;
     }
 
@@ -478,6 +516,7 @@ const NewBookingPage: NextPageWithAuth = () => {
               value={guestCountInput}
               onChange={(event) => setGuestCountInput(event.target.value.replace(/\D/g, ""))}
               inputMode="numeric"
+              max={String(Math.max(1, maxAdultsByQuantity))}
               aria-describedby="guest-capacity-hint"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
               required
@@ -493,6 +532,7 @@ const NewBookingPage: NextPageWithAuth = () => {
               value={quantityInput}
               onChange={(event) => setQuantityInput(event.target.value.replace(/\D/g, ""))}
               inputMode="numeric"
+              max={String(maxQuantity)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
               required
             />
@@ -543,11 +583,12 @@ const NewBookingPage: NextPageWithAuth = () => {
         </div>
 
         {formError ? <ErrorNotice message={formError} /> : null}
+        {!formError && bookingValidationMessage ? <p className="text-xs font-medium text-amber-700">{bookingValidationMessage}</p> : null}
         {createError ? <ErrorNotice message={getErrorMessage(createError)} /> : null}
 
         <button
           type="submit"
-          disabled={creating || !canCreateBooking}
+          disabled={!canSubmitBooking}
           className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {creating ? "Creating booking..." : "Create booking"}

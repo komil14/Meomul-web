@@ -818,6 +818,9 @@ export default function RoomDetailPage() {
                   ) : null}
                 </div>
               ) : null}
+              <p className="text-[11px] text-slate-500">
+                Calendar prices are demand preview. Booking confirms final nightly rate by backend rule: price lock, then deal, then base rate.
+              </p>
 
               {bookingValidationMessage ? <p className="text-xs font-medium text-amber-700">{bookingValidationMessage}</p> : null}
 
