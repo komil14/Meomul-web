@@ -5,6 +5,16 @@ import { useEffect, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { CREATE_BOOKING_MUTATION, SEARCH_MEMBERS_FOR_BOOKING_QUERY } from "@/graphql/booking.gql";
 import { GET_HOTEL_CONTEXT_QUERY, GET_MY_PRICE_LOCK_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
+import {
+  diffNights,
+  type EffectiveRateSource,
+  formatTodayDate,
+  getBookingValidationMessage,
+  isDateKey,
+  parsePositiveInt,
+  resolveEffectiveNightPrice,
+  toDateTime,
+} from "@/lib/booking/booking-rules";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -25,39 +35,6 @@ import type {
 import type { NextPageWithAuth } from "@/types/page";
 
 const PAYMENT_METHODS: PaymentMethod[] = ["AT_HOTEL", "CREDIT_CARD", "DEBIT_CARD", "KAKAOPAY", "NAVERPAY", "TOSS"];
-
-const parsePositiveInt = (value: string): number | null => {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return parsed;
-};
-
-const diffNights = (checkInDate: string, checkOutDate: string): number => {
-  if (!checkInDate || !checkOutDate) {
-    return 0;
-  }
-
-  const checkIn = new Date(`${checkInDate}T00:00:00.000Z`);
-  const checkOut = new Date(`${checkOutDate}T00:00:00.000Z`);
-  return Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-};
-
-const toDateTime = (date: string): string => `${date}T00:00:00.000Z`;
-const isDateKey = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
-const formatTodayDate = (): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 const NewBookingPage: NextPageWithAuth = () => {
   const router = useRouter();
@@ -214,24 +191,18 @@ const NewBookingPage: NextPageWithAuth = () => {
 
   const nights = diffNights(checkInDate, checkOutDate);
   const activePriceLock = !isStaffCreator ? priceLockData?.getMyPriceLock ?? null : null;
-  const effectivePrice = useMemo(() => {
-    if (activePriceLock?.lockedPrice) {
-      return activePriceLock.lockedPrice;
-    }
-    if (room?.lastMinuteDeal?.isActive) {
-      return room.lastMinuteDeal.dealPrice;
-    }
-    return room?.basePrice ?? 0;
-  }, [activePriceLock?.lockedPrice, room?.basePrice, room?.lastMinuteDeal?.dealPrice, room?.lastMinuteDeal?.isActive]);
-  const effectivePriceSource = useMemo(() => {
-    if (activePriceLock?.lockedPrice) {
-      return "PRICE_LOCK";
-    }
-    if (room?.lastMinuteDeal?.isActive) {
-      return "LAST_MINUTE_DEAL";
-    }
-    return "BASE_RATE";
-  }, [activePriceLock?.lockedPrice, room?.lastMinuteDeal?.isActive]);
+  const effectiveRate = useMemo(
+    () =>
+      resolveEffectiveNightPrice({
+        basePrice: room?.basePrice ?? 0,
+        allowPriceLock: !isStaffCreator,
+        lockedPrice: activePriceLock?.lockedPrice,
+        lastMinuteDeal: room?.lastMinuteDeal,
+      }),
+    [activePriceLock?.lockedPrice, isStaffCreator, room?.basePrice, room?.lastMinuteDeal],
+  );
+  const effectivePrice = effectiveRate.price;
+  const effectivePriceSource: EffectiveRateSource = effectiveRate.source;
 
   const estimatedSubtotal = effectivePrice * (quantity ?? 0) * Math.max(0, nights);
   const maxQuantity = room?.availableRooms && room.availableRooms > 0 ? room.availableRooms : 1;
@@ -260,40 +231,24 @@ const NewBookingPage: NextPageWithAuth = () => {
   }, [guestCountInput, maxAdultsByQuantity]);
 
   const bookingValidationMessage = useMemo(() => {
-    if (!hotelId || !roomId) {
-      return "Missing booking context.";
-    }
-    if (!canCreateBooking) {
-      return "Your role cannot create booking with current backend policy.";
-    }
-    if (!hotel || !room) {
-      return "Loading booking context...";
-    }
-    if (isStaffCreator && !targetGuestId.trim()) {
-      return "For staff booking, target guestId is required.";
-    }
-    if (!guestCount || !quantity) {
-      return "Guest count and room quantity must be positive integers.";
-    }
-    if (room.roomStatus !== "AVAILABLE") {
-      return `Room is currently ${room.roomStatus.toLowerCase()} and cannot be booked.`;
-    }
-    if (quantity > room.availableRooms) {
-      return `Only ${room.availableRooms} room(s) currently available.`;
-    }
-    if (guestCount > room.maxOccupancy * quantity) {
-      return `Guest count exceeds room capacity (${room.maxOccupancy} x ${quantity} room(s)).`;
-    }
-    if (!checkInDate || !checkOutDate) {
-      return "Please select check-in and check-out dates.";
-    }
-    if (checkInDate < todayDate) {
-      return "Check-in date cannot be in the past.";
-    }
-    if (nights < 1) {
-      return "Check-out date must be after check-in date.";
-    }
-    return null;
+    return getBookingValidationMessage({
+      hotelId,
+      roomId,
+      canCreateBooking,
+      isStaffCreator,
+      targetGuestId,
+      hasHotel: Boolean(hotel),
+      hasRoom: Boolean(room),
+      guestCount,
+      quantity,
+      roomStatus: room?.roomStatus,
+      roomMaxOccupancy: room?.maxOccupancy,
+      roomAvailableRooms: room?.availableRooms,
+      checkInDate,
+      checkOutDate,
+      todayDate,
+      nights,
+    });
   }, [
     canCreateBooking,
     checkInDate,
@@ -513,9 +468,11 @@ const NewBookingPage: NextPageWithAuth = () => {
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">Guest count</span>
             <input
+              type="number"
               value={guestCountInput}
               onChange={(event) => setGuestCountInput(event.target.value.replace(/\D/g, ""))}
               inputMode="numeric"
+              min={1}
               max={String(Math.max(1, maxAdultsByQuantity))}
               aria-describedby="guest-capacity-hint"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
@@ -529,9 +486,11 @@ const NewBookingPage: NextPageWithAuth = () => {
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">Room quantity</span>
             <input
+              type="number"
               value={quantityInput}
               onChange={(event) => setQuantityInput(event.target.value.replace(/\D/g, ""))}
               inputMode="numeric"
+              min={1}
               max={String(maxQuantity)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
               required
@@ -580,6 +539,9 @@ const NewBookingPage: NextPageWithAuth = () => {
             Estimated subtotal: <span className="font-semibold">₩ {estimatedSubtotal.toLocaleString()}</span>
           </p>
           <p className="mt-1 text-xs text-slate-500">Final total is calculated on server (taxes, service fee, surcharges).</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Backend rate priority: price lock, then deal, then base rate. Calendar demand preview may differ.
+          </p>
         </div>
 
         {formError ? <ErrorNotice message={formError} /> : null}
