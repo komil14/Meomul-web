@@ -13,14 +13,11 @@ import { HotelReviewsSection } from "@/components/hotels/detail/hotel-reviews-se
 import { HotelRoomsSection } from "@/components/hotels/detail/hotel-rooms-section";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
-  CANCEL_PRICE_LOCK_MUTATION,
-  GET_MY_PRICE_LOCK_QUERY,
   GET_HOTEL_QUERY,
   GET_HOTEL_REVIEWS_QUERY,
   GET_RECOMMENDED_HOTELS_QUERY,
   GET_ROOMS_BY_HOTEL_QUERY,
   HAS_LIKED_QUERY,
-  LOCK_PRICE_MUTATION,
   MARK_HELPFUL_MUTATION,
   GET_SIMILAR_HOTELS_QUERY,
   TOGGLE_LIKE_MUTATION,
@@ -29,14 +26,10 @@ import {
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
-  CancelPriceLockMutationData,
-  CancelPriceLockMutationVars,
   GetHotelQueryData,
   GetHotelQueryVars,
   GetHotelReviewsQueryData,
   GetHotelReviewsQueryVars,
-  GetMyPriceLockQueryData,
-  GetMyPriceLockQueryVars,
   GetRecommendedHotelsQueryData,
   GetRecommendedHotelsQueryVars,
   GetRoomsByHotelQueryData,
@@ -50,8 +43,6 @@ import type {
   HotelDetailItem,
   HotelListItem,
   HotelLocation,
-  LockPriceMutationData,
-  LockPriceMutationVars,
   MarkHelpfulMutationData,
   MarkHelpfulMutationVars,
   RoomListItem,
@@ -110,13 +101,6 @@ const canUseMemberActions = (memberType: string | undefined): boolean => {
   return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
 };
 
-const formatDateTime = (value: string): string => new Date(value).toLocaleString();
-
-const getMinutesUntil = (value: string): number => {
-  const diff = new Date(value).getTime() - Date.now();
-  return Math.max(0, Math.ceil(diff / 60000));
-};
-
 const uniqueHotels = (hotels: HotelListItem[], excludeHotelId: string): HotelListItem[] => {
   const seen = new Set<string>();
   return hotels.filter((hotel) => {
@@ -169,7 +153,6 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   const locationSectionRef = useRef<HTMLElement | null>(null);
 
   const [reviewPage, setReviewPage] = useState(1);
-  const [selectedRoomId, setSelectedRoomId] = useState("");
   const [shouldLoadDiscovery, setShouldLoadDiscovery] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
   const [reviewActionError, setReviewActionError] = useState<string | null>(null);
@@ -188,7 +171,6 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   const memberType = member?.memberType;
   const canUseRecommendedQuery = canUsePersonalizedRecommendations(memberType);
   const canUseLikeActions = canUseMemberActions(memberType);
-  const canUsePriceActions = canUseMemberActions(memberType);
 
   useEffect(() => {
     setMember(getSessionMember());
@@ -243,26 +225,6 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     fetchPolicy: initialRooms.length > 0 ? "cache-first" : "cache-and-network",
     nextFetchPolicy: "cache-first",
   });
-
-  const {
-    data: myPriceLockData,
-    loading: myPriceLockLoading,
-    error: myPriceLockError,
-    refetch: refetchMyPriceLock,
-  } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
-    skip: !selectedRoomId || !canUsePriceActions,
-    variables: {
-      roomId: selectedRoomId,
-    },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-first",
-  });
-
-  const [lockPriceMutation, { loading: lockingPrice }] = useMutation<LockPriceMutationData, LockPriceMutationVars>(LOCK_PRICE_MUTATION);
-  const [cancelPriceLockMutation, { loading: cancellingPriceLock }] = useMutation<
-    CancelPriceLockMutationData,
-    CancelPriceLockMutationVars
-  >(CANCEL_PRICE_LOCK_MUTATION);
 
   const {
     data: reviewsData,
@@ -391,24 +353,12 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   }, [shouldLoadMap]);
 
   useEffect(() => {
-    if (rooms.length === 0) {
-      return;
-    }
-
-    const firstRoomId = rooms[0]?._id;
-    if (firstRoomId && (!selectedRoomId || !rooms.some((room) => room._id === selectedRoomId))) {
-      setSelectedRoomId(firstRoomId);
-    }
-  }, [rooms, selectedRoomId]);
-
-  useEffect(() => {
     setHotelLikeState(null);
     setHelpfulCountOverrides({});
     setReviewActionError(null);
     setGeneralActionError(null);
   }, [hotelId]);
 
-  const selectedRoom = useMemo(() => rooms.find((room) => room._id === selectedRoomId) ?? null, [rooms, selectedRoomId]);
   const fromPrice = useMemo(() => {
     const prices = rooms.map((room) => room.basePrice).filter((price): price is number => typeof price === "number");
     return prices.length > 0 ? Math.min(...prices) : 0;
@@ -458,8 +408,6 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   const satisfactionText = useMemo(() => (hotel ? asPercent(hotel.hotelRating) : "0%"), [hotel]);
   const hotelLikeCount = hotelLikeState?.count ?? hotel?.hotelLikes ?? 0;
   const hotelLiked = hotelLikeState?.liked ?? Boolean(hotelLikedData?.hasLiked);
-  const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
-  const lockMinutesLeft = activePriceLock ? getMinutesUntil(activePriceLock.expiresAt) : 0;
 
   const handleToggleHotelLike = async (): Promise<void> => {
     if (!hotelId || !canUseLikeActions) {
@@ -516,43 +464,6 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     }
   };
 
-  const handleLockPrice = async (): Promise<void> => {
-    if (!canUsePriceActions || !selectedRoom) {
-      return;
-    }
-
-    setGeneralActionError(null);
-    try {
-      await lockPriceMutation({
-        variables: {
-          input: {
-            roomId: selectedRoom._id,
-            currentPrice: selectedRoom.basePrice,
-          },
-        },
-      });
-      await refetchMyPriceLock();
-    } catch (error) {
-      setGeneralActionError(getErrorMessage(error));
-    }
-  };
-
-  const handleCancelPriceLock = async (): Promise<void> => {
-    if (!canUsePriceActions || !activePriceLock) {
-      return;
-    }
-
-    setGeneralActionError(null);
-    try {
-      await cancelPriceLockMutation({
-        variables: { priceLockId: activePriceLock._id },
-      });
-      await refetchMyPriceLock();
-    } catch (error) {
-      setGeneralActionError(getErrorMessage(error));
-    }
-  };
-
   if (!hotelId) {
     return (
       <main className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
@@ -586,7 +497,6 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
 
       {hotelError ? <ErrorNotice message={getErrorMessage(hotelError)} /> : null}
       {hotelLikedError ? <ErrorNotice message={getErrorMessage(hotelLikedError)} /> : null}
-      {myPriceLockError ? <ErrorNotice message={getErrorMessage(myPriceLockError)} /> : null}
       {generalActionError ? <ErrorNotice message={generalActionError} /> : null}
 
       {hotelLoading && !hotel ? (
@@ -618,8 +528,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
         />
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-        <div className="space-y-8">
+      <div className="space-y-8">
           <HotelGallerySection images={galleryImages} />
 
           <HotelFeaturesSection
@@ -696,107 +605,6 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
               />
             ) : null}
           </section>
-        </div>
-
-        <aside className="space-y-4 lg:sticky lg:top-24">
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Book this stay</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">₩ {fromPrice > 0 ? fromPrice.toLocaleString() : "-"}</p>
-            <p className="text-xs text-slate-500">starting price per room/night</p>
-
-            <div className="mt-4 space-y-3">
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Room</span>
-                <select
-                  value={selectedRoomId}
-                  onChange={(event) => setSelectedRoomId(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
-                  disabled={rooms.length === 0}
-                >
-                  {rooms.length === 0 ? <option value="">No rooms available</option> : null}
-                  {rooms.map((room) => (
-                    <option key={room._id} value={room._id}>
-                      {room.roomName} · ₩ {room.basePrice.toLocaleString()}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {selectedRoom ? (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-                  Selected: <span className="font-semibold text-slate-900">{selectedRoom.roomName}</span>
-                  <br />
-                  Status: {selectedRoom.roomStatus} · Left: {selectedRoom.availableRooms}
-                </div>
-              ) : (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                  Select a room to open its calendar.
-                </div>
-              )}
-
-              {selectedRoom ? (
-                <div className="grid gap-2">
-                  <Link
-                    href={`/rooms/${selectedRoom._id}`}
-                    className="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-                  >
-                    Choose Dates on Room Page
-                  </Link>
-                  <Link
-                    href={`/bookings/new?hotelId=${hotelId}&roomId=${selectedRoom._id}`}
-                    className="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
-                  >
-                    Open Booking Form
-                  </Link>
-                </div>
-              ) : null}
-
-              <p className="text-xs text-slate-500">Calendar and date selection are now handled per room detail page.</p>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Price lock</p>
-            <div className="mt-3 space-y-3">
-              {canUsePriceActions ? (
-                <>
-                  {myPriceLockLoading ? <p className="text-xs text-slate-500">Checking your active price lock...</p> : null}
-                  {activePriceLock ? (
-                    <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-                      <p>
-                        Locked price: <span className="font-semibold">₩ {activePriceLock.lockedPrice.toLocaleString()}</span>
-                      </p>
-                      <p>
-                        Expires in <span className="font-semibold">{lockMinutesLeft} min</span> ({formatDateTime(activePriceLock.expiresAt)})
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => void handleCancelPriceLock()}
-                        disabled={cancellingPriceLock}
-                        className="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-900 transition hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {cancellingPriceLock ? "Cancelling..." : "Cancel lock"}
-                      </button>
-                    </div>
-                  ) : selectedRoom ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleLockPrice()}
-                      disabled={lockingPrice}
-                      className="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {lockingPrice ? "Locking..." : `Lock ₩ ${selectedRoom.basePrice.toLocaleString()} for 30 min`}
-                    </button>
-                  ) : (
-                    <p className="text-xs text-slate-500">Select a room first to lock its price.</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-slate-500">Login with USER/AGENT/ADMIN to use price lock.</p>
-              )}
-            </div>
-          </section>
-        </aside>
       </div>
     </main>
   );

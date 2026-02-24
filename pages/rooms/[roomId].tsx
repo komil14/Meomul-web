@@ -1,21 +1,36 @@
-import { useQuery } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { DayButton as DefaultDayButton, DayPicker, getDefaultClassNames, type DateRange, type DayButtonProps } from "react-day-picker";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { GET_HOTEL_CONTEXT_QUERY, GET_PRICE_CALENDAR_QUERY, GET_ROOM_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
+import {
+  CANCEL_PRICE_LOCK_MUTATION,
+  GET_HOTEL_CONTEXT_QUERY,
+  GET_MY_PRICE_LOCK_QUERY,
+  GET_PRICE_CALENDAR_QUERY,
+  GET_ROOM_QUERY,
+  GET_ROOMS_BY_HOTEL_QUERY,
+  LOCK_PRICE_MUTATION,
+} from "@/graphql/hotel.gql";
+import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
+  CancelPriceLockMutationData,
+  CancelPriceLockMutationVars,
   DayPriceDto,
   GetHotelContextQueryData,
   GetHotelContextQueryVars,
+  GetMyPriceLockQueryData,
+  GetMyPriceLockQueryVars,
   GetPriceCalendarQueryData,
   GetPriceCalendarQueryVars,
   GetRoomQueryData,
   GetRoomQueryVars,
   GetRoomsByHotelQueryData,
   GetRoomsByHotelQueryVars,
+  LockPriceMutationData,
+  LockPriceMutationVars,
   ViewType,
 } from "@/types/hotel";
 
@@ -43,6 +58,16 @@ const formatMonthLabel = (monthKey: string): string => {
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const monthLabel = monthNames[month - 1] ?? String(month);
   return `${monthLabel} ${year}`;
+};
+
+const canUsePriceActions = (memberType: string | undefined): boolean =>
+  memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
+
+const formatDateTime = (value: string): string => new Date(value).toLocaleString();
+
+const getMinutesUntil = (value: string): number => {
+  const diff = new Date(value).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / 60000));
 };
 
 const buildStayDates = (checkInDate: string, checkOutDate: string): string[] => {
@@ -330,6 +355,8 @@ const PriceDayButton = ({
   const isDisabled = Boolean(modifiers.disabled);
   const isSingleSelected = isSelected && !isRangeStart && !isRangeEnd && !isRangeMiddle;
   const isEdgeSelected = isSingleSelected || isRangeStart || isRangeEnd;
+  const isInSelectedRange = isEdgeSelected || isRangeMiddle;
+  const isBookable = !isUnavailable && !isDisabled;
 
   return (
     <DefaultDayButton
@@ -339,7 +366,9 @@ const PriceDayButton = ({
       className={[
         buttonProps.className,
         "group inline-flex flex-col items-center justify-center gap-0 overflow-hidden",
-        !isDisabled ? "hover:shadow-[0_0_0_1px_rgba(14,165,233,0.24),0_10px_24px_-14px_rgba(15,23,42,0.75),0_0_18px_rgba(59,130,246,0.25)]" : "",
+        isInSelectedRange ? "!border-black !bg-black !text-white shadow-[0_1px_0_rgba(255,255,255,0.05)_inset]" : "",
+        !isInSelectedRange && isUnavailable ? "border-slate-200 bg-slate-100 text-slate-400" : "",
+        !isInSelectedRange && isBookable ? "hover:border-slate-500 hover:bg-slate-50 hover:shadow-sm" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -360,16 +389,15 @@ const PriceDayButton = ({
         onHover?.(null);
       }}
     >
-      <span className={`block text-[10px] leading-none font-bold transition ${isEdgeSelected ? "text-white drop-shadow-sm" : "text-slate-700"}`}>
+      <span className={`block text-[11px] leading-none font-bold transition ${isInSelectedRange ? "text-white drop-shadow-sm" : "text-slate-700"}`}>
         {day.date.getDate()}
       </span>
       <span
         className={[
           "inline-flex min-w-7 items-center justify-center rounded-full px-1 py-[1px] text-[8px] leading-none font-bold transition",
-          isUnavailable ? "bg-slate-300/60 text-slate-500" : "",
-          !isUnavailable && isEdgeSelected ? "border border-violet-200/70 bg-white/95 text-violet-900" : "",
-          !isUnavailable && !isEdgeSelected && isRangeMiddle ? "bg-white/85 text-slate-700" : "",
-          !isUnavailable && !isEdgeSelected && !isRangeMiddle ? "bg-slate-900/10 text-slate-600 group-hover:-translate-y-0.5 group-hover:bg-violet-100 group-hover:text-violet-800" : "",
+          isUnavailable ? "bg-slate-300/70 text-slate-500" : "",
+          !isUnavailable && isInSelectedRange ? "border border-white/35 bg-white/15 text-white" : "",
+          !isUnavailable && !isInSelectedRange ? "bg-slate-900/10 text-slate-600" : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -383,12 +411,15 @@ const PriceDayButton = ({
 export default function RoomDetailPage() {
   const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
+  const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [adultCount, setAdultCount] = useState(2);
+  const [lockActionError, setLockActionError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsHydrated(true);
+    setMember(getSessionMember());
   }, []);
 
   const todayDate = useMemo(() => formatDateInput(new Date()), []);
@@ -416,6 +447,8 @@ export default function RoomDetailPage() {
 
   const room = roomData?.getRoom;
   const roomHotelId = room?.hotelId ?? "";
+  const memberType = member?.memberType;
+  const canLockPrice = canUsePriceActions(memberType);
 
   const {
     data: priceCalendarData,
@@ -432,6 +465,25 @@ export default function RoomDetailPage() {
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
+
+  const {
+    data: myPriceLockData,
+    loading: myPriceLockLoading,
+    error: myPriceLockError,
+    refetch: refetchMyPriceLock,
+  } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
+    skip: !isHydrated || !roomId || !canLockPrice,
+    variables: {
+      roomId,
+    },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+  });
+  const [lockPriceMutation, { loading: lockingPrice }] = useMutation<LockPriceMutationData, LockPriceMutationVars>(LOCK_PRICE_MUTATION);
+  const [cancelPriceLockMutation, { loading: cancellingPriceLock }] = useMutation<
+    CancelPriceLockMutationData,
+    CancelPriceLockMutationVars
+  >(CANCEL_PRICE_LOCK_MUTATION);
 
   const { data: hotelData, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
     skip: !isHydrated || !roomHotelId,
@@ -486,6 +538,7 @@ export default function RoomDetailPage() {
     setCheckInDate("");
     setCheckOutDate("");
     setHoveredDateKey(null);
+    setLockActionError(null);
   }, [roomId, todayMonth]);
 
   useEffect(() => {
@@ -568,6 +621,7 @@ export default function RoomDetailPage() {
   }, [adultCount, availabilityByDate, checkInDate, checkOutDate, hasCalendarAvailability, room]);
 
   const canContinueBooking = bookingValidationMessage === null && Boolean(roomHotelId) && Boolean(room);
+  const canLockCurrentRoom = Boolean(room && room.roomStatus === "AVAILABLE" && room.availableRooms > 0);
   const cheapestDateKey = useMemo(() => {
     const availableDays = visibleWindowCalendar.filter((day) => isCalendarDayBookable(day));
     if (availableDays.length === 0) {
@@ -626,13 +680,13 @@ export default function RoomDetailPage() {
       month_grid: `${defaults.month_grid} w-full border-separate border-spacing-[2px]`,
       day: `${defaults.day} p-0`,
       day_button:
-        `${defaults.day_button} h-11 w-10 rounded-xl border border-slate-200 bg-white/95 text-slate-700 backdrop-blur-[4px] transition duration-300 hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-lg sm:h-11 sm:w-11`,
-      selected: "border-slate-300 bg-white/95 text-slate-700",
-      range_start: "border-violet-700 bg-violet-700 text-white shadow-[0_0_0_1px_rgba(109,40,217,0.35)]",
-      range_middle: "border-violet-100 bg-violet-50 text-violet-900",
-      range_end: "border-violet-700 bg-violet-700 text-white shadow-[0_0_0_1px_rgba(109,40,217,0.35)]",
+        `${defaults.day_button} h-11 w-10 rounded-xl border border-slate-200 bg-white/95 text-slate-700 backdrop-blur-[4px] transition-colors duration-150 sm:h-11 sm:w-11`,
+      selected: "",
+      range_start: "",
+      range_middle: "",
+      range_end: "",
       today: "ring-2 ring-cyan-300",
-      focused: "ring-2 ring-sky-400",
+      focused: "ring-2 ring-slate-500",
       disabled: "opacity-45",
       outside: "opacity-35",
       hidden: "opacity-0",
@@ -721,6 +775,45 @@ export default function RoomDetailPage() {
   };
   const calendarLoadInProgress = priceCalendarLoading;
   const calendarLoadError = priceCalendarError;
+  const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
+  const lockMinutesLeft = activePriceLock ? getMinutesUntil(activePriceLock.expiresAt) : 0;
+
+  const handleLockPrice = async (): Promise<void> => {
+    if (!canLockPrice || !room) {
+      return;
+    }
+
+    setLockActionError(null);
+    try {
+      await lockPriceMutation({
+        variables: {
+          input: {
+            roomId: room._id,
+            currentPrice: room.basePrice,
+          },
+        },
+      });
+      await refetchMyPriceLock();
+    } catch (error) {
+      setLockActionError(getErrorMessage(error));
+    }
+  };
+
+  const handleCancelPriceLock = async (): Promise<void> => {
+    if (!canLockPrice || !activePriceLock) {
+      return;
+    }
+
+    setLockActionError(null);
+    try {
+      await cancelPriceLockMutation({
+        variables: { priceLockId: activePriceLock._id },
+      });
+      await refetchMyPriceLock();
+    } catch (error) {
+      setLockActionError(getErrorMessage(error));
+    }
+  };
   const roomFactCards = useMemo(
     () =>
       room
@@ -771,15 +864,12 @@ export default function RoomDetailPage() {
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
           Back to hotels
         </Link>
-        {roomHotelId ? (
-          <Link href={`/hotels/${roomHotelId}`} className="text-sm text-slate-600 underline underline-offset-4">
-            Back to hotel detail
-          </Link>
-        ) : null}
       </div>
 
       {roomError ? <ErrorNotice message={getErrorMessage(roomError)} /> : null}
       {hotelError ? <ErrorNotice message={getErrorMessage(hotelError)} /> : null}
+      {myPriceLockError ? <ErrorNotice message={getErrorMessage(myPriceLockError)} /> : null}
+      {lockActionError ? <ErrorNotice message={lockActionError} /> : null}
 
       {!isHydrated || roomLoading ? (
         <section className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-600">Loading room...</section>
@@ -973,7 +1063,7 @@ export default function RoomDetailPage() {
                 </div>
               </div>
 
-              <aside className="order-1 self-start space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur lg:order-2 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+              <aside className="order-1 self-start space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur lg:order-2 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-scroll">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Quick Booking</p>
                   <h3 className="mt-1 text-2xl font-semibold leading-tight text-slate-900">Select Stay Dates</h3>
@@ -1010,6 +1100,51 @@ export default function RoomDetailPage() {
                   />
                 </label>
 
+                <section className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Price lock (30 min)</p>
+                  <div className="mt-2 space-y-2.5">
+                    {canLockPrice ? (
+                      <>
+                        {myPriceLockLoading ? <p className="text-xs text-slate-500">Checking your active lock...</p> : null}
+                        {activePriceLock ? (
+                          <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                            <p>
+                              Locked price: <span className="font-semibold">₩ {activePriceLock.lockedPrice.toLocaleString()}</span>
+                            </p>
+                            <p>
+                              Expires in <span className="font-semibold">{lockMinutesLeft} min</span> ({formatDateTime(activePriceLock.expiresAt)})
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => void handleCancelPriceLock()}
+                              disabled={cancellingPriceLock}
+                              className="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-900 transition hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {cancellingPriceLock ? "Cancelling..." : "Cancel lock"}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void handleLockPrice()}
+                            disabled={!canLockCurrentRoom || lockingPrice}
+                            className="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {lockingPrice
+                              ? "Locking..."
+                              : `Lock ₩ ${(room?.basePrice ?? 0).toLocaleString()} for 30 min`}
+                          </button>
+                        )}
+                        {!canLockCurrentRoom ? (
+                          <p className="text-xs text-slate-500">Room is not currently bookable, so lock cannot be created.</p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="text-xs text-slate-500">Login with USER/AGENT/ADMIN to use price lock.</p>
+                    )}
+                  </div>
+                </section>
+
                 <div className="relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-slate-50 to-sky-50/70 p-3.5 shadow-[0_18px_38px_-24px_rgba(15,23,42,0.42)] before:pointer-events-none before:absolute before:inset-[-40%_-20%] before:bg-[radial-gradient(circle_at_25%_30%,rgba(56,189,248,0.2),transparent_38%),radial-gradient(circle_at_75%_70%,rgba(59,130,246,0.16),transparent_34%),conic-gradient(from_160deg_at_50%_50%,rgba(148,163,184,0.08),rgba(59,130,246,0.12),rgba(14,165,233,0.08),rgba(148,163,184,0.08))] before:blur-[18px] after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] after:bg-[length:16px_16px] after:opacity-20">
                   <div className="relative z-10">
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -1037,26 +1172,26 @@ export default function RoomDetailPage() {
                     </div>
                     <div className="mb-3 rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50 to-cyan-50 p-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-700">Live Date Preview</p>
-                      {hoveredDateKey && hoveredDay ? (
-                        <div className="mt-1.5 flex items-end justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">{hoveredDateKey}</p>
-                            <p className="text-xs text-slate-600">
-                              {isCalendarDayBookable(hoveredDay)
-                                ? `${hoveredDay.availableRooms ?? 0} room(s) left · ${hoveredDay.demandLevel.toLowerCase()} demand`
-                                : "Unavailable for booking"}
-                            </p>
+                      <div className="mt-1.5 h-[78px] rounded-lg border border-sky-200 bg-white/80 px-3 py-2">
+                        {hoveredDateKey && hoveredDay ? (
+                          <div className="flex h-full items-end justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">{hoveredDateKey}</p>
+                              <p className="text-xs text-slate-600">
+                                {isCalendarDayBookable(hoveredDay)
+                                  ? `${hoveredDay.availableRooms ?? 0} room(s) left · ${hoveredDay.demandLevel.toLowerCase()} demand`
+                                  : "Unavailable for booking"}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Nightly Price</p>
+                              <p className="text-xl font-bold text-sky-900">₩ {hoveredDay.price.toLocaleString()}</p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Nightly Price</p>
-                            <p className="text-xl font-bold text-sky-900">₩ {hoveredDay.price.toLocaleString()}</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-1.5 rounded-lg border border-sky-200 bg-white/80 px-3 py-2 text-xs text-slate-600">
-                          Hover a date to preview exact nightly price and availability.
-                        </div>
-                      )}
+                        ) : (
+                          <div className="flex h-full items-center text-xs text-slate-600">Hover a date to preview exact nightly price and availability.</div>
+                        )}
+                      </div>
                     </div>
                     <div className="overflow-x-auto pb-1">
                       <DayPicker
@@ -1069,16 +1204,6 @@ export default function RoomDetailPage() {
                       onMonthChange={(month) => setCalendarMonth(toMonthKey(month))}
                       onDayClick={handleSelectCalendarDay}
                       disabled={disabledDays}
-                      modifiers={{
-                        cheap: (date) => formatDateInput(date) === cheapestDateKey,
-                        peak: (date) => formatDateInput(date) === peakDateKey,
-                      }}
-                      modifiersClassNames={{
-                        cheap:
-                          "[&>button:not([aria-selected='true'])]:border-cyan-400 [&>button:not([aria-selected='true'])]:bg-gradient-to-b [&>button:not([aria-selected='true'])]:from-cyan-50 [&>button:not([aria-selected='true'])]:to-cyan-100 [&>button:not([aria-selected='true'])]:text-cyan-900",
-                        peak:
-                          "[&>button:not([aria-selected='true'])]:border-sky-400 [&>button:not([aria-selected='true'])]:bg-gradient-to-b [&>button:not([aria-selected='true'])]:from-blue-50 [&>button:not([aria-selected='true'])]:to-blue-100 [&>button:not([aria-selected='true'])]:text-blue-900",
-                      }}
                       components={dayPickerComponents}
                       classNames={dayPickerClassNames}
                       style={dayPickerStyle}
@@ -1092,18 +1217,14 @@ export default function RoomDetailPage() {
                       <p className="mt-2 text-[11px] text-amber-700">{getErrorMessage(calendarLoadError)}</p>
                     ) : null}
                     <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-slate-900" />
-                      Selected
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-slate-300" />
-                      In range
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-slate-200" />
-                      Disabled unavailable
-                    </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-black" />
+                        Selected range
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-slate-300" />
+                        Unavailable
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1154,14 +1275,6 @@ export default function RoomDetailPage() {
                   </button>
                 )}
 
-                {roomHotelId ? (
-                  <Link
-                    href={`/hotels/${roomHotelId}`}
-                    className="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
-                  >
-                    Open hotel detail
-                  </Link>
-                ) : null}
               </aside>
             </div>
           </section>
