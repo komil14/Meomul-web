@@ -49,19 +49,6 @@ const addDays = (dateInput: string, days: number): string => {
   return formatDateInput(base);
 };
 
-const formatMonthLabel = (monthKey: string): string => {
-  const [yearPart, monthPart] = monthKey.split("-");
-  const year = Number(yearPart);
-  const month = Number(monthPart);
-  if (!Number.isInteger(year) || !Number.isInteger(month)) {
-    return monthKey;
-  }
-
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const monthLabel = monthNames[month - 1] ?? String(month);
-  return `${monthLabel} ${year}`;
-};
-
 const canUsePriceActions = (memberType: string | undefined): boolean =>
   memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
 
@@ -311,17 +298,6 @@ const DetailIcon = ({ name }: { name: DetailIconName }) => {
       <path d="M9 12l2 2 4-4" />
     </svg>
   );
-};
-
-const addMonthsToMonthKey = (monthKey: string, monthsToAdd: number): string => {
-  const [yearPart, monthPart] = monthKey.split("-");
-  const year = Number(yearPart);
-  const month = Number(monthPart);
-  if (!Number.isInteger(year) || !Number.isInteger(month)) {
-    return monthKey;
-  }
-  const next = new Date(year, month - 1 + monthsToAdd, 1);
-  return toMonthKey(next);
 };
 
 const formatCompactKrw = (price: number): string => {
@@ -612,10 +588,6 @@ export default function RoomDetailPage() {
   const visibleWindowCalendar = useMemo(() => calendarByMonth[calendarMonth] ?? [], [calendarByMonth, calendarMonth]);
 
   const hasCalendarAvailability = availabilityByDate.size > 0;
-  const calendarMonthLabel = useMemo(() => formatMonthLabel(calendarMonth), [calendarMonth]);
-  const canMoveToPreviousMonth = calendarMonth > todayMonth;
-  const previousMonthKey = useMemo(() => addMonthsToMonthKey(calendarMonth, -1), [calendarMonth]);
-  const nextMonthKey = useMemo(() => addMonthsToMonthKey(calendarMonth, 1), [calendarMonth]);
   const hoveredDay = useMemo(() => (hoveredDateKey ? availabilityByDate.get(hoveredDateKey) : undefined), [availabilityByDate, hoveredDateKey]);
 
   useEffect(() => {
@@ -705,6 +677,15 @@ export default function RoomDetailPage() {
     }
     return new Date(year, month - 1, 1);
   }, [calendarMonth]);
+  const minCalendarMonthDate = useMemo(() => {
+    const [yearPart, monthPart] = todayMonth.split("-");
+    const year = Number(yearPart);
+    const month = Number(monthPart);
+    if (!Number.isInteger(year) || !Number.isInteger(month)) {
+      return new Date();
+    }
+    return new Date(year, month - 1, 1);
+  }, [todayMonth]);
 
   const dayPickerClassNames = useMemo(() => {
     const defaults = getDefaultClassNames();
@@ -715,9 +696,11 @@ export default function RoomDetailPage() {
       month: `${defaults.month} rounded-2xl border border-white/70 bg-white/80 p-2.5 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.85)] backdrop-blur`,
       month_caption: `${defaults.month_caption} mb-3`,
       caption_label: `${defaults.caption_label} text-xs font-semibold uppercase tracking-[0.12em] text-slate-700`,
-      nav: "hidden",
-      button_previous: "hidden",
-      button_next: "hidden",
+      nav: `${defaults.nav} flex items-center gap-1`,
+      button_previous:
+        `${defaults.button_previous} inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40`,
+      button_next:
+        `${defaults.button_next} inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40`,
       weekdays: `${defaults.weekdays} border-b border-slate-200 pb-1`,
       weekday: `${defaults.weekday} text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500`,
       month_grid: `${defaults.month_grid} w-full border-separate border-spacing-[2px]`,
@@ -1202,29 +1185,6 @@ export default function RoomDetailPage() {
 
                 <div className="relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-slate-50 to-sky-50/70 p-3.5 shadow-[0_18px_38px_-24px_rgba(15,23,42,0.42)] before:pointer-events-none before:absolute before:inset-[-40%_-20%] before:bg-[radial-gradient(circle_at_25%_30%,rgba(56,189,248,0.2),transparent_38%),radial-gradient(circle_at_75%_70%,rgba(59,130,246,0.16),transparent_34%),conic-gradient(from_160deg_at_50%_50%,rgba(148,163,184,0.08),rgba(59,130,246,0.12),rgba(14,165,233,0.08),rgba(148,163,184,0.08))] before:blur-[18px] after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] after:bg-[length:16px_16px] after:opacity-20">
                   <div className="relative z-10">
-                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">{calendarMonthLabel}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-[11px] text-slate-500">Monthly price board</p>
-                      <div className="inline-flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setCalendarMonth(previousMonthKey)}
-                          disabled={!canMoveToPreviousMonth}
-                          className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          Prev
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCalendarMonth(nextMonthKey)}
-                          className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition hover:border-slate-500"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                    </div>
                     <div className="mb-3 rounded-xl border border-sky-200/80 bg-gradient-to-br from-sky-50 to-cyan-50 p-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-700">Live Date Preview</p>
                       <div className="mt-1.5 h-[78px] rounded-lg border border-sky-200 bg-white/80 px-3 py-2">
@@ -1254,6 +1214,7 @@ export default function RoomDetailPage() {
                       mode="range"
                       selected={selectedRange}
                       month={calendarMonthDate}
+                      startMonth={minCalendarMonthDate}
                       numberOfMonths={1}
                       pagedNavigation
                       onMonthChange={(month) => setCalendarMonth(toMonthKey(month))}
