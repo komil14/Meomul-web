@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
@@ -11,32 +11,23 @@ import { LiveInterestFab } from "@/components/rooms/live-interest-fab";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   GET_HOTEL_CONTEXT_QUERY,
-  GET_MY_PRICE_LOCK_QUERY,
-  GET_MY_PRICE_LOCKS_QUERY,
   GET_PRICE_CALENDAR_QUERY,
   GET_ROOM_QUERY,
-  LOCK_PRICE_MUTATION,
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { useRoomBookingState } from "@/lib/hooks/use-room-booking-state";
 import { useRoomLiveViewers } from "@/lib/hooks/use-room-live-viewers";
+import { useRoomPriceLock } from "@/lib/hooks/use-room-price-lock";
 import { formatDateInput, formatEnumLabel, isCalendarDayBookable } from "@/lib/rooms/booking";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   GetHotelContextQueryData,
   GetHotelContextQueryVars,
-  GetMyPriceLockQueryData,
-  GetMyPriceLockQueryVars,
   GetPriceCalendarQueryData,
   GetPriceCalendarQueryVars,
   GetRoomQueryData,
   GetRoomQueryVars,
-  LockPriceMutationData,
-  LockPriceMutationVars,
 } from "@/types/hotel";
-
-const canUsePriceActions = (memberType: string | undefined): boolean =>
-  memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
 
 const buildBookingHref = (
   hotelId: string,
@@ -72,7 +63,6 @@ export default function RoomDetailPage() {
   const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
   const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
-  const [lockActionError, setLockActionError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -103,7 +93,6 @@ export default function RoomDetailPage() {
   const room = roomData?.getRoom;
   const roomHotelId = room?.hotelId ?? "";
   const memberType = member?.memberType;
-  const canLockPrice = canUsePriceActions(memberType);
 
   const {
     data: priceCalendarData,
@@ -122,20 +111,6 @@ export default function RoomDetailPage() {
     nextFetchPolicy: "cache-first",
     notifyOnNetworkStatusChange: true,
   });
-
-  const {
-    data: myPriceLockData,
-    loading: myPriceLockLoading,
-    error: myPriceLockError,
-  } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
-    skip: !isHydrated || !roomId || !canLockPrice,
-    variables: {
-      roomId,
-    },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-first",
-  });
-  const [lockPriceMutation, { loading: lockingPrice }] = useMutation<LockPriceMutationData, LockPriceMutationVars>(LOCK_PRICE_MUTATION);
 
   const { data: hotelData, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
     skip: !isHydrated || !roomHotelId,
@@ -162,14 +137,6 @@ export default function RoomDetailPage() {
     return deal;
   }, [room?.lastMinuteDeal]);
   const { viewerCount: liveViewerCount, connected: isLiveViewConnected } = useRoomLiveViewers({ roomId });
-
-  useEffect(() => {
-    if (!roomId) {
-      return;
-    }
-
-    setLockActionError(null);
-  }, [roomId]);
 
   const {
     checkInDate,
@@ -212,19 +179,26 @@ export default function RoomDetailPage() {
     refetchPriceCalendar,
   });
 
-  const canLockCurrentRoom = Boolean(room && room.roomStatus === "AVAILABLE");
+  const {
+    myPriceLockError,
+    lockActionError,
+    lockingPrice,
+    lockRequestPrice,
+    effectiveNightlyRate,
+    effectiveNightlyRateSourceLabel,
+    showBottomLockBar,
+    onLockPrice,
+  } = useRoomPriceLock({
+    isHydrated,
+    roomId,
+    room,
+    memberType,
+    activeDeal,
+  });
+
   const calendarLoadInProgress = priceCalendarLoading;
   const calendarLoadError = priceCalendarError;
   const calendarLoadErrorMessage = calendarLoadError && visibleWindowCalendar.length === 0 ? getErrorMessage(calendarLoadError) : null;
-  const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
-  const lockRequestPrice = activeDeal?.dealPrice ?? room?.basePrice ?? 0;
-  const effectiveNightlyRate = activePriceLock?.lockedPrice ?? lockRequestPrice;
-  const effectiveNightlyRateSourceLabel = activePriceLock
-    ? "Locked price is active for your account."
-    : activeDeal
-      ? "Last-minute deal is currently active."
-      : "Base rate (before taxes/fees).";
-  const showBottomLockBar = canLockPrice && canLockCurrentRoom && !myPriceLockLoading && !activePriceLock && !lockingPrice;
   const cheapestDatePrice = cheapestDateKey ? availabilityByDate.get(cheapestDateKey)?.price : undefined;
   const peakDatePrice = peakDateKey ? availabilityByDate.get(peakDateKey)?.price : undefined;
   const continueBookingHref = canContinueBooking && room
@@ -234,31 +208,6 @@ export default function RoomDetailPage() {
     () => getRoomPresentation(room),
     [room],
   );
-
-  const handleLockPrice = async (): Promise<void> => {
-    if (!canLockPrice || !room) {
-      return;
-    }
-
-    setLockActionError(null);
-    try {
-      await lockPriceMutation({
-        variables: {
-          input: {
-            roomId: room._id,
-            currentPrice: lockRequestPrice,
-          },
-        },
-        refetchQueries: [
-          { query: GET_MY_PRICE_LOCK_QUERY, variables: { roomId: room._id } },
-          { query: GET_MY_PRICE_LOCKS_QUERY },
-        ],
-        awaitRefetchQueries: true,
-      });
-    } catch (error) {
-      setLockActionError(getErrorMessage(error));
-    }
-  };
   return (
     <main className={showBottomLockBar ? "space-y-6 pb-28 sm:pb-32" : "space-y-6"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -349,7 +298,7 @@ export default function RoomDetailPage() {
             </div>
           </section>
 
-          {showBottomLockBar ? <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={() => void handleLockPrice()} /> : null}
+          {showBottomLockBar ? <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={() => void onLockPrice()} /> : null}
           <LiveInterestFab
             viewerCount={liveViewerCount}
             connected={isLiveViewConnected}
