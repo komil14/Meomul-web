@@ -1,0 +1,107 @@
+import { useMemo } from "react";
+
+interface LiveInterestFabProps {
+  viewerCount: number;
+  connected: boolean;
+  availableRooms: number;
+}
+
+type LiveTone = {
+  buttonClass: string;
+  pingClass: string;
+  dotClass: string;
+  badgeClass: string;
+  label: string;
+};
+
+const getLiveTone = (viewerCount: number, connected: boolean, availableRooms: number): LiveTone => {
+  if (!connected) {
+    return {
+      buttonClass: "border-slate-400 bg-slate-700 text-white",
+      pingClass: "bg-slate-400/50",
+      dotClass: "bg-slate-300",
+      badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
+      label: "Reconnecting",
+    };
+  }
+
+  if (viewerCount >= 5 || (viewerCount >= 3 && availableRooms <= 2)) {
+    return {
+      buttonClass: "border-rose-400 bg-rose-600 text-white",
+      pingClass: "bg-rose-400/40",
+      dotClass: "bg-rose-500",
+      badgeClass: "border-rose-300 bg-rose-50 text-rose-700",
+      label: "High demand",
+    };
+  }
+
+  if (viewerCount >= 2) {
+    return {
+      buttonClass: "border-amber-400 bg-amber-500 text-white",
+      pingClass: "bg-amber-300/45",
+      dotClass: "bg-amber-500",
+      badgeClass: "border-amber-300 bg-amber-50 text-amber-700",
+      label: "Active now",
+    };
+  }
+
+  return {
+    buttonClass: "border-sky-400 bg-sky-600 text-white",
+    pingClass: "bg-sky-300/45",
+    dotClass: "bg-sky-500",
+    badgeClass: "border-sky-300 bg-sky-50 text-sky-700",
+    label: "Live",
+  };
+};
+
+export function LiveInterestFab({ viewerCount, connected, availableRooms }: LiveInterestFabProps) {
+  const safeCount = Math.max(0, Math.trunc(viewerCount));
+  const displayCount = safeCount > 99 ? "99+" : String(safeCount);
+  const tone = useMemo(() => getLiveTone(safeCount, connected, availableRooms), [availableRooms, connected, safeCount]);
+
+  const explanation = useMemo(() => {
+    if (!connected) {
+      return "Live signal reconnecting. Viewer count updates automatically once the socket is back.";
+    }
+    if (safeCount === 0) {
+      return "No active viewers right now. Demand can rise quickly when dates are attractive.";
+    }
+    if (safeCount === 1) {
+      return "1 guest is currently viewing this room. This count updates in real time.";
+    }
+    return `${safeCount} guests are currently viewing this room. Interest can convert to bookings quickly.`;
+  }, [connected, safeCount]);
+
+  return (
+    <div className="group fixed bottom-24 right-5 z-50">
+      <div className="relative inline-flex h-14 w-14 items-center justify-center">
+        {connected ? (
+          <span
+            className={`pointer-events-none absolute inset-0 rounded-full ${tone.pingClass} ${safeCount > 0 ? "animate-ping" : "opacity-40"}`}
+            aria-hidden
+          />
+        ) : null}
+        <div
+          className={`relative inline-flex h-14 w-14 flex-col items-center justify-center rounded-full border shadow-2xl transition duration-300 group-hover:scale-105 ${tone.buttonClass}`}
+          aria-label={`Live interest: ${safeCount} viewer${safeCount === 1 ? "" : "s"}`}
+          role="status"
+        >
+          <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">Live</span>
+          <span className="text-base font-semibold leading-none">{displayCount}</span>
+          <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-white ${tone.dotClass} animate-pulse`} />
+        </div>
+      </div>
+
+      <div className="pointer-events-none absolute right-[4.25rem] top-1/2 w-64 -translate-y-1/2 translate-x-2 rounded-xl border border-slate-200 bg-white/95 p-3 text-left shadow-xl opacity-0 transition duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">Live Interest</p>
+          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone.badgeClass}`}>{tone.label}</span>
+        </div>
+        <p className="mt-1 text-sm font-semibold text-slate-900">
+          {safeCount} viewer{safeCount === 1 ? "" : "s"} on this room now
+        </p>
+        <p className="mt-1 text-xs leading-5 text-slate-600">{explanation}</p>
+      </div>
+    </div>
+  );
+}

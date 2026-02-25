@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { DayButton as DefaultDayButton, DayPicker, getDefaultClassNames, type DateRange, type DayButtonProps } from "react-day-picker";
+import { LiveInterestFab } from "@/components/rooms/live-interest-fab";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   CANCEL_PRICE_LOCK_MUTATION,
@@ -859,11 +860,10 @@ export default function RoomDetailPage() {
             { label: "Room Size", value: `${room.roomSize} m²`, icon: "size" as const },
             { label: "Inventory", value: `${room.availableRooms}/${room.totalRooms} ready`, icon: "inventory" as const },
             { label: "Weekend Add-on", value: `₩ ${room.weekendSurcharge.toLocaleString()}`, icon: "surcharge" as const },
-            { label: "Live Interest", value: `${liveViewerCount} viewer${liveViewerCount === 1 ? "" : "s"}`, icon: "eyes" as const },
             { label: "Updated", value: formatIsoDate(room.updatedAt), icon: "clock" as const },
           ]
         : [],
-    [liveViewerCount, room],
+    [room],
   );
   const roomHeroHighlights = useMemo(
     () =>
@@ -1008,19 +1008,40 @@ export default function RoomDetailPage() {
                     <h2 className="mt-2 text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">{room.roomName}</h2>
                     {hotel ? <p className="mt-3 text-lg text-slate-600">{hotel.hotelTitle}</p> : null}
                   </div>
-                  <div className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-right shadow-sm sm:w-auto sm:min-w-[14rem]">
-                    {deal?.isActive ? (
-                      <>
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">Last minute deal</p>
-                        <p className="mt-1 text-3xl font-semibold text-slate-900">₩ {deal.dealPrice.toLocaleString()}</p>
-                        <p className="text-xs text-slate-500 line-through">₩ {deal.originalPrice.toLocaleString()}</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Base rate</p>
-                        <p className="mt-1 text-3xl font-semibold text-slate-900">₩ {room.basePrice.toLocaleString()}</p>
-                      </>
-                    )}
+                  {deal?.isActive ? (
+                    <div className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-right shadow-sm sm:w-auto sm:min-w-[14rem]">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">Last minute deal</p>
+                      <p className="mt-1 text-3xl font-semibold text-slate-900">₩ {deal.dealPrice.toLocaleString()}</p>
+                      <p className="text-xs text-slate-500 line-through">₩ {deal.originalPrice.toLocaleString()}</p>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-white to-indigo-50 p-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">Select Room View</h3>
+                    <p className="text-xs text-slate-500">Switch view type without leaving this room category.</p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {sameTypeViewOptions.map((option) => {
+                      const isCurrent = option.roomId === room._id;
+                      return isCurrent ? (
+                        <span
+                          key={option.viewType}
+                          className="rounded-full border border-sky-500 bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
+                        >
+                          {formatEnumLabel(option.viewType)} (Current)
+                        </span>
+                      ) : (
+                        <Link
+                          key={option.viewType}
+                          href={`/rooms/${option.roomId}`}
+                          className="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900"
+                        >
+                          {formatEnumLabel(option.viewType)}
+                        </Link>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1042,9 +1063,6 @@ export default function RoomDetailPage() {
                     </article>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500">
-                  Live viewer tracking: {isLiveViewConnected ? "connected" : "reconnecting..."}
-                </p>
 
                 <div className="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm">
                   <div className="mb-4">
@@ -1074,34 +1092,9 @@ export default function RoomDetailPage() {
                   )}
                 </div>
 
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">View Options</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {sameTypeViewOptions.map((option) => {
-                      const isCurrent = option.roomId === room._id;
-                      return isCurrent ? (
-                        <span
-                          key={option.viewType}
-                          className="rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-xs font-semibold text-sky-900"
-                        >
-                          {formatEnumLabel(option.viewType)} (Current)
-                        </span>
-                      ) : (
-                        <Link
-                          key={option.viewType}
-                          href={`/rooms/${option.roomId}`}
-                          className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-500"
-                        >
-                          {formatEnumLabel(option.viewType)}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-slate-500">Switch to another view from the same room category when available.</p>
-                </div>
               </div>
 
-              <aside className="order-1 self-start space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur lg:order-2 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-scroll">
+              <aside className="order-1 self-start space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur lg:order-2">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Quick Booking</p>
                   <h3 className="mt-1 text-2xl font-semibold leading-tight text-slate-900">Select Stay Dates</h3>
@@ -1313,6 +1306,7 @@ export default function RoomDetailPage() {
               </div>
             </section>
           ) : null}
+          <LiveInterestFab viewerCount={liveViewerCount} connected={isLiveViewConnected} availableRooms={room.availableRooms} />
         </>
       ) : null}
     </main>
