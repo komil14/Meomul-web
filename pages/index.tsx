@@ -98,7 +98,7 @@ export default function HomePage() {
           </Link>
           {isUser ? (
             <Link
-              href="/onboarding"
+              href="/settings/preferences"
               className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-500"
             >
               Update preferences
