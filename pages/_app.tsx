@@ -31,6 +31,8 @@ interface GuardState {
   ready: boolean;
 }
 
+const APOLLO_CACHE_PERSIST_INTERVAL_MS = 60_000;
+
 export default function App({ Component, pageProps }: AppPropsWithAuth) {
   const router = useRouter();
   const [client] = useState(() => createApolloClient());
@@ -64,23 +66,69 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
   }, [Component.auth, guardKey, requiresGuard, router]);
 
   useEffect(() => {
-    const persistNow = () => {
+    let intervalId: number | null = null;
+
+    const persistNow = (useIdleCallback: boolean) => {
+      const runPersist = () => {
+        persistApolloCache(client.cache);
+      };
+
+      if (
+        useIdleCallback &&
+        typeof window !== "undefined" &&
+        "requestIdleCallback" in window &&
+        typeof window.requestIdleCallback === "function"
+      ) {
+        window.requestIdleCallback(runPersist, { timeout: 2000 });
+        return;
+      }
+
       persistApolloCache(client.cache);
     };
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
-        persistNow();
+        persistNow(false);
+        if (intervalId !== null) {
+          window.clearInterval(intervalId);
+          intervalId = null;
+        }
+        return;
+      }
+
+      if (intervalId === null) {
+        intervalId = window.setInterval(() => {
+          if (document.visibilityState !== "visible") {
+            return;
+          }
+
+          persistNow(true);
+        }, APOLLO_CACHE_PERSIST_INTERVAL_MS);
       }
     };
 
-    const intervalId = window.setInterval(persistNow, 10000);
-    window.addEventListener("pagehide", persistNow);
+    intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      persistNow(true);
+    }, APOLLO_CACHE_PERSIST_INTERVAL_MS);
+
+    const persistImmediately = () => {
+      persistNow(false);
+    };
+
+    window.addEventListener("pagehide", persistImmediately);
+    window.addEventListener("beforeunload", persistImmediately);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener("pagehide", persistNow);
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+      window.removeEventListener("pagehide", persistImmediately);
+      window.removeEventListener("beforeunload", persistImmediately);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [client]);
