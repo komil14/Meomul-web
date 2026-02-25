@@ -1,7 +1,5 @@
-import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { PriceLockReadyBar } from "@/components/rooms/detail/price-lock-ready-bar";
 import { getRoomPresentation } from "@/components/rooms/detail/room-presenters";
 import { RoomBookingSidebar } from "@/components/rooms/detail/room-booking-sidebar";
@@ -9,25 +7,12 @@ import { RoomHeroSection } from "@/components/rooms/detail/room-hero-section";
 import { RoomOverviewSection } from "@/components/rooms/detail/room-overview-section";
 import { LiveInterestFab } from "@/components/rooms/live-interest-fab";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import {
-  GET_HOTEL_CONTEXT_QUERY,
-  GET_PRICE_CALENDAR_QUERY,
-  GET_ROOM_QUERY,
-} from "@/graphql/hotel.gql";
-import { getSessionMember } from "@/lib/auth/session";
 import { useRoomBookingState } from "@/lib/hooks/use-room-booking-state";
+import { useRoomDetailData } from "@/lib/hooks/use-room-detail-data";
 import { useRoomLiveViewers } from "@/lib/hooks/use-room-live-viewers";
 import { useRoomPriceLock } from "@/lib/hooks/use-room-price-lock";
-import { formatDateInput, formatEnumLabel, isCalendarDayBookable } from "@/lib/rooms/booking";
+import { formatEnumLabel, isCalendarDayBookable } from "@/lib/rooms/booking";
 import { getErrorMessage } from "@/lib/utils/error";
-import type {
-  GetHotelContextQueryData,
-  GetHotelContextQueryVars,
-  GetPriceCalendarQueryData,
-  GetPriceCalendarQueryVars,
-  GetRoomQueryData,
-  GetRoomQueryVars,
-} from "@/types/hotel";
 
 const buildBookingHref = (
   hotelId: string,
@@ -60,82 +45,29 @@ const buildBookingHref = (
 };
 
 export default function RoomDetailPage() {
-  const router = useRouter();
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
-
-  useEffect(() => {
-    setIsHydrated(true);
-    setMember(getSessionMember());
-  }, []);
-
-  const todayDate = useMemo(() => formatDateInput(new Date()), []);
-  const todayMonth = useMemo(() => todayDate.slice(0, 7), [todayDate]);
-  const [calendarMonth, setCalendarMonth] = useState(todayMonth);
-
-  const roomId = useMemo(() => {
-    if (typeof router.query.roomId === "string") {
-      return router.query.roomId;
-    }
-    return "";
-  }, [router.query.roomId]);
-
   const {
-    data: roomData,
-    loading: roomLoading,
-    error: roomError,
-  } = useQuery<GetRoomQueryData, GetRoomQueryVars>(GET_ROOM_QUERY, {
-    skip: !isHydrated || !roomId,
-    variables: { roomId },
-    fetchPolicy: "cache-and-network",
-  });
+    isHydrated,
+    memberType,
+    todayDate,
+    todayMonth,
+    calendarMonth,
+    setCalendarMonth,
+    roomId,
+    room,
+    roomLoading,
+    roomError,
+    roomHotelId,
+    priceCalendarData,
+    priceCalendarLoading,
+    priceCalendarError,
+    refetchPriceCalendar,
+    hotel,
+    hotelError,
+    coverImage,
+    galleryImages,
+    activeDeal,
+  } = useRoomDetailData();
 
-  const room = roomData?.getRoom;
-  const roomHotelId = room?.hotelId ?? "";
-  const memberType = member?.memberType;
-
-  const {
-    data: priceCalendarData,
-    loading: priceCalendarLoading,
-    error: priceCalendarError,
-    refetch: refetchPriceCalendar,
-  } = useQuery<GetPriceCalendarQueryData, GetPriceCalendarQueryVars>(GET_PRICE_CALENDAR_QUERY, {
-    skip: !isHydrated || !roomId,
-    variables: {
-      input: {
-        roomId,
-        month: calendarMonth,
-      },
-    },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-first",
-    notifyOnNetworkStatusChange: true,
-  });
-
-  const { data: hotelData, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
-    skip: !isHydrated || !roomHotelId,
-    variables: {
-      hotelId: roomHotelId,
-    },
-    fetchPolicy: "cache-first",
-  });
-
-  const hotel = hotelData?.getHotel;
-  const coverImage = room?.roomImages[0] ?? "";
-  const galleryImages = room?.roomImages.slice(1) ?? [];
-  const activeDeal = useMemo(() => {
-    const deal = room?.lastMinuteDeal;
-    if (!deal?.isActive) {
-      return null;
-    }
-
-    const expiresAtMs = new Date(deal.validUntil).getTime();
-    if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
-      return null;
-    }
-
-    return deal;
-  }, [room?.lastMinuteDeal]);
   const { viewerCount: liveViewerCount, connected: isLiveViewConnected } = useRoomLiveViewers({ roomId });
 
   const {
