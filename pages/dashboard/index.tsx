@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { CHECK_AUTH_QUERY } from "@/graphql/auth.gql";
-import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
 import {
   GET_AGENT_HOTELS_QUERY,
   GET_DASHBOARD_STATS_QUERY,
@@ -16,7 +15,6 @@ import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type { CheckAuthQueryData } from "@/types/auth";
-import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
 import type {
   GetAgentHotelsQueryData,
   GetAgentHotelsQueryVars,
@@ -105,16 +103,6 @@ const DashboardPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-first",
   });
 
-  const {
-    data: unreadChatData,
-    loading: unreadChatLoading,
-    error: unreadChatError,
-  } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
-    skip: !member,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
-  });
-
   const logout = async () => {
     clearAuthSession();
     await router.push("/auth/login");
@@ -181,14 +169,9 @@ const DashboardPage: NextPageWithAuth = () => {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Chat Inbox</h2>
-            {unreadChatLoading ? <p className="mt-2 text-sm text-slate-600">Loading unread chat count...</p> : null}
-            {unreadChatError ? <ErrorNotice className="mt-2" message={getErrorMessage(unreadChatError)} /> : null}
-            {!unreadChatLoading && !unreadChatError ? (
-              <p className="mt-2 text-sm text-slate-700">
-                Unread chat messages:{" "}
-                <span className="font-semibold">{formatNumber(unreadChatData?.getMyUnreadChatCount ?? 0)}</span>
-              </p>
-            ) : null}
+            <p className="mt-2 text-sm text-slate-700">
+              Unread message count is shown in the top navigation chat badge.
+            </p>
           </div>
           <Link href="/chats" className="text-sm font-semibold text-slate-700 underline underline-offset-4">
             Open chats
