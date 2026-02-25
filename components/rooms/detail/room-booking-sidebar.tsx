@@ -17,7 +17,6 @@ interface RoomBookingSidebarProps {
   checkInDate: string;
   checkOutDate: string;
   availabilityByDate: Map<string, DayPriceDto>;
-  calendarMonthKey: string;
   selectedRange: DateRange | undefined;
   calendarMonthDate: Date;
   minCalendarMonthDate: Date;
@@ -51,7 +50,6 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
   checkInDate,
   checkOutDate,
   availabilityByDate,
-  calendarMonthKey,
   selectedRange,
   calendarMonthDate,
   minCalendarMonthDate,
@@ -171,7 +169,6 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
           </div>
           <div className="overflow-x-auto pb-1">
             <DayPicker
-              key={calendarMonthKey}
               mode="range"
               selected={selectedRange}
               month={calendarMonthDate}

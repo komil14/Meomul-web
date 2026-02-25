@@ -247,29 +247,40 @@ export const useRoomBookingState = ({
   }, [adultCount, availabilityByDate, checkInDate, checkOutDate, childCount, room, roomQuantity, selectedStayMinAvailable]);
 
   const canContinueBooking = bookingValidationMessage === null && Boolean(roomHotelId) && Boolean(room);
-  const cheapestDateKey = useMemo(() => {
-    const availableDays = visibleWindowCalendar.filter((day) => isCalendarDayBookable(day));
-    if (availableDays.length === 0) {
-      return "";
-    }
-    return availableDays.reduce((lowest, current) => (current.price < lowest.price ? current : lowest)).date;
-  }, [visibleWindowCalendar]);
+  const availableDaysInWindow = useMemo(
+    () => visibleWindowCalendar.filter((day) => isCalendarDayBookable(day)),
+    [visibleWindowCalendar],
+  );
 
-  const peakDateKey = useMemo(() => {
-    const availableDays = visibleWindowCalendar.filter((day) => isCalendarDayBookable(day));
-    if (availableDays.length === 0) {
-      return "";
+  const { cheapestDateKey, peakDateKey, averageVisiblePrice } = useMemo(() => {
+    if (availableDaysInWindow.length === 0) {
+      return {
+        cheapestDateKey: "",
+        peakDateKey: "",
+        averageVisiblePrice: 0,
+      };
     }
-    return availableDays.reduce((highest, current) => (current.price > highest.price ? current : highest)).date;
-  }, [visibleWindowCalendar]);
 
-  const averageVisiblePrice = useMemo(() => {
-    const availableDays = visibleWindowCalendar.filter((day) => isCalendarDayBookable(day));
-    if (availableDays.length === 0) {
-      return 0;
-    }
-    return Math.round(availableDays.reduce((sum, day) => sum + day.price, 0) / availableDays.length);
-  }, [visibleWindowCalendar]);
+    let cheapest = availableDaysInWindow[0] as DayPriceDto;
+    let peak = availableDaysInWindow[0] as DayPriceDto;
+    let priceSum = 0;
+
+    availableDaysInWindow.forEach((day) => {
+      priceSum += day.price;
+      if (day.price < cheapest.price) {
+        cheapest = day;
+      }
+      if (day.price > peak.price) {
+        peak = day;
+      }
+    });
+
+    return {
+      cheapestDateKey: cheapest.date,
+      peakDateKey: peak.date,
+      averageVisiblePrice: Math.round(priceSum / availableDaysInWindow.length),
+    };
+  }, [availableDaysInWindow]);
 
   const selectedRange = useMemo<DateRange | undefined>(() => {
     if (!checkInDate) {
@@ -464,9 +475,13 @@ export const useRoomBookingState = ({
 
   const onCalendarMonthChange = useCallback(
     (month: Date): void => {
-      setCalendarMonth(toMonthKey(month));
+      const nextMonth = toMonthKey(month);
+      if (nextMonth === calendarMonth) {
+        return;
+      }
+      setCalendarMonth(nextMonth);
     },
-    [setCalendarMonth],
+    [calendarMonth, setCalendarMonth],
   );
 
   return {

@@ -1,7 +1,7 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback } from "react";
 import { PriceLockReadyBar } from "@/components/rooms/detail/price-lock-ready-bar";
-import { RoomBookingSidebar } from "@/components/rooms/detail/room-booking-sidebar";
 import { RoomHeroSection } from "@/components/rooms/detail/room-hero-section";
 import { RoomOverviewSection } from "@/components/rooms/detail/room-overview-section";
 import { LiveInterestFabContainer } from "@/components/rooms/live-interest-fab-container";
@@ -9,10 +9,14 @@ import { ErrorNotice } from "@/components/ui/error-notice";
 import { useRoomDetailPageViewModel } from "@/lib/hooks/use-room-detail-page-view-model";
 import { formatEnumLabel } from "@/lib/rooms/booking";
 
+const RoomBookingSidebar = dynamic(
+  () => import("@/components/rooms/detail/room-booking-sidebar").then((mod) => mod.RoomBookingSidebar),
+  { loading: () => <aside className="order-1 self-start rounded-3xl border border-slate-200 bg-white/90 p-4 text-sm text-slate-500 lg:order-2">Loading booking panel...</aside> },
+);
+
 export default function RoomDetailPage() {
   const {
     isHydrated,
-    calendarMonth,
     room,
     roomLoading,
     roomErrorMessage,
@@ -133,7 +137,6 @@ export default function RoomDetailPage() {
                 checkInDate={checkInDate}
                 checkOutDate={checkOutDate}
                 availabilityByDate={availabilityByDate}
-                calendarMonthKey={calendarMonth}
                 selectedRange={selectedRange}
                 calendarMonthDate={calendarMonthDate}
                 minCalendarMonthDate={minCalendarMonthDate}
