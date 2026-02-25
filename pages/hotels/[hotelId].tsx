@@ -255,6 +255,15 @@ export const getServerSideProps: GetServerSideProps<HotelDetailPageProps> = asyn
     return { notFound: true };
   }
 
+  if (context.res) {
+    context.res.setHeader(
+      "Cache-Control",
+      process.env.NODE_ENV === "production"
+        ? "public, s-maxage=60, stale-while-revalidate=300"
+        : "no-store",
+    );
+  }
+
   const client = createApolloClient();
 
   try {
