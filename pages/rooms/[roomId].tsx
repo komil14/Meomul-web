@@ -2,8 +2,9 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { DayButton as DefaultDayButton, getDefaultClassNames, type DateRange, type DayButtonProps } from "react-day-picker";
+import { getDefaultClassNames, type DateRange, type DayButtonProps } from "react-day-picker";
 import type { DetailIconName } from "@/components/rooms/detail/detail-icon";
+import { PriceDayButton } from "@/components/rooms/detail/price-day-button";
 import { PriceLockReadyBar } from "@/components/rooms/detail/price-lock-ready-bar";
 import { RoomBookingSidebar } from "@/components/rooms/detail/room-booking-sidebar";
 import { RoomHeroSection, type RoomHeroHighlight } from "@/components/rooms/detail/room-hero-section";
@@ -20,6 +21,18 @@ import {
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { useRoomLiveViewers } from "@/lib/hooks/use-room-live-viewers";
+import {
+  buildStayDates,
+  formatAmenityLabel,
+  formatDateInput,
+  formatEnumLabel,
+  formatIsoDate,
+  hasStayDatesLoaded,
+  isCalendarDayBookable,
+  isStayRangeAvailable,
+  toLocalDateFromDateKey,
+  toMonthKey,
+} from "@/lib/rooms/booking";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   DayPriceDto,
@@ -35,109 +48,8 @@ import type {
   LockPriceMutationVars,
 } from "@/types/hotel";
 
-const DATE_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-const parseDateKeyParts = (value: string): { year: number; month: number; day: number } | null => {
-  const match = DATE_KEY_PATTERN.exec(value);
-  if (!match) {
-    return null;
-  }
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
-    return null;
-  }
-  if (month < 1 || month > 12) {
-    return null;
-  }
-
-  const maxDay = new Date(year, month, 0).getDate();
-  if (day < 1 || day > maxDay) {
-    return null;
-  }
-
-  return { year, month, day };
-};
-
-const formatDateKeyUtc = (value: Date): string => {
-  const year = value.getUTCFullYear();
-  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(value.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const formatDateInput = (value: Date): string => {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const toLocalDateFromDateKey = (dateKey: string): Date | null => {
-  const parts = parseDateKeyParts(dateKey);
-  if (!parts) {
-    return null;
-  }
-
-  return new Date(parts.year, parts.month - 1, parts.day);
-};
-
-const addDays = (dateInput: string, days: number): string => {
-  const parts = parseDateKeyParts(dateInput);
-  if (!parts) {
-    return dateInput;
-  }
-
-  const baseUtc = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0));
-  baseUtc.setUTCDate(baseUtc.getUTCDate() + days);
-  return formatDateKeyUtc(baseUtc);
-};
-
 const canUsePriceActions = (memberType: string | undefined): boolean =>
   memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
-
-const buildStayDates = (checkInDate: string, checkOutDate: string): string[] => {
-  if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
-    return [];
-  }
-
-  const dates: string[] = [];
-  let cursor = checkInDate;
-  while (cursor < checkOutDate) {
-    dates.push(cursor);
-    cursor = addDays(cursor, 1);
-  }
-
-  return dates;
-};
-
-const isCalendarDayBookable = (day: DayPriceDto | undefined): boolean => {
-  if (!day) {
-    return false;
-  }
-  if (day.localEvent === "Closed") {
-    return false;
-  }
-  return (day.availableRooms ?? 0) > 0;
-};
-
-const isStayRangeAvailable = (checkInDate: string, checkOutDate: string, availabilityByDate: Map<string, DayPriceDto>): boolean => {
-  const stayDates = buildStayDates(checkInDate, checkOutDate);
-  if (stayDates.length === 0) {
-    return false;
-  }
-  return stayDates.every((date) => isCalendarDayBookable(availabilityByDate.get(date)));
-};
-
-const hasStayDatesLoaded = (checkInDate: string, checkOutDate: string, availabilityByDate: Map<string, DayPriceDto>): boolean => {
-  const stayDates = buildStayDates(checkInDate, checkOutDate);
-  if (stayDates.length === 0) {
-    return false;
-  }
-  return stayDates.every((date) => availabilityByDate.has(date));
-};
 
 const buildBookingHref = (
   hotelId: string,
@@ -169,27 +81,6 @@ const buildBookingHref = (
   };
 };
 
-const toMonthKey = (value: Date): string => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
-
-const formatIsoDate = (value: string): string => {
-  if (!value) {
-    return "-";
-  }
-  return value.slice(0, 10);
-};
-const formatEnumLabel = (value: string): string =>
-  value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-const formatAmenityLabel = (value: string): string =>
-  value
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/[_-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
 const resolveAmenityIcon = (amenity: string): DetailIconName => {
   const value = amenity.toLowerCase();
   if (value.includes("wifi") || value.includes("internet")) return "wifi";
@@ -240,98 +131,6 @@ const amenityToneStyles: Record<AmenityTone, { card: string; icon: string; badge
     icon: "border-slate-200 bg-white text-slate-700",
     badge: "border-slate-300 bg-white text-slate-700",
   },
-};
-const formatCompactKrw = (price: number): string => {
-  if (!Number.isFinite(price)) {
-    return "-";
-  }
-  if (price >= 1_000_000) {
-    return `${(price / 1_000_000).toFixed(1).replace(/\.0$/, "")}m`;
-  }
-  if (price >= 1_000) {
-    return `${Math.round(price / 1_000)}k`;
-  }
-  return `${Math.round(price)}`;
-};
-
-const PriceDayButton = ({
-  day,
-  modifiers,
-  price,
-  onHover,
-  ...buttonProps
-}: DayButtonProps & {
-  price?: DayPriceDto;
-  onHover?: (dateKey: string | null) => void;
-}) => {
-  const dateKey = formatDateInput(day.date);
-  const isUnavailable = Boolean(price) && !isCalendarDayBookable(price);
-  const priceLabel = !price ? "n/a" : isUnavailable ? "sold" : `₩${formatCompactKrw(price.price)}`;
-  const isSelected = Boolean(modifiers.selected);
-  const isRangeStart = Boolean(modifiers.range_start);
-  const isRangeEnd = Boolean(modifiers.range_end);
-  const isRangeMiddle = Boolean(modifiers.range_middle);
-  const isDisabled = Boolean(modifiers.disabled);
-  const isSingleSelected = isSelected && !isRangeStart && !isRangeEnd && !isRangeMiddle;
-  const isEdgeSelected = isSingleSelected || isRangeStart || isRangeEnd;
-  const isMiddleSelected = isRangeMiddle && !isEdgeSelected;
-  const isInSelectedRange = isEdgeSelected || isMiddleSelected;
-  const isBookable = !isUnavailable && !isDisabled;
-
-  return (
-    <DefaultDayButton
-      {...buttonProps}
-      day={day}
-      modifiers={modifiers}
-      className={[
-        buttonProps.className,
-        "group inline-flex flex-col items-center justify-center gap-0 overflow-hidden",
-        isEdgeSelected ? "!border-indigo-600 !bg-indigo-600 !text-white shadow-[0_1px_0_rgba(255,255,255,0.08)_inset]" : "",
-        isMiddleSelected ? "!border-slate-300 !bg-slate-200 !text-slate-900" : "",
-        !isInSelectedRange && isUnavailable ? "border-slate-200 bg-slate-100 text-slate-400" : "",
-        !isInSelectedRange && isBookable ? "hover:border-slate-500 hover:bg-slate-50 hover:shadow-sm" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      onMouseEnter={(event) => {
-        buttonProps.onMouseEnter?.(event);
-        onHover?.(dateKey);
-      }}
-      onMouseLeave={(event) => {
-        buttonProps.onMouseLeave?.(event);
-        onHover?.(null);
-      }}
-      onFocus={(event) => {
-        buttonProps.onFocus?.(event);
-        onHover?.(dateKey);
-      }}
-      onBlur={(event) => {
-        buttonProps.onBlur?.(event);
-        onHover?.(null);
-      }}
-    >
-      <span
-        className={`block text-[11px] leading-none font-bold transition ${
-          isEdgeSelected ? "text-white drop-shadow-sm" : isMiddleSelected ? "text-slate-900" : "text-slate-700"
-        }`}
-      >
-        {day.date.getDate()}
-      </span>
-      <span
-        className={[
-          "inline-flex min-w-7 items-center justify-center rounded-full px-1 py-[1px] text-[8px] leading-none font-bold transition",
-          isUnavailable ? "bg-slate-300/70 text-slate-500" : "",
-          !isUnavailable && isEdgeSelected ? "border border-indigo-200/60 bg-indigo-400/35 text-white" : "",
-          !isUnavailable && isMiddleSelected ? "border border-slate-400 bg-slate-300 text-slate-800" : "",
-          !isUnavailable && !isInSelectedRange ? "bg-slate-900/10 text-slate-600" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        {priceLabel}
-      </span>
-    </DefaultDayButton>
-  );
 };
 
 export default function RoomDetailPage() {
