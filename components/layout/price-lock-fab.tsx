@@ -95,6 +95,8 @@ export function PriceLockFab() {
   const nearestLock = activeLocks[0];
   const nearestRemaining = nearestLock ? getRemainingSeconds(nearestLock.expiresAt, nowMs) : 0;
   const isAlert = nearestRemaining > 0 && nearestRemaining <= 600;
+  const panelBottomClass = "bottom-40";
+  const buttonBottomClass = "bottom-24";
 
   const handleCancel = async (lock: PriceLockDto): Promise<void> => {
     setActionError(null);
@@ -122,7 +124,7 @@ export function PriceLockFab() {
   return (
     <>
       {isOpen ? (
-        <section className="fixed bottom-24 right-5 z-50 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl">
+        <section className={`fixed right-5 z-50 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl ${panelBottomClass}`}>
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Active Price Locks</p>
             <button
@@ -179,7 +181,7 @@ export function PriceLockFab() {
       <button
         type="button"
         onClick={() => setIsOpen((previous) => !previous)}
-        className={`fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 flex-col items-center justify-center rounded-full text-white shadow-2xl transition hover:scale-[1.02] ${
+        className={`fixed right-5 z-50 inline-flex h-14 w-14 flex-col items-center justify-center rounded-full text-white shadow-2xl transition hover:scale-[1.02] ${buttonBottomClass} ${
           isAlert ? "bg-rose-600 hover:bg-rose-500" : activeLocks.length > 0 ? "bg-slate-900 hover:bg-slate-700" : "bg-sky-700 hover:bg-sky-600"
         }`}
         aria-label="Open price lock status"

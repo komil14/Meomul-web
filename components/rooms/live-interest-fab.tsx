@@ -73,7 +73,7 @@ export function LiveInterestFab({ viewerCount, connected, availableRooms }: Live
   }, [connected, safeCount]);
 
   return (
-    <div className="group fixed bottom-24 right-5 z-50">
+    <div className="group fixed bottom-40 right-5 z-50">
       <div className="relative inline-flex h-14 w-14 items-center justify-center">
         {connected ? (
           <span
