@@ -1,8 +1,9 @@
 import { useMutation } from "@apollo/client/react";
 import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { SAVE_ONBOARDING_PREFERENCES_MUTATION } from "@/graphql/recommendation.gql";
+import { trackAnalyticsEvent } from "@/lib/analytics/events";
 import {
   AMENITY_OPTIONS,
   BUDGET_OPTIONS,
@@ -33,6 +34,7 @@ const OnboardingPage: NextPageWithAuth = () => {
   const [preferredAmenities, setPreferredAmenities] = useState<string[]>([]);
   const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | undefined>(undefined);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const lastTrackedStepRef = useRef<number | null>(null);
 
   const redirectTarget = useMemo(() => {
     if (typeof router.query.next !== "string") {
@@ -61,6 +63,22 @@ const OnboardingPage: NextPageWithAuth = () => {
   const canGoNext = !stepValidationMessage && !loading;
   const isLastStep = step === STEP_LABELS.length - 1;
 
+  useEffect(() => {
+    trackAnalyticsEvent("onboarding_viewed");
+  }, []);
+
+  useEffect(() => {
+    if (lastTrackedStepRef.current === step) {
+      return;
+    }
+
+    trackAnalyticsEvent("onboarding_step_viewed", {
+      stepIndex: step + 1,
+      stepName: STEP_LABELS[step],
+    });
+    lastTrackedStepRef.current = step;
+  }, [step]);
+
   const handleBack = () => {
     if (!canGoBack) return;
     setErrorText(null);
@@ -72,6 +90,13 @@ const OnboardingPage: NextPageWithAuth = () => {
     setErrorText(null);
 
     if (!isLastStep) {
+      trackAnalyticsEvent("onboarding_step_completed", {
+        stepIndex: step + 1,
+        stepName: STEP_LABELS[step],
+        travelStylesCount: travelStyles.length,
+        destinationsCount: preferredDestinations.length,
+        amenitiesCount: preferredAmenities.length,
+      });
       setStep((prev) => Math.min(STEP_LABELS.length - 1, prev + 1));
       return;
     }
@@ -87,8 +112,17 @@ const OnboardingPage: NextPageWithAuth = () => {
           },
         },
       });
+      trackAnalyticsEvent("onboarding_completed", {
+        travelStylesCount: travelStyles.length,
+        destinationsCount: preferredDestinations.length,
+        amenitiesCount: preferredAmenities.length,
+        hasBudgetLevel: Boolean(budgetLevel),
+      });
       await router.push(redirectTarget);
     } catch (error) {
+      trackAnalyticsEvent("onboarding_submit_failed", {
+        error: getErrorMessage(error),
+      });
       setErrorText(getErrorMessage(error));
     }
   };

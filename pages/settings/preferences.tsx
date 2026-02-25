@@ -5,6 +5,7 @@ import {
   GET_MY_RECOMMENDATION_PROFILE_QUERY,
   SAVE_ONBOARDING_PREFERENCES_MUTATION,
 } from "@/graphql/recommendation.gql";
+import { trackAnalyticsEvent } from "@/lib/analytics/events";
 import {
   AMENITY_OPTIONS,
   BUDGET_OPTIONS,
@@ -38,6 +39,7 @@ const PreferencesPage: NextPageWithAuth = () => {
   const [errorText, setErrorText] = useState<string | null>(null);
   const [successText, setSuccessText] = useState<string | null>(null);
   const [isPrefillApplied, setIsPrefillApplied] = useState(false);
+  const [hasTrackedViewEvent, setHasTrackedViewEvent] = useState(false);
 
   const { data, loading, error, refetch } = useQuery<GetMyRecommendationProfileQueryData>(GET_MY_RECOMMENDATION_PROFILE_QUERY, {
     fetchPolicy: "cache-first",
@@ -56,6 +58,18 @@ const PreferencesPage: NextPageWithAuth = () => {
     setBudgetLevel(mapBudgetLevelFromProfile(profile.avgPriceMax));
     setIsPrefillApplied(true);
   }, [data, isPrefillApplied]);
+
+  useEffect(() => {
+    if (hasTrackedViewEvent || loading || !data) {
+      return;
+    }
+
+    trackAnalyticsEvent("preferences_viewed", {
+      hasProfile: data.getMyRecommendationProfile.hasProfile,
+      source: data.getMyRecommendationProfile.source ?? null,
+    });
+    setHasTrackedViewEvent(true);
+  }, [data, hasTrackedViewEvent, loading]);
 
   const [saveOnboardingPreferences, { loading: saving }] = useMutation<
     SaveOnboardingPreferencesMutationData,
@@ -94,8 +108,17 @@ const PreferencesPage: NextPageWithAuth = () => {
       });
 
       setSuccessText(response.data?.saveOnboardingPreferences.message ?? "Preferences saved.");
+      trackAnalyticsEvent("preferences_saved", {
+        travelStylesCount: travelStyles.length,
+        destinationsCount: preferredDestinations.length,
+        amenitiesCount: preferredAmenities.length,
+        hasBudgetLevel: Boolean(budgetLevel),
+      });
       await refetch();
     } catch (saveError) {
+      trackAnalyticsEvent("preferences_save_failed", {
+        error: getErrorMessage(saveError),
+      });
       setErrorText(getErrorMessage(saveError));
     }
   };
