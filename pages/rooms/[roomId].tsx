@@ -1,76 +1,29 @@
 import Link from "next/link";
-import { useMemo } from "react";
 import { PriceLockReadyBar } from "@/components/rooms/detail/price-lock-ready-bar";
-import { getRoomPresentation } from "@/components/rooms/detail/room-presenters";
 import { RoomBookingSidebar } from "@/components/rooms/detail/room-booking-sidebar";
 import { RoomHeroSection } from "@/components/rooms/detail/room-hero-section";
 import { RoomOverviewSection } from "@/components/rooms/detail/room-overview-section";
 import { LiveInterestFab } from "@/components/rooms/live-interest-fab";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useRoomBookingState } from "@/lib/hooks/use-room-booking-state";
-import { useRoomDetailData } from "@/lib/hooks/use-room-detail-data";
-import { useRoomLiveViewers } from "@/lib/hooks/use-room-live-viewers";
-import { useRoomPriceLock } from "@/lib/hooks/use-room-price-lock";
+import { useRoomDetailPageViewModel } from "@/lib/hooks/use-room-detail-page-view-model";
 import { formatEnumLabel, isCalendarDayBookable } from "@/lib/rooms/booking";
-import { getErrorMessage } from "@/lib/utils/error";
-
-const buildBookingHref = (
-  hotelId: string,
-  roomId: string,
-  checkInDate: string,
-  checkOutDate: string,
-  adults: number,
-  children: number,
-  quantity: number,
-) => {
-  const query: Record<string, string> = {
-    hotelId,
-    roomId,
-    adultCount: String(adults),
-    childCount: String(children),
-    quantity: String(quantity),
-  };
-
-  if (checkInDate) {
-    query.checkInDate = checkInDate;
-  }
-  if (checkOutDate) {
-    query.checkOutDate = checkOutDate;
-  }
-
-  return {
-    pathname: "/bookings/new",
-    query,
-  };
-};
 
 export default function RoomDetailPage() {
   const {
     isHydrated,
-    memberType,
-    todayDate,
-    todayMonth,
     calendarMonth,
-    setCalendarMonth,
-    roomId,
     room,
     roomLoading,
-    roomError,
-    roomHotelId,
-    priceCalendarData,
+    roomErrorMessage,
+    hotelErrorMessage,
+    myPriceLockErrorMessage,
+    lockActionError,
     priceCalendarLoading,
-    priceCalendarError,
-    refetchPriceCalendar,
+    calendarLoadErrorMessage,
     hotel,
-    hotelError,
     coverImage,
     galleryImages,
     activeDeal,
-  } = useRoomDetailData();
-
-  const { viewerCount: liveViewerCount, connected: isLiveViewConnected } = useRoomLiveViewers({ roomId });
-
-  const {
     checkInDate,
     checkOutDate,
     adultCount,
@@ -78,7 +31,6 @@ export default function RoomDetailPage() {
     roomQuantity,
     hoveredDateKey,
     hoveredDay,
-    availabilityByDate,
     visibleWindowCalendar,
     selectedStayMinAvailable,
     bookingValidationMessage,
@@ -98,48 +50,25 @@ export default function RoomDetailPage() {
     onRoomQuantityChange,
     onCalendarMonthChange,
     onCalendarDayClick,
-  } = useRoomBookingState({
-    roomId,
-    room,
-    roomHotelId,
-    isHydrated,
-    todayDate,
-    todayMonth,
-    calendarMonth,
-    setCalendarMonth,
-    priceCalendarData,
-    refetchPriceCalendar,
-  });
-
-  const {
-    myPriceLockError,
-    lockActionError,
     lockingPrice,
     lockRequestPrice,
     effectiveNightlyRate,
     effectiveNightlyRateSourceLabel,
     showBottomLockBar,
     onLockPrice,
-  } = useRoomPriceLock({
-    isHydrated,
-    roomId,
-    room,
-    memberType,
-    activeDeal,
-  });
+    cheapestDatePrice,
+    peakDatePrice,
+    continueBookingHref,
+    roomTypeLabel,
+    viewTypeLabel,
+    roomTypeLine,
+    roomFactCards,
+    roomHeroHighlights,
+    roomAmenityCards,
+    viewerCount: liveViewerCount,
+    connected: isLiveViewConnected,
+  } = useRoomDetailPageViewModel();
 
-  const calendarLoadInProgress = priceCalendarLoading;
-  const calendarLoadError = priceCalendarError;
-  const calendarLoadErrorMessage = calendarLoadError && visibleWindowCalendar.length === 0 ? getErrorMessage(calendarLoadError) : null;
-  const cheapestDatePrice = cheapestDateKey ? availabilityByDate.get(cheapestDateKey)?.price : undefined;
-  const peakDatePrice = peakDateKey ? availabilityByDate.get(peakDateKey)?.price : undefined;
-  const continueBookingHref = canContinueBooking && room
-    ? buildBookingHref(roomHotelId, room._id, checkInDate, checkOutDate, adultCount, childCount, roomQuantity)
-    : undefined;
-  const { roomTypeLabel, viewTypeLabel, roomTypeLine, roomFactCards, roomHeroHighlights, roomAmenityCards } = useMemo(
-    () => getRoomPresentation(room),
-    [room],
-  );
   return (
     <main className={showBottomLockBar ? "space-y-6 pb-28 sm:pb-32" : "space-y-6"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -148,9 +77,9 @@ export default function RoomDetailPage() {
         </Link>
       </div>
 
-      {roomError ? <ErrorNotice message={getErrorMessage(roomError)} /> : null}
-      {hotelError ? <ErrorNotice message={getErrorMessage(hotelError)} /> : null}
-      {myPriceLockError ? <ErrorNotice message={getErrorMessage(myPriceLockError)} /> : null}
+      {roomErrorMessage ? <ErrorNotice message={roomErrorMessage} /> : null}
+      {hotelErrorMessage ? <ErrorNotice message={hotelErrorMessage} /> : null}
+      {myPriceLockErrorMessage ? <ErrorNotice message={myPriceLockErrorMessage} /> : null}
       {lockActionError ? <ErrorNotice message={lockActionError} /> : null}
 
       {!isHydrated || roomLoading ? (
@@ -215,7 +144,7 @@ export default function RoomDetailPage() {
                 dayPickerComponents={dayPickerComponents}
                 dayPickerClassNames={dayPickerClassNames}
                 dayPickerStyle={dayPickerStyle}
-                calendarLoadInProgress={calendarLoadInProgress}
+                calendarLoadInProgress={priceCalendarLoading}
                 calendarLoadErrorMessage={calendarLoadErrorMessage}
                 visibleWindowCalendarLength={visibleWindowCalendar.length}
                 averageVisiblePrice={averageVisiblePrice}
