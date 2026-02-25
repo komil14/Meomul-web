@@ -267,6 +267,9 @@ export interface HotelContextItem {
   hotelTitle: string;
   hotelLocation: HotelLocation;
   hotelType: HotelType;
+  checkInTime: string;
+  checkOutTime: string;
+  cancellationPolicy: CancellationPolicy;
 }
 
 export interface GetHotelContextQueryData {

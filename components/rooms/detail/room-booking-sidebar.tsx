@@ -5,7 +5,11 @@ import type { DayPriceDto } from "@/types/hotel";
 
 interface RoomBookingSidebarProps {
   adultCount: number;
+  childCount: number;
+  roomQuantity: number;
   onAdultCountChange: (rawValue: string) => void;
+  onChildCountChange: (rawValue: string) => void;
+  onRoomQuantityChange: (rawValue: string) => void;
   checkInDate: string;
   checkOutDate: string;
   hoveredDateKey: string | null;
@@ -36,7 +40,11 @@ interface RoomBookingSidebarProps {
 
 export function RoomBookingSidebar({
   adultCount,
+  childCount,
+  roomQuantity,
   onAdultCountChange,
+  onChildCountChange,
+  onRoomQuantityChange,
   checkInDate,
   checkOutDate,
   hoveredDateKey,
@@ -92,6 +100,27 @@ export function RoomBookingSidebar({
           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base font-semibold outline-none ring-slate-900 focus:ring-2"
         />
       </label>
+
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Children</span>
+          <input
+            value={String(childCount)}
+            onChange={(event) => onChildCountChange(event.target.value)}
+            inputMode="numeric"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base font-semibold outline-none ring-slate-900 focus:ring-2"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Rooms</span>
+          <input
+            value={String(roomQuantity)}
+            onChange={(event) => onRoomQuantityChange(event.target.value)}
+            inputMode="numeric"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base font-semibold outline-none ring-slate-900 focus:ring-2"
+          />
+        </label>
+      </div>
 
       <div className="relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-slate-50 to-sky-50/70 p-3.5 shadow-[0_18px_38px_-24px_rgba(15,23,42,0.42)] before:pointer-events-none before:absolute before:inset-[-40%_-20%] before:bg-[radial-gradient(circle_at_25%_30%,rgba(56,189,248,0.2),transparent_38%),radial-gradient(circle_at_75%_70%,rgba(59,130,246,0.16),transparent_34%),conic-gradient(from_160deg_at_50%_50%,rgba(148,163,184,0.08),rgba(59,130,246,0.12),rgba(14,165,233,0.08),rgba(148,163,184,0.08))] before:blur-[18px] after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] after:bg-[length:16px_16px] after:opacity-20">
         <div className="relative z-10">

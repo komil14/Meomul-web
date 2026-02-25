@@ -26,6 +26,9 @@ export const GET_HOTEL_CONTEXT_QUERY = gql`
       hotelTitle
       hotelLocation
       hotelType
+      checkInTime
+      checkOutTime
+      cancellationPolicy
     }
   }
 `;

@@ -139,11 +139,21 @@ const hasStayDatesLoaded = (checkInDate: string, checkOutDate: string, availabil
   return stayDates.every((date) => availabilityByDate.has(date));
 };
 
-const buildBookingHref = (hotelId: string, roomId: string, checkInDate: string, checkOutDate: string, adults: number) => {
+const buildBookingHref = (
+  hotelId: string,
+  roomId: string,
+  checkInDate: string,
+  checkOutDate: string,
+  adults: number,
+  children: number,
+  quantity: number,
+) => {
   const query: Record<string, string> = {
     hotelId,
     roomId,
     adultCount: String(adults),
+    childCount: String(children),
+    quantity: String(quantity),
   };
 
   if (checkInDate) {
@@ -331,6 +341,8 @@ export default function RoomDetailPage() {
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [adultCount, setAdultCount] = useState(2);
+  const [childCount, setChildCount] = useState(0);
+  const [roomQuantity, setRoomQuantity] = useState(1);
   const [lockActionError, setLockActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -422,6 +434,8 @@ export default function RoomDetailPage() {
     setCalendarMonth(todayMonth);
     setCheckInDate("");
     setCheckOutDate("");
+    setChildCount(0);
+    setRoomQuantity(1);
     setHoveredDateKey(null);
     setLockActionError(null);
   }, [roomId, todayMonth]);
@@ -506,6 +520,41 @@ export default function RoomDetailPage() {
     }
   }, [availabilityByDate, checkInDate, checkOutDate]);
 
+  const selectedStayMinAvailable = useMemo(() => {
+    if (!checkInDate || !checkOutDate) {
+      return null;
+    }
+
+    const stayDates = buildStayDates(checkInDate, checkOutDate);
+    if (stayDates.length === 0) {
+      return null;
+    }
+
+    let minAvailable: number | null = null;
+    for (const date of stayDates) {
+      const day = availabilityByDate.get(date);
+      if (!day) {
+        return null;
+      }
+      const available = isCalendarDayBookable(day) ? (day.availableRooms ?? 0) : 0;
+      minAvailable = minAvailable === null ? available : Math.min(minAvailable, available);
+    }
+
+    return minAvailable;
+  }, [availabilityByDate, checkInDate, checkOutDate]);
+
+  useEffect(() => {
+    if (!room) {
+      return;
+    }
+
+    const maxByInventory = selectedStayMinAvailable ?? room.totalRooms;
+    const cappedQuantity = Math.max(1, Math.min(roomQuantity, Math.max(1, maxByInventory)));
+    if (cappedQuantity !== roomQuantity) {
+      setRoomQuantity(cappedQuantity);
+    }
+  }, [room, roomQuantity, selectedStayMinAvailable]);
+
   const bookingValidationMessage = useMemo(() => {
     if (!room) {
       return "Room is not ready.";
@@ -513,8 +562,17 @@ export default function RoomDetailPage() {
     if (room.roomStatus !== "AVAILABLE") {
       return `Room is currently ${room.roomStatus.toLowerCase()} and cannot be booked.`;
     }
-    if (adultCount > room.maxOccupancy) {
-      return `This room accepts up to ${room.maxOccupancy} adult(s).`;
+    if (roomQuantity < 1) {
+      return "Room quantity must be at least 1.";
+    }
+    if (adultCount > room.maxOccupancy * roomQuantity) {
+      return `Adults exceed room capacity (${room.maxOccupancy} x ${roomQuantity} room(s)).`;
+    }
+    if (childCount < 0) {
+      return "Child count cannot be negative.";
+    }
+    if (adultCount + childCount > room.maxOccupancy * roomQuantity) {
+      return `Total guests exceed room capacity (${room.maxOccupancy} x ${roomQuantity} room(s)).`;
     }
     if (!checkInDate || !checkOutDate) {
       return "Choose check-in and check-out dates.";
@@ -528,11 +586,14 @@ export default function RoomDetailPage() {
     if (!isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)) {
       return "One or more selected nights are unavailable.";
     }
+    if (selectedStayMinAvailable !== null && roomQuantity > selectedStayMinAvailable) {
+      return `Only ${selectedStayMinAvailable} room(s) available for at least one selected night.`;
+    }
     if (adultCount < 1) {
       return "Adult count must be at least 1.";
     }
     return null;
-  }, [adultCount, availabilityByDate, checkInDate, checkOutDate, room]);
+  }, [adultCount, availabilityByDate, checkInDate, checkOutDate, childCount, room, roomQuantity, selectedStayMinAvailable]);
 
   const canContinueBooking = bookingValidationMessage === null && Boolean(roomHotelId) && Boolean(room);
   const canLockCurrentRoom = Boolean(room && room.roomStatus === "AVAILABLE");
@@ -710,37 +771,43 @@ export default function RoomDetailPage() {
   const showBottomLockBar = canLockPrice && canLockCurrentRoom && !myPriceLockLoading && !activePriceLock && !lockingPrice;
   const cheapestDatePrice = cheapestDateKey ? availabilityByDate.get(cheapestDateKey)?.price : undefined;
   const peakDatePrice = peakDateKey ? availabilityByDate.get(peakDateKey)?.price : undefined;
-  const selectedStayMinAvailable = useMemo(() => {
-    if (!checkInDate || !checkOutDate) {
-      return null;
-    }
-
-    const stayDates = buildStayDates(checkInDate, checkOutDate);
-    if (stayDates.length === 0) {
-      return null;
-    }
-
-    let minAvailable: number | null = null;
-    for (const date of stayDates) {
-      const day = availabilityByDate.get(date);
-      if (!day) {
-        return null;
-      }
-      const available = isCalendarDayBookable(day) ? (day.availableRooms ?? 0) : 0;
-      minAvailable = minAvailable === null ? available : Math.min(minAvailable, available);
-    }
-
-    return minAvailable;
-  }, [availabilityByDate, checkInDate, checkOutDate]);
   const continueBookingHref = canContinueBooking && room
-    ? buildBookingHref(roomHotelId, room._id, checkInDate, checkOutDate, adultCount)
+    ? buildBookingHref(roomHotelId, room._id, checkInDate, checkOutDate, adultCount, childCount, roomQuantity)
     : undefined;
 
   const handleAdultCountChange = (rawValue: string): void => {
     const parsed = Number(rawValue.replace(/\D/g, ""));
     const normalized = Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
-    const clamped = room ? Math.min(normalized, Math.max(1, room.maxOccupancy)) : normalized;
+    const maxAdults = room ? Math.max(1, room.maxOccupancy * roomQuantity) : normalized;
+    const clamped = Math.min(normalized, maxAdults);
     setAdultCount(clamped);
+  };
+
+  const handleChildCountChange = (rawValue: string): void => {
+    const parsed = Number(rawValue.replace(/\D/g, ""));
+    const normalized = Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+    const maxChildren = room ? Math.max(0, room.maxOccupancy * roomQuantity - adultCount) : normalized;
+    const clamped = Math.min(normalized, maxChildren);
+    setChildCount(clamped);
+  };
+
+  const handleRoomQuantityChange = (rawValue: string): void => {
+    const parsed = Number(rawValue.replace(/\D/g, ""));
+    const normalized = Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+    const maxByInventory = selectedStayMinAvailable ?? room?.totalRooms ?? normalized;
+    const clampedQuantity = Math.min(normalized, Math.max(1, maxByInventory));
+    setRoomQuantity(clampedQuantity);
+
+    if (room) {
+      const maxTotalGuests = room.maxOccupancy * clampedQuantity;
+      const nextAdultCount = Math.min(adultCount, Math.max(1, maxTotalGuests));
+      if (nextAdultCount !== adultCount) {
+        setAdultCount(nextAdultCount);
+      }
+      if (nextAdultCount + childCount > maxTotalGuests) {
+        setChildCount(Math.max(0, maxTotalGuests - nextAdultCount));
+      }
+    }
   };
 
   const handleLockPrice = async (): Promise<void> => {
@@ -853,6 +920,9 @@ export default function RoomDetailPage() {
                 roomTypeLine={`${formatEnumLabel(room.roomType)}${room.roomNumber ? ` · #${room.roomNumber}` : ""}`}
                 roomName={room.roomName}
                 hotelTitle={hotel?.hotelTitle}
+                hotelCheckInTime={hotel?.checkInTime}
+                hotelCheckOutTime={hotel?.checkOutTime}
+                hotelCancellationPolicy={hotel?.cancellationPolicy ? formatEnumLabel(hotel.cancellationPolicy) : undefined}
                 deal={deal}
                 roomDesc={room.roomDesc}
                 factCards={roomFactCards}
@@ -860,7 +930,11 @@ export default function RoomDetailPage() {
               />
               <RoomBookingSidebar
                 adultCount={adultCount}
+                childCount={childCount}
+                roomQuantity={roomQuantity}
                 onAdultCountChange={handleAdultCountChange}
+                onChildCountChange={handleChildCountChange}
+                onRoomQuantityChange={handleRoomQuantityChange}
                 checkInDate={checkInDate}
                 checkOutDate={checkOutDate}
                 hoveredDateKey={hoveredDateKey}

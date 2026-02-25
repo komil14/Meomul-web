@@ -22,6 +22,9 @@ interface RoomOverviewSectionProps {
   roomTypeLine: string;
   roomName: string;
   hotelTitle?: string;
+  hotelCheckInTime?: string;
+  hotelCheckOutTime?: string;
+  hotelCancellationPolicy?: string;
   deal?: RoomDetailItem["lastMinuteDeal"];
   roomDesc: string;
   factCards: RoomFactCard[];
@@ -32,6 +35,9 @@ export function RoomOverviewSection({
   roomTypeLine,
   roomName,
   hotelTitle,
+  hotelCheckInTime,
+  hotelCheckOutTime,
+  hotelCancellationPolicy,
   deal,
   roomDesc,
   factCards,
@@ -57,6 +63,23 @@ export function RoomOverviewSection({
       <p className="max-w-3xl text-lg leading-8 text-slate-700">
         {roomDesc || "No room description provided. This room is prepared for practical comfort with distinct atmosphere and clean details."}
       </p>
+
+      {hotelCheckInTime || hotelCheckOutTime || hotelCancellationPolicy ? (
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:grid-cols-3">
+          <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Check-in</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCheckInTime || "-"}</p>
+          </article>
+          <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Check-out</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCheckOutTime || "-"}</p>
+          </article>
+          <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Cancellation</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCancellationPolicy || "-"}</p>
+          </article>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {factCards.map((item) => (

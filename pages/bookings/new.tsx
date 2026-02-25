@@ -83,6 +83,20 @@ const NewBookingPage: NextPageWithAuth = () => {
     const parsed = parsePositiveInt(router.query.adultCount);
     return parsed ? String(parsed) : "";
   }, [router.query.adultCount]);
+  const initialChildCountFromQuery = useMemo(() => {
+    if (typeof router.query.childCount !== "string") {
+      return "";
+    }
+    const parsed = parseNonNegativeInt(router.query.childCount);
+    return parsed != null ? String(parsed) : "";
+  }, [router.query.childCount]);
+  const initialQuantityFromQuery = useMemo(() => {
+    if (typeof router.query.quantity !== "string") {
+      return "";
+    }
+    const parsed = parsePositiveInt(router.query.quantity);
+    return parsed ? String(parsed) : "";
+  }, [router.query.quantity]);
 
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
@@ -168,6 +182,16 @@ const NewBookingPage: NextPageWithAuth = () => {
       setGuestCountInput(initialAdultCountFromQuery);
     }
   }, [guestCountInput, initialAdultCountFromQuery]);
+  useEffect(() => {
+    if (initialChildCountFromQuery && childCountInput === "0") {
+      setChildCountInput(initialChildCountFromQuery);
+    }
+  }, [childCountInput, initialChildCountFromQuery]);
+  useEffect(() => {
+    if (initialQuantityFromQuery && quantityInput === "1") {
+      setQuantityInput(initialQuantityFromQuery);
+    }
+  }, [initialQuantityFromQuery, quantityInput]);
 
   useEffect(() => {
     if (!isStaffCreator) {
