@@ -1,5 +1,6 @@
 import { memo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import type { HotelListItem } from "@/types/hotel";
 
 interface HotelCardProps {
@@ -12,15 +13,21 @@ export const HotelCard = memo(function HotelCard({ hotel }: HotelCardProps) {
   return (
     <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <Link href={`/hotels/${hotel._id}`} prefetch={false} className="block">
-        <div
-          className="h-40 w-full bg-slate-200 bg-cover bg-center"
-          style={coverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
-        >
-          {!coverImage ? (
+        <div className="relative h-40 w-full bg-slate-200">
+          {coverImage ? (
+            <Image
+              src={coverImage}
+              alt={hotel.hotelTitle}
+              fill
+              sizes="(min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw"
+              className="object-cover"
+              unoptimized
+            />
+          ) : (
             <div className="flex h-full items-center justify-center bg-slate-100 text-xs font-medium uppercase tracking-[0.15em] text-slate-500">
               No Image
             </div>
-          ) : null}
+          )}
         </div>
 
         <div className="space-y-2 p-4">
