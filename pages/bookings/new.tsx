@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { CREATE_BOOKING_MUTATION, SEARCH_MEMBERS_FOR_BOOKING_QUERY } from "@/graphql/booking.gql";
 import { GET_HOTEL_CONTEXT_QUERY, GET_MY_PRICE_LOCK_QUERY, GET_ROOM_QUERY } from "@/graphql/hotel.gql";
@@ -17,6 +17,7 @@ import {
   toDateTime,
 } from "@/lib/booking/booking-rules";
 import { getSessionMember } from "@/lib/auth/session";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   CreateBookingMutationData,
@@ -40,6 +41,9 @@ const PAYMENT_METHODS: PaymentMethod[] = ["AT_HOTEL", "CREDIT_CARD", "DEBIT_CARD
 const NewBookingPage: NextPageWithAuth = () => {
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
+  const isPageVisible = usePageVisible();
+  const hasVisibilityMountedRef = useRef(false);
+  const wasVisibleRef = useRef(false);
 
   const hotelId = useMemo(() => {
     if (typeof router.query.hotelId === "string") {
@@ -115,19 +119,26 @@ const NewBookingPage: NextPageWithAuth = () => {
 
   const [createdBookingCode, setCreatedBookingCode] = useState<string | null>(null);
 
-  const { data: hotelData, loading: hotelLoading, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(
-    GET_HOTEL_CONTEXT_QUERY,
-    {
-      skip: !hotelId,
-      variables: { hotelId },
-      fetchPolicy: "cache-and-network",
-    },
-  );
+  const {
+    data: hotelData,
+    loading: hotelLoading,
+    error: hotelError,
+    refetch: refetchHotel,
+  } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
+    skip: !hotelId,
+    variables: { hotelId },
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
+  });
 
-  const { data: roomData, loading: roomLoading, error: roomError } = useQuery<GetRoomQueryData, GetRoomQueryVars>(GET_ROOM_QUERY, {
+  const { data: roomData, loading: roomLoading, error: roomError, refetch: refetchRoom } = useQuery<
+    GetRoomQueryData,
+    GetRoomQueryVars
+  >(GET_ROOM_QUERY, {
     skip: !roomId,
     variables: { roomId },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const memberType = member?.memberType;
@@ -138,10 +149,12 @@ const NewBookingPage: NextPageWithAuth = () => {
     data: priceLockData,
     loading: priceLockLoading,
     error: priceLockError,
+    refetch: refetchPriceLock,
   } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
     skip: !roomId || isStaffCreator,
     variables: { roomId },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -206,6 +219,38 @@ const NewBookingPage: NextPageWithAuth = () => {
       clearTimeout(timeout);
     };
   }, [guestKeyword, isStaffCreator]);
+
+  useEffect(() => {
+    if (!isPageVisible) {
+      wasVisibleRef.current = false;
+      return;
+    }
+
+    const becameVisible = !wasVisibleRef.current;
+    wasVisibleRef.current = true;
+    if (!hasVisibilityMountedRef.current) {
+      hasVisibilityMountedRef.current = true;
+      return;
+    }
+    if (!becameVisible) {
+      return;
+    }
+
+    const refreshTasks: Array<Promise<unknown>> = [];
+    if (hotelId) {
+      refreshTasks.push(refetchHotel());
+    }
+    if (roomId) {
+      refreshTasks.push(refetchRoom());
+      if (!isStaffCreator) {
+        refreshTasks.push(refetchPriceLock());
+      }
+    }
+
+    if (refreshTasks.length > 0) {
+      void Promise.allSettled(refreshTasks);
+    }
+  }, [hotelId, isPageVisible, isStaffCreator, refetchHotel, refetchPriceLock, refetchRoom, roomId]);
 
   const hotel = hotelData?.getHotel;
   const room = roomData?.getRoom;

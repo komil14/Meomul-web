@@ -17,6 +17,7 @@ import {
 } from "@/lib/hotels/detail-page-helpers";
 import { useHotelDetailActions } from "@/lib/hooks/use-hotel-detail-actions";
 import { useHotelDetailDiscovery } from "@/lib/hooks/use-hotel-detail-discovery";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   GetHotelQueryData,
@@ -36,12 +37,15 @@ interface UseHotelDetailPageDataInput {
 
 export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelDetailPageDataInput) => {
   const router = useRouter();
+  const isPageVisible = usePageVisible();
 
   const [isHydrated, setIsHydrated] = useState(false);
   const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
   const [reviewPage, setReviewPage] = useState(1);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const reviewsSectionRef = useRef<HTMLDivElement | null>(null);
+  const hasVisibilityMountedRef = useRef(false);
+  const wasVisibleRef = useRef(false);
 
   const hotelId = useMemo(() => {
     if (typeof router.query.hotelId === "string") {
@@ -133,10 +137,11 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     data: hotelData,
     loading: hotelLoading,
     error: hotelError,
+    refetch: refetchHotel,
   } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
     skip: !hotelId,
     variables: hotelQueryVariables,
-    fetchPolicy: initialHotel ? "cache-first" : "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
 
@@ -148,10 +153,11 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     data: roomsData,
     loading: roomsLoading,
     error: roomsError,
+    refetch: refetchRooms,
   } = useQuery<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>(GET_ROOMS_BY_HOTEL_QUERY, {
     skip: !hotelId,
     variables: roomsQueryVariables,
-    fetchPolicy: initialRooms.length > 0 ? "cache-first" : "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
 
@@ -159,12 +165,37 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     data: reviewsData,
     loading: reviewsQueryLoading,
     error: reviewsError,
+    refetch: refetchReviews,
   } = useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(GET_HOTEL_REVIEWS_QUERY, {
     skip: !hotelId || !shouldLoadReviews,
     variables: reviewsQueryVariables,
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
+
+  useEffect(() => {
+    if (!isPageVisible) {
+      wasVisibleRef.current = false;
+      return;
+    }
+
+    const becameVisible = !wasVisibleRef.current;
+    wasVisibleRef.current = true;
+    if (!hasVisibilityMountedRef.current) {
+      hasVisibilityMountedRef.current = true;
+      return;
+    }
+    if (!becameVisible || !hotelId) {
+      return;
+    }
+
+    const refreshTasks: Array<Promise<unknown>> = [refetchHotel(), refetchRooms()];
+    if (shouldLoadReviews) {
+      refreshTasks.push(refetchReviews());
+    }
+
+    void Promise.allSettled(refreshTasks);
+  }, [hotelId, isPageVisible, refetchHotel, refetchReviews, refetchRooms, shouldLoadReviews]);
 
   const {
     hotelLikeState,

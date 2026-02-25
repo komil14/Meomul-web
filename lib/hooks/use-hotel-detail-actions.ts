@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HAS_LIKED_QUERY, MARK_HELPFUL_MUTATION, TOGGLE_LIKE_MUTATION } from "@/graphql/hotel.gql";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   HasLikedQueryData,
@@ -22,6 +23,9 @@ export const useHotelDetailActions = ({ hotelId, canUseLikeActions }: UseHotelDe
   const [markingHelpfulReviewId, setMarkingHelpfulReviewId] = useState<string | null>(null);
   const [helpfulCountOverrides, setHelpfulCountOverrides] = useState<Record<string, number>>({});
   const [hotelLikeState, setHotelLikeState] = useState<{ liked: boolean; count: number } | null>(null);
+  const isPageVisible = usePageVisible();
+  const hasVisibilityMountedRef = useRef(false);
+  const wasVisibleRef = useRef(false);
 
   const likedQueryVariables = useMemo<HasLikedQueryVars>(
     () => ({
@@ -34,10 +38,11 @@ export const useHotelDetailActions = ({ hotelId, canUseLikeActions }: UseHotelDe
   const {
     data: hotelLikedData,
     error: hotelLikedError,
+    refetch: refetchHotelLiked,
   } = useQuery<HasLikedQueryData, HasLikedQueryVars>(HAS_LIKED_QUERY, {
     skip: !hotelId || !canUseLikeActions,
     variables: likedQueryVariables,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
 
@@ -53,6 +58,25 @@ export const useHotelDetailActions = ({ hotelId, canUseLikeActions }: UseHotelDe
     setReviewActionError(null);
     setGeneralActionError(null);
   }, [hotelId]);
+
+  useEffect(() => {
+    if (!isPageVisible) {
+      wasVisibleRef.current = false;
+      return;
+    }
+
+    const becameVisible = !wasVisibleRef.current;
+    wasVisibleRef.current = true;
+    if (!hasVisibilityMountedRef.current) {
+      hasVisibilityMountedRef.current = true;
+      return;
+    }
+    if (!becameVisible || !hotelId || !canUseLikeActions) {
+      return;
+    }
+
+    void refetchHotelLiked();
+  }, [canUseLikeActions, hotelId, isPageVisible, refetchHotelLiked]);
 
   const handleToggleHotelLike = useCallback(async (): Promise<void> => {
     if (!hotelId || !canUseLikeActions) {

@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GET_MY_PRICE_LOCK_QUERY, GET_MY_PRICE_LOCKS_QUERY, LOCK_PRICE_MUTATION } from "@/graphql/hotel.gql";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   GetMyPriceLockQueryData,
@@ -45,6 +46,9 @@ export const useRoomPriceLock = ({
   activeDeal,
 }: UseRoomPriceLockInput): UseRoomPriceLockResult => {
   const [lockActionError, setLockActionError] = useState<string | null>(null);
+  const isPageVisible = usePageVisible();
+  const hasVisibilityMountedRef = useRef(false);
+  const wasVisibleRef = useRef(false);
   const canLockPrice = canUsePriceActions(memberType);
   const canLockCurrentRoom = Boolean(room && room.roomStatus === "AVAILABLE");
   const priceLockQueryVariables = useMemo<GetMyPriceLockQueryVars>(
@@ -58,10 +62,11 @@ export const useRoomPriceLock = ({
     data: myPriceLockData,
     loading: myPriceLockLoading,
     error: myPriceLockError,
+    refetch: refetchMyPriceLock,
   } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
     skip: !isHydrated || !roomId || !canLockPrice,
     variables: priceLockQueryVariables,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
   const [lockPriceMutation, { loading: lockingPrice }] = useMutation<LockPriceMutationData, LockPriceMutationVars>(LOCK_PRICE_MUTATION);
@@ -72,6 +77,25 @@ export const useRoomPriceLock = ({
     }
     setLockActionError(null);
   }, [roomId]);
+
+  useEffect(() => {
+    if (!isPageVisible) {
+      wasVisibleRef.current = false;
+      return;
+    }
+
+    const becameVisible = !wasVisibleRef.current;
+    wasVisibleRef.current = true;
+    if (!hasVisibilityMountedRef.current) {
+      hasVisibilityMountedRef.current = true;
+      return;
+    }
+    if (!becameVisible || !isHydrated || !roomId || !canLockPrice) {
+      return;
+    }
+
+    void refetchMyPriceLock();
+  }, [canLockPrice, isHydrated, isPageVisible, refetchMyPriceLock, roomId]);
 
   const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
   const lockRequestPrice = activeDeal?.dealPrice ?? room?.basePrice ?? 0;

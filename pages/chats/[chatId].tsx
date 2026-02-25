@@ -84,7 +84,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const { data, loading, error, refetch, startPolling, stopPolling } = useQuery<GetChatQueryData, GetChatQueryVars>(GET_CHAT_QUERY, {
     skip: !chatId,
     variables: { chatId },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
 
