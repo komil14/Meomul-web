@@ -44,9 +44,10 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     reviewPage,
     reviewTotalPages,
     reviewTotal,
-    setReviewPage,
     canGoPrev,
     canGoNext,
+    handlePrevReviewPage,
+    handleNextReviewPage,
     markingHelpfulReviewId,
     helpfulCountOverrides,
     canUseLikeActions,
@@ -172,8 +173,8 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
           reviewPage={reviewPage}
           reviewTotalPages={reviewTotalPages}
           reviewTotal={reviewTotal}
-          onPrevPage={() => setReviewPage((prev) => Math.max(1, prev - 1))}
-          onNextPage={() => setReviewPage((prev) => Math.min(reviewTotalPages, prev + 1))}
+          onPrevPage={handlePrevReviewPage}
+          onNextPage={handleNextReviewPage}
           canGoPrev={canGoPrev}
           canGoNext={canGoNext}
           canMarkHelpful={canUseLikeActions}

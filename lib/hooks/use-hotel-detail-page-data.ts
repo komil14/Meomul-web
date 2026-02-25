@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GET_HOTEL_QUERY, GET_HOTEL_REVIEWS_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import {
@@ -58,13 +58,41 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     setMember(getSessionMember());
   }, []);
 
+  const hotelQueryVariables = useMemo<GetHotelQueryVars>(() => ({ hotelId }), [hotelId]);
+
+  const roomsQueryVariables = useMemo<GetRoomsByHotelQueryVars>(
+    () => ({
+      hotelId,
+      input: {
+        page: 1,
+        limit: ROOM_PAGE_SIZE,
+        sort: "createdAt",
+        direction: -1,
+      },
+    }),
+    [hotelId],
+  );
+
+  const reviewsQueryVariables = useMemo<GetHotelReviewsQueryVars>(
+    () => ({
+      hotelId,
+      input: {
+        page: reviewPage,
+        limit: REVIEW_PAGE_SIZE,
+        sort: "createdAt",
+        direction: -1,
+      },
+    }),
+    [hotelId, reviewPage],
+  );
+
   const {
     data: hotelData,
     loading: hotelLoading,
     error: hotelError,
   } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
     skip: !hotelId,
-    variables: { hotelId },
+    variables: hotelQueryVariables,
     fetchPolicy: initialHotel ? "cache-first" : "cache-and-network",
     nextFetchPolicy: "cache-first",
   });
@@ -79,15 +107,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     error: roomsError,
   } = useQuery<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>(GET_ROOMS_BY_HOTEL_QUERY, {
     skip: !hotelId,
-    variables: {
-      hotelId,
-      input: {
-        page: 1,
-        limit: ROOM_PAGE_SIZE,
-        sort: "createdAt",
-        direction: -1,
-      },
-    },
+    variables: roomsQueryVariables,
     fetchPolicy: initialRooms.length > 0 ? "cache-first" : "cache-and-network",
     nextFetchPolicy: "cache-first",
   });
@@ -98,15 +118,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     error: reviewsError,
   } = useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(GET_HOTEL_REVIEWS_QUERY, {
     skip: !hotelId,
-    variables: {
-      hotelId,
-      input: {
-        page: reviewPage,
-        limit: REVIEW_PAGE_SIZE,
-        sort: "createdAt",
-        direction: -1,
-      },
-    },
+    variables: reviewsQueryVariables,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
   });
@@ -152,6 +164,16 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   const reviews = reviewsData?.getHotelReviews.list ?? [];
   const reviewTotal = reviewsData?.getHotelReviews.metaCounter.total ?? 0;
   const reviewTotalPages = Math.max(1, Math.ceil(reviewTotal / REVIEW_PAGE_SIZE));
+  const canGoPrev = reviewPage > 1;
+  const canGoNext = reviewPage < reviewTotalPages;
+
+  const handlePrevReviewPage = useCallback(() => {
+    setReviewPage((prev) => Math.max(1, prev - 1));
+  }, []);
+
+  const handleNextReviewPage = useCallback(() => {
+    setReviewPage((prev) => Math.min(reviewTotalPages, prev + 1));
+  }, [reviewTotalPages]);
 
   const fromPrice = useMemo(() => {
     const prices = rooms.map((room) => room.basePrice).filter((price): price is number => typeof price === "number");
@@ -215,9 +237,10 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     reviewPage,
     reviewTotalPages,
     reviewTotal,
-    setReviewPage,
-    canGoPrev: reviewPage > 1,
-    canGoNext: reviewPage < reviewTotalPages,
+    canGoPrev,
+    canGoNext,
+    handlePrevReviewPage,
+    handleNextReviewPage,
     markingHelpfulReviewId,
     helpfulCountOverrides,
     canUseLikeActions,

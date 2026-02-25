@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { HAS_LIKED_QUERY, MARK_HELPFUL_MUTATION, TOGGLE_LIKE_MUTATION } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -23,15 +23,20 @@ export const useHotelDetailActions = ({ hotelId, canUseLikeActions }: UseHotelDe
   const [helpfulCountOverrides, setHelpfulCountOverrides] = useState<Record<string, number>>({});
   const [hotelLikeState, setHotelLikeState] = useState<{ liked: boolean; count: number } | null>(null);
 
+  const likedQueryVariables = useMemo<HasLikedQueryVars>(
+    () => ({
+      likeRefId: hotelId,
+      likeGroup: "HOTEL",
+    }),
+    [hotelId],
+  );
+
   const {
     data: hotelLikedData,
     error: hotelLikedError,
   } = useQuery<HasLikedQueryData, HasLikedQueryVars>(HAS_LIKED_QUERY, {
     skip: !hotelId || !canUseLikeActions,
-    variables: {
-      likeRefId: hotelId,
-      likeGroup: "HOTEL",
-    },
+    variables: likedQueryVariables,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
   });

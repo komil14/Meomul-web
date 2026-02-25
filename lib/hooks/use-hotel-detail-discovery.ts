@@ -34,6 +34,29 @@ export const useHotelDetailDiscovery = ({
   const [shouldLoadDiscovery, setShouldLoadDiscovery] = useState(false);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
 
+  const similarQueryVariables = useMemo<GetSimilarHotelsQueryVars>(
+    () => ({
+      hotelId,
+      limit: CARD_LIST_LIMIT,
+    }),
+    [hotelId],
+  );
+
+  const trendingQueryVariables = useMemo<GetTrendingByLocationQueryVars>(
+    () => ({
+      location: (trendingLocation ?? "SEOUL") as HotelLocation,
+      limit: CARD_LIST_LIMIT,
+    }),
+    [trendingLocation],
+  );
+
+  const recommendedQueryVariables = useMemo<GetRecommendedHotelsQueryVars>(
+    () => ({
+      limit: CARD_LIST_LIMIT,
+    }),
+    [],
+  );
+
   useEffect(() => {
     if (shouldLoadDiscovery) {
       return;
@@ -101,10 +124,7 @@ export const useHotelDetailDiscovery = ({
     error: similarError,
   } = useQuery<GetSimilarHotelsQueryData, GetSimilarHotelsQueryVars>(GET_SIMILAR_HOTELS_QUERY, {
     skip: !hotelId || !shouldLoadDiscovery,
-    variables: {
-      hotelId,
-      limit: CARD_LIST_LIMIT,
-    },
+    variables: similarQueryVariables,
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
@@ -115,10 +135,7 @@ export const useHotelDetailDiscovery = ({
     error: trendingError,
   } = useQuery<GetTrendingByLocationQueryData, GetTrendingByLocationQueryVars>(GET_TRENDING_BY_LOCATION_QUERY, {
     skip: !trendingLocation || !shouldLoadDiscovery,
-    variables: {
-      location: (trendingLocation ?? "SEOUL") as HotelLocation,
-      limit: CARD_LIST_LIMIT,
-    },
+    variables: trendingQueryVariables,
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
@@ -129,9 +146,7 @@ export const useHotelDetailDiscovery = ({
     error: recommendedError,
   } = useQuery<GetRecommendedHotelsQueryData, GetRecommendedHotelsQueryVars>(GET_RECOMMENDED_HOTELS_QUERY, {
     skip: !canUseRecommendedQuery || !shouldLoadDiscovery,
-    variables: {
-      limit: CARD_LIST_LIMIT,
-    },
+    variables: recommendedQueryVariables,
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
