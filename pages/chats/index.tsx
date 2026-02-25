@@ -95,7 +95,8 @@ const ChatsPage: NextPageWithAuth = () => {
   } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(GET_AGENT_HOTELS_QUERY, {
     skip: !isAgent,
     variables: { input: hotelsInput },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -105,7 +106,8 @@ const ChatsPage: NextPageWithAuth = () => {
   } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
     skip: !(isStaff || isUser),
     variables: { input: hotelsInput },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const availableHotels = useMemo<HotelListItem[]>(() => {
@@ -159,7 +161,8 @@ const ChatsPage: NextPageWithAuth = () => {
   } = useQuery<GetMyChatsQueryData, GetMyChatsQueryVars>(GET_MY_CHATS_QUERY, {
     skip: !isUser,
     variables: { input: listInput },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -173,7 +176,8 @@ const ChatsPage: NextPageWithAuth = () => {
       input: listInput,
       statusFilter: statusFilter === "ALL" ? undefined : statusFilter,
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const [startChat, { loading: startingChat }] = useMutation<StartChatMutationData, StartChatMutationVars>(START_CHAT_MUTATION);

@@ -47,7 +47,8 @@ const BookingDetailPage: NextPageWithAuth = () => {
   const { data, loading, error, refetch } = useQuery<GetBookingQueryData, GetBookingQueryVars>(GET_BOOKING_QUERY, {
     skip: !bookingId,
     variables: { bookingId },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const [cancelBooking, { loading: cancellingAsGuest }] = useMutation<CancelBookingMutationData, CancelBookingMutationVars>(

@@ -331,7 +331,8 @@ export default function HotelsPage() {
       },
       search,
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const hotels = data?.getHotels.list ?? [];

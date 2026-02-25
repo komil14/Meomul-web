@@ -66,7 +66,8 @@ const DashboardPage: NextPageWithAuth = () => {
   } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
     skip: !isUser,
     variables: { input: DASHBOARD_LIST_INPUT },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -76,7 +77,8 @@ const DashboardPage: NextPageWithAuth = () => {
   } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(GET_AGENT_HOTELS_QUERY, {
     skip: !isAgent,
     variables: { input: DASHBOARD_LIST_INPUT },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -94,7 +96,7 @@ const DashboardPage: NextPageWithAuth = () => {
     error: unreadChatError,
   } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
     skip: !member,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
 

@@ -103,7 +103,8 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     variables: {
       input: hotelListInput,
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const { data: publicHotelsData, loading: publicHotelsLoading, error: publicHotelsError } = useQuery<
@@ -114,7 +115,8 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     variables: {
       input: hotelListInput,
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const availableHotels = useMemo<HotelListItem[]>(() => {
@@ -158,7 +160,8 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       hotelId: selectedHotelId,
       input: bookingInput,
     },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const [updateBookingStatus] = useMutation<UpdateBookingStatusMutationData, UpdateBookingStatusMutationVars>(
