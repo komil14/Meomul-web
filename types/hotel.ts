@@ -375,6 +375,14 @@ export interface GetTrendingByLocationQueryVars {
   limit?: number;
 }
 
+export interface GetTrendingHotelsQueryData {
+  getTrendingHotels: HotelListItem[];
+}
+
+export interface GetTrendingHotelsQueryVars {
+  limit?: number;
+}
+
 export interface GetRecommendedHotelsQueryData {
   getRecommendedHotels: HotelListItem[];
 }

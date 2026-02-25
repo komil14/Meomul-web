@@ -293,6 +293,20 @@ export const GET_TRENDING_BY_LOCATION_QUERY = gql`
   }
 `;
 
+export const GET_TRENDING_HOTELS_QUERY = gql`
+  query GetTrendingHotels($limit: Int) {
+    getTrendingHotels(limit: $limit) {
+      _id
+      hotelTitle
+      hotelLocation
+      hotelType
+      hotelRating
+      hotelLikes
+      hotelImages
+    }
+  }
+`;
+
 export const GET_RECOMMENDED_HOTELS_QUERY = gql`
   query GetRecommendedHotels($limit: Int) {
     getRecommendedHotels(limit: $limit) {
