@@ -16,6 +16,8 @@ const canUsePriceLock = (memberType: string | undefined): boolean =>
   memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
 
 const getRemainingSeconds = (expiresAt: string, nowMs: number): number => Math.max(0, Math.floor((new Date(expiresAt).getTime() - nowMs) / 1000));
+const ACTIVE_LOCK_POLL_INTERVAL_MS = 60000;
+const IDLE_LOCK_POLL_INTERVAL_MS = 180000;
 
 const formatCountdown = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -35,7 +37,7 @@ export function PriceLockFab() {
 
   const { data, loading, startPolling, stopPolling, refetch } = useQuery<GetMyPriceLocksQueryData>(GET_MY_PRICE_LOCKS_QUERY, {
     skip: !isHydrated || !canUse || !isPageVisible,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
   const [cancelPriceLockMutation] = useMutation<CancelPriceLockMutationData, CancelPriceLockMutationVars>(CANCEL_PRICE_LOCK_MUTATION);
@@ -65,7 +67,7 @@ export function PriceLockFab() {
       return;
     }
 
-    const intervalMs = isOpen || hasUnexpiredLocks ? 30000 : 120000;
+    const intervalMs = isOpen || hasUnexpiredLocks ? ACTIVE_LOCK_POLL_INTERVAL_MS : IDLE_LOCK_POLL_INTERVAL_MS;
     startPolling(intervalMs);
     return () => stopPolling();
   }, [canUse, hasUnexpiredLocks, isHydrated, isOpen, isPageVisible, startPolling, stopPolling]);

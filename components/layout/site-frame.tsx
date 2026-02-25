@@ -10,6 +10,8 @@ import { getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
 
+const UNREAD_POLL_INTERVAL_MS = 120000;
+
 const links = [
   { href: "/", label: "Home" },
   { href: "/hotels", label: "Hotels" },
@@ -43,9 +45,9 @@ export function SiteFrame({ children }: PropsWithChildren) {
 
   const { data: unreadData, refetch: refetchUnread } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
     skip: !canPollUnread,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
-    pollInterval: 60000,
+    pollInterval: UNREAD_POLL_INTERVAL_MS,
   });
 
   const unreadCount = unreadData?.getMyUnreadChatCount ?? 0;

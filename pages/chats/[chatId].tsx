@@ -15,6 +15,7 @@ import {
 } from "@/graphql/chat.gql";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import { createChatSocket } from "@/lib/socket/chat";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
 import { showMutationError } from "@/lib/utils/toast";
 import type {
@@ -61,6 +62,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const router = useRouter();
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
+  const isPageVisible = usePageVisible();
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
   const isAgent = memberType === "AGENT";
@@ -76,12 +78,14 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const localTypingTimeoutRef = useRef<number | null>(null);
   const localTypingSentRef = useRef(false);
   const socketJoinFailedRef = useRef(false);
+  const lastEventRefetchAtRef = useRef(0);
+  const queuedEventRefetchTimeoutRef = useRef<number | null>(null);
 
-  const { data, loading, error, refetch } = useQuery<GetChatQueryData, GetChatQueryVars>(GET_CHAT_QUERY, {
+  const { data, loading, error, refetch, startPolling, stopPolling } = useQuery<GetChatQueryData, GetChatQueryVars>(GET_CHAT_QUERY, {
     skip: !chatId,
     variables: { chatId },
     fetchPolicy: "cache-and-network",
-    pollInterval: 15000,
+    nextFetchPolicy: "cache-first",
   });
 
   const [sendMessage, { loading: sending }] = useMutation<SendMessageMutationData, SendMessageMutationVars>(SEND_MESSAGE_MUTATION);
@@ -118,7 +122,31 @@ const ChatThreadPage: NextPageWithAuth = () => {
   }, [chat, markRead, toast, unreadForMe]);
 
   useEffect(() => {
+    if (!chatId || socketConnected || !isPageVisible) {
+      stopPolling();
+      return;
+    }
+
+    startPolling(30000);
+
+    return () => {
+      stopPolling();
+    };
+  }, [chatId, isPageVisible, socketConnected, startPolling, stopPolling]);
+
+  useEffect(() => {
+    if (!chatId || socketConnected || !isPageVisible) {
+      return;
+    }
+
+    void refetch();
+  }, [chatId, isPageVisible, refetch, socketConnected]);
+
+  useEffect(() => {
     if (!chatId) {
+      return;
+    }
+    if (!isPageVisible) {
       return;
     }
 
@@ -130,6 +158,29 @@ const ChatThreadPage: NextPageWithAuth = () => {
     const socket = createChatSocket(token);
     socketRef.current = socket;
     socketJoinFailedRef.current = false;
+
+    const requestRefetch = (): void => {
+      const nowMs = Date.now();
+      const elapsedMs = nowMs - lastEventRefetchAtRef.current;
+      const minIntervalMs = 800;
+
+      if (elapsedMs >= minIntervalMs) {
+        lastEventRefetchAtRef.current = nowMs;
+        void refetch();
+        return;
+      }
+
+      if (queuedEventRefetchTimeoutRef.current !== null) {
+        return;
+      }
+
+      const waitMs = minIntervalMs - elapsedMs;
+      queuedEventRefetchTimeoutRef.current = window.setTimeout(() => {
+        queuedEventRefetchTimeoutRef.current = null;
+        lastEventRefetchAtRef.current = Date.now();
+        void refetch();
+      }, waitMs);
+    };
 
     const clearRemoteTyping = () => {
       if (remoteTypingTimeoutRef.current) {
@@ -157,7 +208,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
             socketJoinFailedRef.current = true;
             return;
           }
-          void refetch();
+          requestRefetch();
         });
       });
     };
@@ -175,7 +226,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       if (!payload?.chatId || payload.chatId !== chatId) {
         return;
       }
-      void refetch();
+      requestRefetch();
     };
 
     const onUserTyping = (payload: TypingEventPayload) => {
@@ -221,6 +272,10 @@ const ChatThreadPage: NextPageWithAuth = () => {
         window.clearTimeout(localTypingTimeoutRef.current);
         localTypingTimeoutRef.current = null;
       }
+      if (queuedEventRefetchTimeoutRef.current !== null) {
+        window.clearTimeout(queuedEventRefetchTimeoutRef.current);
+        queuedEventRefetchTimeoutRef.current = null;
+      }
       if (localTypingSentRef.current) {
         socket.emit("stopTyping", { chatId });
         localTypingSentRef.current = false;
@@ -241,7 +296,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       socketRef.current = null;
       setSocketConnected(false);
     };
-  }, [chatId, member?._id, refetch, toast]);
+  }, [chatId, isPageVisible, member?._id, refetch, toast]);
 
   const stopTypingSignal = () => {
     if (!chat) {
