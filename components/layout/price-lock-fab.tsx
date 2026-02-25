@@ -67,16 +67,16 @@ export function PriceLockFab() {
       return;
     }
 
-    const intervalMs = isOpen || hasUnexpiredLocks ? ACTIVE_LOCK_POLL_INTERVAL_MS : IDLE_LOCK_POLL_INTERVAL_MS;
+    const intervalMs = hasUnexpiredLocks ? ACTIVE_LOCK_POLL_INTERVAL_MS : IDLE_LOCK_POLL_INTERVAL_MS;
     startPolling(intervalMs);
     return () => stopPolling();
-  }, [canUse, hasUnexpiredLocks, isHydrated, isOpen, isPageVisible, startPolling, stopPolling]);
+  }, [canUse, hasUnexpiredLocks, isHydrated, isPageVisible, startPolling, stopPolling]);
 
   useEffect(() => {
     if (!isHydrated || !canUse || !isPageVisible) {
       return;
     }
-    if (!isOpen && !hasUnexpiredLocks) {
+    if (!hasUnexpiredLocks) {
       setNowMs(Date.now());
       return;
     }
@@ -85,7 +85,7 @@ export function PriceLockFab() {
       setNowMs(Date.now());
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [canUse, hasUnexpiredLocks, isHydrated, isOpen, isPageVisible]);
+  }, [canUse, hasUnexpiredLocks, isHydrated, isPageVisible]);
 
   const activeLocks = useMemo(() => {
     const locks = data?.getMyPriceLocks ?? [];
