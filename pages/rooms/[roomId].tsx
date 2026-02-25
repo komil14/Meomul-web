@@ -35,6 +35,39 @@ import type {
   LockPriceMutationVars,
 } from "@/types/hotel";
 
+const DATE_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const parseDateKeyParts = (value: string): { year: number; month: number; day: number } | null => {
+  const match = DATE_KEY_PATTERN.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+  if (month < 1 || month > 12) {
+    return null;
+  }
+
+  const maxDay = new Date(year, month, 0).getDate();
+  if (day < 1 || day > maxDay) {
+    return null;
+  }
+
+  return { year, month, day };
+};
+
+const formatDateKeyUtc = (value: Date): string => {
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(value.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const formatDateInput = (value: Date): string => {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, "0");
@@ -42,10 +75,24 @@ const formatDateInput = (value: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const toLocalDateFromDateKey = (dateKey: string): Date | null => {
+  const parts = parseDateKeyParts(dateKey);
+  if (!parts) {
+    return null;
+  }
+
+  return new Date(parts.year, parts.month - 1, parts.day);
+};
+
 const addDays = (dateInput: string, days: number): string => {
-  const base = new Date(`${dateInput}T00:00:00`);
-  base.setDate(base.getDate() + days);
-  return formatDateInput(base);
+  const parts = parseDateKeyParts(dateInput);
+  if (!parts) {
+    return dateInput;
+  }
+
+  const baseUtc = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 0, 0, 0, 0));
+  baseUtc.setUTCDate(baseUtc.getUTCDate() + days);
+  return formatDateKeyUtc(baseUtc);
 };
 
 const canUsePriceActions = (memberType: string | undefined): boolean =>
@@ -514,9 +561,14 @@ export default function RoomDetailPage() {
     if (!checkInDate) {
       return undefined;
     }
+    const fromDate = toLocalDateFromDateKey(checkInDate);
+    if (!fromDate) {
+      return undefined;
+    }
+    const toDate = checkOutDate ? toLocalDateFromDateKey(checkOutDate) : null;
     return {
-      from: new Date(`${checkInDate}T00:00:00`),
-      ...(checkOutDate ? { to: new Date(`${checkOutDate}T00:00:00`) } : {}),
+      from: fromDate,
+      ...(toDate ? { to: toDate } : {}),
     };
   }, [checkInDate, checkOutDate]);
 
