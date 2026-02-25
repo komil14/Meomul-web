@@ -65,7 +65,7 @@ export function PriceLockFab() {
       return;
     }
 
-    const intervalMs = isOpen || hasUnexpiredLocks ? 15000 : 60000;
+    const intervalMs = isOpen || hasUnexpiredLocks ? 30000 : 120000;
     startPolling(intervalMs);
     return () => stopPolling();
   }, [canUse, hasUnexpiredLocks, isHydrated, isOpen, isPageVisible, startPolling, stopPolling]);

@@ -36,7 +36,8 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const member = useMemo(() => getSessionMember(), []);
   const isPageVisible = usePageVisible();
   const canTrackUnread = Boolean(member);
-  const canPollUnread = canTrackUnread && isPageVisible;
+  const isChatRoute = router.pathname === "/chats" || router.pathname === "/chats/[chatId]";
+  const canPollUnread = canTrackUnread && isPageVisible && !isChatRoute;
   const previousUnreadRef = useRef<number | null>(null);
   const hasPolledOnVisibleRef = useRef(false);
 
@@ -44,7 +45,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
     skip: !canPollUnread,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
-    pollInterval: 30000,
+    pollInterval: 60000,
   });
 
   const unreadCount = unreadData?.getMyUnreadChatCount ?? 0;
