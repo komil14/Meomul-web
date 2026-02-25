@@ -1,24 +1,13 @@
 import Link, { type LinkProps } from "next/link";
 import { DayPicker, type DateRange, type DayPickerProps } from "react-day-picker";
 import type { CSSProperties } from "react";
-import type { DayPriceDto, PriceLockDto } from "@/types/hotel";
+import type { DayPriceDto } from "@/types/hotel";
 
 interface RoomBookingSidebarProps {
   adultCount: number;
   onAdultCountChange: (rawValue: string) => void;
   checkInDate: string;
   checkOutDate: string;
-  canLockPrice: boolean;
-  myPriceLockLoading: boolean;
-  activePriceLock: PriceLockDto | null;
-  cancellingPriceLock: boolean;
-  lockingPrice: boolean;
-  canLockCurrentRoom: boolean;
-  onCancelPriceLock: () => void;
-  onLockPrice: () => void;
-  roomBasePrice: number;
-  lockMinutesLeft: number;
-  formatDateTime: (value: string) => string;
   hoveredDateKey: string | null;
   hoveredDay: DayPriceDto | undefined;
   isCalendarDayBookable: (day: DayPriceDto | undefined) => boolean;
@@ -50,17 +39,6 @@ export function RoomBookingSidebar({
   onAdultCountChange,
   checkInDate,
   checkOutDate,
-  canLockPrice,
-  myPriceLockLoading,
-  activePriceLock,
-  cancellingPriceLock,
-  lockingPrice,
-  canLockCurrentRoom,
-  onCancelPriceLock,
-  onLockPrice,
-  roomBasePrice,
-  lockMinutesLeft,
-  formatDateTime,
   hoveredDateKey,
   hoveredDay,
   isCalendarDayBookable,
@@ -114,47 +92,6 @@ export function RoomBookingSidebar({
           className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-base font-semibold outline-none ring-slate-900 focus:ring-2"
         />
       </label>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Price lock (30 min)</p>
-        <div className="mt-2 space-y-2.5">
-          {canLockPrice ? (
-            <>
-              {myPriceLockLoading ? <p className="text-xs text-slate-500">Checking your active lock...</p> : null}
-              {activePriceLock ? (
-                <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-                  <p>
-                    Locked price: <span className="font-semibold">₩ {activePriceLock.lockedPrice.toLocaleString()}</span>
-                  </p>
-                  <p>
-                    Expires in <span className="font-semibold">{lockMinutesLeft} min</span> ({formatDateTime(activePriceLock.expiresAt)})
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onCancelPriceLock}
-                    disabled={cancellingPriceLock}
-                    className="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-900 transition hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {cancellingPriceLock ? "Cancelling..." : "Cancel lock"}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onLockPrice}
-                  disabled={!canLockCurrentRoom || lockingPrice}
-                  className="inline-flex w-full items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {lockingPrice ? "Locking..." : `Lock ₩ ${roomBasePrice.toLocaleString()} for 30 min`}
-                </button>
-              )}
-              {!canLockCurrentRoom ? <p className="text-xs text-slate-500">Room is not currently bookable, so lock cannot be created.</p> : null}
-            </>
-          ) : (
-            <p className="text-xs text-slate-500">Login with USER/AGENT/ADMIN to use price lock.</p>
-          )}
-        </div>
-      </section>
 
       <div className="relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-white via-slate-50 to-sky-50/70 p-3.5 shadow-[0_18px_38px_-24px_rgba(15,23,42,0.42)] before:pointer-events-none before:absolute before:inset-[-40%_-20%] before:bg-[radial-gradient(circle_at_25%_30%,rgba(56,189,248,0.2),transparent_38%),radial-gradient(circle_at_75%_70%,rgba(59,130,246,0.16),transparent_34%),conic-gradient(from_160deg_at_50%_50%,rgba(148,163,184,0.08),rgba(59,130,246,0.12),rgba(14,165,233,0.08),rgba(148,163,184,0.08))] before:blur-[18px] after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] after:bg-[length:16px_16px] after:opacity-20">
         <div className="relative z-10">

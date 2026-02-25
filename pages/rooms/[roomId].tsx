@@ -11,7 +11,6 @@ import { RoomOverviewSection, type RoomAmenityCard, type RoomFactCard } from "@/
 import { LiveInterestFab } from "@/components/rooms/live-interest-fab";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
-  CANCEL_PRICE_LOCK_MUTATION,
   GET_HOTEL_CONTEXT_QUERY,
   GET_MY_PRICE_LOCK_QUERY,
   GET_MY_PRICE_LOCKS_QUERY,
@@ -23,8 +22,6 @@ import { getSessionMember } from "@/lib/auth/session";
 import { useRoomLiveViewers } from "@/lib/hooks/use-room-live-viewers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
-  CancelPriceLockMutationData,
-  CancelPriceLockMutationVars,
   DayPriceDto,
   GetHotelContextQueryData,
   GetHotelContextQueryVars,
@@ -53,13 +50,6 @@ const addDays = (dateInput: string, days: number): string => {
 
 const canUsePriceActions = (memberType: string | undefined): boolean =>
   memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
-
-const formatDateTime = (value: string): string => new Date(value).toLocaleString();
-
-const getMinutesUntil = (value: string): number => {
-  const diff = new Date(value).getTime() - Date.now();
-  return Math.max(0, Math.ceil(diff / 60000));
-};
 
 const buildStayDates = (checkInDate: string, checkOutDate: string): string[] => {
   if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
@@ -353,10 +343,6 @@ export default function RoomDetailPage() {
     nextFetchPolicy: "cache-first",
   });
   const [lockPriceMutation, { loading: lockingPrice }] = useMutation<LockPriceMutationData, LockPriceMutationVars>(LOCK_PRICE_MUTATION);
-  const [cancelPriceLockMutation, { loading: cancellingPriceLock }] = useMutation<
-    CancelPriceLockMutationData,
-    CancelPriceLockMutationVars
-  >(CANCEL_PRICE_LOCK_MUTATION);
 
   const { data: hotelData, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
     skip: !isHydrated || !roomHotelId,
@@ -659,7 +645,6 @@ export default function RoomDetailPage() {
   const calendarLoadError = priceCalendarError;
   const calendarLoadErrorMessage = calendarLoadError && visibleWindowCalendar.length === 0 ? getErrorMessage(calendarLoadError) : null;
   const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
-  const lockMinutesLeft = activePriceLock ? getMinutesUntil(activePriceLock.expiresAt) : 0;
   const showBottomLockBar = canLockPrice && canLockCurrentRoom && !myPriceLockLoading && !activePriceLock && !lockingPrice;
   const cheapestDatePrice = cheapestDateKey ? availabilityByDate.get(cheapestDateKey)?.price : undefined;
   const peakDatePrice = peakDateKey ? availabilityByDate.get(peakDateKey)?.price : undefined;
@@ -690,26 +675,6 @@ export default function RoomDetailPage() {
         },
         refetchQueries: [
           { query: GET_MY_PRICE_LOCK_QUERY, variables: { roomId: room._id } },
-          { query: GET_MY_PRICE_LOCKS_QUERY },
-        ],
-        awaitRefetchQueries: true,
-      });
-    } catch (error) {
-      setLockActionError(getErrorMessage(error));
-    }
-  };
-
-  const handleCancelPriceLock = async (): Promise<void> => {
-    if (!canLockPrice || !activePriceLock) {
-      return;
-    }
-
-    setLockActionError(null);
-    try {
-      await cancelPriceLockMutation({
-        variables: { priceLockId: activePriceLock._id },
-        refetchQueries: [
-          { query: GET_MY_PRICE_LOCK_QUERY, variables: { roomId: activePriceLock.roomId } },
           { query: GET_MY_PRICE_LOCKS_QUERY },
         ],
         awaitRefetchQueries: true,
@@ -814,17 +779,6 @@ export default function RoomDetailPage() {
                 onAdultCountChange={handleAdultCountChange}
                 checkInDate={checkInDate}
                 checkOutDate={checkOutDate}
-                canLockPrice={canLockPrice}
-                myPriceLockLoading={myPriceLockLoading}
-                activePriceLock={activePriceLock}
-                cancellingPriceLock={cancellingPriceLock}
-                lockingPrice={lockingPrice}
-                canLockCurrentRoom={canLockCurrentRoom}
-                onCancelPriceLock={() => void handleCancelPriceLock()}
-                onLockPrice={() => void handleLockPrice()}
-                roomBasePrice={room.basePrice}
-                lockMinutesLeft={lockMinutesLeft}
-                formatDateTime={formatDateTime}
                 hoveredDateKey={hoveredDateKey}
                 hoveredDay={hoveredDay}
                 isCalendarDayBookable={isCalendarDayBookable}
