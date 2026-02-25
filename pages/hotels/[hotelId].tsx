@@ -148,6 +148,7 @@ interface HotelDetailPageProps {
 
 export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDetailPageProps) {
   const router = useRouter();
+  const [isHydrated, setIsHydrated] = useState(false);
   const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
   const discoverySectionRef = useRef<HTMLElement | null>(null);
   const locationSectionRef = useRef<HTMLElement | null>(null);
@@ -173,6 +174,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   const canUseLikeActions = canUseMemberActions(memberType);
 
   useEffect(() => {
+    setIsHydrated(true);
     setMember(getSessionMember());
   }, []);
 
@@ -187,7 +189,8 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     nextFetchPolicy: "cache-first",
   });
 
-  const hotel = hotelData?.getHotel ?? initialHotel;
+  const queriedHotel = hotelData?.getHotel ?? null;
+  const hotel = isHydrated ? queriedHotel ?? initialHotel : initialHotel;
   const trendingLocation = hotel?.hotelLocation;
   const {
     data: hotelLikedData,
@@ -286,7 +289,8 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     nextFetchPolicy: "cache-first",
   });
 
-  const rooms = useMemo(() => roomsData?.getRoomsByHotel?.list ?? initialRooms, [initialRooms, roomsData?.getRoomsByHotel?.list]);
+  const queriedRooms = roomsData?.getRoomsByHotel?.list;
+  const rooms = useMemo(() => (isHydrated ? queriedRooms ?? initialRooms : initialRooms), [initialRooms, isHydrated, queriedRooms]);
   const reviews = reviewsData?.getHotelReviews.list ?? [];
   const reviewTotal = reviewsData?.getHotelReviews.metaCounter.total ?? 0;
   const reviewTotalPages = Math.max(1, Math.ceil(reviewTotal / REVIEW_PAGE_SIZE));
