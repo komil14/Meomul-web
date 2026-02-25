@@ -58,14 +58,33 @@ export const useHotelDetailDiscovery = ({
   );
 
   useEffect(() => {
+    setShouldLoadDiscovery(false);
+  }, [hotelId]);
+
+  useEffect(() => {
     if (shouldLoadDiscovery) {
       return;
     }
 
-    const fallbackTimer = window.setTimeout(() => {
-      setShouldLoadDiscovery(true);
-    }, 1500);
+    const activateDiscovery = () => setShouldLoadDiscovery(true);
+    const requestIdle = (
+      window as Window & {
+        requestIdleCallback?: (cb: () => void, options?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+      }
+    ).requestIdleCallback;
 
+    if (typeof requestIdle === "function") {
+      const idleId = requestIdle(activateDiscovery, { timeout: 1500 });
+      return () => {
+        const cancelIdle = (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback;
+        if (typeof cancelIdle === "function") {
+          cancelIdle(idleId);
+        }
+      };
+    }
+
+    const fallbackTimer = window.setTimeout(activateDiscovery, 1500);
     return () => window.clearTimeout(fallbackTimer);
   }, [shouldLoadDiscovery]);
 
@@ -169,6 +188,7 @@ export const useHotelDetailDiscovery = ({
   return {
     discoverySectionRef,
     locationSectionRef,
+    shouldLoadDiscovery,
     shouldLoadMap,
     similarHotels,
     similarLoading,

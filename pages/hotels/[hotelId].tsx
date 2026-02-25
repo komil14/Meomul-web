@@ -67,6 +67,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     galleryImages,
     discoverySectionRef,
     locationSectionRef,
+    shouldLoadDiscovery,
     shouldLoadMap,
     mapEmbedUrl,
     mapUrl,
@@ -80,6 +81,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     recommendedLoading,
     recommendedErrorMessage,
     cancellationPolicyText,
+    reviewsSectionRef,
   } = useHotelDetailPageData({ initialHotel, initialRooms });
 
   if (!hotelId) {
@@ -165,23 +167,25 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
           hotelId={hotelId}
         />
 
-        <HotelReviewsSection
-          reviews={reviews}
-          reviewsLoading={reviewsLoading}
-          reviewsErrorMessage={reviewsErrorMessage}
-          reviewActionErrorMessage={reviewActionError}
-          reviewPage={reviewPage}
-          reviewTotalPages={reviewTotalPages}
-          reviewTotal={reviewTotal}
-          onPrevPage={handlePrevReviewPage}
-          onNextPage={handleNextReviewPage}
-          canGoPrev={canGoPrev}
-          canGoNext={canGoNext}
-          canMarkHelpful={canUseLikeActions}
-          markingHelpfulReviewId={markingHelpfulReviewId}
-          helpfulCountOverrides={helpfulCountOverrides}
-          onMarkHelpful={handleMarkHelpful}
-        />
+        <div ref={reviewsSectionRef}>
+          <HotelReviewsSection
+            reviews={reviews}
+            reviewsLoading={reviewsLoading}
+            reviewsErrorMessage={reviewsErrorMessage}
+            reviewActionErrorMessage={reviewActionError}
+            reviewPage={reviewPage}
+            reviewTotalPages={reviewTotalPages}
+            reviewTotal={reviewTotal}
+            onPrevPage={handlePrevReviewPage}
+            onNextPage={handleNextReviewPage}
+            canGoPrev={canGoPrev}
+            canGoNext={canGoNext}
+            canMarkHelpful={canUseLikeActions}
+            markingHelpfulReviewId={markingHelpfulReviewId}
+            helpfulCountOverrides={helpfulCountOverrides}
+            onMarkHelpful={handleMarkHelpful}
+          />
+        </div>
 
         <HotelLocationSection
           hotel={hotel}
@@ -192,37 +196,51 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
         />
 
         <section ref={discoverySectionRef} className="space-y-6">
-          <HotelListSection
-            title="Similar Hotels"
-            description="Properties with matching location, type, and demand profile."
-            hotels={similarHotels}
-            loading={similarLoading}
-            loadingText="Loading similar hotels..."
-            errorMessage={similarErrorMessage}
-            layout="horizontal"
-          />
+          {shouldLoadDiscovery ? (
+            <>
+              <HotelListSection
+                title="Similar Hotels"
+                description="Properties with matching location, type, and demand profile."
+                hotels={similarHotels}
+                loading={similarLoading}
+                loadingText="Loading similar hotels..."
+                errorMessage={similarErrorMessage}
+                layout="horizontal"
+              />
 
-          <HotelListSection
-            title={`Trending in ${hotel.hotelLocation}`}
-            description="Most active hotels in this location right now."
-            hotels={trendingHotels}
-            loading={trendingLoading}
-            loadingText="Loading location trends..."
-            errorMessage={trendingErrorMessage}
-            layout="horizontal"
-          />
+              <HotelListSection
+                title={`Trending in ${hotel.hotelLocation}`}
+                description="Most active hotels in this location right now."
+                hotels={trendingHotels}
+                loading={trendingLoading}
+                loadingText="Loading location trends..."
+                errorMessage={trendingErrorMessage}
+                layout="horizontal"
+              />
 
-          {canUseRecommendedQuery ? (
-            <HotelListSection
-              title="Recommended for You"
-              description="Personalized suggestions based on your activity."
-              hotels={recommendedHotels}
-              loading={recommendedLoading}
-              loadingText="Loading personalized recommendations..."
-              errorMessage={recommendedErrorMessage}
-              layout="horizontal"
-            />
-          ) : null}
+              {canUseRecommendedQuery ? (
+                <HotelListSection
+                  title="Recommended for You"
+                  description="Personalized suggestions based on your activity."
+                  hotels={recommendedHotels}
+                  loading={recommendedLoading}
+                  loadingText="Loading personalized recommendations..."
+                  errorMessage={recommendedErrorMessage}
+                  layout="horizontal"
+                />
+              ) : null}
+            </>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-sm font-semibold text-slate-900">Preparing recommendations...</p>
+              <p className="mt-1 text-xs text-slate-600">Discovery sections will load as you scroll.</p>
+              <div className="mt-4 flex gap-3 overflow-hidden">
+                <div className="h-44 min-w-[16rem] flex-1 animate-pulse rounded-xl bg-slate-100" />
+                <div className="hidden h-44 min-w-[16rem] flex-1 animate-pulse rounded-xl bg-slate-100 sm:block" />
+                <div className="hidden h-44 min-w-[16rem] flex-1 animate-pulse rounded-xl bg-slate-100 lg:block" />
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </main>

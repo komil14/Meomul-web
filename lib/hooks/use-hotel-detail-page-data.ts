@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GET_HOTEL_QUERY, GET_HOTEL_REVIEWS_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import {
@@ -40,6 +40,8 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   const [isHydrated, setIsHydrated] = useState(false);
   const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
   const [reviewPage, setReviewPage] = useState(1);
+  const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
+  const reviewsSectionRef = useRef<HTMLDivElement | null>(null);
 
   const hotelId = useMemo(() => {
     if (typeof router.query.hotelId === "string") {
@@ -57,6 +59,47 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     setIsHydrated(true);
     setMember(getSessionMember());
   }, []);
+
+  useEffect(() => {
+    setReviewPage(1);
+    setShouldLoadReviews(false);
+  }, [hotelId]);
+
+  useEffect(() => {
+    if (shouldLoadReviews) {
+      return;
+    }
+
+    const fallbackTimer = window.setTimeout(() => {
+      setShouldLoadReviews(true);
+    }, 1200);
+
+    return () => window.clearTimeout(fallbackTimer);
+  }, [shouldLoadReviews]);
+
+  useEffect(() => {
+    if (shouldLoadReviews) {
+      return;
+    }
+
+    const target = reviewsSectionRef.current;
+    if (!target || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoadReviews(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "320px 0px" },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [shouldLoadReviews]);
 
   const hotelQueryVariables = useMemo<GetHotelQueryVars>(() => ({ hotelId }), [hotelId]);
 
@@ -114,12 +157,12 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
 
   const {
     data: reviewsData,
-    loading: reviewsLoading,
+    loading: reviewsQueryLoading,
     error: reviewsError,
   } = useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(GET_HOTEL_REVIEWS_QUERY, {
-    skip: !hotelId,
+    skip: !hotelId || !shouldLoadReviews,
     variables: reviewsQueryVariables,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
   });
 
@@ -142,6 +185,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   const {
     discoverySectionRef,
     locationSectionRef,
+    shouldLoadDiscovery,
     shouldLoadMap,
     similarHotels,
     similarLoading,
@@ -161,9 +205,10 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   const queriedRooms = roomsData?.getRoomsByHotel?.list;
   const rooms = useMemo(() => (isHydrated ? queriedRooms ?? initialRooms : initialRooms), [initialRooms, isHydrated, queriedRooms]);
 
-  const reviews = reviewsData?.getHotelReviews.list ?? [];
-  const reviewTotal = reviewsData?.getHotelReviews.metaCounter.total ?? 0;
+  const reviews = shouldLoadReviews ? reviewsData?.getHotelReviews.list ?? [] : [];
+  const reviewTotal = shouldLoadReviews ? reviewsData?.getHotelReviews.metaCounter.total ?? 0 : 0;
   const reviewTotalPages = Math.max(1, Math.ceil(reviewTotal / REVIEW_PAGE_SIZE));
+  const reviewsLoading = !shouldLoadReviews || reviewsQueryLoading;
   const canGoPrev = reviewPage > 1;
   const canGoNext = reviewPage < reviewTotalPages;
 
@@ -260,6 +305,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     galleryImages,
     discoverySectionRef,
     locationSectionRef,
+    shouldLoadDiscovery,
     shouldLoadMap,
     mapEmbedUrl: hotel ? getMapEmbedLink(hotel) : "",
     mapUrl: hotel ? getMapLink(hotel) : "",
@@ -273,5 +319,6 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     recommendedLoading,
     recommendedErrorMessage,
     cancellationPolicyText: hotel ? getPolicyText(hotel.cancellationPolicy) : "Moderate cancellation",
+    reviewsSectionRef,
   };
 };
