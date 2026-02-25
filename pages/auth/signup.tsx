@@ -1,9 +1,10 @@
 import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { SIGNUP_MEMBER_MUTATION } from "@/graphql/auth.gql";
+import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { saveAuthSession } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { AuthMember, SignupMemberMutationVars } from "@/types/auth";
@@ -21,6 +22,13 @@ const SignupPage: NextPageWithAuth = () => {
   const [memberPassword, setMemberPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorText, setErrorText] = useState<string | null>(null);
+  const redirectTarget = useMemo(() => {
+    if (typeof router.query.next !== "string") {
+      return "/dashboard";
+    }
+
+    return router.query.next.startsWith("/") ? router.query.next : "/dashboard";
+  }, [router.query.next]);
 
   const [signupMember, { loading }] = useMutation<SignupMemberMutationData, SignupMemberMutationVars>(
     SIGNUP_MEMBER_MUTATION,
@@ -56,7 +64,8 @@ const SignupPage: NextPageWithAuth = () => {
       }
 
       saveAuthSession(authMember);
-      await router.push("/dashboard");
+      const nextRoute = await resolvePostAuthRedirect(authMember, redirectTarget);
+      await router.push(nextRoute);
     } catch (error) {
       setErrorText(getErrorMessage(error));
     }
