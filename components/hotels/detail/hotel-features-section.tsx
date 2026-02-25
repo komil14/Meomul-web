@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 interface HotelFeaturesSectionProps {
   fromPrice: number;
   cancellationPolicyText: string;
@@ -6,7 +8,7 @@ interface HotelFeaturesSectionProps {
   activeAmenities: string[];
 }
 
-export function HotelFeaturesSection({
+export const HotelFeaturesSection = memo(function HotelFeaturesSection({
   fromPrice,
   cancellationPolicyText,
   address,
@@ -54,4 +56,4 @@ export function HotelFeaturesSection({
       ) : null}
     </section>
   );
-}
+});

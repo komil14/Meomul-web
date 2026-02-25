@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { memo, type RefObject } from "react";
 import type { HotelDetailItem } from "@/types/hotel";
 
 interface HotelLocationSectionProps {
@@ -9,7 +9,13 @@ interface HotelLocationSectionProps {
   mapUrl: string;
 }
 
-export function HotelLocationSection({ hotel, mapSectionRef, shouldLoadMap, mapEmbedUrl, mapUrl }: HotelLocationSectionProps) {
+export const HotelLocationSection = memo(function HotelLocationSection({
+  hotel,
+  mapSectionRef,
+  shouldLoadMap,
+  mapEmbedUrl,
+  mapUrl,
+}: HotelLocationSectionProps) {
   return (
     <section id="location" ref={mapSectionRef} className="space-y-4">
       <header>
@@ -58,4 +64,4 @@ export function HotelLocationSection({ hotel, mapSectionRef, shouldLoadMap, mapE
       </div>
     </section>
   );
-}
+});

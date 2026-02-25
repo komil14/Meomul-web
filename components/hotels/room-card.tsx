@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Link from "next/link";
 import type { RoomListItem } from "@/types/hotel";
 
@@ -6,7 +7,7 @@ interface RoomCardProps {
   hotelId?: string;
 }
 
-export function RoomCard({ room, hotelId }: RoomCardProps) {
+export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps) {
   const coverImage = room.roomImages[0];
 
   return (
@@ -49,4 +50,4 @@ export function RoomCard({ room, hotelId }: RoomCardProps) {
       </div>
     </article>
   );
-}
+});

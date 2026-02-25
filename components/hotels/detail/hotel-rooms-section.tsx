@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { RoomCard } from "@/components/hotels/room-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import type { RoomListItem } from "@/types/hotel";
@@ -9,7 +10,12 @@ interface HotelRoomsSectionProps {
   hotelId: string;
 }
 
-export function HotelRoomsSection({ rooms, roomsLoading, roomsErrorMessage, hotelId }: HotelRoomsSectionProps) {
+export const HotelRoomsSection = memo(function HotelRoomsSection({
+  rooms,
+  roomsLoading,
+  roomsErrorMessage,
+  hotelId,
+}: HotelRoomsSectionProps) {
   return (
     <section id="rooms" className="space-y-4">
       <header>
@@ -38,4 +44,4 @@ export function HotelRoomsSection({ rooms, roomsLoading, roomsErrorMessage, hote
       ) : null}
     </section>
   );
-}
+});

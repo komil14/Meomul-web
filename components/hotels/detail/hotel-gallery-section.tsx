@@ -1,10 +1,11 @@
+import { memo } from "react";
 import Image from "next/image";
 
 interface HotelGallerySectionProps {
   images: string[];
 }
 
-export function HotelGallerySection({ images }: HotelGallerySectionProps) {
+export const HotelGallerySection = memo(function HotelGallerySection({ images }: HotelGallerySectionProps) {
   return (
     <section id="gallery" className="space-y-4">
       <header>
@@ -39,4 +40,4 @@ export function HotelGallerySection({ images }: HotelGallerySectionProps) {
       )}
     </section>
   );
-}
+});

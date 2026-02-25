@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import type { ReviewDto } from "@/types/hotel";
 
@@ -28,7 +29,7 @@ const formatDate = (value: string): string => {
 };
 const asPercent = (rating: number): string => `${Math.round((rating / 5) * 100)}%`;
 
-export function HotelReviewsSection({
+export const HotelReviewsSection = memo(function HotelReviewsSection({
   reviews,
   reviewsLoading,
   reviewsErrorMessage,
@@ -145,4 +146,4 @@ export function HotelReviewsSection({
       ) : null}
     </section>
   );
-}
+});

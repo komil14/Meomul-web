@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import type { HotelListItem } from "@/types/hotel";
@@ -12,7 +13,7 @@ interface HotelListSectionProps {
   layout?: "grid" | "horizontal";
 }
 
-export function HotelListSection({
+export const HotelListSection = memo(function HotelListSection({
   title,
   description,
   hotels,
@@ -53,4 +54,4 @@ export function HotelListSection({
       ) : null}
     </div>
   );
-}
+});

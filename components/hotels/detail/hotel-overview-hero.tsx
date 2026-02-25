@@ -1,3 +1,4 @@
+import { memo } from "react";
 import Image from "next/image";
 import type { HotelDetailItem } from "@/types/hotel";
 
@@ -16,7 +17,7 @@ interface HotelOverviewHeroProps {
   onToggleLike: () => void;
 }
 
-export function HotelOverviewHero({
+export const HotelOverviewHero = memo(function HotelOverviewHero({
   hotel,
   heroImage,
   secondaryImage,
@@ -117,4 +118,4 @@ export function HotelOverviewHero({
       </div>
     </section>
   );
-}
+});
