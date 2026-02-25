@@ -7,6 +7,7 @@ import { PriceLockFab } from "@/components/layout/price-lock-fab";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
 
 const links = [
@@ -33,20 +34,38 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const router = useRouter();
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
+  const isPageVisible = usePageVisible();
   const canTrackUnread = Boolean(member);
+  const canPollUnread = canTrackUnread && isPageVisible;
   const previousUnreadRef = useRef<number | null>(null);
+  const hasPolledOnVisibleRef = useRef(false);
 
-  const { data: unreadData } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
-    skip: !canTrackUnread,
-    fetchPolicy: "network-only",
-    pollInterval: 10000,
+  const { data: unreadData, refetch: refetchUnread } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
+    skip: !canPollUnread,
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+    pollInterval: 30000,
   });
 
   const unreadCount = unreadData?.getMyUnreadChatCount ?? 0;
 
   useEffect(() => {
+    if (!canPollUnread) {
+      hasPolledOnVisibleRef.current = false;
+      return;
+    }
+    if (!hasPolledOnVisibleRef.current) {
+      hasPolledOnVisibleRef.current = true;
+      void refetchUnread();
+    }
+  }, [canPollUnread, refetchUnread]);
+
+  useEffect(() => {
     if (!canTrackUnread) {
       previousUnreadRef.current = null;
+      return;
+    }
+    if (!canPollUnread) {
       return;
     }
 
@@ -57,7 +76,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
     }
 
     previousUnreadRef.current = unreadCount;
-  }, [canTrackUnread, router.pathname, toast, unreadCount]);
+  }, [canPollUnread, canTrackUnread, router.pathname, toast, unreadCount]);
 
   return (
     <div className="min-h-screen">

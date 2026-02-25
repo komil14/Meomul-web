@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { DayButton as DefaultDayButton, DayPicker, getDefaultClassNames, type DateRange, type DayButtonProps } from "react-day-picker";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
@@ -436,6 +436,7 @@ export default function RoomDetailPage() {
   const [calendarMonth, setCalendarMonth] = useState(todayMonth);
   const [calendarByMonth, setCalendarByMonth] = useState<Record<string, DayPriceDto[]>>({});
   const [hoveredDateKey, setHoveredDateKey] = useState<string | null>(null);
+  const lastCalendarRefetchAtRef = useRef(0);
 
   const roomId = useMemo(() => {
     if (typeof router.query.roomId === "string") {
@@ -475,7 +476,6 @@ export default function RoomDetailPage() {
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
     notifyOnNetworkStatusChange: true,
-    pollInterval: 60000,
   });
 
   const {
@@ -577,6 +577,11 @@ export default function RoomDetailPage() {
       if (document.visibilityState !== "visible") {
         return;
       }
+      const nowMs = Date.now();
+      if (nowMs - lastCalendarRefetchAtRef.current < 1000) {
+        return;
+      }
+      lastCalendarRefetchAtRef.current = nowMs;
 
       void refetchPriceCalendar({
         input: {

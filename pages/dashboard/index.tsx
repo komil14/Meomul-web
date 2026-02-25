@@ -94,8 +94,8 @@ const DashboardPage: NextPageWithAuth = () => {
     error: unreadChatError,
   } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
     skip: !member,
-    fetchPolicy: "network-only",
-    pollInterval: 10000,
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
   });
 
   const logout = async () => {

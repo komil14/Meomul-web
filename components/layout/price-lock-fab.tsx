@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CANCEL_PRICE_LOCK_MUTATION, GET_MY_PRICE_LOCK_QUERY, GET_MY_PRICE_LOCKS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   CancelPriceLockMutationData,
@@ -28,14 +29,14 @@ export function PriceLockFab() {
   const [nowMs, setNowMs] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const isPageVisible = usePageVisible();
   const member = useMemo(() => (isHydrated ? getSessionMember() : null), [isHydrated]);
   const canUse = canUsePriceLock(member?.memberType);
 
-  const { data, loading } = useQuery<GetMyPriceLocksQueryData>(GET_MY_PRICE_LOCKS_QUERY, {
-    skip: !isHydrated || !canUse,
+  const { data, loading, startPolling, stopPolling, refetch } = useQuery<GetMyPriceLocksQueryData>(GET_MY_PRICE_LOCKS_QUERY, {
+    skip: !isHydrated || !canUse || !isPageVisible,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
-    pollInterval: 15000,
   });
   const [cancelPriceLockMutation] = useMutation<CancelPriceLockMutationData, CancelPriceLockMutationVars>(CANCEL_PRICE_LOCK_MUTATION);
 
@@ -45,14 +46,44 @@ export function PriceLockFab() {
   }, []);
 
   useEffect(() => {
-    if (!isHydrated || !canUse) {
+    if (!isHydrated || !canUse || !isPageVisible) {
       return;
     }
+
+    void refetch();
+  }, [canUse, isHydrated, isPageVisible, refetch]);
+
+  const hasUnexpiredLocks = useMemo(() => {
+    const locks = data?.getMyPriceLocks ?? [];
+    const currentNowMs = Date.now();
+    return locks.some((lock) => getRemainingSeconds(lock.expiresAt, currentNowMs) > 0);
+  }, [data?.getMyPriceLocks]);
+
+  useEffect(() => {
+    if (!isHydrated || !canUse || !isPageVisible) {
+      stopPolling();
+      return;
+    }
+
+    const intervalMs = isOpen || hasUnexpiredLocks ? 15000 : 60000;
+    startPolling(intervalMs);
+    return () => stopPolling();
+  }, [canUse, hasUnexpiredLocks, isHydrated, isOpen, isPageVisible, startPolling, stopPolling]);
+
+  useEffect(() => {
+    if (!isHydrated || !canUse || !isPageVisible) {
+      return;
+    }
+    if (!isOpen && !hasUnexpiredLocks) {
+      setNowMs(Date.now());
+      return;
+    }
+
     const timer = window.setInterval(() => {
       setNowMs(Date.now());
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [canUse, isHydrated]);
+  }, [canUse, hasUnexpiredLocks, isHydrated, isOpen, isPageVisible]);
 
   const activeLocks = useMemo(() => {
     const locks = data?.getMyPriceLocks ?? [];
