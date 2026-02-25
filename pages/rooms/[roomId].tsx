@@ -2,11 +2,11 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import type { DetailIconName } from "@/components/rooms/detail/detail-icon";
 import { PriceLockReadyBar } from "@/components/rooms/detail/price-lock-ready-bar";
+import { getRoomPresentation } from "@/components/rooms/detail/room-presenters";
 import { RoomBookingSidebar } from "@/components/rooms/detail/room-booking-sidebar";
-import { RoomHeroSection, type RoomHeroHighlight } from "@/components/rooms/detail/room-hero-section";
-import { RoomOverviewSection, type RoomAmenityCard, type RoomFactCard } from "@/components/rooms/detail/room-overview-section";
+import { RoomHeroSection } from "@/components/rooms/detail/room-hero-section";
+import { RoomOverviewSection } from "@/components/rooms/detail/room-overview-section";
 import { LiveInterestFab } from "@/components/rooms/live-interest-fab";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
@@ -20,13 +20,7 @@ import {
 import { getSessionMember } from "@/lib/auth/session";
 import { useRoomBookingState } from "@/lib/hooks/use-room-booking-state";
 import { useRoomLiveViewers } from "@/lib/hooks/use-room-live-viewers";
-import {
-  formatAmenityLabel,
-  formatDateInput,
-  formatEnumLabel,
-  formatIsoDate,
-  isCalendarDayBookable,
-} from "@/lib/rooms/booking";
+import { formatDateInput, formatEnumLabel, isCalendarDayBookable } from "@/lib/rooms/booking";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   GetHotelContextQueryData,
@@ -72,58 +66,6 @@ const buildBookingHref = (
     pathname: "/bookings/new",
     query,
   };
-};
-
-const resolveAmenityIcon = (amenity: string): DetailIconName => {
-  const value = amenity.toLowerCase();
-  if (value.includes("wifi") || value.includes("internet")) return "wifi";
-  if (value.includes("restaurant") || value.includes("breakfast") || value.includes("kitchen") || value.includes("coffee")) return "food";
-  if (value.includes("service") || value.includes("clean") || value.includes("laundry") || value.includes("room")) return "service";
-  if (value.includes("access") || value.includes("wheelchair") || value.includes("elevator") || value.includes("bathroom")) return "access";
-  if (value.includes("parking") || value.includes("shuttle") || value.includes("charging")) return "parking";
-  if (value.includes("tv") || value.includes("stream") || value.includes("spa") || value.includes("pool")) return "entertainment";
-  return "default";
-};
-type AmenityTone = "sky" | "emerald" | "amber" | "violet" | "rose" | "slate";
-const resolveAmenityTone = (icon: DetailIconName): AmenityTone => {
-  if (icon === "wifi" || icon === "access") return "sky";
-  if (icon === "service" || icon === "default") return "emerald";
-  if (icon === "food" || icon === "surcharge") return "amber";
-  if (icon === "entertainment" || icon === "view") return "violet";
-  if (icon === "clock" || icon === "eyes") return "rose";
-  return "slate";
-};
-const amenityToneStyles: Record<AmenityTone, { card: string; icon: string; badge: string }> = {
-  sky: {
-    card: "border-sky-200/80 bg-gradient-to-br from-sky-50 to-cyan-50",
-    icon: "border-sky-200 bg-white text-sky-700",
-    badge: "border-sky-300 bg-white text-sky-700",
-  },
-  emerald: {
-    card: "border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-lime-50",
-    icon: "border-emerald-200 bg-white text-emerald-700",
-    badge: "border-emerald-300 bg-white text-emerald-700",
-  },
-  amber: {
-    card: "border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50",
-    icon: "border-amber-200 bg-white text-amber-700",
-    badge: "border-amber-300 bg-white text-amber-700",
-  },
-  violet: {
-    card: "border-violet-200/80 bg-gradient-to-br from-violet-50 to-fuchsia-50",
-    icon: "border-violet-200 bg-white text-violet-700",
-    badge: "border-violet-300 bg-white text-violet-700",
-  },
-  rose: {
-    card: "border-rose-200/80 bg-gradient-to-br from-rose-50 to-pink-50",
-    icon: "border-rose-200 bg-white text-rose-700",
-    badge: "border-rose-300 bg-white text-rose-700",
-  },
-  slate: {
-    card: "border-slate-200/80 bg-gradient-to-br from-slate-50 to-white",
-    icon: "border-slate-200 bg-white text-slate-700",
-    badge: "border-slate-300 bg-white text-slate-700",
-  },
 };
 
 export default function RoomDetailPage() {
@@ -288,6 +230,10 @@ export default function RoomDetailPage() {
   const continueBookingHref = canContinueBooking && room
     ? buildBookingHref(roomHotelId, room._id, checkInDate, checkOutDate, adultCount, childCount, roomQuantity)
     : undefined;
+  const { roomTypeLabel, viewTypeLabel, roomTypeLine, roomFactCards, roomHeroHighlights, roomAmenityCards } = useMemo(
+    () => getRoomPresentation(room),
+    [room],
+  );
 
   const handleLockPrice = async (): Promise<void> => {
     if (!canLockPrice || !room) {
@@ -313,49 +259,6 @@ export default function RoomDetailPage() {
       setLockActionError(getErrorMessage(error));
     }
   };
-  const roomFactCards = useMemo<RoomFactCard[]>(
-    () =>
-      room
-        ? [
-            { label: "View Option", value: `${formatEnumLabel(room.viewType)} View`, icon: "view" },
-            { label: "Status", value: formatEnumLabel(room.roomStatus), icon: "status" },
-            { label: "Capacity", value: `${room.maxOccupancy} guests`, icon: "capacity" },
-            { label: "Bed Setup", value: `${room.bedCount} x ${formatEnumLabel(room.bedType)}`, icon: "bed" },
-            { label: "Room Size", value: `${room.roomSize} m²`, icon: "size" },
-            { label: "Inventory", value: `${room.totalRooms} total · date-based`, icon: "inventory" },
-            { label: "Weekend Add-on", value: `₩ ${room.weekendSurcharge.toLocaleString()}`, icon: "surcharge" },
-            { label: "Updated", value: formatIsoDate(room.updatedAt), icon: "clock" },
-          ]
-        : [],
-    [room],
-  );
-  const roomHeroHighlights = useMemo<RoomHeroHighlight[]>(
-    () =>
-      room
-        ? [
-            { label: "Guests", value: `${room.maxOccupancy}`, icon: "capacity" },
-            { label: "Size", value: `${room.roomSize}m²`, icon: "size" },
-            { label: "Beds", value: `${room.bedCount}`, icon: "bed" },
-            { label: "Units", value: `${room.totalRooms}`, icon: "inventory" },
-          ]
-        : [],
-    [room],
-  );
-  const roomAmenityCards = useMemo<RoomAmenityCard[]>(
-    () =>
-      (room?.roomAmenities ?? []).map((amenity) => {
-        const icon = resolveAmenityIcon(amenity);
-        const tone = resolveAmenityTone(icon);
-        return {
-          amenity,
-          label: formatAmenityLabel(amenity),
-          icon,
-          styles: amenityToneStyles[tone],
-        };
-      }),
-    [room?.roomAmenities],
-  );
-
   return (
     <main className={showBottomLockBar ? "space-y-6 pb-28 sm:pb-32" : "space-y-6"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -382,8 +285,8 @@ export default function RoomDetailPage() {
           <RoomHeroSection
             coverImage={coverImage}
             galleryImages={galleryImages}
-            roomTypeLabel={formatEnumLabel(room.roomType)}
-            viewTypeLabel={formatEnumLabel(room.viewType)}
+            roomTypeLabel={roomTypeLabel}
+            viewTypeLabel={viewTypeLabel}
             roomNumber={room.roomNumber}
             roomName={room.roomName}
             roomDesc={room.roomDesc}
@@ -396,7 +299,7 @@ export default function RoomDetailPage() {
             <div className="pointer-events-none absolute -right-28 top-16 h-52 w-52 rounded-full bg-sky-100/80 blur-3xl" />
             <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)]">
               <RoomOverviewSection
-                roomTypeLine={`${formatEnumLabel(room.roomType)}${room.roomNumber ? ` · #${room.roomNumber}` : ""}`}
+                roomTypeLine={roomTypeLine}
                 roomName={room.roomName}
                 hotelTitle={hotel?.hotelTitle}
                 hotelCheckInTime={hotel?.checkInTime}
