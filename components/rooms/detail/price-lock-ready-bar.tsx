@@ -1,10 +1,12 @@
+import { memo } from "react";
+
 interface PriceLockReadyBarProps {
   basePrice: number;
   locking: boolean;
   onLockPrice: () => void;
 }
 
-export function PriceLockReadyBar({ basePrice, locking, onLockPrice }: PriceLockReadyBarProps) {
+export const PriceLockReadyBar = memo(function PriceLockReadyBar({ basePrice, locking, onLockPrice }: PriceLockReadyBarProps) {
   return (
     <section className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-12px_28px_-18px_rgba(15,23,42,0.65)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3">
@@ -23,4 +25,4 @@ export function PriceLockReadyBar({ basePrice, locking, onLockPrice }: PriceLock
       </div>
     </section>
   );
-}
+});

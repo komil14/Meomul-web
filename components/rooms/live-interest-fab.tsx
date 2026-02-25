@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 
 interface LiveInterestFabProps {
   viewerCount: number;
@@ -54,7 +54,7 @@ const getLiveTone = (viewerCount: number, connected: boolean, availableRooms: nu
   };
 };
 
-export function LiveInterestFab({ viewerCount, connected, availableRooms }: LiveInterestFabProps) {
+export const LiveInterestFab = memo(function LiveInterestFab({ viewerCount, connected, availableRooms }: LiveInterestFabProps) {
   const safeCount = Math.max(0, Math.trunc(viewerCount));
   const displayCount = safeCount > 99 ? "99+" : String(safeCount);
   const tone = useMemo(() => getLiveTone(safeCount, connected, availableRooms), [availableRooms, connected, safeCount]);
@@ -104,4 +104,4 @@ export function LiveInterestFab({ viewerCount, connected, availableRooms }: Live
       </div>
     </div>
   );
-}
+});

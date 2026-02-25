@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { DetailIcon, type DetailIconName } from "@/components/rooms/detail/detail-icon";
 import type { RoomDetailItem } from "@/types/hotel";
 
@@ -20,7 +21,7 @@ interface RoomHeroSectionProps {
   highlights: RoomHeroHighlight[];
 }
 
-export function RoomHeroSection({
+export const RoomHeroSection = memo(function RoomHeroSection({
   coverImage,
   galleryImages,
   roomTypeLabel,
@@ -107,4 +108,4 @@ export function RoomHeroSection({
       ) : null}
     </section>
   );
-}
+});

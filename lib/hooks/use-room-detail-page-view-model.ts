@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import { getRoomPresentation } from "@/components/rooms/detail/room-presenters";
 import { useRoomBookingState } from "@/lib/hooks/use-room-booking-state";
 import { useRoomDetailData } from "@/lib/hooks/use-room-detail-data";
-import { useRoomLiveViewers } from "@/lib/hooks/use-room-live-viewers";
 import { useRoomPriceLock } from "@/lib/hooks/use-room-price-lock";
 import { getErrorMessage } from "@/lib/utils/error";
 
@@ -39,7 +38,6 @@ const buildBookingHref = (
 
 export const useRoomDetailPageViewModel = () => {
   const detail = useRoomDetailData();
-  const live = useRoomLiveViewers({ roomId: detail.roomId });
   const booking = useRoomBookingState({
     roomId: detail.roomId,
     room: detail.room,
@@ -87,7 +85,6 @@ export const useRoomDetailPageViewModel = () => {
     ...detail,
     ...booking,
     ...priceLock,
-    ...live,
     ...presentation,
     roomErrorMessage,
     hotelErrorMessage,

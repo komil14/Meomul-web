@@ -1,6 +1,8 @@
 import Link, { type LinkProps } from "next/link";
-import { DayPicker, type DateRange, type DayPickerProps } from "react-day-picker";
-import type { CSSProperties } from "react";
+import { memo, useMemo, useState, type CSSProperties } from "react";
+import { DayPicker, type DateRange, type DayButtonProps, type DayPickerProps } from "react-day-picker";
+import { PriceDayButton } from "@/components/rooms/detail/price-day-button";
+import { formatDateInput, isCalendarDayBookable } from "@/lib/rooms/booking";
 import type { DayPriceDto } from "@/types/hotel";
 
 interface RoomBookingSidebarProps {
@@ -14,9 +16,7 @@ interface RoomBookingSidebarProps {
   onRoomQuantityChange: (rawValue: string) => void;
   checkInDate: string;
   checkOutDate: string;
-  hoveredDateKey: string | null;
-  hoveredDay: DayPriceDto | undefined;
-  isCalendarDayBookable: (day: DayPriceDto | undefined) => boolean;
+  availabilityByDate: Map<string, DayPriceDto>;
   calendarMonthKey: string;
   selectedRange: DateRange | undefined;
   calendarMonthDate: Date;
@@ -24,7 +24,6 @@ interface RoomBookingSidebarProps {
   onCalendarMonthChange: (month: Date) => void;
   onCalendarDayClick: (day: Date | undefined) => void;
   disabledDays: (date: Date) => boolean;
-  dayPickerComponents: DayPickerProps["components"];
   dayPickerClassNames: DayPickerProps["classNames"];
   dayPickerStyle: CSSProperties;
   calendarLoadInProgress: boolean;
@@ -40,7 +39,7 @@ interface RoomBookingSidebarProps {
   continueBookingHref?: LinkProps["href"];
 }
 
-export function RoomBookingSidebar({
+export const RoomBookingSidebar = memo(function RoomBookingSidebar({
   effectiveNightlyRate,
   effectiveNightlyRateSourceLabel,
   adultCount,
@@ -51,9 +50,7 @@ export function RoomBookingSidebar({
   onRoomQuantityChange,
   checkInDate,
   checkOutDate,
-  hoveredDateKey,
-  hoveredDay,
-  isCalendarDayBookable,
+  availabilityByDate,
   calendarMonthKey,
   selectedRange,
   calendarMonthDate,
@@ -61,7 +58,6 @@ export function RoomBookingSidebar({
   onCalendarMonthChange,
   onCalendarDayClick,
   disabledDays,
-  dayPickerComponents,
   dayPickerClassNames,
   dayPickerStyle,
   calendarLoadInProgress,
@@ -76,6 +72,22 @@ export function RoomBookingSidebar({
   canContinueBooking,
   continueBookingHref,
 }: RoomBookingSidebarProps) {
+  const [hoveredDateKey, setHoveredDateKey] = useState<string | null>(null);
+
+  const hoveredDay = useMemo(
+    () => (hoveredDateKey ? availabilityByDate.get(hoveredDateKey) : undefined),
+    [availabilityByDate, hoveredDateKey],
+  );
+
+  const dayPickerComponents = useMemo<DayPickerProps["components"]>(
+    () => ({
+      DayButton: (props: DayButtonProps) => (
+        <PriceDayButton {...props} price={availabilityByDate.get(formatDateInput(props.day.date))} onHover={setHoveredDateKey} />
+      ),
+    }),
+    [availabilityByDate],
+  );
+
   return (
     <aside className="order-1 self-start space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur lg:order-2">
       <div>
@@ -228,4 +240,4 @@ export function RoomBookingSidebar({
       )}
     </aside>
   );
-}
+});

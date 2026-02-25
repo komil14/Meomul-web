@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GET_MY_PRICE_LOCK_QUERY, GET_MY_PRICE_LOCKS_QUERY, LOCK_PRICE_MUTATION } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -47,6 +47,12 @@ export const useRoomPriceLock = ({
   const [lockActionError, setLockActionError] = useState<string | null>(null);
   const canLockPrice = canUsePriceActions(memberType);
   const canLockCurrentRoom = Boolean(room && room.roomStatus === "AVAILABLE");
+  const priceLockQueryVariables = useMemo<GetMyPriceLockQueryVars>(
+    () => ({
+      roomId,
+    }),
+    [roomId],
+  );
 
   const {
     data: myPriceLockData,
@@ -54,9 +60,7 @@ export const useRoomPriceLock = ({
     error: myPriceLockError,
   } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
     skip: !isHydrated || !roomId || !canLockPrice,
-    variables: {
-      roomId,
-    },
+    variables: priceLockQueryVariables,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
   });
@@ -79,7 +83,7 @@ export const useRoomPriceLock = ({
       : "Base rate (before taxes/fees).";
   const showBottomLockBar = canLockPrice && canLockCurrentRoom && !myPriceLockLoading && !activePriceLock && !lockingPrice;
 
-  const onLockPrice = async (): Promise<void> => {
+  const onLockPrice = useCallback(async (): Promise<void> => {
     if (!canLockPrice || !room) {
       return;
     }
@@ -102,7 +106,7 @@ export const useRoomPriceLock = ({
     } catch (error) {
       setLockActionError(getErrorMessage(error));
     }
-  };
+  }, [canLockPrice, lockPriceMutation, lockRequestPrice, room]);
 
   return {
     canLockPrice,

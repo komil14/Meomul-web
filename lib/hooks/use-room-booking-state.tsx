@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { getDefaultClassNames, type DateRange, type DayButtonProps, type DayPickerProps } from "react-day-picker";
-import { PriceDayButton } from "@/components/rooms/detail/price-day-button";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { getDefaultClassNames, type DateRange, type DayPickerProps } from "react-day-picker";
 import {
   buildStayDates,
   formatDateInput,
@@ -34,8 +33,6 @@ interface UseRoomBookingStateResult {
   adultCount: number;
   childCount: number;
   roomQuantity: number;
-  hoveredDateKey: string | null;
-  hoveredDay: DayPriceDto | undefined;
   availabilityByDate: Map<string, DayPriceDto>;
   visibleWindowCalendar: DayPriceDto[];
   selectedStayMinAvailable: number | null;
@@ -49,7 +46,6 @@ interface UseRoomBookingStateResult {
   minCalendarMonthDate: Date;
   dayPickerClassNames: DayPickerProps["classNames"];
   dayPickerStyle: CSSProperties;
-  dayPickerComponents: DayPickerProps["components"];
   disabledDays: (date: Date) => boolean;
   onAdultCountChange: (rawValue: string) => void;
   onChildCountChange: (rawValue: string) => void;
@@ -76,7 +72,6 @@ export const useRoomBookingState = ({
   const [childCount, setChildCount] = useState(0);
   const [roomQuantity, setRoomQuantity] = useState(1);
   const [calendarByMonth, setCalendarByMonth] = useState<Record<string, DayPriceDto[]>>({});
-  const [hoveredDateKey, setHoveredDateKey] = useState<string | null>(null);
   const lastCalendarRefetchAtRef = useRef(0);
 
   useEffect(() => {
@@ -90,7 +85,6 @@ export const useRoomBookingState = ({
     setCheckOutDate("");
     setChildCount(0);
     setRoomQuantity(1);
-    setHoveredDateKey(null);
   }, [roomId, setCalendarMonth, todayMonth]);
 
   useEffect(() => {
@@ -155,7 +149,6 @@ export const useRoomBookingState = ({
   }, [calendarByMonth]);
 
   const visibleWindowCalendar = useMemo(() => calendarByMonth[calendarMonth] ?? [], [calendarByMonth, calendarMonth]);
-  const hoveredDay = useMemo(() => (hoveredDateKey ? availabilityByDate.get(hoveredDateKey) : undefined), [availabilityByDate, hoveredDateKey]);
 
   useEffect(() => {
     if (!checkInDate) {
@@ -354,15 +347,6 @@ export const useRoomBookingState = ({
     [],
   );
 
-  const dayPickerComponents = useMemo(
-    () => ({
-      DayButton: (props: DayButtonProps) => (
-        <PriceDayButton {...props} price={availabilityByDate.get(formatDateInput(props.day.date))} onHover={setHoveredDateKey} />
-      ),
-    }),
-    [availabilityByDate],
-  );
-
   const disabledDays = useMemo(
     () => (date: Date): boolean => {
       const dateKey = formatDateInput(date);
@@ -379,93 +363,111 @@ export const useRoomBookingState = ({
     [availabilityByDate, checkInDate, checkOutDate, todayDate],
   );
 
-  const handleSelectCalendarDate = (date: string): void => {
-    if (date < todayDate) {
-      return;
-    }
-
-    const day = availabilityByDate.get(date);
-    const isBookableDay = isCalendarDayBookable(day);
-
-    if (!checkInDate) {
-      if (!isBookableDay) {
+  const handleSelectCalendarDate = useCallback(
+    (date: string): void => {
+      if (date < todayDate) {
         return;
       }
-      setCheckInDate(date);
-      setCheckOutDate("");
-      return;
-    }
 
-    if (checkOutDate) {
-      if (!isBookableDay) {
+      const day = availabilityByDate.get(date);
+      const isBookableDay = isCalendarDayBookable(day);
+
+      if (!checkInDate) {
+        if (!isBookableDay) {
+          return;
+        }
+        setCheckInDate(date);
+        setCheckOutDate("");
         return;
       }
-      setCheckInDate(date);
-      setCheckOutDate("");
-      return;
-    }
 
-    if (date <= checkInDate) {
-      if (!isBookableDay) {
+      if (checkOutDate) {
+        if (!isBookableDay) {
+          return;
+        }
+        setCheckInDate(date);
+        setCheckOutDate("");
         return;
       }
-      setCheckInDate(date);
-      setCheckOutDate("");
-      return;
-    }
 
-    if (!isStayRangeAvailable(checkInDate, date, availabilityByDate)) {
-      return;
-    }
-
-    setCheckOutDate(date);
-  };
-
-  const onCalendarDayClick = (date: Date | undefined): void => {
-    if (!date) {
-      return;
-    }
-    handleSelectCalendarDate(formatDateInput(date));
-  };
-
-  const onAdultCountChange = (rawValue: string): void => {
-    const parsed = Number(rawValue.replace(/\D/g, ""));
-    const normalized = Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
-    const maxAdults = room ? Math.max(1, room.maxOccupancy * roomQuantity) : normalized;
-    const clamped = Math.min(normalized, maxAdults);
-    setAdultCount(clamped);
-  };
-
-  const onChildCountChange = (rawValue: string): void => {
-    const parsed = Number(rawValue.replace(/\D/g, ""));
-    const normalized = Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
-    const maxChildren = room ? Math.max(0, room.maxOccupancy * roomQuantity - adultCount) : normalized;
-    const clamped = Math.min(normalized, maxChildren);
-    setChildCount(clamped);
-  };
-
-  const onRoomQuantityChange = (rawValue: string): void => {
-    const parsed = Number(rawValue.replace(/\D/g, ""));
-    const normalized = Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
-    const maxByInventory = selectedStayMinAvailable ?? room?.totalRooms ?? normalized;
-    const clampedQuantity = Math.min(normalized, Math.max(1, maxByInventory));
-    setRoomQuantity(clampedQuantity);
-
-    if (room) {
-      const maxTotalGuests = room.maxOccupancy * clampedQuantity;
-      const nextAdultCount = Math.min(adultCount, Math.max(1, maxTotalGuests));
-      if (nextAdultCount !== adultCount) {
-        setAdultCount(nextAdultCount);
+      if (date <= checkInDate) {
+        if (!isBookableDay) {
+          return;
+        }
+        setCheckInDate(date);
+        setCheckOutDate("");
+        return;
       }
-      if (nextAdultCount + childCount > maxTotalGuests) {
-        setChildCount(Math.max(0, maxTotalGuests - nextAdultCount));
-      }
-    }
-  };
 
-  const onCalendarMonthChange = (month: Date): void => {
-    setCalendarMonth(toMonthKey(month));
-  };
+      if (!isStayRangeAvailable(checkInDate, date, availabilityByDate)) {
+        return;
+      }
+
+      setCheckOutDate(date);
+    },
+    [availabilityByDate, checkInDate, checkOutDate, todayDate],
+  );
+
+  const onCalendarDayClick = useCallback(
+    (date: Date | undefined): void => {
+      if (!date) {
+        return;
+      }
+      handleSelectCalendarDate(formatDateInput(date));
+    },
+    [handleSelectCalendarDate],
+  );
+
+  const onAdultCountChange = useCallback(
+    (rawValue: string): void => {
+      const parsed = Number(rawValue.replace(/\D/g, ""));
+      const normalized = Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+      const maxAdults = room ? Math.max(1, room.maxOccupancy * roomQuantity) : normalized;
+      const clamped = Math.min(normalized, maxAdults);
+      setAdultCount(clamped);
+    },
+    [room, roomQuantity],
+  );
+
+  const onChildCountChange = useCallback(
+    (rawValue: string): void => {
+      const parsed = Number(rawValue.replace(/\D/g, ""));
+      const normalized = Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+      const maxChildren = room ? Math.max(0, room.maxOccupancy * roomQuantity - adultCount) : normalized;
+      const clamped = Math.min(normalized, maxChildren);
+      setChildCount(clamped);
+    },
+    [adultCount, room, roomQuantity],
+  );
+
+  const onRoomQuantityChange = useCallback(
+    (rawValue: string): void => {
+      const parsed = Number(rawValue.replace(/\D/g, ""));
+      const normalized = Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+      const maxByInventory = selectedStayMinAvailable ?? room?.totalRooms ?? normalized;
+      const clampedQuantity = Math.min(normalized, Math.max(1, maxByInventory));
+      setRoomQuantity(clampedQuantity);
+
+      if (room) {
+        const maxTotalGuests = room.maxOccupancy * clampedQuantity;
+        const nextAdultCount = Math.min(adultCount, Math.max(1, maxTotalGuests));
+        if (nextAdultCount !== adultCount) {
+          setAdultCount(nextAdultCount);
+        }
+        if (nextAdultCount + childCount > maxTotalGuests) {
+          setChildCount(Math.max(0, maxTotalGuests - nextAdultCount));
+        }
+      }
+    },
+    [adultCount, childCount, room, selectedStayMinAvailable],
+  );
+
+  const onCalendarMonthChange = useCallback(
+    (month: Date): void => {
+      setCalendarMonth(toMonthKey(month));
+    },
+    [setCalendarMonth],
+  );
 
   return {
     checkInDate,
@@ -473,8 +475,6 @@ export const useRoomBookingState = ({
     adultCount,
     childCount,
     roomQuantity,
-    hoveredDateKey,
-    hoveredDay,
     availabilityByDate,
     visibleWindowCalendar,
     selectedStayMinAvailable,
@@ -488,7 +488,6 @@ export const useRoomBookingState = ({
     minCalendarMonthDate,
     dayPickerClassNames,
     dayPickerStyle,
-    dayPickerComponents,
     disabledDays,
     onAdultCountChange,
     onChildCountChange,

@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { useCallback } from "react";
 import { PriceLockReadyBar } from "@/components/rooms/detail/price-lock-ready-bar";
 import { RoomBookingSidebar } from "@/components/rooms/detail/room-booking-sidebar";
 import { RoomHeroSection } from "@/components/rooms/detail/room-hero-section";
 import { RoomOverviewSection } from "@/components/rooms/detail/room-overview-section";
-import { LiveInterestFab } from "@/components/rooms/live-interest-fab";
+import { LiveInterestFabContainer } from "@/components/rooms/live-interest-fab-container";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useRoomDetailPageViewModel } from "@/lib/hooks/use-room-detail-page-view-model";
-import { formatEnumLabel, isCalendarDayBookable } from "@/lib/rooms/booking";
+import { formatEnumLabel } from "@/lib/rooms/booking";
 
 export default function RoomDetailPage() {
   const {
@@ -29,8 +30,7 @@ export default function RoomDetailPage() {
     adultCount,
     childCount,
     roomQuantity,
-    hoveredDateKey,
-    hoveredDay,
+    availabilityByDate,
     visibleWindowCalendar,
     selectedStayMinAvailable,
     bookingValidationMessage,
@@ -43,7 +43,6 @@ export default function RoomDetailPage() {
     minCalendarMonthDate,
     dayPickerClassNames,
     dayPickerStyle,
-    dayPickerComponents,
     disabledDays,
     onAdultCountChange,
     onChildCountChange,
@@ -65,9 +64,11 @@ export default function RoomDetailPage() {
     roomFactCards,
     roomHeroHighlights,
     roomAmenityCards,
-    viewerCount: liveViewerCount,
-    connected: isLiveViewConnected,
   } = useRoomDetailPageViewModel();
+
+  const handleLockPrice = useCallback(() => {
+    void onLockPrice();
+  }, [onLockPrice]);
 
   return (
     <main className={showBottomLockBar ? "space-y-6 pb-28 sm:pb-32" : "space-y-6"}>
@@ -131,9 +132,7 @@ export default function RoomDetailPage() {
                 onRoomQuantityChange={onRoomQuantityChange}
                 checkInDate={checkInDate}
                 checkOutDate={checkOutDate}
-                hoveredDateKey={hoveredDateKey}
-                hoveredDay={hoveredDay}
-                isCalendarDayBookable={isCalendarDayBookable}
+                availabilityByDate={availabilityByDate}
                 calendarMonthKey={calendarMonth}
                 selectedRange={selectedRange}
                 calendarMonthDate={calendarMonthDate}
@@ -141,7 +140,6 @@ export default function RoomDetailPage() {
                 onCalendarMonthChange={onCalendarMonthChange}
                 onCalendarDayClick={onCalendarDayClick}
                 disabledDays={disabledDays}
-                dayPickerComponents={dayPickerComponents}
                 dayPickerClassNames={dayPickerClassNames}
                 dayPickerStyle={dayPickerStyle}
                 calendarLoadInProgress={priceCalendarLoading}
@@ -159,12 +157,8 @@ export default function RoomDetailPage() {
             </div>
           </section>
 
-          {showBottomLockBar ? <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={() => void onLockPrice()} /> : null}
-          <LiveInterestFab
-            viewerCount={liveViewerCount}
-            connected={isLiveViewConnected}
-            availableRooms={selectedStayMinAvailable ?? room.availableRooms}
-          />
+          {showBottomLockBar ? <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={handleLockPrice} /> : null}
+          <LiveInterestFabContainer roomId={room._id} availableRooms={selectedStayMinAvailable ?? room.availableRooms} />
         </>
       ) : null}
     </main>

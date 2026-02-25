@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { DetailIcon, type DetailIconName } from "@/components/rooms/detail/detail-icon";
 import type { RoomDetailItem } from "@/types/hotel";
 
@@ -31,7 +32,7 @@ interface RoomOverviewSectionProps {
   amenityCards: RoomAmenityCard[];
 }
 
-export function RoomOverviewSection({
+export const RoomOverviewSection = memo(function RoomOverviewSection({
   roomTypeLine,
   roomName,
   hotelTitle,
@@ -122,4 +123,4 @@ export function RoomOverviewSection({
       </div>
     </div>
   );
-}
+});
