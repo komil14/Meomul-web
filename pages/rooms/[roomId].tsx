@@ -84,6 +84,14 @@ const isStayRangeAvailable = (checkInDate: string, checkOutDate: string, availab
   return stayDates.every((date) => isCalendarDayBookable(availabilityByDate.get(date)));
 };
 
+const hasStayDatesLoaded = (checkInDate: string, checkOutDate: string, availabilityByDate: Map<string, DayPriceDto>): boolean => {
+  const stayDates = buildStayDates(checkInDate, checkOutDate);
+  if (stayDates.length === 0) {
+    return false;
+  }
+  return stayDates.every((date) => availabilityByDate.has(date));
+};
+
 const buildBookingHref = (hotelId: string, roomId: string, checkInDate: string, checkOutDate: string, adults: number) => {
   const query: Record<string, string> = {
     hotelId,
@@ -428,8 +436,6 @@ export default function RoomDetailPage() {
   }, [calendarByMonth]);
 
   const visibleWindowCalendar = useMemo(() => calendarByMonth[calendarMonth] ?? [], [calendarByMonth, calendarMonth]);
-
-  const hasCalendarAvailability = availabilityByDate.size > 0;
   const hoveredDay = useMemo(() => (hoveredDateKey ? availabilityByDate.get(hoveredDateKey) : undefined), [availabilityByDate, hoveredDateKey]);
 
   useEffect(() => {
@@ -438,16 +444,20 @@ export default function RoomDetailPage() {
     }
 
     const checkInDay = availabilityByDate.get(checkInDate);
-    if (hasCalendarAvailability && (!checkInDay || !isCalendarDayBookable(checkInDay))) {
+    if (checkInDay && !isCalendarDayBookable(checkInDay)) {
       setCheckInDate("");
       setCheckOutDate("");
       return;
     }
 
-    if (checkOutDate && hasCalendarAvailability && !isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)) {
+    if (
+      checkOutDate &&
+      hasStayDatesLoaded(checkInDate, checkOutDate, availabilityByDate) &&
+      !isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)
+    ) {
       setCheckOutDate("");
     }
-  }, [availabilityByDate, checkInDate, checkOutDate, hasCalendarAvailability]);
+  }, [availabilityByDate, checkInDate, checkOutDate]);
 
   const bookingValidationMessage = useMemo(() => {
     if (!room) {
@@ -455,9 +465,6 @@ export default function RoomDetailPage() {
     }
     if (room.roomStatus !== "AVAILABLE") {
       return `Room is currently ${room.roomStatus.toLowerCase()} and cannot be booked.`;
-    }
-    if (room.availableRooms <= 0) {
-      return "This room is currently sold out.";
     }
     if (adultCount > room.maxOccupancy) {
       return `This room accepts up to ${room.maxOccupancy} adult(s).`;
@@ -468,17 +475,20 @@ export default function RoomDetailPage() {
     if (checkOutDate <= checkInDate) {
       return "Check-out must be after check-in.";
     }
-    if (hasCalendarAvailability && !isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)) {
+    if (!hasStayDatesLoaded(checkInDate, checkOutDate, availabilityByDate)) {
+      return "Checking selected dates availability...";
+    }
+    if (!isStayRangeAvailable(checkInDate, checkOutDate, availabilityByDate)) {
       return "One or more selected nights are unavailable.";
     }
     if (adultCount < 1) {
       return "Adult count must be at least 1.";
     }
     return null;
-  }, [adultCount, availabilityByDate, checkInDate, checkOutDate, hasCalendarAvailability, room]);
+  }, [adultCount, availabilityByDate, checkInDate, checkOutDate, room]);
 
   const canContinueBooking = bookingValidationMessage === null && Boolean(roomHotelId) && Boolean(room);
-  const canLockCurrentRoom = Boolean(room && room.roomStatus === "AVAILABLE" && room.availableRooms > 0);
+  const canLockCurrentRoom = Boolean(room && room.roomStatus === "AVAILABLE");
   const cheapestDateKey = useMemo(() => {
     const availableDays = visibleWindowCalendar.filter((day) => isCalendarDayBookable(day));
     if (availableDays.length === 0) {
@@ -648,6 +658,28 @@ export default function RoomDetailPage() {
   const showBottomLockBar = canLockPrice && canLockCurrentRoom && !myPriceLockLoading && !activePriceLock && !lockingPrice;
   const cheapestDatePrice = cheapestDateKey ? availabilityByDate.get(cheapestDateKey)?.price : undefined;
   const peakDatePrice = peakDateKey ? availabilityByDate.get(peakDateKey)?.price : undefined;
+  const selectedStayMinAvailable = useMemo(() => {
+    if (!checkInDate || !checkOutDate) {
+      return null;
+    }
+
+    const stayDates = buildStayDates(checkInDate, checkOutDate);
+    if (stayDates.length === 0) {
+      return null;
+    }
+
+    let minAvailable: number | null = null;
+    for (const date of stayDates) {
+      const day = availabilityByDate.get(date);
+      if (!day) {
+        return null;
+      }
+      const available = isCalendarDayBookable(day) ? (day.availableRooms ?? 0) : 0;
+      minAvailable = minAvailable === null ? available : Math.min(minAvailable, available);
+    }
+
+    return minAvailable;
+  }, [availabilityByDate, checkInDate, checkOutDate]);
   const continueBookingHref = canContinueBooking && room
     ? buildBookingHref(roomHotelId, room._id, checkInDate, checkOutDate, adultCount)
     : undefined;
@@ -692,7 +724,7 @@ export default function RoomDetailPage() {
             { label: "Capacity", value: `${room.maxOccupancy} guests`, icon: "capacity" },
             { label: "Bed Setup", value: `${room.bedCount} x ${formatEnumLabel(room.bedType)}`, icon: "bed" },
             { label: "Room Size", value: `${room.roomSize} m²`, icon: "size" },
-            { label: "Inventory", value: `${room.availableRooms}/${room.totalRooms} ready`, icon: "inventory" },
+            { label: "Inventory", value: `${room.totalRooms} total · date-based`, icon: "inventory" },
             { label: "Weekend Add-on", value: `₩ ${room.weekendSurcharge.toLocaleString()}`, icon: "surcharge" },
             { label: "Updated", value: formatIsoDate(room.updatedAt), icon: "clock" },
           ]
@@ -706,7 +738,7 @@ export default function RoomDetailPage() {
             { label: "Guests", value: `${room.maxOccupancy}`, icon: "capacity" },
             { label: "Size", value: `${room.roomSize}m²`, icon: "size" },
             { label: "Beds", value: `${room.bedCount}`, icon: "bed" },
-            { label: "Available", value: `${room.availableRooms}`, icon: "inventory" },
+            { label: "Units", value: `${room.totalRooms}`, icon: "inventory" },
           ]
         : [],
     [room],
@@ -808,7 +840,11 @@ export default function RoomDetailPage() {
           </section>
 
           {showBottomLockBar ? <PriceLockReadyBar basePrice={room.basePrice} locking={lockingPrice} onLockPrice={() => void handleLockPrice()} /> : null}
-          <LiveInterestFab viewerCount={liveViewerCount} connected={isLiveViewConnected} availableRooms={room.availableRooms} />
+          <LiveInterestFab
+            viewerCount={liveViewerCount}
+            connected={isLiveViewConnected}
+            availableRooms={selectedStayMinAvailable ?? room.availableRooms}
+          />
         </>
       ) : null}
     </main>
