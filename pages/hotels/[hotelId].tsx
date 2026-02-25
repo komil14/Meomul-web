@@ -24,6 +24,20 @@ import {
   GET_TRENDING_BY_LOCATION_QUERY,
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import {
+  amenityLabels,
+  asPercent,
+  canUseMemberActions,
+  canUsePersonalizedRecommendations,
+  CARD_LIST_LIMIT,
+  getMapEmbedLink,
+  getMapLink,
+  getPolicyText,
+  REVIEW_PAGE_SIZE,
+  ROOM_PAGE_SIZE,
+  shortenText,
+  uniqueHotels,
+} from "@/lib/hotels/detail-page-helpers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   GetHotelQueryData,
@@ -41,7 +55,6 @@ import type {
   GetTrendingByLocationQueryData,
   GetTrendingByLocationQueryVars,
   HotelDetailItem,
-  HotelListItem,
   HotelLocation,
   MarkHelpfulMutationData,
   MarkHelpfulMutationVars,
@@ -49,97 +62,6 @@ import type {
   ToggleLikeMutationData,
   ToggleLikeMutationVars,
 } from "@/types/hotel";
-
-const ROOM_PAGE_SIZE = 12;
-const REVIEW_PAGE_SIZE = 5;
-const CARD_LIST_LIMIT = 6;
-
-const amenityLabels: Partial<Record<keyof HotelDetailItem["amenities"], string>> = {
-  wifi: "Fast Wi-Fi",
-  wifiSpeed: "High-speed Wi-Fi",
-  parking: "Parking",
-  parkingFee: "Paid Parking",
-  breakfast: "Breakfast",
-  breakfastIncluded: "Breakfast Included",
-  roomService: "Room Service",
-  gym: "Gym",
-  pool: "Pool",
-  workspace: "Workspace",
-  familyRoom: "Family Room",
-  kidsFriendly: "Kids Friendly",
-  wheelchairAccessible: "Wheelchair Accessible",
-  elevator: "Elevator",
-  accessibleBathroom: "Accessible Bathroom",
-  visualAlarms: "Visual Alarms",
-  serviceAnimalsAllowed: "Service Animals Allowed",
-  airportShuttle: "Airport Shuttle",
-  evCharging: "EV Charging",
-  playground: "Playground",
-  meetingRoom: "Meeting Room",
-  privateBath: "Private Bath",
-  restaurant: "Restaurant",
-  spa: "Spa",
-  coupleRoom: "Couple Room",
-  romanticView: "Romantic View",
-};
-
-const asPercent = (rating: number): string => `${Math.round((rating / 5) * 100)}%`;
-
-
-const shortenText = (text: string, maxLength: number): string => {
-  if (text.length <= maxLength) {
-    return text;
-  }
-  return `${text.slice(0, maxLength).trimEnd()}...`;
-};
-
-const canUsePersonalizedRecommendations = (memberType: string | undefined): boolean => {
-  return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
-};
-
-const canUseMemberActions = (memberType: string | undefined): boolean => {
-  return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
-};
-
-const uniqueHotels = (hotels: HotelListItem[], excludeHotelId: string): HotelListItem[] => {
-  const seen = new Set<string>();
-  return hotels.filter((hotel) => {
-    if (hotel._id === excludeHotelId) {
-      return false;
-    }
-    if (seen.has(hotel._id)) {
-      return false;
-    }
-    seen.add(hotel._id);
-    return true;
-  });
-};
-
-const getPolicyText = (policy: HotelDetailItem["cancellationPolicy"]): string => {
-  if (policy === "FLEXIBLE") {
-    return "Flexible cancellation";
-  }
-  if (policy === "STRICT") {
-    return "Strict cancellation";
-  }
-  return "Moderate cancellation";
-};
-
-const getMapLink = (hotel: HotelDetailItem): string => {
-  const { lat, lng } = hotel.detailedLocation.coordinates;
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    return `https://maps.google.com/?q=${lat},${lng}`;
-  }
-  return `https://maps.google.com/?q=${encodeURIComponent(hotel.detailedLocation.address)}`;
-};
-
-const getMapEmbedLink = (hotel: HotelDetailItem): string => {
-  const { lat, lng } = hotel.detailedLocation.coordinates;
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    return `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
-  }
-  return `https://maps.google.com/maps?q=${encodeURIComponent(hotel.detailedLocation.address)}&z=15&output=embed`;
-};
 
 interface HotelDetailPageProps {
   initialHotel: HotelDetailItem | null;
