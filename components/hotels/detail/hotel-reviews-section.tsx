@@ -1,5 +1,6 @@
 import { memo, useCallback } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
+import { formatNumber } from "@/lib/utils/format";
 import type { ReviewDto } from "@/types/hotel";
 
 interface HotelReviewsSectionProps {
@@ -69,7 +70,7 @@ const ReviewRow = memo(function ReviewRow({
         <p>Service: {asPercent(review.serviceRating)}</p>
         <p>Amenities: {asPercent(review.amenitiesRating)}</p>
         <p>Value: {asPercent(review.valueRating)}</p>
-        <p>Helpful: {helpfulCount.toLocaleString()}</p>
+        <p>Helpful: {formatNumber(helpfulCount)}</p>
       </div>
 
       {review.hotelResponse ? (
@@ -153,7 +154,7 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
 
           <footer className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
             <p className="text-slate-600">
-              Page {reviewPage} / {reviewTotalPages} · Total reviews: {reviewTotal.toLocaleString()}
+              Page {reviewPage} / {reviewTotalPages} · Total reviews: {formatNumber(reviewTotal)}
             </p>
             <div className="flex gap-2">
               <button

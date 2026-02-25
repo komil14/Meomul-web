@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { DetailIcon, type DetailIconName } from "@/components/rooms/detail/detail-icon";
+import { formatNumber } from "@/lib/utils/format";
 import type { RoomDetailItem } from "@/types/hotel";
 
 export interface RoomFactCard {
@@ -55,8 +56,8 @@ export const RoomOverviewSection = memo(function RoomOverviewSection({
         {deal?.isActive ? (
           <div className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-right shadow-sm sm:w-auto sm:min-w-[14rem]">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">Last minute deal</p>
-            <p className="mt-1 text-3xl font-semibold text-slate-900">₩ {deal.dealPrice.toLocaleString()}</p>
-            <p className="text-xs text-slate-500 line-through">₩ {deal.originalPrice.toLocaleString()}</p>
+            <p className="mt-1 text-3xl font-semibold text-slate-900">₩ {formatNumber(deal.dealPrice)}</p>
+            <p className="text-xs text-slate-500 line-through">₩ {formatNumber(deal.originalPrice)}</p>
           </div>
         ) : null}
       </div>

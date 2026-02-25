@@ -1,5 +1,6 @@
 import { memo } from "react";
 import Link from "next/link";
+import { formatNumber } from "@/lib/utils/format";
 import type { RoomListItem } from "@/types/hotel";
 
 interface RoomCardProps {
@@ -28,7 +29,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
           {room.roomType} · {room.roomStatus}
         </p>
         <div className="flex items-center justify-between text-sm text-slate-700">
-          <span>₩ {room.basePrice.toLocaleString()}</span>
+          <span>₩ {formatNumber(room.basePrice)}</span>
           <span>{room.availableRooms} left</span>
         </div>
         <div className="flex items-center gap-2">

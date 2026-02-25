@@ -6,6 +6,7 @@ import { StatusPills } from "@/components/ui/status-pills";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatDateKst, formatNumber } from "@/lib/utils/format";
 import type {
   BookingListItem,
   BookingStatus,
@@ -34,8 +35,6 @@ const paymentToneClass: Record<BookingListItem["paymentStatus"], string> = {
   FAILED: "border-rose-200 bg-rose-50 text-rose-800",
   REFUNDED: "border-slate-200 bg-slate-100 text-slate-700",
 };
-
-const formatDate = (value: string): string => new Date(value).toLocaleDateString();
 
 const MyBookingsPage: NextPageWithAuth = () => {
   const { page, statusFilter, pushQuery } = usePaginationQueryState<BookingStatus>({
@@ -113,7 +112,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Booking Code</p>
                   <h2 className="mt-1 text-lg font-semibold text-slate-900">{booking.bookingCode}</h2>
                   <p className="mt-1 text-sm text-slate-600">
-                    {formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
+                    {formatDateKst(booking.checkInDate)} - {formatDateKst(booking.checkOutDate)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -128,16 +127,16 @@ const MyBookingsPage: NextPageWithAuth = () => {
 
               <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
                 <p>
-                  Total: <span className="font-semibold">₩ {booking.totalPrice.toLocaleString()}</span>
+                  Total: <span className="font-semibold">₩ {formatNumber(booking.totalPrice)}</span>
                 </p>
                 <p>
-                  Paid: <span className="font-semibold">₩ {booking.paidAmount.toLocaleString()}</span>
+                  Paid: <span className="font-semibold">₩ {formatNumber(booking.paidAmount)}</span>
                 </p>
                 <p>
                   Guest ID: <span className="font-mono text-xs">{booking.guestId}</span>
                 </p>
                 <p>
-                  Created: <span className="font-semibold">{formatDate(booking.createdAt)}</span>
+                  Created: <span className="font-semibold">{formatDateKst(booking.createdAt)}</span>
                 </p>
               </div>
               <div className="mt-3">
@@ -152,7 +151,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
 
       <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
         <p className="text-slate-600">
-          Page {page} / {totalPages} · Total records: {total.toLocaleString()}
+          Page {page} / {totalPages} · Total records: {formatNumber(total)}
         </p>
         <div className="flex gap-2">
           <button

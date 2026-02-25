@@ -15,6 +15,7 @@ import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatDateKst, formatNumber } from "@/lib/utils/format";
 import { showMutationError } from "@/lib/utils/toast";
 import type {
   BookingListItem,
@@ -64,8 +65,6 @@ const getStatusOptions = (currentStatus: BookingStatus): BookingStatus[] => {
   const nextStatuses = STATUS_TRANSITIONS[currentStatus];
   return [currentStatus, ...nextStatuses];
 };
-
-const formatDate = (value: string): string => new Date(value).toLocaleDateString();
 
 interface OptimisticPatch {
   bookingStatus?: BookingStatus;
@@ -499,7 +498,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Booking</p>
                     <h2 className="mt-1 text-lg font-semibold text-slate-900">{booking.bookingCode}</h2>
                     <p className="mt-1 text-sm text-slate-600">
-                      {formatDate(booking.checkInDate)} - {formatDate(booking.checkOutDate)}
+                      {formatDateKst(booking.checkInDate)} - {formatDateKst(booking.checkOutDate)}
                     </p>
                     {memberType !== "ADMIN_OPERATOR" ? (
                       <p className="mt-1">
@@ -510,8 +509,8 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                     ) : null}
                   </div>
                   <div className="text-right text-sm text-slate-700">
-                    <p>Total: ₩ {booking.totalPrice.toLocaleString()}</p>
-                    <p>Paid: ₩ {booking.paidAmount.toLocaleString()}</p>
+                    <p>Total: ₩ {formatNumber(booking.totalPrice)}</p>
+                    <p>Paid: ₩ {formatNumber(booking.paidAmount)}</p>
                     <p className="font-mono text-xs text-slate-500">Guest: {booking.guestId}</p>
                   </div>
                 </div>
@@ -640,7 +639,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
       <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
         <p className="text-slate-600">
-          Page {page} / {totalPages} · Total records: {total.toLocaleString()}
+          Page {page} / {totalPages} · Total records: {formatNumber(total)}
         </p>
         <div className="flex gap-2">
           <button

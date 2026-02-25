@@ -12,6 +12,7 @@ import {
 } from "@/graphql/booking.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatDateTimeKst, formatNumber } from "@/lib/utils/format";
 import { showMutationError } from "@/lib/utils/toast";
 import type {
   BookingStatus,
@@ -25,8 +26,6 @@ import type {
 import type { NextPageWithAuth } from "@/types/page";
 
 const CANCELLABLE_STATUSES: BookingStatus[] = ["PENDING", "CONFIRMED"];
-
-const formatDate = (value: string): string => new Date(value).toLocaleString();
 
 const parseEvidencePhotos = (value: string): string[] => {
   return value
@@ -155,18 +154,18 @@ const BookingDetailPage: NextPageWithAuth = () => {
               <p>Status: <span className="font-semibold">{booking.bookingStatus}</span></p>
               <p>Payment: <span className="font-semibold">{booking.paymentStatus}</span></p>
               <p>Payment Method: <span className="font-semibold">{booking.paymentMethod}</span></p>
-              <p>Total: <span className="font-semibold">₩ {booking.totalPrice.toLocaleString()}</span></p>
-              <p>Paid: <span className="font-semibold">₩ {booking.paidAmount.toLocaleString()}</span></p>
+              <p>Total: <span className="font-semibold">₩ {formatNumber(booking.totalPrice)}</span></p>
+              <p>Paid: <span className="font-semibold">₩ {formatNumber(booking.paidAmount)}</span></p>
               <p>Nights: <span className="font-semibold">{booking.nights}</span></p>
-              <p>Check-in: <span className="font-semibold">{formatDate(booking.checkInDate)}</span></p>
-              <p>Check-out: <span className="font-semibold">{formatDate(booking.checkOutDate)}</span></p>
-              <p>Created: <span className="font-semibold">{formatDate(booking.createdAt)}</span></p>
+              <p>Check-in: <span className="font-semibold">{formatDateTimeKst(booking.checkInDate)}</span></p>
+              <p>Check-out: <span className="font-semibold">{formatDateTimeKst(booking.checkOutDate)}</span></p>
+              <p>Created: <span className="font-semibold">{formatDateTimeKst(booking.createdAt)}</span></p>
               <p>Guest ID: <span className="font-mono text-xs">{booking.guestId}</span></p>
               <p>Hotel ID: <span className="font-mono text-xs">{booking.hotelId}</span></p>
               <p>
                 Refund:{" "}
                 <span className="font-semibold">
-                  {booking.refundAmount != null ? `₩ ${booking.refundAmount.toLocaleString()}` : "-"}
+                  {booking.refundAmount != null ? `₩ ${formatNumber(booking.refundAmount)}` : "-"}
                 </span>
               </p>
             </div>
@@ -184,7 +183,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
                 </p>
                 <p>Reason: {booking.cancellationReason}</p>
                 {booking.cancellationDate ? (
-                  <p>Cancelled at: {formatDate(booking.cancellationDate)}</p>
+                  <p>Cancelled at: {formatDateTimeKst(booking.cancellationDate)}</p>
                 ) : null}
               </div>
             ) : null}
@@ -197,7 +196,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
                 <div key={`${room.roomId}-${room.roomType}`} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
                   <p className="font-medium text-slate-900">{room.roomType}</p>
                   <p className="text-slate-700">Quantity: {room.quantity}</p>
-                  <p className="text-slate-700">Price/Night: ₩ {room.pricePerNight.toLocaleString()}</p>
+                  <p className="text-slate-700">Price/Night: ₩ {formatNumber(room.pricePerNight)}</p>
                   {room.guestName ? <p className="text-slate-700">Guest Name: {room.guestName}</p> : null}
                 </div>
               ))}

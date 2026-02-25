@@ -19,6 +19,7 @@ import { useHotelDetailActions } from "@/lib/hooks/use-hotel-detail-actions";
 import { useHotelDetailDiscovery } from "@/lib/hooks/use-hotel-detail-discovery";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatNumber } from "@/lib/utils/format";
 import type {
   GetHotelQueryData,
   GetHotelQueryVars,
@@ -287,7 +288,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   );
 
   const reviewCountText = useMemo(
-    () => (reviewTotal > 0 ? reviewTotal.toLocaleString() : reviewsLoading ? "..." : "0"),
+    () => (reviewTotal > 0 ? formatNumber(reviewTotal) : reviewsLoading ? "..." : "0"),
     [reviewTotal, reviewsLoading],
   );
 

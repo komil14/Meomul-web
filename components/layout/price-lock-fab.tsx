@@ -5,6 +5,7 @@ import { CANCEL_PRICE_LOCK_MUTATION, GET_MY_PRICE_LOCK_QUERY, GET_MY_PRICE_LOCKS
 import { getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatNumber } from "@/lib/utils/format";
 import type {
   CancelPriceLockMutationData,
   CancelPriceLockMutationVars,
@@ -152,7 +153,7 @@ export function PriceLockFab() {
                 <article key={lock._id} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">₩ {lock.lockedPrice.toLocaleString()}</p>
+                      <p className="text-sm font-semibold text-slate-900">₩ {formatNumber(lock.lockedPrice)}</p>
                       <p className="text-xs text-slate-600">Room {lock.roomId}</p>
                       <p className={`text-xs font-semibold ${remaining <= 600 ? "text-rose-600" : "text-slate-700"}`}>{formatCountdown(remaining)}</p>
                     </div>

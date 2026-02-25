@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { formatNumber } from "@/lib/utils/format";
 
 interface PriceLockReadyBarProps {
   basePrice: number;
@@ -12,7 +13,7 @@ export const PriceLockReadyBar = memo(function PriceLockReadyBar({ basePrice, lo
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Price lock ready</p>
-          <p className="text-sm font-semibold text-slate-900">Lock ₩ {basePrice.toLocaleString()} for 30 minutes</p>
+          <p className="text-sm font-semibold text-slate-900">Lock ₩ {formatNumber(basePrice)} for 30 minutes</p>
         </div>
         <button
           type="button"

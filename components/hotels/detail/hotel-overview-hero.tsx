@@ -1,5 +1,6 @@
 import { memo } from "react";
 import Image from "next/image";
+import { formatNumber } from "@/lib/utils/format";
 import type { HotelDetailItem } from "@/types/hotel";
 
 interface HotelOverviewHeroProps {
@@ -49,7 +50,7 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{hotel.starRating} star</span>
                 <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{cancellationPolicyText}</span>
-                <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{hotelLikeCount.toLocaleString()} likes</span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{formatNumber(hotelLikeCount)} likes</span>
                 {hotel.suitableFor.slice(0, 2).map((tag) => (
                   <span key={tag} className="rounded-full border border-white/35 bg-white/10 px-3 py-1 text-sm">
                     {tag}

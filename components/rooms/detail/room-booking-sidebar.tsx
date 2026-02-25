@@ -3,6 +3,7 @@ import { memo, useMemo, useState, type CSSProperties } from "react";
 import { DayPicker, type DateRange, type DayButtonProps, type DayPickerProps } from "react-day-picker";
 import { PriceDayButton } from "@/components/rooms/detail/price-day-button";
 import { formatDateInput, isCalendarDayBookable } from "@/lib/rooms/booking";
+import { formatNumber } from "@/lib/utils/format";
 import type { DayPriceDto } from "@/types/hotel";
 
 interface RoomBookingSidebarProps {
@@ -96,7 +97,7 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
 
       <article className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Current bookable nightly rate</p>
-        <p className="mt-1 text-lg font-semibold text-slate-900">₩ {effectiveNightlyRate.toLocaleString()}</p>
+        <p className="mt-1 text-lg font-semibold text-slate-900">₩ {formatNumber(effectiveNightlyRate)}</p>
         <p className="text-[11px] text-slate-600">{effectiveNightlyRateSourceLabel}</p>
       </article>
 
@@ -159,7 +160,7 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Nightly Price</p>
-                    <p className="text-xl font-bold text-sky-900">₩ {hoveredDay.price.toLocaleString()}</p>
+                    <p className="text-xl font-bold text-sky-900">₩ {formatNumber(hoveredDay.price)}</p>
                   </div>
                 </div>
               ) : (
@@ -202,13 +203,13 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
       {visibleWindowCalendarLength > 0 ? (
         <div className="grid gap-2 text-xs text-slate-700">
           <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-            Average (this month): <span className="font-semibold">₩ {averageVisiblePrice.toLocaleString()}</span>
+            Average (this month): <span className="font-semibold">₩ {formatNumber(averageVisiblePrice)}</span>
           </p>
           {cheapestDateKey ? (
             <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
               Cheapest:{" "}
               <span className="font-semibold">
-                {cheapestDateKey} · ₩ {cheapestDatePrice?.toLocaleString()}
+                {cheapestDateKey} · ₩ {cheapestDatePrice != null ? formatNumber(cheapestDatePrice) : "-"}
               </span>
             </p>
           ) : null}
@@ -216,7 +217,7 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
             <p className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
               Peak:{" "}
               <span className="font-semibold">
-                {peakDateKey} · ₩ {peakDatePrice?.toLocaleString()}
+                {peakDateKey} · ₩ {peakDatePrice != null ? formatNumber(peakDatePrice) : "-"}
               </span>
             </p>
           ) : null}

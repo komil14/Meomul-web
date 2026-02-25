@@ -14,6 +14,7 @@ import {
 import { clearAuthSession, getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatNumber } from "@/lib/utils/format";
 import type { CheckAuthQueryData } from "@/types/auth";
 import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
 import type {
@@ -43,7 +44,7 @@ function StatTile({ label, value }: StatTileProps) {
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-900">{value.toLocaleString()}</p>
+      <p className="mt-2 text-2xl font-semibold text-slate-900">{formatNumber(value)}</p>
     </article>
   );
 }
@@ -185,7 +186,7 @@ const DashboardPage: NextPageWithAuth = () => {
             {!unreadChatLoading && !unreadChatError ? (
               <p className="mt-2 text-sm text-slate-700">
                 Unread chat messages:{" "}
-                <span className="font-semibold">{(unreadChatData?.getMyUnreadChatCount ?? 0).toLocaleString()}</span>
+                <span className="font-semibold">{formatNumber(unreadChatData?.getMyUnreadChatCount ?? 0)}</span>
               </p>
             ) : null}
           </div>

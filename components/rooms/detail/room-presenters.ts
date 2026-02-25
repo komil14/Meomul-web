@@ -1,6 +1,7 @@
 import type { RoomHeroHighlight } from "@/components/rooms/detail/room-hero-section";
 import type { RoomAmenityCard, RoomFactCard } from "@/components/rooms/detail/room-overview-section";
 import { formatAmenityLabel, formatEnumLabel, formatIsoDate } from "@/lib/rooms/booking";
+import { formatNumber } from "@/lib/utils/format";
 import type { RoomDetailItem } from "@/types/hotel";
 
 type DetailIconName = RoomFactCard["icon"] | RoomAmenityCard["icon"];
@@ -91,7 +92,7 @@ export const getRoomPresentation = (room: RoomDetailItem | undefined): RoomPrese
     { label: "Bed Setup", value: `${room.bedCount} x ${formatEnumLabel(room.bedType)}`, icon: "bed" },
     { label: "Room Size", value: `${room.roomSize} m²`, icon: "size" },
     { label: "Inventory", value: `${room.totalRooms} total · date-based`, icon: "inventory" },
-    { label: "Weekend Add-on", value: `₩ ${room.weekendSurcharge.toLocaleString()}`, icon: "surcharge" },
+    { label: "Weekend Add-on", value: `₩ ${formatNumber(room.weekendSurcharge)}`, icon: "surcharge" },
     { label: "Updated", value: formatIsoDate(room.updatedAt), icon: "clock" },
   ];
 

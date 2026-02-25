@@ -17,6 +17,7 @@ import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatDateTimeKst } from "@/lib/utils/format";
 import { showMutationError } from "@/lib/utils/toast";
 import type {
   ClaimChatMutationData,
@@ -32,8 +33,6 @@ import type {
   SendMessageMutationVars,
 } from "@/types/chat";
 import type { NextPageWithAuth } from "@/types/page";
-
-const formatDateTime = (value: string): string => new Date(value).toLocaleString();
 
 const renderMessageBody = (message: MessageDto): string => {
   if (message.messageType === "IMAGE") {
@@ -448,7 +447,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 <p className="text-sm text-slate-600">Hotel: {chat.hotelId}</p>
                 <p className="text-sm text-slate-600">Guest: {chat.guestId}</p>
                 <p className="text-sm text-slate-600">Assigned Agent: {chat.assignedAgentId || "Unassigned"}</p>
-                <p className="text-sm text-slate-600">Last message: {formatDateTime(chat.lastMessageAt)}</p>
+                <p className="text-sm text-slate-600">Last message: {formatDateTimeKst(chat.lastMessageAt)}</p>
                 <p className="text-sm text-slate-600">
                   Realtime:{" "}
                   <span className={socketConnected ? "font-semibold text-emerald-700" : "font-semibold text-slate-600"}>
@@ -514,7 +513,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                           {message.senderType} · {message.messageType}
                         </p>
                         <p className="mt-1 break-words">{renderMessageBody(message)}</p>
-                        <p className="mt-1 text-[11px] opacity-70">{formatDateTime(message.timestamp)}</p>
+                        <p className="mt-1 text-[11px] opacity-70">{formatDateTimeKst(message.timestamp)}</p>
                       </div>
                     </div>
                   );

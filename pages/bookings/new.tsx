@@ -19,6 +19,7 @@ import {
 import { getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatNumber } from "@/lib/utils/format";
 import type {
   CreateBookingMutationData,
   CreateBookingMutationVars,
@@ -466,7 +467,7 @@ const NewBookingPage: NextPageWithAuth = () => {
             <p className="text-sm text-slate-600">{room.roomType}</p>
             <p className="text-sm text-slate-600">{room.viewType} view</p>
             <p className="mt-2 text-sm text-slate-700">Available: {room.availableRooms}</p>
-            <p className="text-sm text-slate-700">Price per night: ₩ {effectivePrice.toLocaleString()}</p>
+            <p className="text-sm text-slate-700">Price per night: ₩ {formatNumber(effectivePrice)}</p>
             <p className="text-xs text-slate-500">
               Rate source:{" "}
               {effectivePriceSource === "PRICE_LOCK"
@@ -669,13 +670,13 @@ const NewBookingPage: NextPageWithAuth = () => {
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
           <p>
-            Estimated subtotal: <span className="font-semibold">₩ {estimatedSubtotal.toLocaleString()}</span>
+            Estimated subtotal: <span className="font-semibold">₩ {formatNumber(estimatedSubtotal)}</span>
           </p>
           <p className="mt-1">
-            Early/Late fees (known): <span className="font-semibold">₩ {estimatedTimeFees.toLocaleString()}</span>
+            Early/Late fees (known): <span className="font-semibold">₩ {formatNumber(estimatedTimeFees)}</span>
           </p>
           <p className="mt-1">
-            Estimated known total: <span className="font-semibold">₩ {estimatedKnownTotal.toLocaleString()}</span>
+            Estimated known total: <span className="font-semibold">₩ {formatNumber(estimatedKnownTotal)}</span>
           </p>
           <p className="mt-1 text-xs text-slate-500">Final total is calculated on server (taxes, service fee, surcharges).</p>
           <p className="mt-1 text-xs text-slate-500">
@@ -703,7 +704,7 @@ const NewBookingPage: NextPageWithAuth = () => {
             Code: <span className="font-semibold">{createdBookingCode}</span>
           </p>
           <p className="mt-1 text-sm text-emerald-800">
-            Total price: <span className="font-semibold">₩ {createdBookingData.createBooking.totalPrice.toLocaleString()}</span>
+            Total price: <span className="font-semibold">₩ {formatNumber(createdBookingData.createBooking.totalPrice)}</span>
           </p>
           <p className="mt-1 text-sm text-emerald-800">
             Payment status: <span className="font-semibold">{createdBookingData.createBooking.paymentStatus}</span>

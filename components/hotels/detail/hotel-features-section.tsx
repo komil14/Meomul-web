@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { formatNumber } from "@/lib/utils/format";
 
 interface HotelFeaturesSectionProps {
   fromPrice: number;
@@ -25,7 +26,7 @@ export const HotelFeaturesSection = memo(function HotelFeaturesSection({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">
           <p className="text-xs uppercase tracking-[0.14em] text-slate-500">From</p>
-          <p className="mt-1 text-xl font-semibold text-slate-900">₩ {fromPrice > 0 ? fromPrice.toLocaleString() : "-"}</p>
+          <p className="mt-1 text-xl font-semibold text-slate-900">₩ {fromPrice > 0 ? formatNumber(fromPrice) : "-"}</p>
           <p className="mt-1 text-xs text-slate-500">per room/night</p>
         </article>
         <article className="rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">

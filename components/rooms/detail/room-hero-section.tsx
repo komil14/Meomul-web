@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { DetailIcon, type DetailIconName } from "@/components/rooms/detail/detail-icon";
+import { formatNumber } from "@/lib/utils/format";
 import type { RoomDetailItem } from "@/types/hotel";
 
 export interface RoomHeroHighlight {
@@ -51,13 +52,13 @@ export const RoomHeroSection = memo(function RoomHeroSection({
               {deal?.isActive ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-200">Deal Price</p>
-                  <p className="mt-1 text-2xl font-semibold">₩ {deal.dealPrice.toLocaleString()}</p>
-                  <p className="text-[11px] text-slate-200 line-through">₩ {deal.originalPrice.toLocaleString()}</p>
+                  <p className="mt-1 text-2xl font-semibold">₩ {formatNumber(deal.dealPrice)}</p>
+                  <p className="text-[11px] text-slate-200 line-through">₩ {formatNumber(deal.originalPrice)}</p>
                 </>
               ) : (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Nightly Rate</p>
-                  <p className="mt-1 text-2xl font-semibold">₩ {basePrice.toLocaleString()}</p>
+                  <p className="mt-1 text-2xl font-semibold">₩ {formatNumber(basePrice)}</p>
                 </>
               )}
             </div>

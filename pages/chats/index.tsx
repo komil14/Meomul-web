@@ -11,6 +11,7 @@ import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { formatDateTimeKst, formatNumber } from "@/lib/utils/format";
 import { showMutationError } from "@/lib/utils/toast";
 import type {
   ChatDto,
@@ -35,8 +36,6 @@ import type { NextPageWithAuth } from "@/types/page";
 const PAGE_LIMIT = 15;
 const HOTEL_LIST_LIMIT = 200;
 const CHAT_STATUSES: ChatStatus[] = ["WAITING", "ACTIVE", "CLOSED"];
-
-const formatDateTime = (value: string): string => new Date(value).toLocaleString();
 
 const getLastMessagePreview = (chat: ChatDto): string => {
   const message = chat.messages.at(-1);
@@ -408,7 +407,7 @@ const ChatsPage: NextPageWithAuth = () => {
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Chat</p>
                   <h2 className="mt-1 text-lg font-semibold text-slate-900">{chat._id}</h2>
                   <p className="mt-1 text-sm text-slate-600">Hotel: {chat.hotelId}</p>
-                  <p className="text-sm text-slate-600">Last activity: {formatDateTime(chat.lastMessageAt)}</p>
+                  <p className="text-sm text-slate-600">Last activity: {formatDateTimeKst(chat.lastMessageAt)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium text-slate-700">Status: {chat.chatStatus}</p>
@@ -428,7 +427,7 @@ const ChatsPage: NextPageWithAuth = () => {
 
       <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
         <p className="text-slate-600">
-          Page {page} / {totalPages} · Total records: {total.toLocaleString()}
+          Page {page} / {totalPages} · Total records: {formatNumber(total)}
         </p>
         <div className="flex gap-2">
           <button
