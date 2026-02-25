@@ -12,7 +12,6 @@ import {
   GET_MY_PRICE_LOCKS_QUERY,
   GET_PRICE_CALENDAR_QUERY,
   GET_ROOM_QUERY,
-  GET_ROOMS_BY_HOTEL_QUERY,
   LOCK_PRICE_MUTATION,
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
@@ -30,11 +29,8 @@ import type {
   GetPriceCalendarQueryVars,
   GetRoomQueryData,
   GetRoomQueryVars,
-  GetRoomsByHotelQueryData,
-  GetRoomsByHotelQueryVars,
   LockPriceMutationData,
   LockPriceMutationVars,
-  ViewType,
 } from "@/types/hotel";
 
 const formatDateInput = (value: Date): string => {
@@ -135,10 +131,10 @@ const formatAmenityLabel = (value: string): string =>
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 type DetailIconName =
+  | "view"
   | "status"
   | "capacity"
   | "bed"
-  | "view"
   | "size"
   | "inventory"
   | "surcharge"
@@ -480,42 +476,12 @@ export default function RoomDetailPage() {
     },
     fetchPolicy: "cache-first",
   });
-  const { data: roomsByHotelData } = useQuery<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>(GET_ROOMS_BY_HOTEL_QUERY, {
-    skip: !isHydrated || !roomHotelId,
-    variables: {
-      hotelId: roomHotelId,
-      input: {
-        page: 1,
-        limit: 100,
-        sort: "createdAt",
-        direction: -1,
-      },
-    },
-    fetchPolicy: "cache-first",
-  });
 
   const hotel = hotelData?.getHotel;
   const coverImage = room?.roomImages[0] ?? "";
   const galleryImages = room?.roomImages.slice(1) ?? [];
   const deal = room?.lastMinuteDeal;
   const { viewerCount: liveViewerCount, connected: isLiveViewConnected } = useRoomLiveViewers({ roomId });
-  const sameTypeViewOptions = useMemo(() => {
-    if (!room) {
-      return [] as Array<{ viewType: ViewType; roomId: string }>;
-    }
-    const allRooms = roomsByHotelData?.getRoomsByHotel.list ?? [];
-    const sameTypeRooms = allRooms.filter((candidate) => candidate.roomType === room.roomType && candidate.viewType);
-    const unique = new Map<ViewType, string>();
-    for (const candidate of sameTypeRooms) {
-      if (!unique.has(candidate.viewType)) {
-        unique.set(candidate.viewType, candidate._id);
-      }
-    }
-    if (!unique.has(room.viewType)) {
-      unique.set(room.viewType, room._id);
-    }
-    return Array.from(unique.entries()).map(([viewType, roomId]) => ({ viewType, roomId }));
-  }, [room, roomsByHotelData?.getRoomsByHotel.list]);
 
   useEffect(() => {
     if (!roomId) {
@@ -854,6 +820,7 @@ export default function RoomDetailPage() {
     () =>
       room
         ? [
+            { label: "View Option", value: `${formatEnumLabel(room.viewType)} View`, icon: "view" as const },
             { label: "Status", value: formatEnumLabel(room.roomStatus), icon: "status" as const },
             { label: "Capacity", value: `${room.maxOccupancy} guests`, icon: "capacity" as const },
             { label: "Bed Setup", value: `${room.bedCount} x ${formatEnumLabel(room.bedType)}`, icon: "bed" as const },
@@ -1017,34 +984,6 @@ export default function RoomDetailPage() {
                   ) : null}
                 </div>
 
-                <div className="rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-white to-indigo-50 p-4 shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">Select Room View</h3>
-                    <p className="text-xs text-slate-500">Switch view type without leaving this room category.</p>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {sameTypeViewOptions.map((option) => {
-                      const isCurrent = option.roomId === room._id;
-                      return isCurrent ? (
-                        <span
-                          key={option.viewType}
-                          className="rounded-full border border-sky-500 bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
-                        >
-                          {formatEnumLabel(option.viewType)} (Current)
-                        </span>
-                      ) : (
-                        <Link
-                          key={option.viewType}
-                          href={`/rooms/${option.roomId}`}
-                          className="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-slate-900"
-                        >
-                          {formatEnumLabel(option.viewType)}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 <p className="max-w-3xl text-lg leading-8 text-slate-700">
                   {room.roomDesc || "No room description provided. This room is prepared for practical comfort with distinct atmosphere and clean details."}
                 </p>
@@ -1055,7 +994,7 @@ export default function RoomDetailPage() {
                       key={item.label}
                       className="rounded-2xl border border-slate-200 bg-white px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
                     >
-                      <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+                      <div className="mb-2 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-800 [&>svg]:h-6 [&>svg]:w-6">
                         <DetailIcon name={item.icon} />
                       </div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{item.label}</p>
