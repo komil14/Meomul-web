@@ -1,7 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { CHECK_AUTH_QUERY } from "@/graphql/auth.gql";
@@ -12,6 +12,7 @@ import {
   GET_HOTELS_QUERY,
 } from "@/graphql/hotel.gql";
 import { clearAuthSession, getSessionMember } from "@/lib/auth/session";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { CheckAuthQueryData } from "@/types/auth";
 import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
@@ -31,6 +32,7 @@ const DASHBOARD_LIST_INPUT: PaginationInput = {
   sort: "createdAt",
   direction: -1,
 };
+const DASHBOARD_REFRESH_COOLDOWN_MS = 60000;
 
 interface StatTileProps {
   label: string;
@@ -49,14 +51,24 @@ function StatTile({ label, value }: StatTileProps) {
 const DashboardPage: NextPageWithAuth = () => {
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
+  const isPageVisible = usePageVisible();
+  const hasVisibilityMountedRef = useRef(false);
+  const wasVisibleRef = useRef(false);
+  const lastRefreshAtRef = useRef(0);
 
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
   const isAgent = memberType === "AGENT";
   const isAdminArea = memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 
-  const { data: authData, loading: authLoading, error: authError } = useQuery<CheckAuthQueryData>(CHECK_AUTH_QUERY, {
-    fetchPolicy: "network-only",
+  const {
+    data: authData,
+    loading: authLoading,
+    error: authError,
+    refetch: refetchAuth,
+  } = useQuery<CheckAuthQueryData>(CHECK_AUTH_QUERY, {
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -85,9 +97,11 @@ const DashboardPage: NextPageWithAuth = () => {
     data: dashboardStatsData,
     loading: dashboardStatsLoading,
     error: dashboardStatsError,
+    refetch: refetchDashboardStats,
   } = useQuery<GetDashboardStatsQueryData>(GET_DASHBOARD_STATS_QUERY, {
     skip: !isAdminArea,
-    fetchPolicy: "network-only",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const {
@@ -104,6 +118,34 @@ const DashboardPage: NextPageWithAuth = () => {
     clearAuthSession();
     await router.push("/auth/login");
   };
+
+  useEffect(() => {
+    if (!isPageVisible) {
+      wasVisibleRef.current = false;
+      return;
+    }
+
+    const becameVisible = !wasVisibleRef.current;
+    wasVisibleRef.current = true;
+    if (!hasVisibilityMountedRef.current) {
+      hasVisibilityMountedRef.current = true;
+      return;
+    }
+    if (!becameVisible) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    if (nowMs - lastRefreshAtRef.current < DASHBOARD_REFRESH_COOLDOWN_MS) {
+      return;
+    }
+    lastRefreshAtRef.current = nowMs;
+
+    void refetchAuth();
+    if (isAdminArea) {
+      void refetchDashboardStats();
+    }
+  }, [isAdminArea, isPageVisible, refetchAuth, refetchDashboardStats]);
 
   const userHotels = userHotelsData?.getHotels.list ?? [];
   const agentHotels = agentHotelsData?.getAgentHotels.list ?? [];

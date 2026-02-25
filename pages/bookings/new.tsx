@@ -167,7 +167,8 @@ const NewBookingPage: NextPageWithAuth = () => {
       keyword: debouncedGuestKeyword,
       limit: 8,
     },
-    fetchPolicy: "network-only",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const [createBooking, { loading: creating, data: createdBookingData, error: createError }] = useMutation<

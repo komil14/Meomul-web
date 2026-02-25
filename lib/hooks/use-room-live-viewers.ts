@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { createRoomViewersSocket } from "@/lib/socket/room-viewers";
 
 interface UseRoomLiveViewersInput {
@@ -70,14 +71,16 @@ export const useRoomLiveViewers = ({ roomId }: UseRoomLiveViewersInput): UseRoom
   const [viewerCount, setViewerCount] = useState<number>(0);
   const [connected, setConnected] = useState(false);
   const joinedRef = useRef(false);
+  const isPageVisible = usePageVisible();
 
   useEffect(() => {
     setViewerCount(0);
   }, [roomId]);
 
   useEffect(() => {
-    if (!roomId) {
+    if (!roomId || !isPageVisible) {
       setConnected(false);
+      joinedRef.current = false;
       return;
     }
 
@@ -136,7 +139,7 @@ export const useRoomLiveViewers = ({ roomId }: UseRoomLiveViewersInput): UseRoom
       socket.off("disconnect", handleDisconnect);
       socket.disconnect();
     };
-  }, [roomId]);
+  }, [isPageVisible, roomId]);
 
   return {
     viewerCount,
