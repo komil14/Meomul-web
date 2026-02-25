@@ -13,6 +13,7 @@ import {
 import type { DayPriceDto, GetPriceCalendarQueryData, GetPriceCalendarQueryVars, RoomDetailItem } from "@/types/hotel";
 
 type RefetchPriceCalendar = (variables?: GetPriceCalendarQueryVars) => Promise<unknown>;
+const CALENDAR_REFETCH_MIN_INTERVAL_MS = 20_000;
 
 interface UseRoomBookingStateInput {
   roomId: string;
@@ -112,12 +113,17 @@ export const useRoomBookingState = ({
       return;
     }
 
+    const hasCurrentMonthCalendar = Boolean(calendarByMonth[calendarMonth]?.length);
+    if (!hasCurrentMonthCalendar) {
+      return;
+    }
+
     const refreshCalendar = (): void => {
       if (document.visibilityState !== "visible") {
         return;
       }
       const nowMs = Date.now();
-      if (nowMs - lastCalendarRefetchAtRef.current < 1000) {
+      if (nowMs - lastCalendarRefetchAtRef.current < CALENDAR_REFETCH_MIN_INTERVAL_MS) {
         return;
       }
       lastCalendarRefetchAtRef.current = nowMs;
@@ -136,7 +142,7 @@ export const useRoomBookingState = ({
       window.removeEventListener("focus", refreshCalendar);
       document.removeEventListener("visibilitychange", refreshCalendar);
     };
-  }, [calendarMonth, isHydrated, refetchPriceCalendar, roomId]);
+  }, [calendarByMonth, calendarMonth, isHydrated, refetchPriceCalendar, roomId]);
 
   const availabilityByDate = useMemo(() => {
     const map = new Map<string, DayPriceDto>();

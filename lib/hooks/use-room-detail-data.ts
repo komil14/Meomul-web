@@ -58,18 +58,36 @@ export const useRoomDetailData = (): UseRoomDetailDataResult => {
     return "";
   }, [router.query.roomId]);
 
+  const roomQueryVariables = useMemo<GetRoomQueryVars>(() => ({ roomId }), [roomId]);
+  const priceCalendarQueryVariables = useMemo<GetPriceCalendarQueryVars>(
+    () => ({
+      input: {
+        roomId,
+        month: calendarMonth,
+      },
+    }),
+    [calendarMonth, roomId],
+  );
+
   const {
     data: roomData,
     loading: roomLoading,
     error: roomError,
   } = useQuery<GetRoomQueryData, GetRoomQueryVars>(GET_ROOM_QUERY, {
     skip: !isHydrated || !roomId,
-    variables: { roomId },
-    fetchPolicy: "cache-and-network",
+    variables: roomQueryVariables,
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const room = roomData?.getRoom;
   const roomHotelId = room?.hotelId ?? "";
+  const hotelContextQueryVariables = useMemo<GetHotelContextQueryVars>(
+    () => ({
+      hotelId: roomHotelId,
+    }),
+    [roomHotelId],
+  );
 
   const {
     data: priceCalendarData,
@@ -78,22 +96,15 @@ export const useRoomDetailData = (): UseRoomDetailDataResult => {
     refetch: refetchPriceCalendar,
   } = useQuery<GetPriceCalendarQueryData, GetPriceCalendarQueryVars>(GET_PRICE_CALENDAR_QUERY, {
     skip: !isHydrated || !roomId,
-    variables: {
-      input: {
-        roomId,
-        month: calendarMonth,
-      },
-    },
-    fetchPolicy: "cache-and-network",
+    variables: priceCalendarQueryVariables,
+    fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
     notifyOnNetworkStatusChange: true,
   });
 
   const { data: hotelData, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
     skip: !isHydrated || !roomHotelId,
-    variables: {
-      hotelId: roomHotelId,
-    },
+    variables: hotelContextQueryVariables,
     fetchPolicy: "cache-first",
   });
 
