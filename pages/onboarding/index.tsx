@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { SAVE_ONBOARDING_PREFERENCES_MUTATION } from "@/graphql/recommendation.gql";
 import { trackAnalyticsEvent } from "@/lib/analytics/events";
+import { setOnboardingCompletionCachedValue } from "@/lib/auth/onboarding-status";
+import { getSessionMember } from "@/lib/auth/session";
 import {
   AMENITY_OPTIONS,
   BUDGET_OPTIONS,
@@ -118,6 +120,12 @@ const OnboardingPage: NextPageWithAuth = () => {
         amenitiesCount: preferredAmenities.length,
         hasBudgetLevel: Boolean(budgetLevel),
       });
+
+      const sessionMember = getSessionMember();
+      if (sessionMember?._id) {
+        setOnboardingCompletionCachedValue(sessionMember._id, true);
+      }
+
       await router.push(redirectTarget);
     } catch (error) {
       trackAnalyticsEvent("onboarding_submit_failed", {

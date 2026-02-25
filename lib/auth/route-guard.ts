@@ -1,4 +1,6 @@
 import type { SessionMember } from "@/types/auth";
+import { resolveOnboardingRedirect } from "@/lib/auth/onboarding-status";
+import { getAccessToken } from "@/lib/auth/session";
 import type { AuthRequirement } from "@/types/page";
 
 const DASHBOARD_PATH = "/dashboard";
@@ -9,11 +11,18 @@ const buildLoginPath = (nextPath: string): string => {
   return `/auth/login?next=${encodedPath}`;
 };
 
-export const resolveGuardRedirect = (
+export const resolveGuardRedirect = async (
   auth: AuthRequirement | undefined,
   member: SessionMember | null,
   currentPath: string,
-): string | null => {
+): Promise<string | null> => {
+  if (member) {
+    const onboardingRedirect = await resolveOnboardingRedirect(member, currentPath, getAccessToken());
+    if (onboardingRedirect) {
+      return onboardingRedirect;
+    }
+  }
+
   if (!auth) {
     return null;
   }

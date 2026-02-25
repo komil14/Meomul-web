@@ -48,21 +48,38 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
   }));
 
   useEffect(() => {
-    if (!requiresGuard) {
+    let isCancelled = false;
+
+    const runGuard = async (): Promise<void> => {
+      if (!requiresGuard) {
+        if (!isCancelled) {
+          setGuardState({ key: guardKey, ready: true });
+        }
+        return;
+      }
+
+      if (!isCancelled) {
+        setGuardState({ key: guardKey, ready: false });
+      }
+
+      const redirectPath = await resolveGuardRedirect(Component.auth, getSessionMember(), router.asPath);
+      if (isCancelled) {
+        return;
+      }
+
+      if (redirectPath && redirectPath !== router.asPath) {
+        void router.replace(redirectPath);
+        return;
+      }
+
       setGuardState({ key: guardKey, ready: true });
-      return;
-    }
+    };
 
-    setGuardState({ key: guardKey, ready: false });
+    void runGuard();
 
-    const redirectPath = resolveGuardRedirect(Component.auth, getSessionMember(), router.asPath);
-
-    if (redirectPath && redirectPath !== router.asPath) {
-      void router.replace(redirectPath);
-      return;
-    }
-
-    setGuardState({ key: guardKey, ready: true });
+    return () => {
+      isCancelled = true;
+    };
   }, [Component.auth, guardKey, requiresGuard, router]);
 
   useEffect(() => {

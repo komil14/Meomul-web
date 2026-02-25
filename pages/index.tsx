@@ -1,11 +1,9 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_RECOMMENDED_HOTELS_QUERY, GET_TRENDING_HOTELS_QUERY } from "@/graphql/hotel.gql";
-import { GET_MY_RECOMMENDATION_PROFILE_QUERY } from "@/graphql/recommendation.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { canUsePersonalizedRecommendations } from "@/lib/hotels/detail-page-helpers";
 import { getErrorMessage } from "@/lib/utils/error";
@@ -15,12 +13,10 @@ import type {
   GetTrendingHotelsQueryData,
   GetTrendingHotelsQueryVars,
 } from "@/types/hotel";
-import type { GetMyRecommendationProfileQueryData } from "@/types/recommendation";
 
 const HOME_HOTEL_LIMIT = 8;
 
 export default function HomePage() {
-  const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
   const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
 
@@ -34,37 +30,11 @@ export default function HomePage() {
   const canUseRecommendedHotels = canUsePersonalizedRecommendations(memberType);
 
   const {
-    data: profileData,
-    loading: profileLoading,
-    error: profileError,
-  } = useQuery<GetMyRecommendationProfileQueryData>(GET_MY_RECOMMENDATION_PROFILE_QUERY, {
-    skip: !isHydrated || !isUser,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
-  });
-
-  const shouldBlockForOnboarding = useMemo(() => {
-    if (!isHydrated || !isUser || profileLoading) {
-      return false;
-    }
-    return profileData?.getMyRecommendationProfile?.hasProfile === false;
-  }, [isHydrated, isUser, profileData?.getMyRecommendationProfile?.hasProfile, profileLoading]);
-
-  useEffect(() => {
-    if (!shouldBlockForOnboarding) {
-      return;
-    }
-
-    const nextPath = router.asPath.startsWith("/") ? router.asPath : "/";
-    void router.replace(`/onboarding?next=${encodeURIComponent(nextPath)}`);
-  }, [router, shouldBlockForOnboarding]);
-
-  const {
     data: recommendedData,
     loading: recommendedLoading,
     error: recommendedError,
   } = useQuery<GetRecommendedHotelsQueryData, GetRecommendedHotelsQueryVars>(GET_RECOMMENDED_HOTELS_QUERY, {
-    skip: !isHydrated || !canUseRecommendedHotels || shouldBlockForOnboarding || profileLoading,
+    skip: !isHydrated || !canUseRecommendedHotels,
     variables: { limit: HOME_HOTEL_LIMIT },
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
@@ -107,23 +77,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {profileError ? (
-        <ErrorNotice
-          tone="warn"
-          title="Preference profile unavailable"
-          message={getErrorMessage(profileError)}
-        />
-      ) : null}
-
-      {shouldBlockForOnboarding ? (
-        <ErrorNotice
-          tone="info"
-          title="Complete onboarding to unlock recommendations"
-          message="Redirecting to onboarding..."
-        />
-      ) : null}
-
-      {canUseRecommendedHotels && !shouldBlockForOnboarding ? (
+      {canUseRecommendedHotels ? (
         <section className="space-y-4">
           <header className="flex items-end justify-between gap-3">
             <div>
