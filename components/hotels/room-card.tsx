@@ -34,6 +34,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
         <div className="flex items-center gap-2">
           <Link
             href={`/rooms/${room._id}`}
+            prefetch={false}
             className="inline-flex rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-500"
           >
             View details
@@ -41,6 +42,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
           {hotelId ? (
             <Link
               href={`/bookings/new?hotelId=${hotelId}&roomId=${room._id}`}
+              prefetch={false}
               className="inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
             >
               Book this room

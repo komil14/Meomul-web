@@ -11,7 +11,7 @@ export const HotelCard = memo(function HotelCard({ hotel }: HotelCardProps) {
 
   return (
     <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <Link href={`/hotels/${hotel._id}`} className="block">
+      <Link href={`/hotels/${hotel._id}`} prefetch={false} className="block">
         <div
           className="h-40 w-full bg-slate-200 bg-cover bg-center"
           style={coverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
