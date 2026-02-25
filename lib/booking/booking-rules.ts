@@ -7,6 +7,7 @@ export interface ResolveEffectiveNightPriceInput {
   lastMinuteDeal?: {
     isActive: boolean;
     dealPrice: number;
+    validUntil?: string;
   } | null;
 }
 
@@ -82,6 +83,12 @@ export const resolveEffectiveNightPrice = (input: ResolveEffectiveNightPriceInpu
     return { price: input.lockedPrice, source: "PRICE_LOCK" };
   }
   if (input.lastMinuteDeal?.isActive) {
+    if (input.lastMinuteDeal.validUntil) {
+      const expiresAt = new Date(input.lastMinuteDeal.validUntil).getTime();
+      if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+        return { price: input.basePrice, source: "BASE_RATE" };
+      }
+    }
     return { price: input.lastMinuteDeal.dealPrice, source: "LAST_MINUTE_DEAL" };
   }
   return { price: input.basePrice, source: "BASE_RATE" };

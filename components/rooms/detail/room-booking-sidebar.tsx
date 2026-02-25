@@ -4,6 +4,8 @@ import type { CSSProperties } from "react";
 import type { DayPriceDto } from "@/types/hotel";
 
 interface RoomBookingSidebarProps {
+  effectiveNightlyRate: number;
+  effectiveNightlyRateSourceLabel: string;
   adultCount: number;
   childCount: number;
   roomQuantity: number;
@@ -39,6 +41,8 @@ interface RoomBookingSidebarProps {
 }
 
 export function RoomBookingSidebar({
+  effectiveNightlyRate,
+  effectiveNightlyRateSourceLabel,
   adultCount,
   childCount,
   roomQuantity,
@@ -79,6 +83,12 @@ export function RoomBookingSidebar({
         <h3 className="mt-1 text-2xl font-semibold leading-tight text-slate-900">Select Stay Dates</h3>
         <p className="mt-1 text-xs text-slate-500">Step 1: dates • Step 2: guests • Step 3: continue to booking</p>
       </div>
+
+      <article className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Current bookable nightly rate</p>
+        <p className="mt-1 text-lg font-semibold text-slate-900">₩ {effectiveNightlyRate.toLocaleString()}</p>
+        <p className="text-[11px] text-slate-600">{effectiveNightlyRateSourceLabel}</p>
+      </article>
 
       <div className="grid grid-cols-2 gap-2">
         <div>

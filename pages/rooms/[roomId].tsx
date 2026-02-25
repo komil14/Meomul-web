@@ -422,7 +422,19 @@ export default function RoomDetailPage() {
   const hotel = hotelData?.getHotel;
   const coverImage = room?.roomImages[0] ?? "";
   const galleryImages = room?.roomImages.slice(1) ?? [];
-  const deal = room?.lastMinuteDeal;
+  const activeDeal = useMemo(() => {
+    const deal = room?.lastMinuteDeal;
+    if (!deal?.isActive) {
+      return null;
+    }
+
+    const expiresAtMs = new Date(deal.validUntil).getTime();
+    if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+      return null;
+    }
+
+    return deal;
+  }, [room?.lastMinuteDeal]);
   const { viewerCount: liveViewerCount, connected: isLiveViewConnected } = useRoomLiveViewers({ roomId });
 
   useEffect(() => {
@@ -768,6 +780,13 @@ export default function RoomDetailPage() {
   const calendarLoadError = priceCalendarError;
   const calendarLoadErrorMessage = calendarLoadError && visibleWindowCalendar.length === 0 ? getErrorMessage(calendarLoadError) : null;
   const activePriceLock = myPriceLockData?.getMyPriceLock ?? null;
+  const lockRequestPrice = activeDeal?.dealPrice ?? room?.basePrice ?? 0;
+  const effectiveNightlyRate = activePriceLock?.lockedPrice ?? lockRequestPrice;
+  const effectiveNightlyRateSourceLabel = activePriceLock
+    ? "Locked price is active for your account."
+    : activeDeal
+      ? "Last-minute deal is currently active."
+      : "Base rate (before taxes/fees).";
   const showBottomLockBar = canLockPrice && canLockCurrentRoom && !myPriceLockLoading && !activePriceLock && !lockingPrice;
   const cheapestDatePrice = cheapestDateKey ? availabilityByDate.get(cheapestDateKey)?.price : undefined;
   const peakDatePrice = peakDateKey ? availabilityByDate.get(peakDateKey)?.price : undefined;
@@ -821,7 +840,7 @@ export default function RoomDetailPage() {
         variables: {
           input: {
             roomId: room._id,
-            currentPrice: room.basePrice,
+            currentPrice: lockRequestPrice,
           },
         },
         refetchQueries: [
@@ -909,7 +928,7 @@ export default function RoomDetailPage() {
             roomName={room.roomName}
             roomDesc={room.roomDesc}
             basePrice={room.basePrice}
-            deal={deal}
+            deal={activeDeal ?? undefined}
             highlights={roomHeroHighlights}
           />
 
@@ -923,12 +942,14 @@ export default function RoomDetailPage() {
                 hotelCheckInTime={hotel?.checkInTime}
                 hotelCheckOutTime={hotel?.checkOutTime}
                 hotelCancellationPolicy={hotel?.cancellationPolicy ? formatEnumLabel(hotel.cancellationPolicy) : undefined}
-                deal={deal}
+                deal={activeDeal ?? undefined}
                 roomDesc={room.roomDesc}
                 factCards={roomFactCards}
                 amenityCards={roomAmenityCards}
               />
               <RoomBookingSidebar
+                effectiveNightlyRate={effectiveNightlyRate}
+                effectiveNightlyRateSourceLabel={effectiveNightlyRateSourceLabel}
                 adultCount={adultCount}
                 childCount={childCount}
                 roomQuantity={roomQuantity}
@@ -965,7 +986,7 @@ export default function RoomDetailPage() {
             </div>
           </section>
 
-          {showBottomLockBar ? <PriceLockReadyBar basePrice={room.basePrice} locking={lockingPrice} onLockPrice={() => void handleLockPrice()} /> : null}
+          {showBottomLockBar ? <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={() => void handleLockPrice()} /> : null}
           <LiveInterestFab
             viewerCount={liveViewerCount}
             connected={isLiveViewConnected}
