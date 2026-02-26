@@ -1420,6 +1420,8 @@ export type ReviewDto = {
   reviewTitle?: Maybe<Scalars['String']['output']>;
   reviewViews: Scalars['Int']['output'];
   reviewerId: Scalars['String']['output'];
+  reviewerImage?: Maybe<Scalars['String']['output']>;
+  reviewerNick?: Maybe<Scalars['String']['output']>;
   serviceRating: Scalars['Float']['output'];
   stayDate: Scalars['DateTime']['output'];
   updatedAt: Scalars['DateTime']['output'];
@@ -1440,6 +1442,17 @@ export type ReviewInput = {
   valueRating: Scalars['Float']['input'];
 };
 
+export type ReviewRatingsSummaryDto = {
+  __typename?: 'ReviewRatingsSummaryDto';
+  amenitiesRating: Scalars['Float']['output'];
+  cleanlinessRating: Scalars['Float']['output'];
+  locationRating: Scalars['Float']['output'];
+  overallRating: Scalars['Float']['output'];
+  serviceRating: Scalars['Float']['output'];
+  totalReviews: Scalars['Int']['output'];
+  valueRating: Scalars['Float']['output'];
+};
+
 export type ReviewStatus =
   | 'APPROVED'
   | 'FLAGGED'
@@ -1457,6 +1470,7 @@ export type ReviewsDto = {
   __typename?: 'ReviewsDto';
   list: Array<ReviewDto>;
   metaCounter: MetaCounterDto;
+  ratingsSummary?: Maybe<ReviewRatingsSummaryDto>;
 };
 
 export type RoomDto = {

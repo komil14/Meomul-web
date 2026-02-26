@@ -44,6 +44,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     reviewPage,
     reviewTotalPages,
     reviewTotal,
+    ratingsSummary,
     canGoPrev,
     canGoNext,
     handlePrevReviewPage,
@@ -176,6 +177,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
             reviewPage={reviewPage}
             reviewTotalPages={reviewTotalPages}
             reviewTotal={reviewTotal}
+            ratingsSummary={ratingsSummary}
             onPrevPage={handlePrevReviewPage}
             onNextPage={handleNextReviewPage}
             canGoPrev={canGoPrev}

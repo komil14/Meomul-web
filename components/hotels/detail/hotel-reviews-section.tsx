@@ -1,7 +1,8 @@
 import { memo, useCallback } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { formatNumber } from "@/lib/utils/format";
-import type { ReviewDto } from "@/types/hotel";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
+import type { ReviewDto, ReviewRatingsSummaryDto } from "@/types/hotel";
 
 interface HotelReviewsSectionProps {
   reviews: ReviewDto[];
@@ -11,6 +12,7 @@ interface HotelReviewsSectionProps {
   reviewPage: number;
   reviewTotalPages: number;
   reviewTotal: number;
+  ratingsSummary: ReviewRatingsSummaryDto | null;
   onPrevPage: () => void;
   onNextPage: () => void;
   canGoPrev: boolean;
@@ -31,6 +33,19 @@ const formatDate = (value?: string | null): string => {
   }
   return date.toISOString().slice(0, 10);
 };
+
+const getReviewerDisplayName = (review: ReviewDto): string => {
+  const nick = review.reviewerNick?.trim();
+  if (nick) {
+    return nick;
+  }
+
+  const suffix = review.reviewerId.slice(-4);
+  return `Guest ${suffix}`;
+};
+
+const getReviewerInitial = (review: ReviewDto): string => getReviewerDisplayName(review).slice(0, 1).toUpperCase();
+
 interface RatingBarProps {
   label: string;
   rating: number;
@@ -72,13 +87,30 @@ const ReviewRow = memo(function ReviewRow({
   const handleMarkHelpful = useCallback(() => {
     onMarkHelpful(review._id);
   }, [onMarkHelpful, review._id]);
+  const reviewerName = getReviewerDisplayName(review);
+  const reviewerInitial = getReviewerInitial(review);
+  const reviewerImageUrl = resolveMediaUrl(review.reviewerImage);
 
   return (
     <article className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">{review.reviewTitle || "Guest review"}</p>
-          <p className="text-xs text-slate-500">{formatDate(review.createdAt)}</p>
+        <div className="flex items-center gap-2">
+          {reviewerImageUrl ? (
+            <img
+              src={reviewerImageUrl}
+              alt={reviewerName}
+              className="h-9 w-9 rounded-full border border-slate-200 object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-600">
+              {reviewerInitial}
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-semibold text-slate-900">{reviewerName}</p>
+            <p className="text-xs text-slate-500">{formatDate(review.createdAt)}</p>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-sm font-semibold text-slate-900">{review.overallRating.toFixed(1)} / 5</p>
@@ -86,20 +118,11 @@ const ReviewRow = memo(function ReviewRow({
         </div>
       </div>
 
+      {review.reviewTitle ? <p className="text-sm font-semibold text-slate-900">{review.reviewTitle}</p> : null}
       <p className="text-sm leading-6 text-slate-700">{review.reviewText}</p>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <RatingBar label="Cleanliness" rating={review.cleanlinessRating} />
-        <RatingBar label="Location" rating={review.locationRating} />
-        <RatingBar label="Service" rating={review.serviceRating} />
-        <RatingBar label="Amenities" rating={review.amenitiesRating} />
-        <RatingBar label="Value" rating={review.valueRating} />
-        <div className="flex items-end">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Helpful <span className="ml-1 text-sm text-slate-800">{formatNumber(helpfulCount)}</span>
-          </p>
-        </div>
-      </div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Helpful <span className="ml-1 text-sm text-slate-800">{formatNumber(helpfulCount)}</span>
+      </p>
 
       {review.hotelResponse ? (
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
@@ -130,6 +153,7 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
   reviewPage,
   reviewTotalPages,
   reviewTotal,
+  ratingsSummary,
   onPrevPage,
   onNextPage,
   canGoPrev,
@@ -139,6 +163,8 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
   helpfulCountOverrides,
   onMarkHelpful,
 }: HotelReviewsSectionProps) {
+  const featuredReviews = reviews.slice(0, 2);
+
   return (
     <section id="reviews" className="space-y-4">
       <header>
@@ -161,23 +187,54 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
 
       {reviews.length > 0 ? (
         <>
-          <div className="space-y-3">
-            {reviews.map((review) => {
-              const helpfulCount = helpfulCountOverrides[review._id] ?? review.helpfulCount;
-              const isMarkingHelpful = markingHelpfulReviewId === review._id;
+          {ratingsSummary ? (
+            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Average Guest Ratings</p>
+                  <p className="text-xs text-slate-500">Calculated from all approved reviews for this hotel.</p>
+                </div>
+                <p className="text-sm font-semibold text-slate-800">
+                  {ratingsSummary.overallRating.toFixed(2)} / 5 · {formatNumber(ratingsSummary.totalReviews)} reviews
+                </p>
+              </div>
 
-              return (
-                <ReviewRow
-                  key={review._id}
-                  review={review}
-                  helpfulCount={helpfulCount}
-                  canMarkHelpful={canMarkHelpful}
-                  isMarkingHelpful={isMarkingHelpful}
-                  onMarkHelpful={onMarkHelpful}
-                />
-              );
-            })}
-          </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <RatingBar label="Overall" rating={ratingsSummary.overallRating} />
+                <RatingBar label="Cleanliness" rating={ratingsSummary.cleanlinessRating} />
+                <RatingBar label="Location" rating={ratingsSummary.locationRating} />
+                <RatingBar label="Service" rating={ratingsSummary.serviceRating} />
+                <RatingBar label="Amenities" rating={ratingsSummary.amenitiesRating} />
+                <RatingBar label="Value" rating={ratingsSummary.valueRating} />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-900">See what guests loved the most:</p>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {featuredReviews.map((review) => {
+                    const helpfulCount = helpfulCountOverrides[review._id] ?? review.helpfulCount;
+                    const isMarkingHelpful = markingHelpfulReviewId === review._id;
+
+                    return (
+                      <ReviewRow
+                        key={`featured-${review._id}`}
+                        review={review}
+                        helpfulCount={helpfulCount}
+                        canMarkHelpful={canMarkHelpful}
+                        isMarkingHelpful={isMarkingHelpful}
+                        onMarkHelpful={onMarkHelpful}
+                      />
+                    );
+                  })}
+                  {featuredReviews.length < 2 ? (
+                    <article className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                      More guest highlights will appear here as new reviews arrive.
+                    </article>
+                  ) : null}
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           <footer className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
             <p className="text-slate-600">

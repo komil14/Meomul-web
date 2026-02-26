@@ -324,6 +324,8 @@ export interface HotelResponseDto {
 export interface ReviewDto {
   _id: string;
   reviewerId: string;
+  reviewerNick?: string | null;
+  reviewerImage?: string | null;
   bookingId: string;
   hotelId: string;
   overallRating: number;
@@ -343,9 +345,20 @@ export interface ReviewDto {
   hotelResponse?: HotelResponseDto | null;
 }
 
+export interface ReviewRatingsSummaryDto {
+  totalReviews: number;
+  overallRating: number;
+  cleanlinessRating: number;
+  locationRating: number;
+  serviceRating: number;
+  amenitiesRating: number;
+  valueRating: number;
+}
+
 export interface ReviewsDto {
   list: ReviewDto[];
   metaCounter: MetaCounterDto;
+  ratingsSummary?: ReviewRatingsSummaryDto | null;
 }
 
 export interface GetHotelReviewsQueryData {

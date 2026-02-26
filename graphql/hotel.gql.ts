@@ -236,6 +236,8 @@ export const GET_HOTEL_REVIEWS_QUERY = gql`
       list {
         _id
         reviewerId
+        reviewerNick
+        reviewerImage
         bookingId
         hotelId
         overallRating
@@ -260,6 +262,15 @@ export const GET_HOTEL_REVIEWS_QUERY = gql`
       }
       metaCounter {
         total
+      }
+      ratingsSummary {
+        totalReviews
+        overallRating
+        cleanlinessRating
+        locationRating
+        serviceRating
+        amenitiesRating
+        valueRating
       }
     }
   }

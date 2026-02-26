@@ -28,6 +28,7 @@ import type {
   GetRoomsByHotelQueryData,
   GetRoomsByHotelQueryVars,
   HotelDetailItem,
+  ReviewRatingsSummaryDto,
   RoomListItem,
 } from "@/types/hotel";
 
@@ -241,6 +242,29 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
 
   const reviews = shouldLoadReviews ? reviewsData?.getHotelReviews.list ?? [] : [];
   const reviewTotal = shouldLoadReviews ? reviewsData?.getHotelReviews.metaCounter.total ?? 0 : 0;
+  const serverRatingsSummary = shouldLoadReviews ? reviewsData?.getHotelReviews.ratingsSummary ?? null : null;
+  const ratingsSummary = useMemo<ReviewRatingsSummaryDto | null>(() => {
+    if (serverRatingsSummary) {
+      return serverRatingsSummary;
+    }
+
+    if (reviews.length === 0) {
+      return null;
+    }
+
+    const count = reviews.length;
+    const avg = (values: number[]): number => values.reduce((sum, value) => sum + value, 0) / count;
+
+    return {
+      totalReviews: reviewTotal || count,
+      overallRating: avg(reviews.map((review) => review.overallRating)),
+      cleanlinessRating: avg(reviews.map((review) => review.cleanlinessRating)),
+      locationRating: avg(reviews.map((review) => review.locationRating)),
+      serviceRating: avg(reviews.map((review) => review.serviceRating)),
+      amenitiesRating: avg(reviews.map((review) => review.amenitiesRating)),
+      valueRating: avg(reviews.map((review) => review.valueRating)),
+    };
+  }, [reviewTotal, reviews, serverRatingsSummary]);
   const reviewTotalPages = Math.max(1, Math.ceil(reviewTotal / REVIEW_PAGE_SIZE));
   const reviewsLoading = !shouldLoadReviews || reviewsQueryLoading;
   const canGoPrev = reviewPage > 1;
@@ -316,6 +340,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     reviewPage,
     reviewTotalPages,
     reviewTotal,
+    ratingsSummary,
     canGoPrev,
     canGoNext,
     handlePrevReviewPage,
