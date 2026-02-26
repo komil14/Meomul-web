@@ -58,7 +58,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
   const statusLine = formatEnumLabel(room.roomStatus);
 
   return (
-    <article className="group overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-xl">
+    <article className="group overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover-lift">
       <div className="grid lg:grid-cols-[1.1fr_1fr]">
         <div className="relative h-56 bg-slate-200 sm:h-64 lg:h-full">
           {coverImage ? (

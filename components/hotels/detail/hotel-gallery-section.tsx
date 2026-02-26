@@ -10,7 +10,7 @@ export const HotelGallerySection = memo(function HotelGallerySection({ images }:
   const galleryImages = images.map((image) => resolveMediaUrl(image));
 
   return (
-    <section id="gallery" className="space-y-5">
+    <section id="gallery" className="space-y-5 motion-fade-up motion-delay-2">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Gallery</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -31,7 +31,7 @@ export const HotelGallerySection = memo(function HotelGallerySection({ images }:
           {galleryImages.map((image, index) => (
             <div
               key={`${image}-${index}`}
-              className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white ${
+              className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-white hover-lift ${
                 index % 6 === 0 ? "sm:col-span-2 lg:col-span-2 lg:row-span-2" : ""
               }`}
             >

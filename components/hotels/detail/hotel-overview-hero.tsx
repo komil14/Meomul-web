@@ -36,9 +36,16 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
   const badgeLabel = hotel.badgeLevel === "NONE" ? null : `${hotel.badgeLevel.toLowerCase()} host`;
 
   return (
-    <section id="overview" className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-xl">
+    <section id="overview" className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-xl motion-pop-in">
       {heroImage ? (
-        <Image src={heroImage} alt={hotel.hotelTitle} fill priority sizes="100vw" className="absolute inset-0 h-full w-full object-cover" />
+        <Image
+          src={heroImage}
+          alt={hotel.hotelTitle}
+          fill
+          priority
+          sizes="100vw"
+          className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+        />
       ) : null}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-900/75 to-sky-900/60" />
       <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-slate-950/95 to-transparent" />
@@ -48,13 +55,13 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
           <div className="flex flex-col justify-between gap-8">
             <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
-                  {hotel.hotelLocation}
-                </span>
-                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
+                  <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] transition hover:bg-white/20">
+                    {hotel.hotelLocation}
+                  </span>
+                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] transition hover:bg-white/20">
                   {hotel.hotelType}
                 </span>
-                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.08em]">
+                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.08em] transition hover:bg-white/20">
                   {verificationLabel}
                 </span>
                 {badgeLabel ? (
@@ -111,22 +118,22 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-4">
-              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm">
+              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm hover-lift">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Guest rating</p>
                 <p className="mt-2 text-4xl font-semibold leading-none">{hotel.hotelRating.toFixed(1)}</p>
                 <p className="mt-2 text-xs text-slate-200">out of 5.0</p>
               </article>
-              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm">
+              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm hover-lift">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Reviews</p>
                 <p className="mt-2 text-4xl font-semibold leading-none">{reviewCountText}</p>
                 <p className="mt-2 text-xs text-slate-200">verified stays</p>
               </article>
-              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm">
+              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm hover-lift">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Satisfaction</p>
                 <p className="mt-2 text-4xl font-semibold leading-none">{satisfactionText}</p>
                 <p className="mt-2 text-xs text-slate-200">average score</p>
               </article>
-              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm">
+              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm hover-lift">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Saved by guests</p>
                 <p className="mt-2 text-4xl font-semibold leading-none">{formatNumber(hotelLikeCount)}</p>
                 <p className="mt-2 text-xs text-slate-200">total likes</p>

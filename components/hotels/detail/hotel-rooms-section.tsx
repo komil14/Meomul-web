@@ -19,8 +19,8 @@ export const HotelRoomsSection = memo(function HotelRoomsSection({
   const roomCount = rooms.length;
 
   return (
-    <section id="rooms" className="space-y-4">
-      <header className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 to-slate-700 px-5 py-5 text-white sm:px-6">
+    <section id="rooms" className="space-y-4 motion-fade-up motion-delay-3">
+      <header className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 to-slate-700 px-5 py-5 text-white sm:px-6 hover-lift">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Stay Selection</p>

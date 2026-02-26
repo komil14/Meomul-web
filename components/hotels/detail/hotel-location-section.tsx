@@ -17,7 +17,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
   mapUrl,
 }: HotelLocationSectionProps) {
   return (
-    <section id="location" ref={mapSectionRef} className="space-y-5">
+    <section id="location" ref={mapSectionRef} className="space-y-5 motion-fade-up motion-delay-4">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Location</p>
         <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Where you will stay</h2>
@@ -25,7 +25,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 hover-lift">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Address</p>
           <p className="mt-2 text-sm font-semibold text-slate-900">{hotel.detailedLocation.address}</p>
 
@@ -60,7 +60,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
           </a>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover-lift">
           <div className="overflow-hidden rounded-xl border border-slate-200">
             {shouldLoadMap ? (
               <iframe

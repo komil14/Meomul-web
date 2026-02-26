@@ -93,7 +93,7 @@ const ReviewRow = memo(function ReviewRow({
   const reviewerImageUrl = resolveMediaUrl(review.reviewerImage);
 
   return (
-    <article className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5">
+    <article className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {reviewerImageUrl ? (
@@ -169,7 +169,7 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
   const featuredReviews = reviews.slice(0, 2);
 
   return (
-    <section id="reviews" className="space-y-4">
+    <section id="reviews" className="space-y-4 motion-fade-up motion-delay-4">
       <header>
         <h2 className="text-2xl font-semibold text-slate-900">Reviews</h2>
         <p className="text-sm text-slate-600">Verified and recent guest feedback for this hotel.</p>
@@ -191,7 +191,7 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
       {reviews.length > 0 ? (
         <>
           {ratingsSummary ? (
-            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 hover-lift">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-slate-900">Average Guest Ratings</p>
