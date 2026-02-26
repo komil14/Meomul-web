@@ -12,8 +12,8 @@ export function ScrollReveal({
   children,
   className,
   delayMs = 0,
-  threshold = 0.18,
-  rootMargin = "0px 0px -8% 0px",
+  threshold = 0.1,
+  rootMargin = "0px 0px 12% 0px",
   once = true,
 }: ScrollRevealProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);

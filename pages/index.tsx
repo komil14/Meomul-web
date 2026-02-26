@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_RECOMMENDED_HOTELS_V2_QUERY, GET_TRENDING_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
@@ -129,112 +130,120 @@ export default function HomePage() {
 
   return (
     <main className={`space-y-10 ${HOME_MOTION_INTENSITY_CLASS}`}>
-      <section className="rounded-3xl border border-slate-200 bg-white px-6 py-8 sm:px-8 sm:py-10 motion-pop-in">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Meomul Discovery</p>
-        <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">Find your next stay faster</h1>
-        <p className="mt-4 max-w-3xl text-sm text-slate-600 sm:text-base">
-          Your homepage now combines personalized recommendations with market-wide trending hotels.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/hotels" className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-            Browse all hotels
-          </Link>
-          {isUser ? (
-            <Link
-              href="/settings/preferences"
-              className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-500"
-            >
-              Update preferences
+      <ScrollReveal delayMs={20}>
+        <section className="rounded-3xl border border-slate-200 bg-white px-6 py-8 sm:px-8 sm:py-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Meomul Discovery</p>
+          <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">Find your next stay faster</h1>
+          <p className="mt-4 max-w-3xl text-sm text-slate-600 sm:text-base">
+            Your homepage now combines personalized recommendations with market-wide trending hotels.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/hotels" className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
+              Browse all hotels
             </Link>
-          ) : null}
-        </div>
-      </section>
+            {isUser ? (
+              <Link
+                href="/settings/preferences"
+                className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-500"
+              >
+                Update preferences
+              </Link>
+            ) : null}
+          </div>
+        </section>
+      </ScrollReveal>
 
       {showOnboardingRefreshNotice ? (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 motion-fade-up motion-delay-1">
-          <p className="text-sm font-semibold text-emerald-800">Preferences saved and recommendations refreshed.</p>
-          <p className="mt-1 text-xs text-emerald-700">
-            Your onboarding answers now drive the first recommendation stage on this page.
-          </p>
-        </section>
+        <ScrollReveal delayMs={30}>
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+            <p className="text-sm font-semibold text-emerald-800">Preferences saved and recommendations refreshed.</p>
+            <p className="mt-1 text-xs text-emerald-700">
+              Your onboarding answers now drive the first recommendation stage on this page.
+            </p>
+          </section>
+        </ScrollReveal>
       ) : null}
 
       {canUseRecommendedHotels ? (
-        <section className="space-y-4 motion-fade-up motion-delay-2">
+        <ScrollReveal delayMs={40}>
+          <section className="space-y-4">
+            <header className="flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">For You</p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-900">Personalized recommendations</h2>
+                {recommendationMeta ? (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
+                      {recommendationSourceLabel}
+                    </span>
+                    <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
+                      {recommendationMeta.matchedLocationCount} location match
+                      {recommendationMeta.matchedLocationCount === 1 ? "" : "es"}
+                    </span>
+                    <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
+                      {recommendationMeta.fallbackCount} fallback
+                    </span>
+                    {recommendationBlendText ? (
+                      <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
+                        {recommendationBlendText}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </header>
+
+            {recommendedError ? <ErrorNotice message={getErrorMessage(recommendedError)} /> : null}
+            {recommendedLoading ? (
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+                Loading personalized hotels...
+              </div>
+            ) : null}
+            {!recommendedLoading && recommendedHotels.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+                We need a little more activity to personalize deeply. Trending hotels are shown below.
+              </div>
+            ) : null}
+            {recommendedHotels.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {recommendedHotels.map((hotel) => (
+                  <HotelCard key={hotel._id} hotel={hotel} trackingContext={getRecommendedTrackingContext(recommendationMeta)} />
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </ScrollReveal>
+      ) : null}
+
+      <ScrollReveal delayMs={50}>
+        <section className="space-y-4">
           <header className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">For You</p>
-              <h2 className="mt-1 text-2xl font-semibold text-slate-900">Personalized recommendations</h2>
-              {recommendationMeta ? (
-                <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
-                    {recommendationSourceLabel}
-                  </span>
-                  <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
-                    {recommendationMeta.matchedLocationCount} location match
-                    {recommendationMeta.matchedLocationCount === 1 ? "" : "es"}
-                  </span>
-                  <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
-                    {recommendationMeta.fallbackCount} fallback
-                  </span>
-                  {recommendationBlendText ? (
-                    <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
-                      {recommendationBlendText}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Trending</p>
+              <h2 className="mt-1 text-2xl font-semibold text-slate-900">Popular right now</h2>
             </div>
           </header>
 
-          {recommendedError ? <ErrorNotice message={getErrorMessage(recommendedError)} /> : null}
-          {recommendedLoading ? (
+          {trendingError ? <ErrorNotice message={getErrorMessage(trendingError)} /> : null}
+          {trendingLoading ? (
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-              Loading personalized hotels...
+              Loading trending hotels...
             </div>
           ) : null}
-          {!recommendedLoading && recommendedHotels.length === 0 ? (
+          {!trendingLoading && trendingHotels.length === 0 ? (
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-              We need a little more activity to personalize deeply. Trending hotels are shown below.
+              No trending hotels available yet.
             </div>
           ) : null}
-          {recommendedHotels.length > 0 ? (
+          {trendingHotels.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {recommendedHotels.map((hotel) => (
-                <HotelCard key={hotel._id} hotel={hotel} trackingContext={getRecommendedTrackingContext(recommendationMeta)} />
+              {trendingHotels.map((hotel) => (
+                <HotelCard key={hotel._id} hotel={hotel} trackingContext={{ source: "trending", section: "home_trending" }} />
               ))}
             </div>
           ) : null}
         </section>
-      ) : null}
-
-      <section className="space-y-4 motion-fade-up motion-delay-3">
-        <header className="flex items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Trending</p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-900">Popular right now</h2>
-          </div>
-        </header>
-
-        {trendingError ? <ErrorNotice message={getErrorMessage(trendingError)} /> : null}
-        {trendingLoading ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-            Loading trending hotels...
-          </div>
-        ) : null}
-        {!trendingLoading && trendingHotels.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-            No trending hotels available yet.
-          </div>
-        ) : null}
-        {trendingHotels.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {trendingHotels.map((hotel) => (
-              <HotelCard key={hotel._id} hotel={hotel} trackingContext={{ source: "trending", section: "home_trending" }} />
-            ))}
-          </div>
-        ) : null}
-      </section>
+      </ScrollReveal>
     </main>
   );
 }
