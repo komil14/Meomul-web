@@ -21,14 +21,38 @@ interface HotelReviewsSectionProps {
   onMarkHelpful: (reviewId: string) => void;
 }
 
-const formatDate = (value: string): string => {
+const formatDate = (value?: string | null): string => {
+  if (!value) {
+    return "-";
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "-";
   }
   return date.toISOString().slice(0, 10);
 };
-const asPercent = (rating: number): string => `${Math.round((rating / 5) * 100)}%`;
+interface RatingBarProps {
+  label: string;
+  rating: number;
+}
+
+function RatingBar({ label, rating }: RatingBarProps) {
+  const percent = Math.max(0, Math.min(100, Math.round((rating / 5) * 100)));
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+        <span className="text-xs font-semibold text-slate-700">{percent}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-[width] duration-300"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 interface ReviewRowProps {
   review: ReviewDto;
@@ -64,13 +88,17 @@ const ReviewRow = memo(function ReviewRow({
 
       <p className="text-sm leading-6 text-slate-700">{review.reviewText}</p>
 
-      <div className="grid gap-2 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-3">
-        <p>Cleanliness: {asPercent(review.cleanlinessRating)}</p>
-        <p>Location: {asPercent(review.locationRating)}</p>
-        <p>Service: {asPercent(review.serviceRating)}</p>
-        <p>Amenities: {asPercent(review.amenitiesRating)}</p>
-        <p>Value: {asPercent(review.valueRating)}</p>
-        <p>Helpful: {formatNumber(helpfulCount)}</p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <RatingBar label="Cleanliness" rating={review.cleanlinessRating} />
+        <RatingBar label="Location" rating={review.locationRating} />
+        <RatingBar label="Service" rating={review.serviceRating} />
+        <RatingBar label="Amenities" rating={review.amenitiesRating} />
+        <RatingBar label="Value" rating={review.valueRating} />
+        <div className="flex items-end">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Helpful <span className="ml-1 text-sm text-slate-800">{formatNumber(helpfulCount)}</span>
+          </p>
+        </div>
       </div>
 
       {review.hotelResponse ? (

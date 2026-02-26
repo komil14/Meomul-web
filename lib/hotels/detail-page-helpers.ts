@@ -43,11 +43,11 @@ export const shortenText = (text: string, maxLength: number): string => {
 };
 
 export const canUsePersonalizedRecommendations = (memberType: string | undefined): boolean => {
-  return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
+  return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 };
 
 export const canUseMemberActions = (memberType: string | undefined): boolean => {
-  return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
+  return memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 };
 
 export const uniqueHotels = (hotels: HotelListItem[], excludeHotelId: string): HotelListItem[] => {

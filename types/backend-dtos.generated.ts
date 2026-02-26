@@ -75,6 +75,34 @@ export type AmenitiesInput = {
   workspace?: Scalars['Boolean']['input'];
 };
 
+export type AnalyticsEventDto = {
+  __typename?: 'AnalyticsEventDto';
+  _id: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  eventName: Scalars['String']['output'];
+  eventPath?: Maybe<Scalars['String']['output']>;
+  memberId: Scalars['String']['output'];
+  memberType: MemberType;
+  payload?: Maybe<Scalars['String']['output']>;
+  source?: Maybe<Scalars['String']['output']>;
+  userAgent?: Maybe<Scalars['String']['output']>;
+};
+
+export type AnalyticsEventSearchInput = {
+  eventName?: InputMaybe<Scalars['String']['input']>;
+  fromDate?: InputMaybe<Scalars['String']['input']>;
+  memberId?: InputMaybe<Scalars['String']['input']>;
+  memberType?: InputMaybe<MemberType>;
+  source?: InputMaybe<Scalars['String']['input']>;
+  toDate?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type AnalyticsEventsDto = {
+  __typename?: 'AnalyticsEventsDto';
+  list: Array<AnalyticsEventDto>;
+  metaCounter: MetaCounterDto;
+};
+
 export type AuthMemberDto = {
   __typename?: 'AuthMemberDto';
   _id: Scalars['String']['output'];
@@ -474,8 +502,8 @@ export type HotelLocation =
 
 export type HotelResponseDto = {
   __typename?: 'HotelResponseDto';
-  respondedAt: Scalars['DateTime']['output'];
-  respondedBy: Scalars['String']['output'];
+  respondedAt?: Maybe<Scalars['DateTime']['output']>;
+  respondedBy?: Maybe<Scalars['String']['output']>;
   responseText: Scalars['String']['output'];
 };
 
@@ -721,6 +749,7 @@ export type Mutation = {
   startChat: ChatDto;
   toggleFollow: ToggleFollowDto;
   toggleLike: ToggleLikeDto;
+  trackAnalyticsEvent: Scalars['Boolean']['output'];
   updateBookingStatus: BookingDto;
   updateHotel: HotelDto;
   updateHotelByAdmin: HotelDto;
@@ -898,6 +927,11 @@ export type MutationToggleLikeArgs = {
 };
 
 
+export type MutationTrackAnalyticsEventArgs = {
+  input: TrackAnalyticsEventInput;
+};
+
+
 export type MutationUpdateBookingStatusArgs = {
   bookingId: Scalars['String']['input'];
   status: BookingStatus;
@@ -1067,6 +1101,7 @@ export type Query = {
   getAllNotificationsAdmin: NotificationsDto;
   getAllReviewsAdmin: ReviewsDto;
   getAllRoomsAdmin: RoomsDto;
+  getAnalyticsEventsAdmin: AnalyticsEventsDto;
   getBooking: BookingDto;
   getChat: ChatDto;
   getDashboardStats: DashboardStatsDto;
@@ -1090,6 +1125,7 @@ export type Query = {
   getMyNotifications: Array<NotificationDto>;
   getMyPriceLock?: Maybe<PriceLockDto>;
   getMyPriceLocks: Array<PriceLockDto>;
+  getMyRecommendationProfile: RecommendationProfileDto;
   getMyReviews: ReviewsDto;
   getMySearchHistory: Array<SearchHistoryDto>;
   getMyUnreadChatCount: Scalars['Int']['output'];
@@ -1166,6 +1202,12 @@ export type QueryGetAllReviewsAdminArgs = {
 export type QueryGetAllRoomsAdminArgs = {
   input: PaginationInput;
   statusFilter?: InputMaybe<RoomStatus>;
+};
+
+
+export type QueryGetAnalyticsEventsAdminArgs = {
+  input: PaginationInput;
+  search?: InputMaybe<AnalyticsEventSearchInput>;
 };
 
 
@@ -1338,6 +1380,19 @@ export type QueryIsFollowingArgs = {
 export type QuerySearchMembersForBookingArgs = {
   keyword: Scalars['String']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type RecommendationProfileDto = {
+  __typename?: 'RecommendationProfileDto';
+  avgPriceMax?: Maybe<Scalars['Float']['output']>;
+  avgPriceMin?: Maybe<Scalars['Float']['output']>;
+  computedAt?: Maybe<Scalars['DateTime']['output']>;
+  hasProfile: Scalars['Boolean']['output'];
+  preferredAmenities: Array<Scalars['String']['output']>;
+  preferredLocations: Array<Scalars['String']['output']>;
+  preferredPurposes: Array<Scalars['String']['output']>;
+  preferredTypes: Array<Scalars['String']['output']>;
+  source?: Maybe<Scalars['String']['output']>;
 };
 
 export type ResponseDto = {
@@ -1578,6 +1633,14 @@ export type ToggleLikeDto = {
   like?: Maybe<LikeDto>;
   likeCount: Scalars['Int']['output'];
   liked: Scalars['Boolean']['output'];
+};
+
+export type TrackAnalyticsEventInput = {
+  eventName: Scalars['String']['input'];
+  eventPath?: InputMaybe<Scalars['String']['input']>;
+  payload?: InputMaybe<Scalars['String']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
+  userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type TravelStyle =

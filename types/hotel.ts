@@ -317,8 +317,8 @@ export type DemandLevel = "LOW" | "MEDIUM" | "HIGH";
 
 export interface HotelResponseDto {
   responseText: string;
-  respondedBy: string;
-  respondedAt: string;
+  respondedBy?: string | null;
+  respondedAt?: string | null;
 }
 
 export interface ReviewDto {
