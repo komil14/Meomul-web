@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
@@ -375,22 +376,25 @@ export default function HotelsPage() {
 
   return (
     <main className={`space-y-6 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
-      <header className="flex flex-wrap items-end justify-between gap-3 motion-fade-up motion-delay-1">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Discover</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Public Hotels</h1>
-          <p className="mt-2 text-sm text-slate-600">Browse available stays across locations.</p>
-        </div>
-        <Link
-          href="/dashboard"
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
-        >
-          Open dashboard
-        </Link>
-      </header>
+      <ScrollReveal delayMs={20}>
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Discover</p>
+            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Public Hotels</h1>
+            <p className="mt-2 text-sm text-slate-600">Browse available stays across locations.</p>
+          </div>
+          <Link
+            href="/dashboard"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
+          >
+            Open dashboard
+          </Link>
+        </header>
+      </ScrollReveal>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 motion-fade-up motion-delay-2">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <ScrollReveal delayMs={30}>
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <label className="block md:col-span-2">
             <span className="mb-2 block text-sm font-medium text-slate-700">Search</span>
             <input
@@ -592,9 +596,9 @@ export default function HotelsPage() {
               Reset filters
             </button>
           </div>
-        </div>
+          </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
             <input
               type="checkbox"
@@ -628,9 +632,9 @@ export default function HotelsPage() {
             />
             Wheelchair accessible
           </label>
-        </div>
+          </div>
 
-        <fieldset className="mt-4">
+          <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-slate-700">Hotel types</legend>
           <div className="flex flex-wrap gap-2">
             {HOTEL_TYPES.map((type) => {
@@ -652,9 +656,9 @@ export default function HotelsPage() {
               );
             })}
           </div>
-        </fieldset>
+          </fieldset>
 
-        <fieldset className="mt-4">
+          <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-slate-700">Room types</legend>
           <div className="flex flex-wrap gap-2">
             {ROOM_TYPES.map((type) => {
@@ -676,9 +680,9 @@ export default function HotelsPage() {
               );
             })}
           </div>
-        </fieldset>
+          </fieldset>
 
-        <fieldset className="mt-4">
+          <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-slate-700">Star ratings</legend>
           <div className="flex flex-wrap gap-2">
             {STAR_RATINGS.map((star) => {
@@ -700,9 +704,9 @@ export default function HotelsPage() {
               );
             })}
           </div>
-        </fieldset>
+          </fieldset>
 
-        <fieldset className="mt-4">
+          <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-slate-700">Amenities</legend>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {AMENITY_OPTIONS.map((amenity) => {
@@ -724,23 +728,24 @@ export default function HotelsPage() {
               );
             })}
           </div>
-        </fieldset>
+          </fieldset>
 
-        {hasPriceRangeError ? (
-          <ErrorNotice
-            className="mt-3"
-            tone="warn"
-            message="Min price must be less than or equal to max price."
-          />
-        ) : null}
-        {hasDateRangeError ? (
-          <ErrorNotice
-            className="mt-3"
-            tone="warn"
-            message="Check-out must be after check-in."
-          />
-        ) : null}
-      </section>
+          {hasPriceRangeError ? (
+            <ErrorNotice
+              className="mt-3"
+              tone="warn"
+              message="Min price must be less than or equal to max price."
+            />
+          ) : null}
+          {hasDateRangeError ? (
+            <ErrorNotice
+              className="mt-3"
+              tone="warn"
+              message="Check-out must be after check-in."
+            />
+          ) : null}
+        </section>
+      </ScrollReveal>
 
       {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
@@ -760,39 +765,43 @@ export default function HotelsPage() {
 
       {isHydrated && hotels.length > 0 ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 motion-fade-up motion-delay-3">
-            {hotels.map((hotel) => (
-              <HotelCard key={hotel._id} hotel={hotel} />
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 motion-fade-up motion-delay-4">
-            <p className="text-sm text-slate-600">
-              Page {page} of {totalPages} · {total} hotels
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => {
-                  replaceQuery({ page: String(Math.max(1, page - 1)) }, false);
-                }}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Prev
-              </button>
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => {
-                  replaceQuery({ page: String(Math.min(totalPages, page + 1)) }, false);
-                }}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Next
-              </button>
+          <ScrollReveal delayMs={40}>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {hotels.map((hotel) => (
+                <HotelCard key={hotel._id} hotel={hotel} />
+              ))}
             </div>
-          </div>
+          </ScrollReveal>
+
+          <ScrollReveal delayMs={50}>
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <p className="text-sm text-slate-600">
+                Page {page} of {totalPages} · {total} hotels
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => {
+                    replaceQuery({ page: String(Math.max(1, page - 1)) }, false);
+                  }}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => {
+                    replaceQuery({ page: String(Math.min(totalPages, page + 1)) }, false);
+                  }}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </ScrollReveal>
         </>
       ) : null}
     </main>
