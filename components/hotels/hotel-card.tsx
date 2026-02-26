@@ -1,6 +1,7 @@
-import { memo } from "react";
+import { memo, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import { trackAnalyticsEvent } from "@/lib/analytics/events";
 import type { HotelListItem } from "@/types/hotel";
 
@@ -18,14 +19,28 @@ interface HotelCardProps {
 }
 
 export const HotelCard = memo(function HotelCard({ hotel, trackingContext }: HotelCardProps) {
+  const router = useRouter();
+  const hasPrefetchedRef = useRef(false);
   const coverImage = hotel.hotelImages[0];
+  const hotelHref = `/hotels/${hotel._id}`;
+
+  const handlePrefetchIntent = useCallback(() => {
+    if (hasPrefetchedRef.current) {
+      return;
+    }
+
+    hasPrefetchedRef.current = true;
+    void router.prefetch(hotelHref);
+  }, [hotelHref, router]);
 
   return (
     <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <Link
-        href={`/hotels/${hotel._id}`}
+        href={hotelHref}
         prefetch={false}
         className="block"
+        onMouseEnter={handlePrefetchIntent}
+        onFocus={handlePrefetchIntent}
         onClick={() => {
           if (!trackingContext) {
             return;
@@ -50,7 +65,6 @@ export const HotelCard = memo(function HotelCard({ hotel, trackingContext }: Hot
               fill
               sizes="(min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw"
               className="object-cover"
-              unoptimized
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-slate-100 text-xs font-medium uppercase tracking-[0.15em] text-slate-500">

@@ -1,9 +1,9 @@
 import type { GetServerSideProps } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { createApolloClient } from "@/lib/apollo/client";
 import { HotelFeaturesSection } from "@/components/hotels/detail/hotel-features-section";
 import { HotelGallerySection } from "@/components/hotels/detail/hotel-gallery-section";
-import { HotelListSection } from "@/components/hotels/detail/hotel-list-section";
 import { HotelLocationSection } from "@/components/hotels/detail/hotel-location-section";
 import { HotelOverviewHero } from "@/components/hotels/detail/hotel-overview-hero";
 import { HotelReviewsSection } from "@/components/hotels/detail/hotel-reviews-section";
@@ -26,6 +26,17 @@ interface HotelDetailPageProps {
   initialHotel: HotelDetailItem | null;
   initialRooms: RoomListItem[];
 }
+
+const HotelListSection = dynamic(
+  () => import("@/components/hotels/detail/hotel-list-section").then((mod) => mod.HotelListSection),
+  {
+    loading: () => (
+      <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+        Loading recommendations...
+      </section>
+    ),
+  },
+);
 
 const HOTEL_DETAIL_MOTION_INTENSITY_CLASS = "motion-intensity-bold";
 

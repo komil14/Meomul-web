@@ -103,7 +103,6 @@ const ReviewRow = memo(function ReviewRow({
               width={36}
               height={36}
               className="h-9 w-9 rounded-full border border-slate-200 object-cover"
-              unoptimized
             />
           ) : (
             <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-600">

@@ -44,7 +44,6 @@ export const HotelGallerySection = memo(function HotelGallerySection({ images }:
                 className={`w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
                   index % 6 === 0 ? "h-80 lg:h-full" : "h-56"
                 }`}
-                unoptimized
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
               <span className="absolute left-3 top-3 rounded-full border border-white/40 bg-black/35 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-white">

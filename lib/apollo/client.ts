@@ -50,11 +50,14 @@ export const createApolloClient = () => {
 
   return new ApolloClient({
     ssrMode: typeof window === "undefined",
+    queryDeduplication: true,
+    assumeImmutableResults: true,
     cache,
     defaultOptions: {
       watchQuery: {
         fetchPolicy: "cache-first",
         nextFetchPolicy: "cache-first",
+        returnPartialData: true,
       },
       query: {
         fetchPolicy: "cache-first",

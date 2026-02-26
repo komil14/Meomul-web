@@ -1,6 +1,7 @@
-import { memo } from "react";
+import { memo, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import { formatAmenityLabel, formatEnumLabel } from "@/lib/rooms/booking";
 import { formatNumber } from "@/lib/utils/format";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -40,7 +41,12 @@ const getAvailabilityBadge = (availableRooms: number): { label: string; classNam
 };
 
 export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps) {
+  const router = useRouter();
+  const hasPrefetchedRoomRef = useRef(false);
+  const hasPrefetchedBookingRef = useRef(false);
   const coverImage = resolveMediaUrl(room.roomImages[0]);
+  const roomHref = `/rooms/${room._id}`;
+  const bookingHref = hotelId ? `/bookings/new?hotelId=${hotelId}&roomId=${room._id}` : "";
   const amenityTags = (room.roomAmenities ?? []).slice(0, 4).map((amenity) => formatAmenityLabel(amenity));
   const extraAmenities = Math.max(0, (room.roomAmenities?.length ?? 0) - amenityTags.length);
   const roomTypeLabel = formatEnumLabel(room.roomType);
@@ -57,6 +63,22 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
   const sizeLine = typeof room.roomSize === "number" && room.roomSize > 0 ? `${room.roomSize} m2` : "Not specified";
   const statusLine = formatEnumLabel(room.roomStatus);
 
+  const handlePrefetchRoomIntent = useCallback(() => {
+    if (hasPrefetchedRoomRef.current) {
+      return;
+    }
+    hasPrefetchedRoomRef.current = true;
+    void router.prefetch(roomHref);
+  }, [roomHref, router]);
+
+  const handlePrefetchBookingIntent = useCallback(() => {
+    if (!bookingHref || hasPrefetchedBookingRef.current) {
+      return;
+    }
+    hasPrefetchedBookingRef.current = true;
+    void router.prefetch(bookingHref);
+  }, [bookingHref, router]);
+
   return (
     <article className="group overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-xl hover-lift">
       <div className="grid lg:grid-cols-[1.1fr_1fr]">
@@ -68,7 +90,6 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
               fill
               sizes="(min-width: 1280px) 48vw, (min-width: 1024px) 50vw, 100vw"
               className="object-cover transition duration-500 group-hover:scale-[1.03]"
-              unoptimized
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-slate-100 text-xs font-medium uppercase tracking-[0.15em] text-slate-500">
@@ -155,8 +176,10 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
 
           <div className="mt-auto flex flex-wrap items-center gap-2 pt-6">
             <Link
-              href={`/rooms/${room._id}`}
+              href={roomHref}
               prefetch={false}
+              onMouseEnter={handlePrefetchRoomIntent}
+              onFocus={handlePrefetchRoomIntent}
               className="inline-flex rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
             >
               Room details
@@ -164,8 +187,10 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
 
             {hotelId && isBookable ? (
               <Link
-                href={`/bookings/new?hotelId=${hotelId}&roomId=${room._id}`}
+                href={bookingHref}
                 prefetch={false}
+                onMouseEnter={handlePrefetchBookingIntent}
+                onFocus={handlePrefetchBookingIntent}
                 className="inline-flex rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
               >
                 Book now
