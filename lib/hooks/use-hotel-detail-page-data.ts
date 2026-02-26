@@ -2,7 +2,7 @@ import { useQuery } from "@apollo/client/react";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GET_HOTEL_QUERY, GET_HOTEL_REVIEWS_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
-import { getSessionMember } from "@/lib/auth/session";
+import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import {
   amenityLabels,
   asPercent,
@@ -42,6 +42,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
 
   const [isHydrated, setIsHydrated] = useState(false);
   const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
+  const [hasAccessToken, setHasAccessToken] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const reviewsSectionRef = useRef<HTMLDivElement | null>(null);
@@ -58,11 +59,12 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
 
   const memberType = member?.memberType;
   const canUseRecommendedQuery = canUsePersonalizedRecommendations(memberType);
-  const canUseLikeActions = canUseMemberActions(memberType);
+  const canUseLikeActions = canUseMemberActions(memberType) || (!member && hasAccessToken);
 
   useEffect(() => {
     setIsHydrated(true);
     setMember(getSessionMember());
+    setHasAccessToken(Boolean(getAccessToken()));
   }, []);
 
   useEffect(() => {

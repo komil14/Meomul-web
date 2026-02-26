@@ -109,16 +109,15 @@ const ReviewRow = memo(function ReviewRow({
         </div>
       ) : null}
 
-      {canMarkHelpful ? (
-        <button
-          type="button"
-          onClick={handleMarkHelpful}
-          disabled={isMarkingHelpful}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isMarkingHelpful ? "Updating..." : "Mark helpful"}
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={canMarkHelpful ? handleMarkHelpful : undefined}
+        disabled={!canMarkHelpful || isMarkingHelpful}
+        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+        title={canMarkHelpful ? "Mark this review as helpful" : "Login required to mark helpful"}
+      >
+        {canMarkHelpful ? (isMarkingHelpful ? "Updating..." : "Mark helpful") : "Mark helpful (login required)"}
+      </button>
     </article>
   );
 });
