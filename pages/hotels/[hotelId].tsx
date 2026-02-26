@@ -26,6 +26,8 @@ interface HotelDetailPageProps {
   initialRooms: RoomListItem[];
 }
 
+const HOTEL_DETAIL_MOTION_INTENSITY_CLASS = "motion-intensity-bold";
+
 export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDetailPageProps) {
   const {
     hotelId,
@@ -125,7 +127,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
   }
 
   return (
-    <main className="space-y-6 [scroll-behavior:smooth]">
+    <main className={`space-y-6 [scroll-behavior:smooth] ${HOTEL_DETAIL_MOTION_INTENSITY_CLASS}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
           Back to hotels
