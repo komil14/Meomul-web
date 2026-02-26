@@ -130,6 +130,9 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
           Back to hotels
         </Link>
+        <p className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
+          {hotel.hotelLocation} · {hotel.hotelType}
+        </p>
       </div>
 
       {hotelErrorMessage ? <ErrorNotice message={hotelErrorMessage} /> : null}
@@ -151,7 +154,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
         onToggleLike={handleToggleHotelLike}
       />
 
-      <div className="space-y-8">
+      <div className="space-y-10">
         <HotelGallerySection images={galleryImages} />
 
         <HotelFeaturesSection
@@ -160,6 +163,12 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
           address={hotel.detailedLocation.address}
           nearestSubway={hotel.detailedLocation.nearestSubway}
           activeAmenities={activeAmenities}
+          checkInTime={hotel.checkInTime}
+          checkOutTime={hotel.checkOutTime}
+          flexibleCheckInEnabled={hotel.flexibleCheckIn.enabled}
+          flexibleCheckOutEnabled={hotel.flexibleCheckOut.enabled}
+          petsAllowed={hotel.petsAllowed}
+          smokingAllowed={hotel.smokingAllowed}
         />
 
         <HotelRoomsSection

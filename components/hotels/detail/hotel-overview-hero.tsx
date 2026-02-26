@@ -32,65 +32,109 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
   togglingLike,
   onToggleLike,
 }: HotelOverviewHeroProps) {
+  const verificationLabel = hotel.verificationStatus === "VERIFIED" ? "Verified property" : "Verification pending";
+  const badgeLabel = hotel.badgeLevel === "NONE" ? null : `${hotel.badgeLevel.toLowerCase()} host`;
+
   return (
-    <section id="overview" className="relative overflow-hidden rounded-3xl border border-slate-200">
+    <section id="overview" className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-xl">
       {heroImage ? (
         <Image src={heroImage} alt={hotel.hotelTitle} fill priority sizes="100vw" className="absolute inset-0 h-full w-full object-cover" />
       ) : null}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-slate-900/70 to-cyan-900/50" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-900/75 to-sky-900/60" />
+      <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-slate-950/95 to-transparent" />
+
       <div className="relative p-6 text-slate-100 sm:p-8 lg:p-12">
-        <div className="grid gap-6 lg:min-h-[37rem] lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-          <div className="flex flex-col justify-between gap-7">
+        <div className="grid gap-7 lg:min-h-[40rem] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <div className="flex flex-col justify-between gap-8">
             <div className="space-y-5">
-              <p className="inline-flex rounded-full border border-white/35 bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
-                {hotel.hotelLocation} · {hotel.hotelType}
-              </p>
-              <h1 className="max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl lg:text-6xl">{hotel.hotelTitle}</h1>
-              <p className="max-w-2xl text-base leading-7 text-slate-100/90">{shortDescription}</p>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{hotel.starRating} star</span>
-                <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{cancellationPolicyText}</span>
-                <span className="rounded-full bg-white/15 px-3 py-1 text-sm">{formatNumber(hotelLikeCount)} likes</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
+                  {hotel.hotelLocation}
+                </span>
+                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
+                  {hotel.hotelType}
+                </span>
+                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.08em]">
+                  {verificationLabel}
+                </span>
+                {badgeLabel ? (
+                  <span className="rounded-full border border-amber-200/40 bg-amber-200/15 px-3 py-1 text-xs font-semibold tracking-[0.08em] text-amber-100">
+                    {badgeLabel}
+                  </span>
+                ) : null}
+              </div>
+
+              <h1 className="max-w-4xl text-4xl font-semibold leading-tight sm:text-5xl lg:text-6xl">{hotel.hotelTitle}</h1>
+              <p className="max-w-2xl text-base leading-7 text-slate-100/90 sm:text-lg">{shortDescription}</p>
+
+              <div className="flex flex-wrap gap-2.5">
+                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-sm">{hotel.starRating} star class</span>
+                <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-sm">{cancellationPolicyText}</span>
+                {hotel.safeStayCertified ? (
+                  <span className="rounded-full border border-emerald-200/40 bg-emerald-200/20 px-3 py-1 text-sm text-emerald-100">
+                    Safe stay certified
+                  </span>
+                ) : null}
                 {hotel.suitableFor.slice(0, 2).map((tag) => (
                   <span key={tag} className="rounded-full border border-white/35 bg-white/10 px-3 py-1 text-sm">
                     {tag}
                   </span>
                 ))}
+              </div>
+
+              <div className="flex flex-wrap gap-2.5">
                 {canToggleLike ? (
                   <button
                     type="button"
                     onClick={onToggleLike}
                     disabled={togglingLike}
-                    className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-sm transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-full border border-white/40 bg-white/15 px-4 py-1.5 text-sm font-semibold transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {togglingLike ? "Saving..." : hotelLiked ? "Saved" : "Save hotel"}
                   </button>
                 ) : (
-                  <span className="rounded-full border border-white/30 bg-white/5 px-3 py-1 text-sm text-slate-200/90">Login to save</span>
+                  <span className="rounded-full border border-white/30 bg-white/5 px-4 py-1.5 text-sm text-slate-200/90">Login to save</span>
                 )}
+                <a
+                  href="#rooms"
+                  className="rounded-full border border-white/35 bg-black/20 px-4 py-1.5 text-sm font-semibold transition hover:bg-black/30"
+                >
+                  See rooms
+                </a>
+                <a
+                  href="#reviews"
+                  className="rounded-full border border-white/35 bg-black/20 px-4 py-1.5 text-sm font-semibold transition hover:bg-black/30"
+                >
+                  Guest reviews
+                </a>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <article className="rounded-2xl border border-white/35 bg-white/20 px-4 py-4 backdrop-blur-sm">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Guest rating</p>
                 <p className="mt-2 text-4xl font-semibold leading-none">{hotel.hotelRating.toFixed(1)}</p>
                 <p className="mt-2 text-xs text-slate-200">out of 5.0</p>
               </article>
-              <article className="rounded-2xl border border-white/35 bg-white/20 px-4 py-4 backdrop-blur-sm">
+              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Reviews</p>
                 <p className="mt-2 text-4xl font-semibold leading-none">{reviewCountText}</p>
                 <p className="mt-2 text-xs text-slate-200">verified stays</p>
               </article>
-              <article className="rounded-2xl border border-white/35 bg-white/20 px-4 py-4 backdrop-blur-sm">
+              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Satisfaction</p>
                 <p className="mt-2 text-4xl font-semibold leading-none">{satisfactionText}</p>
                 <p className="mt-2 text-xs text-slate-200">average score</p>
               </article>
+              <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-200">Saved by guests</p>
+                <p className="mt-2 text-4xl font-semibold leading-none">{formatNumber(hotelLikeCount)}</p>
+                <p className="mt-2 text-xs text-slate-200">total likes</p>
+              </article>
             </div>
           </div>
 
-          <aside className="flex flex-col gap-4 rounded-3xl border border-white/35 bg-white/15 p-4 backdrop-blur-sm transition duration-500 hover:-translate-y-0.5 lg:p-5">
+          <aside className="flex flex-col gap-4 rounded-3xl border border-white/30 bg-white/12 p-4 backdrop-blur-sm transition duration-500 hover:-translate-y-0.5 lg:p-5">
             {secondaryImage ? (
               <Image
                 src={secondaryImage}
@@ -101,18 +145,21 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
                 className="h-60 w-full rounded-2xl object-cover lg:h-72"
               />
             ) : null}
-            <div className="grid gap-2 text-sm">
-              <p className="rounded-lg bg-white/15 px-3 py-2">Check-in: {hotel.checkInTime}</p>
-              <p className="rounded-lg bg-white/15 px-3 py-2">Check-out: {hotel.checkOutTime}</p>
-              <p className="rounded-lg bg-white/15 px-3 py-2">
+            <div className="space-y-2.5 text-sm">
+              <p className="rounded-xl border border-white/25 bg-white/10 px-3 py-2.5">Check-in: {hotel.checkInTime}</p>
+              <p className="rounded-xl border border-white/25 bg-white/10 px-3 py-2.5">Check-out: {hotel.checkOutTime}</p>
+              <p className="rounded-xl border border-white/25 bg-white/10 px-3 py-2.5">
                 {hotel.petsAllowed ? "Pets allowed" : "No pets"} · {hotel.smokingAllowed ? "Smoking allowed" : "Non-smoking"}
+              </p>
+              <p className="rounded-xl border border-white/25 bg-white/10 px-3 py-2.5">
+                {hotel.detailedLocation.district || hotel.hotelLocation} · {hotel.detailedLocation.nearestSubway || "Transit info pending"}
               </p>
             </div>
             <a
-              href="#reviews"
+              href="#location"
               className="inline-flex w-full justify-center rounded-xl border border-white/50 bg-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/30"
             >
-              Jump to guest reviews
+              Explore location
             </a>
           </aside>
         </div>

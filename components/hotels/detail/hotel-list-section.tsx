@@ -28,8 +28,9 @@ export const HotelListSection = memo(function HotelListSection({
   const isHorizontal = layout === "horizontal";
 
   return (
-    <div className="space-y-4">
-      <header>
+    <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+      <header className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Discovery</p>
         <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>
         <p className="text-sm text-slate-600">{description}</p>
       </header>
@@ -40,7 +41,7 @@ export const HotelListSection = memo(function HotelListSection({
       ) : null}
       {hotels.length > 0 ? (
         isHorizontal ? (
-          <div className="flex gap-4 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory">
+          <div className="flex gap-4 overflow-x-auto pb-1 pr-1 snap-x snap-mandatory">
             {hotels.map((entry) => (
               <div key={entry._id} className="min-w-[16rem] flex-[0_0_16rem] snap-start sm:min-w-[18rem] sm:flex-[0_0_18rem]">
                 <HotelCard hotel={entry} trackingContext={trackingContext} />
