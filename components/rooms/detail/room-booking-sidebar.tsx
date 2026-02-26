@@ -124,7 +124,7 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
   );
 
   return (
-    <aside className="order-1 self-start space-y-4 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur lg:order-2">
+    <aside className="order-1 self-start space-y-4 rounded-2xl border border-slate-200 bg-white/90 p-3.5 shadow-sm backdrop-blur sm:rounded-3xl sm:p-4 lg:order-2">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Quick Booking</p>
         <h3 className="mt-1 text-2xl font-semibold leading-tight text-slate-900">Select Stay Dates</h3>
@@ -199,9 +199,7 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
                     <p className="text-xl font-bold text-sky-900">₩ {formatNumber(hoveredDay.price)}</p>
                   </div>
                 </div>
-              ) : (
-                <div className="flex h-full items-center text-xs text-slate-600">Hover a date to preview exact nightly price and availability.</div>
-              )}
+              ) : <div className="flex h-full items-center text-xs text-slate-600">Tap or hover a date to preview exact nightly price and availability.</div>}
             </div>
           </div>
           <div className="overflow-x-auto pb-1" onMouseLeave={handleCalendarMouseLeave}>
@@ -223,7 +221,7 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
           </div>
           {calendarLoadInProgress && visibleWindowCalendarLength === 0 ? <p className="mt-2 text-[11px] text-slate-500">Loading availability...</p> : null}
           {calendarLoadErrorMessage && visibleWindowCalendarLength === 0 ? <p className="mt-2 text-[11px] text-amber-700">{calendarLoadErrorMessage}</p> : null}
-          <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
             <span className="inline-flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-indigo-600" />
               Selected range
@@ -264,11 +262,14 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
       {bookingValidationMessage ? <p className="text-xs font-medium text-amber-700">{bookingValidationMessage}</p> : null}
 
       {canContinueBooking && continueBookingHref ? (
-        <Link href={continueBookingHref} className="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+        <Link
+          href={continueBookingHref}
+          className="inline-flex w-full touch-manipulation items-center justify-center rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+        >
           Continue to booking
         </Link>
       ) : (
-        <button type="button" disabled className="inline-flex w-full items-center justify-center rounded-lg bg-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600">
+        <button type="button" disabled className="inline-flex w-full touch-manipulation items-center justify-center rounded-lg bg-slate-300 px-4 py-3 text-sm font-semibold text-slate-600">
           Complete booking details
         </button>
       )}

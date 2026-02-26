@@ -1,10 +1,12 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
 interface LiveInterestFabProps {
   viewerCount: number;
   connected: boolean;
   availableRooms: number;
 }
+
+const TOUCH_MEDIA_QUERY = "(hover: none), (pointer: coarse)";
 
 type LiveTone = {
   buttonClass: string;
@@ -55,9 +57,48 @@ const getLiveTone = (viewerCount: number, connected: boolean, availableRooms: nu
 };
 
 export const LiveInterestFab = memo(function LiveInterestFab({ viewerCount, connected, availableRooms }: LiveInterestFabProps) {
+  const [isTouchUi, setIsTouchUi] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const safeCount = Math.max(0, Math.trunc(viewerCount));
   const displayCount = safeCount > 99 ? "99+" : String(safeCount);
   const tone = useMemo(() => getLiveTone(safeCount, connected, availableRooms), [availableRooms, connected, safeCount]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(TOUCH_MEDIA_QUERY);
+    const syncTouchMode = (): void => {
+      setIsTouchUi(mediaQuery.matches);
+    };
+
+    syncTouchMode();
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", syncTouchMode);
+      return () => mediaQuery.removeEventListener("change", syncTouchMode);
+    }
+
+    mediaQuery.addListener(syncTouchMode);
+    return () => mediaQuery.removeListener(syncTouchMode);
+  }, []);
+
+  useEffect(() => {
+    if (!isTouchUi && isPanelOpen) {
+      setIsPanelOpen(false);
+    }
+  }, [isPanelOpen, isTouchUi]);
+
+  const handleTogglePanel = useCallback(() => {
+    if (!isTouchUi) {
+      return;
+    }
+    setIsPanelOpen((previous) => !previous);
+  }, [isTouchUi]);
+
+  const handleClosePanel = useCallback(() => {
+    setIsPanelOpen(false);
+  }, []);
 
   const explanation = useMemo(() => {
     if (!connected) {
@@ -72,8 +113,14 @@ export const LiveInterestFab = memo(function LiveInterestFab({ viewerCount, conn
     return `${safeCount} guests are currently viewing this room. Interest can convert to bookings quickly.`;
   }, [connected, safeCount]);
 
+  const panelVisibilityClass = isTouchUi
+    ? isPanelOpen
+      ? "translate-x-0 opacity-100 pointer-events-auto"
+      : "translate-x-2 opacity-0 pointer-events-none"
+    : "pointer-events-none translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100";
+
   return (
-    <div className="group fixed bottom-40 right-5 z-50">
+    <div className="group fixed bottom-[calc(env(safe-area-inset-bottom)+8.5rem)] right-3 z-50 sm:bottom-40 sm:right-5">
       <div className="relative inline-flex h-14 w-14 items-center justify-center">
         {connected ? (
           <span
@@ -81,21 +128,37 @@ export const LiveInterestFab = memo(function LiveInterestFab({ viewerCount, conn
             aria-hidden
           />
         ) : null}
-        <div
+        <button
+          type="button"
+          onClick={handleTogglePanel}
           className={`relative inline-flex h-14 w-14 flex-col items-center justify-center rounded-full border shadow-2xl transition duration-300 group-hover:scale-105 ${tone.buttonClass}`}
           aria-label={`Live interest: ${safeCount} viewer${safeCount === 1 ? "" : "s"}`}
-          role="status"
+          aria-expanded={isTouchUi ? isPanelOpen : undefined}
+          aria-controls={isTouchUi ? "live-interest-panel" : undefined}
         >
           <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">Live</span>
           <span className="text-base font-semibold leading-none">{displayCount}</span>
           <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-white ${tone.dotClass} animate-pulse`} />
-        </div>
+        </button>
       </div>
 
-      <div className="pointer-events-none absolute right-[4.25rem] top-1/2 w-64 -translate-y-1/2 translate-x-2 rounded-xl border border-slate-200 bg-white/95 p-3 text-left shadow-xl opacity-0 transition duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+      <div
+        id="live-interest-panel"
+        className={`absolute right-[4.1rem] top-1/2 w-56 -translate-y-1/2 rounded-xl border border-slate-200 bg-white/95 p-3 text-left shadow-xl transition duration-200 sm:right-[4.25rem] sm:w-64 ${panelVisibilityClass}`}
+      >
         <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">Live Interest</p>
-          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone.badgeClass}`}>{tone.label}</span>
+          {isTouchUi ? (
+            <button
+              type="button"
+              onClick={handleClosePanel}
+              className="inline-flex items-center rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-semibold text-slate-700"
+            >
+              Close
+            </button>
+          ) : (
+            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone.badgeClass}`}>{tone.label}</span>
+          )}
         </div>
         <p className="mt-1 text-sm font-semibold text-slate-900">
           {safeCount} viewer{safeCount === 1 ? "" : "s"} on this room now

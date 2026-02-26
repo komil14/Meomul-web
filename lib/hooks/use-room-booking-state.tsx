@@ -344,15 +344,15 @@ export const useRoomBookingState = ({
       caption_label: `${defaults.caption_label} text-xs font-semibold uppercase tracking-[0.12em] text-slate-700`,
       nav: `${defaults.nav} flex items-center gap-1`,
       button_previous:
-        `${defaults.button_previous} inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40`,
+        `${defaults.button_previous} inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40`,
       button_next:
-        `${defaults.button_next} inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40`,
+        `${defaults.button_next} inline-flex h-8 w-8 touch-manipulation items-center justify-center rounded-md border border-slate-300 bg-white text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40`,
       weekdays: `${defaults.weekdays} border-b border-slate-200 pb-1`,
       weekday: `${defaults.weekday} text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500`,
-      month_grid: `${defaults.month_grid} w-full border-separate border-spacing-[2px]`,
+      month_grid: `${defaults.month_grid} w-full border-separate border-spacing-[1px] sm:border-spacing-[2px]`,
       day: `${defaults.day} p-0`,
       day_button:
-        `${defaults.day_button} h-11 w-10 rounded-xl border border-slate-200 bg-white/95 text-slate-700 backdrop-blur-[4px] transition-colors duration-150 sm:h-11 sm:w-11`,
+        `${defaults.day_button} h-11 w-10 touch-manipulation rounded-xl border border-slate-200 bg-white/95 text-slate-700 backdrop-blur-[4px] transition-colors duration-150 sm:w-11`,
       selected: "",
       range_start: "",
       range_middle: "",

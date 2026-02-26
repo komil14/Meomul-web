@@ -11,7 +11,7 @@ import { formatEnumLabel } from "@/lib/rooms/booking";
 
 const RoomBookingSidebar = dynamic(
   () => import("@/components/rooms/detail/room-booking-sidebar").then((mod) => mod.RoomBookingSidebar),
-  { loading: () => <aside className="order-1 self-start rounded-3xl border border-slate-200 bg-white/90 p-4 text-sm text-slate-500 lg:order-2">Loading booking panel...</aside> },
+  { loading: () => <aside className="order-1 self-start rounded-2xl border border-slate-200 bg-white/90 p-3.5 text-sm text-slate-500 sm:rounded-3xl sm:p-4 lg:order-2">Loading booking panel...</aside> },
 );
 
 const ROOM_DETAIL_MOTION_INTENSITY_CLASS = "motion-intensity-bold";
@@ -78,7 +78,7 @@ export default function RoomDetailPage() {
 
   return (
     <main
-      className={`${ROOM_DETAIL_MOTION_INTENSITY_CLASS} ${showBottomLockBar ? "space-y-6 pb-28 sm:pb-32" : "space-y-6"}`}
+      className={`${ROOM_DETAIL_MOTION_INTENSITY_CLASS} ${showBottomLockBar ? "space-y-6 pb-[calc(env(safe-area-inset-bottom)+9.5rem)] sm:pb-32" : "space-y-6"}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 motion-fade-up motion-delay-1">
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
