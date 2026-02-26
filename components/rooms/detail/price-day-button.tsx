@@ -43,7 +43,6 @@ export function PriceDayButton({ day, modifiers, price, onHover, ...buttonProps 
       }}
       onMouseLeave={(event) => {
         buttonProps.onMouseLeave?.(event);
-        onHover?.(null);
       }}
       onFocus={(event) => {
         buttonProps.onFocus?.(event);
@@ -51,7 +50,6 @@ export function PriceDayButton({ day, modifiers, price, onHover, ...buttonProps 
       }}
       onBlur={(event) => {
         buttonProps.onBlur?.(event);
-        onHover?.(null);
       }}
     >
       <span

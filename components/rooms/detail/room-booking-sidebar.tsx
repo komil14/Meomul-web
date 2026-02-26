@@ -1,5 +1,5 @@
 import Link, { type LinkProps } from "next/link";
-import { memo, useMemo, useState, type CSSProperties } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { DayPicker, type DateRange, type DayButtonProps, type DayPickerProps } from "react-day-picker";
 import { PriceDayButton } from "@/components/rooms/detail/price-day-button";
 import { formatDateInput, isCalendarDayBookable } from "@/lib/rooms/booking";
@@ -71,7 +71,39 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
   canContinueBooking,
   continueBookingHref,
 }: RoomBookingSidebarProps) {
+  const hoverFrameRef = useRef<number | null>(null);
   const [hoveredDateKey, setHoveredDateKey] = useState<string | null>(null);
+
+  const commitHoveredDateKey = useCallback((nextDateKey: string | null): void => {
+    setHoveredDateKey((previous) => (previous === nextDateKey ? previous : nextDateKey));
+  }, []);
+
+  const handleHoverDateKey = useCallback(
+    (nextDateKey: string | null): void => {
+      if (hoverFrameRef.current !== null) {
+        window.cancelAnimationFrame(hoverFrameRef.current);
+      }
+
+      hoverFrameRef.current = window.requestAnimationFrame(() => {
+        hoverFrameRef.current = null;
+        commitHoveredDateKey(nextDateKey);
+      });
+    },
+    [commitHoveredDateKey],
+  );
+
+  const handleCalendarMouseLeave = useCallback(() => {
+    handleHoverDateKey(null);
+  }, [handleHoverDateKey]);
+
+  useEffect(
+    () => () => {
+      if (hoverFrameRef.current !== null) {
+        window.cancelAnimationFrame(hoverFrameRef.current);
+      }
+    },
+    [],
+  );
 
   const hoveredDay = useMemo(
     () => (hoveredDateKey ? availabilityByDate.get(hoveredDateKey) : undefined),
@@ -81,10 +113,14 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
   const dayPickerComponents = useMemo<DayPickerProps["components"]>(
     () => ({
       DayButton: (props: DayButtonProps) => (
-        <PriceDayButton {...props} price={availabilityByDate.get(formatDateInput(props.day.date))} onHover={setHoveredDateKey} />
+        <PriceDayButton
+          {...props}
+          price={availabilityByDate.get(formatDateInput(props.day.date))}
+          onHover={handleHoverDateKey}
+        />
       ),
     }),
-    [availabilityByDate],
+    [availabilityByDate, handleHoverDateKey],
   );
 
   return (
@@ -168,7 +204,7 @@ export const RoomBookingSidebar = memo(function RoomBookingSidebar({
               )}
             </div>
           </div>
-          <div className="overflow-x-auto pb-1">
+          <div className="overflow-x-auto pb-1" onMouseLeave={handleCalendarMouseLeave}>
             <DayPicker
               mode="range"
               selected={selectedRange}

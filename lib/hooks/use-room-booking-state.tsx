@@ -14,6 +14,14 @@ import type { DayPriceDto, GetPriceCalendarQueryData, GetPriceCalendarQueryVars,
 type RefetchPriceCalendar = (variables?: GetPriceCalendarQueryVars) => Promise<unknown>;
 const CALENDAR_REFETCH_MIN_INTERVAL_MS = 20_000;
 
+const getCalendarMonthKeyFromDays = (calendar: DayPriceDto[]): string | null => {
+  const firstDay = calendar[0];
+  if (!firstDay?.date || firstDay.date.length < 7) {
+    return null;
+  }
+  return firstDay.date.slice(0, 7);
+};
+
 interface UseRoomBookingStateInput {
   roomId: string;
   room: RoomDetailItem | undefined;
@@ -92,15 +100,23 @@ export const useRoomBookingState = ({
     if (!calendar || calendar.length === 0) {
       return;
     }
-    if (calendar[0]?.date.slice(0, 7) !== calendarMonth) {
+    const monthKey = getCalendarMonthKeyFromDays(calendar);
+    if (!monthKey) {
       return;
     }
 
-    setCalendarByMonth((previous) => ({
-      ...previous,
-      [calendarMonth]: calendar,
-    }));
-  }, [calendarMonth, priceCalendarData]);
+    setCalendarByMonth((previous) => {
+      const existing = previous[monthKey];
+      if (existing === calendar) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        [monthKey]: calendar,
+      };
+    });
+  }, [priceCalendarData]);
 
   useEffect(() => {
     if (!isHydrated || !roomId) {
@@ -140,11 +156,11 @@ export const useRoomBookingState = ({
 
   const availabilityByDate = useMemo(() => {
     const map = new Map<string, DayPriceDto>();
-    Object.values(calendarByMonth)
-      .flat()
-      .forEach((day) => {
+    Object.values(calendarByMonth).forEach((calendar) => {
+      calendar.forEach((day) => {
         map.set(day.date, day);
       });
+    });
     return map;
   }, [calendarByMonth]);
 
@@ -358,8 +374,10 @@ export const useRoomBookingState = ({
     [],
   );
 
-  const disabledDays = useMemo(
-    () => (date: Date): boolean => {
+  const disabledDays = useMemo(() => {
+    const rangeAvailabilityCache = new Map<string, boolean>();
+
+    return (date: Date): boolean => {
       const dateKey = formatDateInput(date);
       if (dateKey < todayDate) {
         return true;
@@ -369,10 +387,16 @@ export const useRoomBookingState = ({
         return !isCalendarDayBookable(availabilityByDate.get(dateKey));
       }
 
-      return !isStayRangeAvailable(checkInDate, dateKey, availabilityByDate);
-    },
-    [availabilityByDate, checkInDate, checkOutDate, todayDate],
-  );
+      const cached = rangeAvailabilityCache.get(dateKey);
+      if (cached !== undefined) {
+        return !cached;
+      }
+
+      const isAvailable = isStayRangeAvailable(checkInDate, dateKey, availabilityByDate);
+      rangeAvailabilityCache.set(dateKey, isAvailable);
+      return !isAvailable;
+    };
+  }, [availabilityByDate, checkInDate, checkOutDate, todayDate]);
 
   const handleSelectCalendarDate = useCallback(
     (date: string): void => {
