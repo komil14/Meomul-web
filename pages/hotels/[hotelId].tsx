@@ -8,6 +8,7 @@ import { HotelLocationSection } from "@/components/hotels/detail/hotel-location-
 import { HotelOverviewHero } from "@/components/hotels/detail/hotel-overview-hero";
 import { HotelReviewsSection } from "@/components/hotels/detail/hotel-reviews-section";
 import { HotelRoomsSection } from "@/components/hotels/detail/hotel-rooms-section";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_HOTEL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { useHotelDetailPageData } from "@/lib/hooks/use-hotel-detail-page-data";
@@ -141,116 +142,134 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
       {hotelLikedErrorMessage ? <ErrorNotice message={hotelLikedErrorMessage} /> : null}
       {generalActionError ? <ErrorNotice message={generalActionError} /> : null}
 
-      <HotelOverviewHero
-        hotel={hotel}
-        heroImage={heroImage}
-        secondaryImage={secondaryImage}
-        shortDescription={shortDescription}
-        reviewCountText={reviewCountText}
-        satisfactionText={satisfactionText}
-        cancellationPolicyText={cancellationPolicyText}
-        hotelLikeCount={hotelLikeCount}
-        hotelLiked={hotelLiked}
-        canToggleLike={canUseLikeActions}
-        togglingLike={togglingHotelLike}
-        onToggleLike={handleToggleHotelLike}
-      />
+      <ScrollReveal delayMs={30}>
+        <HotelOverviewHero
+          hotel={hotel}
+          heroImage={heroImage}
+          secondaryImage={secondaryImage}
+          shortDescription={shortDescription}
+          reviewCountText={reviewCountText}
+          satisfactionText={satisfactionText}
+          cancellationPolicyText={cancellationPolicyText}
+          hotelLikeCount={hotelLikeCount}
+          hotelLiked={hotelLiked}
+          canToggleLike={canUseLikeActions}
+          togglingLike={togglingHotelLike}
+          onToggleLike={handleToggleHotelLike}
+        />
+      </ScrollReveal>
 
       <div className="space-y-10">
-        <HotelGallerySection images={galleryImages} />
+        <ScrollReveal delayMs={40}>
+          <HotelGallerySection images={galleryImages} />
+        </ScrollReveal>
 
-        <HotelFeaturesSection
-          fromPrice={fromPrice}
-          cancellationPolicyText={cancellationPolicyText}
-          address={hotel.detailedLocation.address}
-          nearestSubway={hotel.detailedLocation.nearestSubway}
-          activeAmenities={activeAmenities}
-          checkInTime={hotel.checkInTime}
-          checkOutTime={hotel.checkOutTime}
-          flexibleCheckInEnabled={hotel.flexibleCheckIn.enabled}
-          flexibleCheckOutEnabled={hotel.flexibleCheckOut.enabled}
-          petsAllowed={hotel.petsAllowed}
-          smokingAllowed={hotel.smokingAllowed}
-        />
+        <ScrollReveal delayMs={50}>
+          <HotelFeaturesSection
+            fromPrice={fromPrice}
+            cancellationPolicyText={cancellationPolicyText}
+            address={hotel.detailedLocation.address}
+            nearestSubway={hotel.detailedLocation.nearestSubway}
+            activeAmenities={activeAmenities}
+            checkInTime={hotel.checkInTime}
+            checkOutTime={hotel.checkOutTime}
+            flexibleCheckInEnabled={hotel.flexibleCheckIn.enabled}
+            flexibleCheckOutEnabled={hotel.flexibleCheckOut.enabled}
+            petsAllowed={hotel.petsAllowed}
+            smokingAllowed={hotel.smokingAllowed}
+          />
+        </ScrollReveal>
 
-        <HotelRoomsSection
-          rooms={rooms}
-          roomsLoading={roomsLoading}
-          roomsErrorMessage={roomsErrorMessage}
-          hotelId={hotelId}
-        />
+        <ScrollReveal delayMs={60}>
+          <HotelRoomsSection
+            rooms={rooms}
+            roomsLoading={roomsLoading}
+            roomsErrorMessage={roomsErrorMessage}
+            hotelId={hotelId}
+          />
+        </ScrollReveal>
 
         <div ref={reviewsSectionRef}>
-          <HotelReviewsSection
-            reviews={reviews}
-            reviewsLoading={reviewsLoading}
-            reviewsErrorMessage={reviewsErrorMessage}
-            reviewActionErrorMessage={reviewActionError}
-            reviewPage={reviewPage}
-            reviewTotalPages={reviewTotalPages}
-            reviewTotal={reviewTotal}
-            ratingsSummary={ratingsSummary}
-            onPrevPage={handlePrevReviewPage}
-            onNextPage={handleNextReviewPage}
-            canGoPrev={canGoPrev}
-            canGoNext={canGoNext}
-            canMarkHelpful={canUseLikeActions}
-            markingHelpfulReviewId={markingHelpfulReviewId}
-            helpfulCountOverrides={helpfulCountOverrides}
-            onMarkHelpful={handleMarkHelpful}
-          />
+          <ScrollReveal delayMs={70}>
+            <HotelReviewsSection
+              reviews={reviews}
+              reviewsLoading={reviewsLoading}
+              reviewsErrorMessage={reviewsErrorMessage}
+              reviewActionErrorMessage={reviewActionError}
+              reviewPage={reviewPage}
+              reviewTotalPages={reviewTotalPages}
+              reviewTotal={reviewTotal}
+              ratingsSummary={ratingsSummary}
+              onPrevPage={handlePrevReviewPage}
+              onNextPage={handleNextReviewPage}
+              canGoPrev={canGoPrev}
+              canGoNext={canGoNext}
+              canMarkHelpful={canUseLikeActions}
+              markingHelpfulReviewId={markingHelpfulReviewId}
+              helpfulCountOverrides={helpfulCountOverrides}
+              onMarkHelpful={handleMarkHelpful}
+            />
+          </ScrollReveal>
         </div>
 
-        <HotelLocationSection
-          hotel={hotel}
-          mapSectionRef={locationSectionRef}
-          shouldLoadMap={shouldLoadMap}
-          mapEmbedUrl={mapEmbedUrl}
-          mapUrl={mapUrl}
-        />
+        <ScrollReveal delayMs={80}>
+          <HotelLocationSection
+            hotel={hotel}
+            mapSectionRef={locationSectionRef}
+            shouldLoadMap={shouldLoadMap}
+            mapEmbedUrl={mapEmbedUrl}
+            mapUrl={mapUrl}
+          />
+        </ScrollReveal>
 
         <section ref={discoverySectionRef} className="space-y-6">
           {shouldLoadDiscovery ? (
             <>
-              <HotelListSection
-                title="Similar Hotels"
-                description="Properties with matching location, type, and demand profile."
-                hotels={similarHotels}
-                loading={similarLoading}
-                loadingText="Loading similar hotels..."
-                errorMessage={similarErrorMessage}
-                layout="horizontal"
-                trackingContext={{ source: "similar", section: "hotel_detail_similar" }}
-              />
+              <ScrollReveal delayMs={40}>
+                <HotelListSection
+                  title="Similar Hotels"
+                  description="Properties with matching location, type, and demand profile."
+                  hotels={similarHotels}
+                  loading={similarLoading}
+                  loadingText="Loading similar hotels..."
+                  errorMessage={similarErrorMessage}
+                  layout="horizontal"
+                  trackingContext={{ source: "similar", section: "hotel_detail_similar" }}
+                />
+              </ScrollReveal>
 
-              <HotelListSection
-                title={`Trending in ${hotel.hotelLocation}`}
-                description="Most active hotels in this location right now."
-                hotels={trendingHotels}
-                loading={trendingLoading}
-                loadingText="Loading location trends..."
-                errorMessage={trendingErrorMessage}
-                layout="horizontal"
-                trackingContext={{ source: "trending_by_location", section: "hotel_detail_trending_location" }}
-              />
+              <ScrollReveal delayMs={60}>
+                <HotelListSection
+                  title={`Trending in ${hotel.hotelLocation}`}
+                  description="Most active hotels in this location right now."
+                  hotels={trendingHotels}
+                  loading={trendingLoading}
+                  loadingText="Loading location trends..."
+                  errorMessage={trendingErrorMessage}
+                  layout="horizontal"
+                  trackingContext={{ source: "trending_by_location", section: "hotel_detail_trending_location" }}
+                />
+              </ScrollReveal>
 
               {canUseRecommendedQuery ? (
-                <HotelListSection
-                  title="Recommended for You"
-                  description="Personalized suggestions based on your activity."
-                  hotels={recommendedHotels}
-                  loading={recommendedLoading}
-                  loadingText="Loading personalized recommendations..."
-                  errorMessage={recommendedErrorMessage}
-                  layout="horizontal"
-                  trackingContext={{
-                    source: "recommended_v2",
-                    section: "hotel_detail_recommended",
-                    profileSource: recommendedMeta?.profileSource,
-                    onboardingWeight: recommendedMeta?.onboardingWeight,
-                    behaviorWeight: recommendedMeta?.behaviorWeight,
-                  }}
-                />
+                <ScrollReveal delayMs={80}>
+                  <HotelListSection
+                    title="Recommended for You"
+                    description="Personalized suggestions based on your activity."
+                    hotels={recommendedHotels}
+                    loading={recommendedLoading}
+                    loadingText="Loading personalized recommendations..."
+                    errorMessage={recommendedErrorMessage}
+                    layout="horizontal"
+                    trackingContext={{
+                      source: "recommended_v2",
+                      section: "hotel_detail_recommended",
+                      profileSource: recommendedMeta?.profileSource,
+                      onboardingWeight: recommendedMeta?.onboardingWeight,
+                      behaviorWeight: recommendedMeta?.behaviorWeight,
+                    }}
+                  />
+                </ScrollReveal>
               ) : null}
             </>
           ) : (

@@ -36,7 +36,7 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
   const badgeLabel = hotel.badgeLevel === "NONE" ? null : `${hotel.badgeLevel.toLowerCase()} host`;
 
   return (
-    <section id="overview" className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-xl motion-pop-in">
+    <section id="overview" className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950 shadow-xl">
       {heroImage ? (
         <Image
           src={heroImage}

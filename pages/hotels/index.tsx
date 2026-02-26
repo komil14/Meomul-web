@@ -47,6 +47,8 @@ const STAY_PURPOSE_OPTIONS: Array<{ value: StayPurpose; label: string }> = [
   { value: "LONG_TERM", label: "Long-term" },
 ];
 
+const HOTELS_MOTION_INTENSITY_CLASS = "motion-intensity-balanced";
+
 const AMENITY_OPTIONS: Array<{ key: HotelAmenityKey; label: string }> = [
   { key: "wifi", label: "Wi-Fi" },
   { key: "workspace", label: "Workspace" },
@@ -372,8 +374,8 @@ export default function HotelsPage() {
   };
 
   return (
-    <main className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <main className={`space-y-6 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
+      <header className="flex flex-wrap items-end justify-between gap-3 motion-fade-up motion-delay-1">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Discover</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900">Public Hotels</h1>
@@ -387,7 +389,7 @@ export default function HotelsPage() {
         </Link>
       </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 motion-fade-up motion-delay-2">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <label className="block md:col-span-2">
             <span className="mb-2 block text-sm font-medium text-slate-700">Search</span>
@@ -758,13 +760,13 @@ export default function HotelsPage() {
 
       {isHydrated && hotels.length > 0 ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 motion-fade-up motion-delay-3">
             {hotels.map((hotel) => (
               <HotelCard key={hotel._id} hotel={hotel} />
             ))}
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 motion-fade-up motion-delay-4">
             <p className="text-sm text-slate-600">
               Page {page} of {totalPages} · {total} hotels
             </p>

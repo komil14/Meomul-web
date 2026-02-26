@@ -14,6 +14,8 @@ const RoomBookingSidebar = dynamic(
   { loading: () => <aside className="order-1 self-start rounded-3xl border border-slate-200 bg-white/90 p-4 text-sm text-slate-500 lg:order-2">Loading booking panel...</aside> },
 );
 
+const ROOM_DETAIL_MOTION_INTENSITY_CLASS = "motion-intensity-bold";
+
 export default function RoomDetailPage() {
   const {
     isHydrated,
@@ -75,8 +77,10 @@ export default function RoomDetailPage() {
   }, [onLockPrice]);
 
   return (
-    <main className={showBottomLockBar ? "space-y-6 pb-28 sm:pb-32" : "space-y-6"}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <main
+      className={`${ROOM_DETAIL_MOTION_INTENSITY_CLASS} ${showBottomLockBar ? "space-y-6 pb-28 sm:pb-32" : "space-y-6"}`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 motion-fade-up motion-delay-1">
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
           Back to hotels
         </Link>
@@ -88,29 +92,35 @@ export default function RoomDetailPage() {
       {lockActionError ? <ErrorNotice message={lockActionError} /> : null}
 
       {!isHydrated || roomLoading ? (
-        <section className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-600">Loading room...</section>
+        <section className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-600 motion-fade-up motion-delay-2">
+          Loading room...
+        </section>
       ) : null}
 
       {isHydrated && !roomLoading && !room ? (
-        <section className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-600">Room not found.</section>
+        <section className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-600 motion-fade-up motion-delay-2">
+          Room not found.
+        </section>
       ) : null}
 
       {room ? (
         <>
-          <RoomHeroSection
-            coverImage={coverImage}
-            galleryImages={galleryImages}
-            roomTypeLabel={roomTypeLabel}
-            viewTypeLabel={viewTypeLabel}
-            roomNumber={room.roomNumber}
-            roomName={room.roomName}
-            roomDesc={room.roomDesc}
-            basePrice={room.basePrice}
-            deal={activeDeal ?? undefined}
-            highlights={roomHeroHighlights}
-          />
+          <div className="motion-pop-in motion-delay-1">
+            <RoomHeroSection
+              coverImage={coverImage}
+              galleryImages={galleryImages}
+              roomTypeLabel={roomTypeLabel}
+              viewTypeLabel={viewTypeLabel}
+              roomNumber={room.roomNumber}
+              roomName={room.roomName}
+              roomDesc={room.roomDesc}
+              basePrice={room.basePrice}
+              deal={activeDeal ?? undefined}
+              highlights={roomHeroHighlights}
+            />
+          </div>
 
-          <section className="relative overflow-visible rounded-[2.2rem] border border-slate-200 bg-gradient-to-b from-white via-slate-50/60 to-white p-5 shadow-[0_24px_55px_-35px_rgba(15,23,42,0.45)] sm:p-7">
+          <section className="relative overflow-visible rounded-[2.2rem] border border-slate-200 bg-gradient-to-b from-white via-slate-50/60 to-white p-5 shadow-[0_24px_55px_-35px_rgba(15,23,42,0.45)] motion-fade-up motion-delay-2 sm:p-7">
             <div className="pointer-events-none absolute -right-28 top-16 h-52 w-52 rounded-full bg-sky-100/80 blur-3xl" />
             <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)]">
               <RoomOverviewSection
@@ -160,7 +170,11 @@ export default function RoomDetailPage() {
             </div>
           </section>
 
-          {showBottomLockBar ? <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={handleLockPrice} /> : null}
+          {showBottomLockBar ? (
+            <div className="motion-fade-up motion-delay-3">
+              <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={handleLockPrice} />
+            </div>
+          ) : null}
           <LiveInterestFabContainer roomId={room._id} availableRooms={selectedStayMinAvailable ?? room.availableRooms} />
         </>
       ) : null}

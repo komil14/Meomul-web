@@ -10,7 +10,7 @@ export const HotelGallerySection = memo(function HotelGallerySection({ images }:
   const galleryImages = images.map((image) => resolveMediaUrl(image));
 
   return (
-    <section id="gallery" className="space-y-5 motion-fade-up motion-delay-2">
+    <section id="gallery" className="space-y-5">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Gallery</p>
         <div className="flex flex-wrap items-end justify-between gap-3">

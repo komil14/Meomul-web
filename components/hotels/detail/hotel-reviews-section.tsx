@@ -169,7 +169,7 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
   const featuredReviews = reviews.slice(0, 2);
 
   return (
-    <section id="reviews" className="space-y-4 motion-fade-up motion-delay-4">
+    <section id="reviews" className="space-y-4">
       <header>
         <h2 className="text-2xl font-semibold text-slate-900">Reviews</h2>
         <p className="text-sm text-slate-600">Verified and recent guest feedback for this hotel.</p>

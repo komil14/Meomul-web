@@ -32,7 +32,7 @@ export const HotelFeaturesSection = memo(function HotelFeaturesSection({
   const extraAmenitiesCount = Math.max(0, activeAmenities.length - primaryAmenities.length);
 
   return (
-    <section id="features" className="space-y-5 motion-fade-up motion-delay-1">
+    <section id="features" className="space-y-5">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Stay Profile</p>
         <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Everything this property offers</h2>

@@ -18,6 +18,7 @@ import type {
 
 const HOME_HOTEL_LIMIT = 8;
 const ONBOARDING_REFRESH_QUERY_VALUE = "complete";
+const HOME_MOTION_INTENSITY_CLASS = "motion-intensity-balanced";
 
 export default function HomePage() {
   const router = useRouter();
@@ -127,8 +128,8 @@ export default function HomePage() {
   });
 
   return (
-    <main className="space-y-10">
-      <section className="rounded-3xl border border-slate-200 bg-white px-6 py-8 sm:px-8 sm:py-10">
+    <main className={`space-y-10 ${HOME_MOTION_INTENSITY_CLASS}`}>
+      <section className="rounded-3xl border border-slate-200 bg-white px-6 py-8 sm:px-8 sm:py-10 motion-pop-in">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Meomul Discovery</p>
         <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">Find your next stay faster</h1>
         <p className="mt-4 max-w-3xl text-sm text-slate-600 sm:text-base">
@@ -150,7 +151,7 @@ export default function HomePage() {
       </section>
 
       {showOnboardingRefreshNotice ? (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 motion-fade-up motion-delay-1">
           <p className="text-sm font-semibold text-emerald-800">Preferences saved and recommendations refreshed.</p>
           <p className="mt-1 text-xs text-emerald-700">
             Your onboarding answers now drive the first recommendation stage on this page.
@@ -159,7 +160,7 @@ export default function HomePage() {
       ) : null}
 
       {canUseRecommendedHotels ? (
-        <section className="space-y-4">
+        <section className="space-y-4 motion-fade-up motion-delay-2">
           <header className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">For You</p>
@@ -207,7 +208,7 @@ export default function HomePage() {
         </section>
       ) : null}
 
-      <section className="space-y-4">
+      <section className="space-y-4 motion-fade-up motion-delay-3">
         <header className="flex items-end justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Trending</p>

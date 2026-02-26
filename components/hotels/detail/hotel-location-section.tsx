@@ -17,7 +17,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
   mapUrl,
 }: HotelLocationSectionProps) {
   return (
-    <section id="location" ref={mapSectionRef} className="space-y-5 motion-fade-up motion-delay-4">
+    <section id="location" ref={mapSectionRef} className="space-y-5">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Location</p>
         <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Where you will stay</h2>
