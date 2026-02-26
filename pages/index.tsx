@@ -1,29 +1,60 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { useEffect, useMemo, useState } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { GET_RECOMMENDED_HOTELS_QUERY, GET_TRENDING_HOTELS_QUERY } from "@/graphql/hotel.gql";
+import { GET_RECOMMENDED_HOTELS_V2_QUERY, GET_TRENDING_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { canUsePersonalizedRecommendations } from "@/lib/hotels/detail-page-helpers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
-  GetRecommendedHotelsQueryData,
-  GetRecommendedHotelsQueryVars,
+  GetRecommendedHotelsV2QueryData,
+  GetRecommendedHotelsV2QueryVars,
   GetTrendingHotelsQueryData,
   GetTrendingHotelsQueryVars,
+  RecommendationMetaDto,
 } from "@/types/hotel";
 
 const HOME_HOTEL_LIMIT = 8;
+const ONBOARDING_REFRESH_QUERY_VALUE = "complete";
 
 export default function HomePage() {
+  const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
   const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
+  const [forceRecommendationRefresh, setForceRecommendationRefresh] = useState(false);
+  const [showOnboardingRefreshNotice, setShowOnboardingRefreshNotice] = useState(false);
 
   useEffect(() => {
     setIsHydrated(true);
     setMember(getSessionMember());
   }, []);
+
+  useEffect(() => {
+    if (!isHydrated || !router.isReady) {
+      return;
+    }
+
+    const onboardingFlag = typeof router.query.onboarding === "string" ? router.query.onboarding : null;
+    if (onboardingFlag !== ONBOARDING_REFRESH_QUERY_VALUE) {
+      return;
+    }
+
+    setShowOnboardingRefreshNotice(true);
+    setForceRecommendationRefresh(true);
+
+    const restQuery = { ...router.query };
+    delete restQuery.onboarding;
+    void router.replace(
+      {
+        pathname: router.pathname,
+        query: restQuery,
+      },
+      undefined,
+      { shallow: true, scroll: false },
+    );
+  }, [isHydrated, router]);
 
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
@@ -33,10 +64,10 @@ export default function HomePage() {
     data: recommendedData,
     loading: recommendedLoading,
     error: recommendedError,
-  } = useQuery<GetRecommendedHotelsQueryData, GetRecommendedHotelsQueryVars>(GET_RECOMMENDED_HOTELS_QUERY, {
+  } = useQuery<GetRecommendedHotelsV2QueryData, GetRecommendedHotelsV2QueryVars>(GET_RECOMMENDED_HOTELS_V2_QUERY, {
     skip: !isHydrated || !canUseRecommendedHotels,
     variables: { limit: HOME_HOTEL_LIMIT },
-    fetchPolicy: "cache-first",
+    fetchPolicy: forceRecommendationRefresh ? "network-only" : "cache-first",
     nextFetchPolicy: "cache-first",
   });
 
@@ -51,8 +82,49 @@ export default function HomePage() {
     nextFetchPolicy: "cache-first",
   });
 
-  const recommendedHotels = recommendedData?.getRecommendedHotels ?? [];
+  useEffect(() => {
+    if (!forceRecommendationRefresh || recommendedLoading) {
+      return;
+    }
+
+    setForceRecommendationRefresh(false);
+  }, [forceRecommendationRefresh, recommendedLoading]);
+
+  const recommendedHotels = recommendedData?.getRecommendedHotelsV2.list ?? [];
+  const recommendationMeta = recommendedData?.getRecommendedHotelsV2.meta ?? null;
+  const recommendationSourceLabel = useMemo(() => {
+    if (!recommendationMeta) {
+      return null;
+    }
+
+    return recommendationMeta.profileSource === "onboarding" ? "Onboarding-led" : "Behavior-led";
+  }, [recommendationMeta]);
+  const recommendationBlendText = useMemo(() => {
+    if (!recommendationMeta) {
+      return null;
+    }
+
+    const onboardingPercent = Math.round(recommendationMeta.onboardingWeight * 100);
+    const behaviorPercent = Math.round(recommendationMeta.behaviorWeight * 100);
+    return `Blend: onboarding ${onboardingPercent}% · behavior ${behaviorPercent}%`;
+  }, [recommendationMeta]);
   const trendingHotels = trendingData?.getTrendingHotels ?? [];
+
+  const getRecommendedTrackingContext = (
+    meta: RecommendationMetaDto | null,
+  ): {
+    source: string;
+    section: string;
+    profileSource?: "onboarding" | "computed";
+    onboardingWeight?: number;
+    behaviorWeight?: number;
+  } => ({
+    source: "recommended_v2",
+    section: "home_recommended",
+    profileSource: meta?.profileSource,
+    onboardingWeight: meta?.onboardingWeight,
+    behaviorWeight: meta?.behaviorWeight,
+  });
 
   return (
     <main className="space-y-10">
@@ -77,12 +149,40 @@ export default function HomePage() {
         </div>
       </section>
 
+      {showOnboardingRefreshNotice ? (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+          <p className="text-sm font-semibold text-emerald-800">Preferences saved and recommendations refreshed.</p>
+          <p className="mt-1 text-xs text-emerald-700">
+            Your onboarding answers now drive the first recommendation stage on this page.
+          </p>
+        </section>
+      ) : null}
+
       {canUseRecommendedHotels ? (
         <section className="space-y-4">
           <header className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">For You</p>
               <h2 className="mt-1 text-2xl font-semibold text-slate-900">Personalized recommendations</h2>
+              {recommendationMeta ? (
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
+                    {recommendationSourceLabel}
+                  </span>
+                  <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
+                    {recommendationMeta.matchedLocationCount} location match
+                    {recommendationMeta.matchedLocationCount === 1 ? "" : "es"}
+                  </span>
+                  <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
+                    {recommendationMeta.fallbackCount} fallback
+                  </span>
+                  {recommendationBlendText ? (
+                    <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
+                      {recommendationBlendText}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </header>
 
@@ -100,7 +200,7 @@ export default function HomePage() {
           {recommendedHotels.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {recommendedHotels.map((hotel) => (
-                <HotelCard key={hotel._id} hotel={hotel} />
+                <HotelCard key={hotel._id} hotel={hotel} trackingContext={getRecommendedTrackingContext(recommendationMeta)} />
               ))}
             </div>
           ) : null}
@@ -129,7 +229,7 @@ export default function HomePage() {
         {trendingHotels.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {trendingHotels.map((hotel) => (
-              <HotelCard key={hotel._id} hotel={hotel} />
+              <HotelCard key={hotel._id} hotel={hotel} trackingContext={{ source: "trending", section: "home_trending" }} />
             ))}
           </div>
         ) : null}

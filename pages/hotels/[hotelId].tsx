@@ -79,6 +79,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     trendingLoading,
     trendingErrorMessage,
     recommendedHotels,
+    recommendedMeta,
     recommendedLoading,
     recommendedErrorMessage,
     cancellationPolicyText,
@@ -208,6 +209,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
                 loadingText="Loading similar hotels..."
                 errorMessage={similarErrorMessage}
                 layout="horizontal"
+                trackingContext={{ source: "similar", section: "hotel_detail_similar" }}
               />
 
               <HotelListSection
@@ -218,6 +220,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
                 loadingText="Loading location trends..."
                 errorMessage={trendingErrorMessage}
                 layout="horizontal"
+                trackingContext={{ source: "trending_by_location", section: "hotel_detail_trending_location" }}
               />
 
               {canUseRecommendedQuery ? (
@@ -229,6 +232,13 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
                   loadingText="Loading personalized recommendations..."
                   errorMessage={recommendedErrorMessage}
                   layout="horizontal"
+                  trackingContext={{
+                    source: "recommended_v2",
+                    section: "hotel_detail_recommended",
+                    profileSource: recommendedMeta?.profileSource,
+                    onboardingWeight: recommendedMeta?.onboardingWeight,
+                    behaviorWeight: recommendedMeta?.behaviorWeight,
+                  }}
                 />
               ) : null}
             </>

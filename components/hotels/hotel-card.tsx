@@ -1,18 +1,47 @@
 import { memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { trackAnalyticsEvent } from "@/lib/analytics/events";
 import type { HotelListItem } from "@/types/hotel";
+
+export interface HotelCardTrackingContext {
+  source: string;
+  section: string;
+  profileSource?: "onboarding" | "computed";
+  onboardingWeight?: number;
+  behaviorWeight?: number;
+}
 
 interface HotelCardProps {
   hotel: HotelListItem;
+  trackingContext?: HotelCardTrackingContext;
 }
 
-export const HotelCard = memo(function HotelCard({ hotel }: HotelCardProps) {
+export const HotelCard = memo(function HotelCard({ hotel, trackingContext }: HotelCardProps) {
   const coverImage = hotel.hotelImages[0];
 
   return (
     <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <Link href={`/hotels/${hotel._id}`} prefetch={false} className="block">
+      <Link
+        href={`/hotels/${hotel._id}`}
+        prefetch={false}
+        className="block"
+        onClick={() => {
+          if (!trackingContext) {
+            return;
+          }
+
+          trackAnalyticsEvent("hotel_card_clicked", {
+            hotelId: hotel._id,
+            hotelLocation: hotel.hotelLocation,
+            source: trackingContext.source,
+            section: trackingContext.section,
+            profileSource: trackingContext.profileSource ?? null,
+            onboardingWeight: trackingContext.onboardingWeight ?? null,
+            behaviorWeight: trackingContext.behaviorWeight ?? null,
+          });
+        }}
+      >
         <div className="relative h-40 w-full bg-slate-200">
           {coverImage ? (
             <Image

@@ -1,15 +1,15 @@
 import { useQuery } from "@apollo/client/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  GET_RECOMMENDED_HOTELS_QUERY,
+  GET_RECOMMENDED_HOTELS_V2_QUERY,
   GET_SIMILAR_HOTELS_QUERY,
   GET_TRENDING_BY_LOCATION_QUERY,
 } from "@/graphql/hotel.gql";
 import { CARD_LIST_LIMIT, uniqueHotels } from "@/lib/hotels/detail-page-helpers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
-  GetRecommendedHotelsQueryData,
-  GetRecommendedHotelsQueryVars,
+  GetRecommendedHotelsV2QueryData,
+  GetRecommendedHotelsV2QueryVars,
   GetSimilarHotelsQueryData,
   GetSimilarHotelsQueryVars,
   GetTrendingByLocationQueryData,
@@ -50,7 +50,7 @@ export const useHotelDetailDiscovery = ({
     [trendingLocation],
   );
 
-  const recommendedQueryVariables = useMemo<GetRecommendedHotelsQueryVars>(
+  const recommendedQueryVariables = useMemo<GetRecommendedHotelsV2QueryVars>(
     () => ({
       limit: CARD_LIST_LIMIT,
     }),
@@ -163,7 +163,7 @@ export const useHotelDetailDiscovery = ({
     data: recommendedData,
     loading: recommendedLoading,
     error: recommendedError,
-  } = useQuery<GetRecommendedHotelsQueryData, GetRecommendedHotelsQueryVars>(GET_RECOMMENDED_HOTELS_QUERY, {
+  } = useQuery<GetRecommendedHotelsV2QueryData, GetRecommendedHotelsV2QueryVars>(GET_RECOMMENDED_HOTELS_V2_QUERY, {
     skip: !canUseRecommendedQuery || !shouldLoadDiscovery,
     variables: recommendedQueryVariables,
     fetchPolicy: "cache-first",
@@ -181,8 +181,8 @@ export const useHotelDetailDiscovery = ({
   );
 
   const recommendedHotels = useMemo(
-    () => (shouldLoadDiscovery ? uniqueHotels(recommendedData?.getRecommendedHotels ?? [], hotelId) : []),
-    [hotelId, recommendedData?.getRecommendedHotels, shouldLoadDiscovery],
+    () => (shouldLoadDiscovery ? uniqueHotels(recommendedData?.getRecommendedHotelsV2.list ?? [], hotelId) : []),
+    [hotelId, recommendedData?.getRecommendedHotelsV2.list, shouldLoadDiscovery],
   );
 
   return {
@@ -197,6 +197,7 @@ export const useHotelDetailDiscovery = ({
     trendingLoading,
     trendingErrorMessage: trendingError ? getErrorMessage(trendingError) : null,
     recommendedHotels,
+    recommendedMeta: recommendedData?.getRecommendedHotelsV2.meta ?? null,
     recommendedLoading,
     recommendedErrorMessage: recommendedError ? getErrorMessage(recommendedError) : null,
   };

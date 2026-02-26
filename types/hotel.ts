@@ -210,8 +210,21 @@ export interface RoomListItem {
   roomName: string;
   roomType: RoomType;
   viewType: ViewType;
+  maxOccupancy?: number;
+  bedType?: BedType;
+  bedCount?: number;
+  roomSize?: number;
+  roomAmenities?: string[];
   basePrice: number;
   availableRooms: number;
+  currentViewers?: number;
+  lastMinuteDeal?: {
+    isActive: boolean;
+    discountPercent: number;
+    originalPrice: number;
+    dealPrice: number;
+    validUntil: string;
+  } | null;
   roomImages: string[];
   roomStatus: RoomStatus;
 }
@@ -401,6 +414,30 @@ export interface GetRecommendedHotelsQueryData {
 }
 
 export interface GetRecommendedHotelsQueryVars {
+  limit?: number;
+}
+
+export interface RecommendationMetaDto {
+  profileSource: "onboarding" | "computed";
+  onboardingWeight: number;
+  behaviorWeight: number;
+  matchedLocationCount: number;
+  fallbackCount: number;
+  strictStageCount: number;
+  relaxedStageCount: number;
+  generalStageCount: number;
+}
+
+export interface RecommendedHotelsV2Dto {
+  list: HotelListItem[];
+  meta: RecommendationMetaDto;
+}
+
+export interface GetRecommendedHotelsV2QueryData {
+  getRecommendedHotelsV2: RecommendedHotelsV2Dto;
+}
+
+export interface GetRecommendedHotelsV2QueryVars {
   limit?: number;
 }
 

@@ -229,6 +229,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     trendingLoading,
     trendingErrorMessage,
     recommendedHotels,
+    recommendedMeta,
     recommendedLoading,
     recommendedErrorMessage,
   } = useHotelDetailDiscovery({
@@ -240,7 +241,10 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   const queriedRooms = roomsData?.getRoomsByHotel?.list;
   const rooms = useMemo(() => (isHydrated ? queriedRooms ?? initialRooms : initialRooms), [initialRooms, isHydrated, queriedRooms]);
 
-  const reviews = shouldLoadReviews ? reviewsData?.getHotelReviews.list ?? [] : [];
+  const reviews = useMemo(
+    () => (shouldLoadReviews ? reviewsData?.getHotelReviews.list ?? [] : []),
+    [reviewsData?.getHotelReviews.list, shouldLoadReviews],
+  );
   const reviewTotal = shouldLoadReviews ? reviewsData?.getHotelReviews.metaCounter.total ?? 0 : 0;
   const serverRatingsSummary = shouldLoadReviews ? reviewsData?.getHotelReviews.ratingsSummary ?? null : null;
   const ratingsSummary = useMemo<ReviewRatingsSummaryDto | null>(() => {
@@ -375,6 +379,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     trendingLoading,
     trendingErrorMessage,
     recommendedHotels,
+    recommendedMeta,
     recommendedLoading,
     recommendedErrorMessage,
     cancellationPolicyText: hotel ? getPolicyText(hotel.cancellationPolicy) : "Moderate cancellation",

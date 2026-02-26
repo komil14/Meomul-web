@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
+import type { HotelCardTrackingContext } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import type { HotelListItem } from "@/types/hotel";
 
@@ -11,6 +12,7 @@ interface HotelListSectionProps {
   loadingText: string;
   errorMessage: string | null;
   layout?: "grid" | "horizontal";
+  trackingContext?: HotelCardTrackingContext;
 }
 
 export const HotelListSection = memo(function HotelListSection({
@@ -21,6 +23,7 @@ export const HotelListSection = memo(function HotelListSection({
   loadingText,
   errorMessage,
   layout = "grid",
+  trackingContext,
 }: HotelListSectionProps) {
   const isHorizontal = layout === "horizontal";
 
@@ -40,14 +43,14 @@ export const HotelListSection = memo(function HotelListSection({
           <div className="flex gap-4 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory">
             {hotels.map((entry) => (
               <div key={entry._id} className="min-w-[16rem] flex-[0_0_16rem] snap-start sm:min-w-[18rem] sm:flex-[0_0_18rem]">
-                <HotelCard hotel={entry} />
+                <HotelCard hotel={entry} trackingContext={trackingContext} />
               </div>
             ))}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {hotels.map((entry) => (
-              <HotelCard key={entry._id} hotel={entry} />
+              <HotelCard key={entry._id} hotel={entry} trackingContext={trackingContext} />
             ))}
           </div>
         )

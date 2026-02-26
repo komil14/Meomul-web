@@ -16,11 +16,23 @@ export const HotelRoomsSection = memo(function HotelRoomsSection({
   roomsErrorMessage,
   hotelId,
 }: HotelRoomsSectionProps) {
+  const roomCount = rooms.length;
+
   return (
     <section id="rooms" className="space-y-4">
-      <header>
-        <h2 className="text-2xl font-semibold text-slate-900">Rooms</h2>
-        <p className="text-sm text-slate-600">Available options and pricing for this property.</p>
+      <header className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 to-slate-700 px-5 py-5 text-white sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Stay Selection</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Choose your room</h2>
+            <p className="mt-2 max-w-2xl text-sm text-slate-200">
+              Compare space, bed setup, live availability, and nightly rates before booking.
+            </p>
+          </div>
+          <p className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-100">
+            {roomCount} option{roomCount === 1 ? "" : "s"}
+          </p>
+        </div>
       </header>
 
       {roomsErrorMessage ? <ErrorNotice message={roomsErrorMessage} /> : null}
@@ -36,7 +48,7 @@ export const HotelRoomsSection = memo(function HotelRoomsSection({
       ) : null}
 
       {rooms.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-5">
           {rooms.map((room) => (
             <RoomCard key={room._id} room={room} hotelId={hotelId} />
           ))}

@@ -27,6 +27,14 @@ import type {
 import type { NextPageWithAuth } from "@/types/page";
 
 const STEP_LABELS = ["Travel style", "Destinations", "Amenities", "Budget"] as const;
+const ONBOARDING_REFRESH_QUERY_KEY = "onboarding";
+const ONBOARDING_REFRESH_QUERY_VALUE = "complete";
+
+const appendRecommendationRefreshFlag = (path: string): string => {
+  const parsed = new URL(path, "http://localhost");
+  parsed.searchParams.set(ONBOARDING_REFRESH_QUERY_KEY, ONBOARDING_REFRESH_QUERY_VALUE);
+  return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+};
 
 const OnboardingPage: NextPageWithAuth = () => {
   const router = useRouter();
@@ -126,7 +134,7 @@ const OnboardingPage: NextPageWithAuth = () => {
         setOnboardingCompletionCachedValue(sessionMember._id, true);
       }
 
-      await router.push(redirectTarget);
+      await router.push(appendRecommendationRefreshFlag(redirectTarget));
     } catch (error) {
       trackAnalyticsEvent("onboarding_submit_failed", {
         error: getErrorMessage(error),

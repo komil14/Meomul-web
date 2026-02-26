@@ -184,8 +184,21 @@ export const GET_ROOMS_BY_HOTEL_QUERY = gql`
         roomName
         roomType
         viewType
+        maxOccupancy
+        bedType
+        bedCount
+        roomSize
+        roomAmenities
         basePrice
         availableRooms
+        currentViewers
+        lastMinuteDeal {
+          isActive
+          discountPercent
+          originalPrice
+          dealPrice
+          validUntil
+        }
         roomImages
         roomStatus
       }
@@ -328,6 +341,32 @@ export const GET_RECOMMENDED_HOTELS_QUERY = gql`
       hotelRating
       hotelLikes
       hotelImages
+    }
+  }
+`;
+
+export const GET_RECOMMENDED_HOTELS_V2_QUERY = gql`
+  query GetRecommendedHotelsV2($limit: Int) {
+    getRecommendedHotelsV2(limit: $limit) {
+      list {
+        _id
+        hotelTitle
+        hotelLocation
+        hotelType
+        hotelRating
+        hotelLikes
+        hotelImages
+      }
+      meta {
+        profileSource
+        onboardingWeight
+        behaviorWeight
+        matchedLocationCount
+        fallbackCount
+        strictStageCount
+        relaxedStageCount
+        generalStageCount
+      }
     }
   }
 `;

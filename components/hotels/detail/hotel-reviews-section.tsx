@@ -1,4 +1,5 @@
 import { memo, useCallback } from "react";
+import Image from "next/image";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { formatNumber } from "@/lib/utils/format";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -96,11 +97,13 @@ const ReviewRow = memo(function ReviewRow({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {reviewerImageUrl ? (
-            <img
+            <Image
               src={reviewerImageUrl}
               alt={reviewerName}
+              width={36}
+              height={36}
               className="h-9 w-9 rounded-full border border-slate-200 object-cover"
-              loading="lazy"
+              unoptimized
             />
           ) : (
             <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-600">
