@@ -34,7 +34,7 @@ export const HotelCard = memo(function HotelCard({ hotel, trackingContext }: Hot
   }, [hotelHref, router]);
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:rounded-2xl">
       <Link
         href={hotelHref}
         prefetch={false}
@@ -57,7 +57,7 @@ export const HotelCard = memo(function HotelCard({ hotel, trackingContext }: Hot
           });
         }}
       >
-        <div className="relative h-40 w-full bg-slate-200">
+        <div className="relative h-32 w-full bg-slate-200 sm:h-40">
           {coverImage ? (
             <Image
               src={coverImage}
@@ -73,12 +73,12 @@ export const HotelCard = memo(function HotelCard({ hotel, trackingContext }: Hot
           )}
         </div>
 
-        <div className="space-y-2 p-4">
-          <h3 className="line-clamp-1 text-base font-semibold text-slate-900">{hotel.hotelTitle}</h3>
-          <p className="text-sm text-slate-600">
+        <div className="space-y-1.5 p-3 sm:space-y-2 sm:p-4">
+          <h3 className="line-clamp-1 text-[15px] font-semibold text-slate-900 sm:text-base">{hotel.hotelTitle}</h3>
+          <p className="line-clamp-1 text-xs text-slate-600 sm:text-sm">
             {hotel.hotelLocation} · {hotel.hotelType}
           </p>
-          <div className="flex items-center justify-between text-sm text-slate-700">
+          <div className="flex items-center justify-between text-xs text-slate-700 sm:text-sm">
             <span>Rating {hotel.hotelRating.toFixed(1)}</span>
             <span>{hotel.hotelLikes} likes</span>
           </div>

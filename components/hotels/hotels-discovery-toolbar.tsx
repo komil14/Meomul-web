@@ -29,12 +29,12 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-sky-100/70 bg-gradient-to-br from-white via-sky-50/60 to-emerald-50/45 p-4 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.35)] sm:p-5">
+    <section className="relative overflow-hidden rounded-3xl border border-sky-100/70 bg-gradient-to-br from-white via-sky-50/60 to-emerald-50/45 p-3.5 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.35)] sm:p-5">
       <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-sky-200/30 blur-2xl" />
       <div className="pointer-events-none absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl" />
 
       <div className="relative">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 sm:mb-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Find Stays Faster</p>
             <p className="mt-1 text-sm text-slate-600">
@@ -91,7 +91,7 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
           </button>
         </form>
 
-        <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-2 hidden gap-2 md:grid md:grid-cols-2 xl:grid-cols-5">
           <select
             value={state.selectedLocation}
             onChange={(event) => {
@@ -148,7 +148,7 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
           />
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1 sm:mt-3 sm:flex-wrap sm:overflow-visible sm:pb-0">
           {FEATURED_LOCATIONS.map((location) => {
             const selected = state.selectedLocation === location;
             return (
@@ -158,7 +158,7 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
                 onClick={() => {
                   state.patchQuery({ location: selected ? undefined : location });
                 }}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.08em] transition ${
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.08em] transition ${
                   selected ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-500"
                 }`}
               >
@@ -175,7 +175,7 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
                 onClick={() => {
                   state.patchQuery({ purpose: selected ? undefined : purpose.value });
                 }}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.08em] transition ${
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.08em] transition ${
                   selected ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-500"
                 }`}
               >

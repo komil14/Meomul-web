@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HotelsActiveFilterChips } from "@/components/hotels/hotels-active-filter-chips";
 import { HotelsDiscoveryToolbar } from "@/components/hotels/hotels-discovery-toolbar";
 import { HotelsFiltersDrawer } from "@/components/hotels/hotels-filters-drawer";
+import { HotelsMobileResultsBar } from "@/components/hotels/hotels-mobile-results-bar";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
@@ -88,6 +89,15 @@ export default function HotelsPage() {
           <HotelsActiveFilterChips state={queryState} />
         </ScrollReveal>
 
+        <HotelsMobileResultsBar
+          total={total}
+          loading={loading}
+          activeFilterCount={queryState.activeFilterCount}
+          onOpenFilters={() => {
+            setIsFiltersOpen(true);
+          }}
+        />
+
         {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
         {showLoadingState ? (
@@ -103,7 +113,7 @@ export default function HotelsPage() {
         {showResults ? (
           <>
             <ScrollReveal delayMs={40}>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3">
                 {hotels.map((hotel) => (
                   <HotelCard key={hotel._id} hotel={hotel} />
                 ))}
@@ -111,7 +121,7 @@ export default function HotelsPage() {
             </ScrollReveal>
 
             <ScrollReveal delayMs={50}>
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 sm:px-4 sm:py-3">
                 <p className="text-sm text-slate-600">
                   Page {queryState.page} of {totalPages} · {total} hotels
                 </p>

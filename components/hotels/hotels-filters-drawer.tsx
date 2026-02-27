@@ -40,12 +40,12 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state }: HotelsFiltersDra
       />
 
       <aside
-        className={`absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-slate-200 bg-[#f6f9fd] p-3 shadow-2xl transition-transform duration-300 sm:p-4 ${
+        className={`absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-slate-200 bg-[#f6f9fd] p-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] shadow-2xl transition-transform duration-300 sm:p-4 sm:pb-[calc(env(safe-area-inset-bottom)+0.75rem)] ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         aria-hidden={!isOpen}
       >
-        <div className="sticky top-0 z-10 mb-3 rounded-2xl border border-slate-200 bg-white/95 p-3 backdrop-blur">
+        <div className="sticky top-0 z-10 mb-2 rounded-2xl border border-slate-200 bg-white/95 p-2.5 backdrop-blur sm:mb-3 sm:p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Advanced filters</p>
@@ -66,7 +66,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state }: HotelsFiltersDra
 
         <HotelsFiltersPanel state={state} />
 
-        <div className="sticky bottom-0 mt-3 border-t border-slate-200 bg-[#f6f9fd]/95 pb-1 pt-3 backdrop-blur">
+        <div className="sticky bottom-0 mt-3 border-t border-slate-200 bg-[#f6f9fd]/95 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] pt-2.5 backdrop-blur sm:pt-3">
           <button
             type="button"
             onClick={onClose}
