@@ -2,10 +2,10 @@ import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
-import { ErrorNotice } from "@/components/ui/error-notice";
 import { LOGIN_MEMBER_MUTATION } from "@/graphql/auth.gql";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { saveAuthSession } from "@/lib/auth/session";
+import { errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { AuthMember, LoginMemberMutationVars } from "@/types/auth";
 import type { NextPageWithAuth } from "@/types/page";
@@ -18,7 +18,6 @@ const LoginPage: NextPageWithAuth = () => {
   const router = useRouter();
   const [memberNick, setMemberNick] = useState("");
   const [memberPassword, setMemberPassword] = useState("");
-  const [errorText, setErrorText] = useState<string | null>(null);
 
   const redirectTarget = useMemo(() => {
     if (typeof router.query.next !== "string") {
@@ -34,7 +33,6 @@ const LoginPage: NextPageWithAuth = () => {
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setErrorText(null);
 
     try {
       const response = await loginMember({
@@ -48,15 +46,16 @@ const LoginPage: NextPageWithAuth = () => {
 
       const authMember = response.data?.loginMember;
       if (!authMember) {
-        setErrorText("Login response is empty.");
+        await infoAlert("Login response missing", "Login response is empty.");
         return;
       }
 
       saveAuthSession(authMember);
       const nextRoute = await resolvePostAuthRedirect(authMember, redirectTarget);
+      await successAlert("Login successful", "You are now signed in.");
       await router.push(nextRoute);
     } catch (error) {
-      setErrorText(getErrorMessage(error));
+      await errorAlert("Login failed", getErrorMessage(error));
     }
   };
 
@@ -88,8 +87,6 @@ const LoginPage: NextPageWithAuth = () => {
             required
           />
         </label>
-
-        {errorText ? <ErrorNotice message={errorText} /> : null}
 
         <button
           type="submit"

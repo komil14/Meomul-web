@@ -16,6 +16,7 @@ import {
   toggleWithLimit,
   TRAVEL_STYLE_OPTIONS,
 } from "@/lib/recommendation/onboarding-options";
+import { errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { HotelLocation } from "@/types/hotel";
 import type {
@@ -134,12 +135,15 @@ const OnboardingPage: NextPageWithAuth = () => {
         setOnboardingCompletionCachedValue(sessionMember._id, true);
       }
 
+      await successAlert("Onboarding complete", "Your preferences are saved and recommendations are ready.");
       await router.push(appendRecommendationRefreshFlag(redirectTarget));
     } catch (error) {
       trackAnalyticsEvent("onboarding_submit_failed", {
         error: getErrorMessage(error),
       });
-      setErrorText(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      setErrorText(message);
+      await errorAlert("Onboarding save failed", message);
     }
   };
 

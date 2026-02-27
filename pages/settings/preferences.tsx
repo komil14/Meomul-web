@@ -22,6 +22,7 @@ import {
   toValidDestinationList,
   TRAVEL_STYLE_OPTIONS,
 } from "@/lib/recommendation/onboarding-options";
+import { errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { HotelLocation } from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
@@ -39,7 +40,6 @@ const PreferencesPage: NextPageWithAuth = () => {
   const [preferredAmenities, setPreferredAmenities] = useState<string[]>([]);
   const [budgetLevel, setBudgetLevel] = useState<BudgetLevel | undefined>(undefined);
   const [errorText, setErrorText] = useState<string | null>(null);
-  const [successText, setSuccessText] = useState<string | null>(null);
   const [isPrefillApplied, setIsPrefillApplied] = useState(false);
   const [hasTrackedViewEvent, setHasTrackedViewEvent] = useState(false);
 
@@ -90,10 +90,10 @@ const PreferencesPage: NextPageWithAuth = () => {
 
   const handleSave = async () => {
     setErrorText(null);
-    setSuccessText(null);
 
     if (validationMessage) {
       setErrorText(validationMessage);
+      await infoAlert("Validation required", validationMessage);
       return;
     }
 
@@ -109,7 +109,7 @@ const PreferencesPage: NextPageWithAuth = () => {
         },
       });
 
-      setSuccessText(response.data?.saveOnboardingPreferences.message ?? "Preferences saved.");
+      const successMessage = response.data?.saveOnboardingPreferences.message ?? "Preferences saved.";
       trackAnalyticsEvent("preferences_saved", {
         travelStylesCount: travelStyles.length,
         destinationsCount: preferredDestinations.length,
@@ -123,11 +123,14 @@ const PreferencesPage: NextPageWithAuth = () => {
       }
 
       await refetch();
+      await successAlert("Preferences saved", successMessage);
     } catch (saveError) {
       trackAnalyticsEvent("preferences_save_failed", {
         error: getErrorMessage(saveError),
       });
-      setErrorText(getErrorMessage(saveError));
+      const message = getErrorMessage(saveError);
+      setErrorText(message);
+      await errorAlert("Save failed", message);
     }
   };
 
@@ -253,8 +256,6 @@ const PreferencesPage: NextPageWithAuth = () => {
         </section>
 
         {errorText ? <ErrorNotice message={errorText} /> : null}
-        {successText ? <ErrorNotice tone="info" message={successText} /> : null}
-
         <footer className="flex justify-end">
           <button
             type="button"

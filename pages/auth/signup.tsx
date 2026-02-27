@@ -2,10 +2,10 @@ import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
-import { ErrorNotice } from "@/components/ui/error-notice";
 import { SIGNUP_MEMBER_MUTATION } from "@/graphql/auth.gql";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { saveAuthSession } from "@/lib/auth/session";
+import { errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { AuthMember, SignupMemberMutationVars } from "@/types/auth";
 import type { NextPageWithAuth } from "@/types/page";
@@ -21,7 +21,6 @@ const SignupPage: NextPageWithAuth = () => {
   const [memberPhone, setMemberPhone] = useState("");
   const [memberPassword, setMemberPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [errorText, setErrorText] = useState<string | null>(null);
   const redirectTarget = useMemo(() => {
     if (typeof router.query.next !== "string") {
       return "/dashboard";
@@ -36,10 +35,9 @@ const SignupPage: NextPageWithAuth = () => {
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setErrorText(null);
 
     if (memberPassword !== confirmPassword) {
-      setErrorText("Passwords do not match.");
+      await errorAlert("Password mismatch", "Passwords do not match.");
       return;
     }
 
@@ -59,15 +57,16 @@ const SignupPage: NextPageWithAuth = () => {
 
       const authMember = response.data?.signupMember;
       if (!authMember) {
-        setErrorText("Signup response is empty.");
+        await infoAlert("Signup response missing", "Signup response is empty.");
         return;
       }
 
       saveAuthSession(authMember);
       const nextRoute = await resolvePostAuthRedirect(authMember, redirectTarget);
+      await successAlert("Account created", "Signup complete. Redirecting...");
       await router.push(nextRoute);
     } catch (error) {
-      setErrorText(getErrorMessage(error));
+      await errorAlert("Signup failed", getErrorMessage(error));
     }
   };
 
@@ -132,8 +131,6 @@ const SignupPage: NextPageWithAuth = () => {
             required
           />
         </label>
-
-        {errorText ? <ErrorNotice message={errorText} /> : null}
 
         <button
           type="submit"
