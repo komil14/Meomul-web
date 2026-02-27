@@ -5,14 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { StatusPills } from "@/components/ui/status-pills";
-import { useToast } from "@/components/ui/toast-provider";
 import { GET_HOTEL_CHATS_QUERY, GET_MY_CHATS_QUERY, START_CHAT_MUTATION } from "@/graphql/chat.gql";
 import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
+import { errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatDateTimeKst, formatNumber } from "@/lib/utils/format";
-import { showMutationError } from "@/lib/utils/toast";
 import type {
   ChatDto,
   ChatStatus,
@@ -55,7 +54,6 @@ const getLastMessagePreview = (chat: ChatDto): string => {
 
 const ChatsPage: NextPageWithAuth = () => {
   const router = useRouter();
-  const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
@@ -214,11 +212,11 @@ const ChatsPage: NextPageWithAuth = () => {
     const hotelId = (startHotelIdFromList || startManualHotelId).trim();
     const initialMessage = startMessage.trim();
     if (!hotelId) {
-      toast.error("Hotel is required. Select one or enter hotelId manually.");
+      await infoAlert("Hotel required", "Select a hotel from the list or paste a hotelId.");
       return;
     }
     if (!initialMessage) {
-      toast.error("Initial message is required.");
+      await infoAlert("Initial message required", "Enter a message to start the chat.");
       return;
     }
 
@@ -235,14 +233,14 @@ const ChatsPage: NextPageWithAuth = () => {
 
       const newChatId = response.data?.startChat._id;
       if (!newChatId) {
-        toast.error("Chat started but chat id was missing.");
+        await errorAlert("Could not open chat", "Chat was created but chat id is missing.");
         return;
       }
 
-      toast.success("Chat started.");
+      await successAlert("Chat started");
       void router.push(`/chats/${newChatId}`);
     } catch (mutationError) {
-      showMutationError(toast, mutationError);
+      await errorAlert("Could not start chat", getErrorMessage(mutationError));
     }
   };
 
@@ -297,7 +295,7 @@ const ChatsPage: NextPageWithAuth = () => {
                     onClick={() => {
                       const manualId = manualStaffHotelId.trim();
                       if (!manualId) {
-                        toast.error("Enter hotelId first.");
+                        void infoAlert("Hotel id required", "Enter hotelId first.");
                         return;
                       }
                       pushChatsQuery({ hotelId: manualId, page: 1 });

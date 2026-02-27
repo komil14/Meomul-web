@@ -16,9 +16,9 @@ import {
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { confirmAction, confirmDanger, errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatDateTimeKst } from "@/lib/utils/format";
-import { showMutationError } from "@/lib/utils/toast";
 import type {
   ClaimChatMutationData,
   ClaimChatMutationVars,
@@ -116,7 +116,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
         chatId: chat._id,
       },
     }).catch((mutationError: unknown) => {
-      showMutationError(toast, mutationError);
+      toast.error(getErrorMessage(mutationError));
     });
   }, [chat, markRead, toast, unreadForMe]);
 
@@ -353,7 +353,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
     const content = messageInput.trim();
     if (!content) {
-      toast.error("Message cannot be empty.");
+      await infoAlert("Empty message", "Message cannot be empty.");
       return;
     }
 
@@ -370,12 +370,22 @@ const ChatThreadPage: NextPageWithAuth = () => {
       stopTypingSignal();
       setMessageInput("");
     } catch (mutationError) {
-      showMutationError(toast, mutationError);
+      await errorAlert("Could not send message", getErrorMessage(mutationError));
     }
   };
 
   const onClaimChat = async () => {
     if (!chat) {
+      return;
+    }
+
+    const confirmed = await confirmAction({
+      title: "Claim this chat?",
+      text: "You will be assigned as the active agent for this chat.",
+      confirmText: "Claim chat",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -388,14 +398,25 @@ const ChatThreadPage: NextPageWithAuth = () => {
         },
       });
       await refetch();
-      toast.success("Chat claimed.");
+      await successAlert("Chat claimed");
     } catch (mutationError) {
-      showMutationError(toast, mutationError);
+      await errorAlert("Could not claim chat", getErrorMessage(mutationError));
     }
   };
 
   const onCloseChat = async () => {
     if (!chat) {
+      return;
+    }
+
+    const confirmed = await confirmDanger({
+      title: "Close this chat?",
+      text: "This conversation will be moved to closed status.",
+      warningText: "Closed chats cannot accept new messages.",
+      confirmText: "Close chat",
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -406,9 +427,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
         },
       });
       await refetch();
-      toast.success("Chat closed.");
+      await successAlert("Chat closed");
     } catch (mutationError) {
-      showMutationError(toast, mutationError);
+      await errorAlert("Could not close chat", getErrorMessage(mutationError));
     }
   };
 
