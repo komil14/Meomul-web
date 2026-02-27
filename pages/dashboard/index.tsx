@@ -303,8 +303,13 @@ const DashboardPage: NextPageWithAuth = () => {
           {userHotelsLoading && userHotels.length === 0 ? <p className="text-sm text-slate-600">Loading hotels...</p> : null}
           {userHotels.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {userHotels.map((hotel) => (
-                <HotelCard key={hotel._id} hotel={hotel} />
+              {userHotels.map((hotel, index) => (
+                <HotelCard
+                  key={hotel._id}
+                  hotel={hotel}
+                  imagePriority={index < 2}
+                  imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 22rem"
+                />
               ))}
             </div>
           ) : null}
@@ -329,8 +334,13 @@ const DashboardPage: NextPageWithAuth = () => {
           ) : null}
           {agentHotels.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {agentHotels.map((hotel) => (
-                <HotelCard key={hotel._id} hotel={hotel} />
+              {agentHotels.map((hotel, index) => (
+                <HotelCard
+                  key={hotel._id}
+                  hotel={hotel}
+                  imagePriority={index < 2}
+                  imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 22rem"
+                />
               ))}
             </div>
           ) : null}

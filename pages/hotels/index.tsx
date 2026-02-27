@@ -1,4 +1,4 @@
-import { useQuery } from "@apollo/client/react";
+import { useApolloClient, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { HotelsActiveFilterChips } from "@/components/hotels/hotels-active-filter-chips";
@@ -18,6 +18,7 @@ import type { GetHotelsQueryData, GetHotelsQueryVars } from "@/types/hotel";
 const HOTELS_MOTION_INTENSITY_CLASS = "motion-intensity-balanced";
 
 export default function HotelsPage() {
+  const apolloClient = useApolloClient();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const queryState = useHotelsPageQueryState();
@@ -51,6 +52,40 @@ export default function HotelsPage() {
   const showEmptyState = isHydrated && !loading && hotels.length === 0;
   const showResults = isHydrated && hotels.length > 0;
   const showResultsOverlay = isHydrated && loading && hotels.length > 0;
+
+  useEffect(() => {
+    if (!isHydrated || loading) {
+      return;
+    }
+
+    const nextPage = queryState.page + 1;
+    if (nextPage > totalPages) {
+      return;
+    }
+
+    void apolloClient.query<GetHotelsQueryData, GetHotelsQueryVars>({
+      query: GET_HOTELS_QUERY,
+      variables: {
+        input: {
+          page: nextPage,
+          limit: HOTELS_PAGE_SIZE,
+          sort: queryState.sortField,
+          direction: queryState.sortDirection,
+        },
+        search: queryState.search,
+      },
+      fetchPolicy: "cache-first",
+    });
+  }, [
+    apolloClient,
+    isHydrated,
+    loading,
+    queryState.page,
+    queryState.search,
+    queryState.sortDirection,
+    queryState.sortField,
+    totalPages,
+  ]);
 
   return (
     <>
@@ -118,10 +153,15 @@ export default function HotelsPage() {
             <ScrollReveal delayMs={40}>
               <div className="relative">
                 <div className={`grid gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 transition duration-200 ${showResultsOverlay ? "opacity-75" : "opacity-100"}`}>
-                  {hotels.map((hotel) => (
-                    <HotelCard key={hotel._id} hotel={hotel} />
-                  ))}
-                </div>
+                {hotels.map((hotel, index) => (
+                  <HotelCard
+                    key={hotel._id}
+                    hotel={hotel}
+                    imagePriority={index < 3}
+                    imageSizes="(max-width: 479px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 24rem"
+                  />
+                ))}
+              </div>
 
                 {showResultsOverlay ? (
                   <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-3xl bg-white/24 p-3 backdrop-blur-[1.5px]">

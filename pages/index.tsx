@@ -206,8 +206,14 @@ export default function HomePage() {
             ) : null}
             {recommendedHotels.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {recommendedHotels.map((hotel) => (
-                  <HotelCard key={hotel._id} hotel={hotel} trackingContext={getRecommendedTrackingContext(recommendationMeta)} />
+                {recommendedHotels.map((hotel, index) => (
+                  <HotelCard
+                    key={hotel._id}
+                    hotel={hotel}
+                    trackingContext={getRecommendedTrackingContext(recommendationMeta)}
+                    imagePriority={index < 2}
+                    imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 25vw, 18rem"
+                  />
                 ))}
               </div>
             ) : null}
@@ -237,8 +243,14 @@ export default function HomePage() {
           ) : null}
           {trendingHotels.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {trendingHotels.map((hotel) => (
-                <HotelCard key={hotel._id} hotel={hotel} trackingContext={{ source: "trending", section: "home_trending" }} />
+              {trendingHotels.map((hotel, index) => (
+                <HotelCard
+                  key={hotel._id}
+                  hotel={hotel}
+                  trackingContext={{ source: "trending", section: "home_trending" }}
+                  imagePriority={index < 2}
+                  imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 25vw, 18rem"
+                />
               ))}
             </div>
           ) : null}

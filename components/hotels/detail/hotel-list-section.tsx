@@ -42,16 +42,27 @@ export const HotelListSection = memo(function HotelListSection({
       {hotels.length > 0 ? (
         isHorizontal ? (
           <div className="flex gap-4 overflow-x-auto pb-1 pr-1 snap-x snap-mandatory">
-            {hotels.map((entry) => (
+            {hotels.map((entry, index) => (
               <div key={entry._id} className="min-w-[16rem] flex-[0_0_16rem] snap-start sm:min-w-[18rem] sm:flex-[0_0_18rem]">
-                <HotelCard hotel={entry} trackingContext={trackingContext} />
+                <HotelCard
+                  hotel={entry}
+                  trackingContext={trackingContext}
+                  imagePriority={index < 2}
+                  imageSizes="(max-width: 639px) 16rem, 18rem"
+                />
               </div>
             ))}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {hotels.map((entry) => (
-              <HotelCard key={entry._id} hotel={entry} trackingContext={trackingContext} />
+            {hotels.map((entry, index) => (
+              <HotelCard
+                key={entry._id}
+                hotel={entry}
+                trackingContext={trackingContext}
+                imagePriority={index < 2}
+                imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 22rem"
+              />
             ))}
           </div>
         )

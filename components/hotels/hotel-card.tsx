@@ -16,6 +16,8 @@ export interface HotelCardTrackingContext {
 interface HotelCardProps {
   hotel: HotelListItem;
   trackingContext?: HotelCardTrackingContext;
+  imagePriority?: boolean;
+  imageSizes?: string;
 }
 
 const formatLocationLabel = (location: string): string =>
@@ -23,7 +25,14 @@ const formatLocationLabel = (location: string): string =>
     ? `${location.toLowerCase().charAt(0).toUpperCase()}${location.toLowerCase().slice(1)}`
     : "Unknown";
 
-export const HotelCard = memo(function HotelCard({ hotel, trackingContext }: HotelCardProps) {
+const DEFAULT_IMAGE_SIZES = "(max-width: 479px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 24rem";
+
+export const HotelCard = memo(function HotelCard({
+  hotel,
+  trackingContext,
+  imagePriority = false,
+  imageSizes = DEFAULT_IMAGE_SIZES,
+}: HotelCardProps) {
   const router = useRouter();
   const hasPrefetchedRef = useRef(false);
   const coverImage = hotel.hotelImages[0];
@@ -71,7 +80,8 @@ export const HotelCard = memo(function HotelCard({ hotel, trackingContext }: Hot
               src={coverImage}
               alt={hotel.hotelTitle}
               fill
-              sizes="(min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw"
+              priority={imagePriority}
+              sizes={imageSizes}
               className="object-cover transition duration-700 group-hover:scale-105"
             />
           ) : (
