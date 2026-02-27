@@ -205,6 +205,14 @@ export interface GetHotelsQueryVars {
   search?: HotelSearchInput;
 }
 
+export interface GetHotelsCountQueryData {
+  getHotelsCount: MetaCounterDto;
+}
+
+export interface GetHotelsCountQueryVars {
+  search?: HotelSearchInput;
+}
+
 export interface RoomListItem {
   _id: string;
   roomName: string;

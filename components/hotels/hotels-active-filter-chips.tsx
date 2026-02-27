@@ -1,4 +1,9 @@
 import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
+import {
+  buildHotelsArraySummary,
+  formatHotelDateSummary,
+  formatHotelLocationLabel,
+} from "@/lib/hotels/hotels-ui";
 
 interface HotelsActiveFilterChipsProps {
   state: HotelsPageQueryState;
@@ -9,18 +14,6 @@ interface ActiveChip {
   label: string;
   clearPatch: Record<string, string | undefined>;
 }
-
-const buildArraySummary = (items: string[], label: string): string => {
-  if (items.length === 0) {
-    return "";
-  }
-
-  if (items.length <= 2) {
-    return `${label}: ${items.join(", ")}`;
-  }
-
-  return `${label}: ${items.slice(0, 2).join(", ")} +${items.length - 2}`;
-};
 
 export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps) {
   const chips: ActiveChip[] = [];
@@ -36,7 +29,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedLocation) {
     chips.push({
       id: "location",
-      label: `Location: ${state.selectedLocation}`,
+      label: `Location: ${formatHotelLocationLabel(state.selectedLocation)}`,
       clearPatch: { location: undefined },
     });
   }
@@ -52,7 +45,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.checkInInput || state.checkOutInput) {
     chips.push({
       id: "stay",
-      label: `Stay: ${state.checkInInput || "?"} - ${state.checkOutInput || "?"}`,
+      label: `Stay: ${formatHotelDateSummary(state.checkInInput, state.checkOutInput)}`,
       clearPatch: { checkIn: undefined, checkOut: undefined },
     });
   }
@@ -106,7 +99,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedTypes.length > 0) {
     chips.push({
       id: "hotelTypes",
-      label: buildArraySummary(state.selectedTypes, "Hotel type"),
+      label: buildHotelsArraySummary(state.selectedTypes, "Hotel type"),
       clearPatch: { types: undefined },
     });
   }
@@ -114,7 +107,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedRoomTypes.length > 0) {
     chips.push({
       id: "roomTypes",
-      label: buildArraySummary(state.selectedRoomTypes, "Room type"),
+      label: buildHotelsArraySummary(state.selectedRoomTypes, "Room type"),
       clearPatch: { roomTypes: undefined },
     });
   }
@@ -122,7 +115,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedStarRatings.length > 0) {
     chips.push({
       id: "stars",
-      label: buildArraySummary(state.selectedStarRatings.map(String), "Star"),
+      label: buildHotelsArraySummary(state.selectedStarRatings.map(String), "Star"),
       clearPatch: { stars: undefined },
     });
   }
@@ -147,22 +140,35 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
     return null;
   }
 
+  const mobileVisibleChips = chips.slice(0, 3);
+  const hiddenChipCount = Math.max(0, chips.length - mobileVisibleChips.length);
+
+  const renderChip = (chip: ActiveChip) => (
+    <button
+      key={chip.id}
+      type="button"
+      onClick={() => {
+        state.patchQuery(chip.clearPatch);
+      }}
+      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-500"
+    >
+      <span>{chip.label}</span>
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-slate-600">x</span>
+    </button>
+  );
+
   return (
-    <section className="-mx-1 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
-      <div className="flex w-max items-center gap-2 sm:w-auto sm:flex-wrap">
-        {chips.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            onClick={() => {
-              state.patchQuery(chip.clearPatch);
-            }}
-            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-500"
-          >
-            <span>{chip.label}</span>
-            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-slate-600">x</span>
-          </button>
-        ))}
+    <section className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 sm:hidden">
+        {mobileVisibleChips.map((chip) => renderChip(chip))}
+        {hiddenChipCount > 0 ? (
+          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">
+            +{hiddenChipCount} more
+          </span>
+        ) : null}
+      </div>
+      <div className="hidden flex-wrap items-center gap-2 sm:flex">
+        {chips.map((chip) => renderChip(chip))}
       </div>
     </section>
   );

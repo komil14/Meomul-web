@@ -1,7 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HotelsFiltersPanel } from "@/components/hotels/hotels-filters-panel";
-import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
+import { GET_HOTELS_COUNT_QUERY } from "@/graphql/hotel.gql";
 import {
   AMENITY_OPTIONS,
   HOTEL_LOCATIONS,
@@ -11,9 +11,10 @@ import {
   STAY_PURPOSE_OPTIONS,
 } from "@/lib/hotels/hotels-filter-config";
 import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
+import { formatStayCountLabel } from "@/lib/hotels/hotels-ui";
 import type {
-  GetHotelsQueryData,
-  GetHotelsQueryVars,
+  GetHotelsCountQueryData,
+  GetHotelsCountQueryVars,
   HotelAmenityKey,
   HotelLocation,
   HotelSearchInput,
@@ -353,17 +354,14 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
     wheelchairAccessible,
   ]);
 
-  const { data: previewData, previousData: previousPreviewData, loading: previewLoading } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(
-    GET_HOTELS_QUERY,
+  const { data: previewData, previousData: previousPreviewData, loading: previewLoading } = useQuery<
+    GetHotelsCountQueryData,
+    GetHotelsCountQueryVars
+  >(
+    GET_HOTELS_COUNT_QUERY,
     {
       skip: !isOpen || hasDateRangeError || hasPriceRangeError,
       variables: {
-        input: {
-          page: 1,
-          limit: 1,
-          sort: state.sortField,
-          direction: state.sortDirection,
-        },
         search: previewSearch,
       },
       fetchPolicy: "cache-first",
@@ -372,7 +370,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
     },
   );
 
-  const previewTotal = (previewData ?? previousPreviewData)?.getHotels?.metaCounter?.total ?? appliedTotal;
+  const previewTotal = (previewData ?? previousPreviewData)?.getHotelsCount.total ?? appliedTotal;
 
   const draftPanelState: HotelsPageQueryState = useMemo(
     () => ({
@@ -442,7 +440,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
     ? "Fix filters to continue"
     : previewLoading
       ? "Updating stays..."
-      : `Show ${previewTotal.toLocaleString()} stay${previewTotal === 1 ? "" : "s"}`;
+      : `Show ${formatStayCountLabel(previewTotal)}`;
 
   if (!isOpen) {
     return null;
@@ -499,8 +497,8 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
           <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
             <p className="mb-3 text-sm text-slate-600">
               {showMatchesSummary
-                ? `${previewLoading ? "Checking" : `${previewTotal.toLocaleString()}`} stay${previewTotal === 1 ? "" : "s"} match these filters${
-                    previewTotal !== appliedTotal ? ` • currently showing ${appliedTotal.toLocaleString()}` : ""
+                ? `${previewLoading ? "Checking" : formatStayCountLabel(previewTotal)} match these filters${
+                    previewTotal !== appliedTotal ? ` • currently showing ${formatStayCountLabel(appliedTotal)}` : ""
                   }`
                 : "Fix the highlighted filters to preview matching stays."}
             </p>

@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
@@ -34,6 +34,7 @@ export const HotelCard = memo(function HotelCard({
   imageSizes = DEFAULT_IMAGE_SIZES,
 }: HotelCardProps) {
   const router = useRouter();
+  const articleRef = useRef<HTMLElement | null>(null);
   const hasPrefetchedRef = useRef(false);
   const coverImage = hotel.hotelImages[0];
   const hotelHref = `/hotels/${hotel._id}`;
@@ -50,8 +51,36 @@ export const HotelCard = memo(function HotelCard({
     void router.prefetch(hotelHref);
   }, [hotelHref, router]);
 
+  useEffect(() => {
+    if (hasPrefetchedRef.current || !articleRef.current || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const hasVisibleEntry = entries.some((entry) => entry.isIntersecting);
+        if (!hasVisibleEntry) {
+          return;
+        }
+
+        handlePrefetchIntent();
+        observer.disconnect();
+      },
+      { rootMargin: "160px 0px" },
+    );
+
+    observer.observe(articleRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [handlePrefetchIntent]);
+
   return (
-    <article className="group overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_22px_46px_-34px_rgba(15,23,42,0.55)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_30px_66px_-30px_rgba(15,23,42,0.58)]">
+    <article
+      ref={articleRef}
+      className="group overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_22px_46px_-34px_rgba(15,23,42,0.55)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_30px_66px_-30px_rgba(15,23,42,0.58)]"
+    >
       <Link
         href={hotelHref}
         prefetch={false}

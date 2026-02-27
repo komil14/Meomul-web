@@ -63,6 +63,17 @@ const parseCsv = (value: string): string[] =>
 const parseEnumCsv = <T extends string>(value: string, allowed: readonly T[]): T[] =>
   parseCsv(value).filter((item): item is T => allowed.includes(item as T));
 
+const areFlatQueriesEqual = (left: Record<string, string>, right: Record<string, string>): boolean => {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  return leftKeys.every((key) => left[key] === right[key]);
+};
+
 const parseIntCsv = (value: string): number[] => {
   const unique = new Set<number>();
   parseCsv(value).forEach((item) => {
@@ -321,14 +332,16 @@ export const useHotelsPageQueryState = (): HotelsPageQueryState => {
 
   const patchQuery = useCallback(
     (next: QueryPatch, resetPage = true) => {
-      const merged: Record<string, string> = {};
+      const currentQuery: Record<string, string> = {};
 
       Object.entries(router.query).forEach(([key, value]) => {
         const single = toSingle(value);
         if (single) {
-          merged[key] = single;
+          currentQuery[key] = single;
         }
       });
+
+      const merged: Record<string, string> = { ...currentQuery };
 
       Object.entries(next).forEach(([key, value]) => {
         if (value) {
@@ -340,6 +353,10 @@ export const useHotelsPageQueryState = (): HotelsPageQueryState => {
 
       if (resetPage) {
         merged.page = "1";
+      }
+
+      if (areFlatQueriesEqual(currentQuery, merged)) {
+        return;
       }
 
       void router.replace(
@@ -355,6 +372,10 @@ export const useHotelsPageQueryState = (): HotelsPageQueryState => {
   );
 
   const clearQuery = useCallback(() => {
+    if (Object.keys(router.query).length === 0) {
+      return;
+    }
+
     void router.replace(
       {
         pathname: router.pathname,

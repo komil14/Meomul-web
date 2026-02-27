@@ -19,6 +19,14 @@ export const GET_HOTELS_QUERY = gql`
   }
 `;
 
+export const GET_HOTELS_COUNT_QUERY = gql`
+  query GetHotelsCount($search: HotelSearchInput) {
+    getHotelsCount(search: $search) {
+      total
+    }
+  }
+`;
+
 export const GET_HOTEL_CONTEXT_QUERY = gql`
   query GetHotelContext($hotelId: String!) {
     getHotel(hotelId: $hotelId) {

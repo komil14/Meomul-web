@@ -10,6 +10,7 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { HOTELS_PAGE_SIZE } from "@/lib/hotels/hotels-filter-config";
 import { useHotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
+import { formatHotelsPaginationSummary } from "@/lib/hotels/hotels-ui";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { GetHotelsQueryData, GetHotelsQueryVars } from "@/types/hotel";
 
@@ -161,9 +162,7 @@ export default function HotelsPage() {
             <ScrollReveal delayMs={50}>
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4 sm:py-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-slate-600">
-                  Page {queryState.page} of {totalPages} · {total} hotels
-                </p>
+                <p className="text-sm text-slate-600">{formatHotelsPaginationSummary(queryState.page, totalPages, total)}</p>
                 <div className="grid grid-cols-2 gap-2 sm:flex">
                   <button
                     type="button"
