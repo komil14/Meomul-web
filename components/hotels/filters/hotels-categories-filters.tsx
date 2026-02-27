@@ -1,0 +1,85 @@
+import { HOTEL_TYPES, ROOM_TYPES, STAR_RATINGS } from "@/lib/hotels/hotels-filter-config";
+import { toggleNumberCsv, toggleStringCsv } from "@/lib/hotels/filter-csv";
+import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
+
+interface HotelsCategoriesFiltersProps {
+  state: HotelsPageQueryState;
+}
+
+export function HotelsCategoriesFilters({ state }: HotelsCategoriesFiltersProps) {
+  return (
+    <>
+      <fieldset className="mt-4">
+        <legend className="mb-2 text-sm font-medium text-slate-700">Hotel types</legend>
+        <div className="flex flex-wrap gap-2">
+          {HOTEL_TYPES.map((type) => {
+            const checked = state.selectedTypes.includes(type);
+
+            return (
+              <label key={type} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => {
+                    const encoded = toggleStringCsv(state.selectedTypes, type, event.target.checked);
+                    state.patchQuery({ types: encoded || undefined });
+                  }}
+                  className="h-4 w-4"
+                />
+                <span>{type}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-4">
+        <legend className="mb-2 text-sm font-medium text-slate-700">Room types</legend>
+        <div className="flex flex-wrap gap-2">
+          {ROOM_TYPES.map((type) => {
+            const checked = state.selectedRoomTypes.includes(type);
+
+            return (
+              <label key={type} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => {
+                    const encoded = toggleStringCsv(state.selectedRoomTypes, type, event.target.checked);
+                    state.patchQuery({ roomTypes: encoded || undefined });
+                  }}
+                  className="h-4 w-4"
+                />
+                <span>{type}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-4">
+        <legend className="mb-2 text-sm font-medium text-slate-700">Star ratings</legend>
+        <div className="flex flex-wrap gap-2">
+          {STAR_RATINGS.map((star) => {
+            const checked = state.selectedStarRatings.includes(star);
+
+            return (
+              <label key={star} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => {
+                    const encoded = toggleNumberCsv(state.selectedStarRatings, star, event.target.checked);
+                    state.patchQuery({ stars: encoded || undefined });
+                  }}
+                  className="h-4 w-4"
+                />
+                <span>{star} star</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+    </>
+  );
+}
