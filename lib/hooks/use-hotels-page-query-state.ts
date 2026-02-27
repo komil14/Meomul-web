@@ -3,10 +3,12 @@ import { useCallback, useMemo } from "react";
 import {
   AMENITY_OPTIONS,
   HOTEL_LOCATIONS,
+  HOTELS_SORT_OPTIONS,
   HOTEL_TYPES,
   ROOM_TYPES,
   STAR_RATINGS,
   STAY_PURPOSE_OPTIONS,
+  type HotelsSortBy,
 } from "@/lib/hotels/hotels-filter-config";
 import type { HotelAmenityKey, HotelLocation, HotelSearchInput, HotelType, RoomType, StayPurpose } from "@/types/hotel";
 
@@ -83,6 +85,10 @@ const toGraphQlDate = (value: string): string | undefined => {
 
 export interface HotelsPageQueryState {
   page: number;
+  sortBy: HotelsSortBy;
+  sortField: string;
+  sortDirection: 1 | -1;
+  activeFilterCount: number;
   textInput: string;
   selectedLocation: HotelLocation | "";
   dongInput: string;
@@ -117,6 +123,14 @@ export const useHotelsPageQueryState = (): HotelsPageQueryState => {
     const parsed = parseInteger(toSingle(router.query.page), 1);
     return parsed ?? 1;
   }, [router.query.page]);
+  const sortBy = useMemo<HotelsSortBy>(() => {
+    const raw = toSingle(router.query.sort);
+    return HOTELS_SORT_OPTIONS.some((option) => option.value === raw) ? (raw as HotelsSortBy) : "RECOMMENDED";
+  }, [router.query.sort]);
+  const sortOption = useMemo(
+    () => HOTELS_SORT_OPTIONS.find((option) => option.value === sortBy) ?? HOTELS_SORT_OPTIONS[0],
+    [sortBy],
+  );
 
   const textInput = useMemo(() => toSingle(router.query.q), [router.query.q]);
   const selectedLocation = useMemo<HotelLocation | "">(() => {
@@ -259,6 +273,52 @@ export const useHotelsPageQueryState = (): HotelsPageQueryState => {
     wheelchairAccessible,
   ]);
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+
+    if (textInput.trim()) count += 1;
+    if (selectedLocation) count += 1;
+    if (selectedPurpose) count += 1;
+    if (dongInput.trim()) count += 1;
+    if (nearestSubwayInput.trim()) count += 1;
+    if (subwayLinesInput.trim()) count += 1;
+    if (maxWalkingDistanceInput) count += 1;
+    if (minInput || maxInput) count += 1;
+    if (guestCountInput) count += 1;
+    if (minRatingInput) count += 1;
+    if (checkInInput || checkOutInput) count += 1;
+    if (verifiedOnly) count += 1;
+    if (petsAllowed) count += 1;
+    if (wheelchairAccessible) count += 1;
+    if (selectedTypes.length > 0) count += 1;
+    if (selectedRoomTypes.length > 0) count += 1;
+    if (selectedStarRatings.length > 0) count += 1;
+    if (selectedAmenities.length > 0) count += 1;
+
+    return count;
+  }, [
+    checkInInput,
+    checkOutInput,
+    dongInput,
+    guestCountInput,
+    maxInput,
+    maxWalkingDistanceInput,
+    minInput,
+    minRatingInput,
+    nearestSubwayInput,
+    petsAllowed,
+    selectedAmenities.length,
+    selectedLocation,
+    selectedPurpose,
+    selectedRoomTypes.length,
+    selectedStarRatings.length,
+    selectedTypes.length,
+    subwayLinesInput,
+    textInput,
+    verifiedOnly,
+    wheelchairAccessible,
+  ]);
+
   const patchQuery = useCallback(
     (next: QueryPatch, resetPage = true) => {
       const merged: Record<string, string> = {};
@@ -307,6 +367,10 @@ export const useHotelsPageQueryState = (): HotelsPageQueryState => {
 
   return {
     page,
+    sortBy,
+    sortField: sortOption.sort,
+    sortDirection: sortOption.direction,
+    activeFilterCount,
     textInput,
     selectedLocation,
     dongInput,

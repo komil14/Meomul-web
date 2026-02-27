@@ -2,6 +2,22 @@ import type { HotelAmenityKey, HotelLocation, HotelType, RoomType, StayPurpose }
 
 export const HOTELS_PAGE_SIZE = 12;
 
+export type HotelsSortBy = "RECOMMENDED" | "NEWEST" | "TOP_RATED" | "MOST_LOVED";
+
+export interface HotelsSortOption {
+  value: HotelsSortBy;
+  label: string;
+  sort: string;
+  direction: 1 | -1;
+}
+
+export const HOTELS_SORT_OPTIONS: HotelsSortOption[] = [
+  { value: "RECOMMENDED", label: "Recommended", sort: "hotelRank", direction: -1 },
+  { value: "NEWEST", label: "Newest", sort: "createdAt", direction: -1 },
+  { value: "TOP_RATED", label: "Top rated", sort: "hotelRating", direction: -1 },
+  { value: "MOST_LOVED", label: "Most loved", sort: "hotelLikes", direction: -1 },
+];
+
 export const HOTEL_LOCATIONS: HotelLocation[] = [
   "SEOUL",
   "BUSAN",
