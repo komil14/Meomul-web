@@ -405,18 +405,10 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
   };
 
   return (
-    <div ref={containerRef} className="relative z-30 rounded-[2rem] border border-slate-200/90 bg-white/95 p-3 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.45)] backdrop-blur">
-      {openPanel ? (
-        <button
-          type="button"
-          aria-label="Close quick filter panel"
-          onClick={() => {
-            setOpenPanel(null);
-          }}
-          className="fixed inset-0 z-10 bg-slate-950/8 backdrop-blur-[2px]"
-        />
-      ) : null}
-
+    <div
+      ref={containerRef}
+      className="relative z-30 rounded-[2rem] border border-slate-200/90 bg-white/95 p-3 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.45)]"
+    >
       <div className="relative z-20 rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <label className="flex-1 rounded-[1.3rem] bg-white px-4 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)]">
@@ -437,40 +429,42 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
             />
           </label>
 
-          <button
-            type="button"
-            onClick={handleSearch}
-            className="inline-flex items-center justify-center gap-2 rounded-[1.3rem] bg-rose-500 px-5 py-4 text-sm font-semibold text-white transition hover:bg-rose-600 md:min-w-[9.5rem]"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-              <path d="m21 21-4.35-4.35" />
-              <circle cx="11" cy="11" r="6" />
-            </svg>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
+            <button
+              type="button"
+              onClick={handleSearch}
+              className="inline-flex items-center justify-center gap-2 rounded-[1.3rem] bg-rose-500 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-rose-600 md:min-w-[9.5rem] md:px-5 md:py-4"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                <path d="m21 21-4.35-4.35" />
+                <circle cx="11" cy="11" r="6" />
+              </svg>
               Search
             </button>
 
-          <label className="flex items-center gap-2 rounded-[1.3rem] bg-white px-4 py-3 text-sm text-slate-600 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)] md:min-w-[13rem]">
-            <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Sort</span>
-            <select
-              value={state.sortBy}
-              onChange={(event) => {
-                state.patchQuery({ sort: event.target.value });
-              }}
-              className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none"
-            >
-              {HOTELS_SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label className="flex items-center gap-2 rounded-[1.3rem] bg-white px-3 py-3 text-sm text-slate-600 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)] md:min-w-[13rem] md:px-4">
+              <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 md:text-[11px]">Sort</span>
+              <select
+                value={state.sortBy}
+                onChange={(event) => {
+                  state.patchQuery({ sort: event.target.value });
+                }}
+                className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none"
+              >
+                {HOTELS_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       </div>
 
-      <div className="relative z-20 mt-3 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="flex-1 rounded-[1.7rem] border border-slate-200 bg-slate-50/90 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-          <div className="grid gap-1.5 md:grid-cols-3">
+      <div className="relative z-20 mt-3">
+        <div className="rounded-[1.7rem] border border-slate-200 bg-slate-50/90 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+          <div className="grid grid-cols-2 gap-1.5 md:grid-cols-[1fr_1fr_1fr_auto]">
             <button
               type="button"
               onClick={openLocationPanel}
@@ -503,36 +497,36 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
               <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Guests</span>
               <span className="mt-1 block text-sm font-medium text-slate-900">{guestSummary}</span>
             </button>
+
+            <button
+              type="button"
+              onClick={onOpenFilters}
+              className={`relative inline-flex min-h-[4.75rem] items-center justify-center rounded-[1.35rem] border bg-white text-slate-700 transition hover:text-slate-900 ${
+                hiddenFilterCount > 0
+                  ? "border-slate-300 px-3 shadow-sm hover:border-slate-400 md:min-w-[6.25rem] md:gap-2"
+                  : "border-slate-200 hover:border-slate-300 md:w-14"
+              }`}
+              aria-label="Open more filters"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 shrink-0">
+                <path d="M4 7h16" />
+                <path d="M7 12h10" />
+                <path d="M10 17h4" />
+              </svg>
+              {hiddenFilterCount > 0 ? (
+                <span className="hidden md:flex md:flex-col md:items-start md:leading-none">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Stays</span>
+                  <span className="mt-1 text-sm font-semibold text-slate-900">{loading ? "..." : total.toLocaleString()}</span>
+                </span>
+              ) : null}
+              {hiddenFilterCount > 0 ? (
+                <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[11px] font-semibold text-white">
+                  {hiddenFilterCount}
+                </span>
+              ) : null}
+            </button>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={onOpenFilters}
-          className={`relative inline-flex h-14 shrink-0 items-center justify-center self-end rounded-2xl border bg-white text-slate-700 shadow-[0_14px_34px_-24px_rgba(15,23,42,0.45)] transition hover:text-slate-900 lg:self-auto ${
-            hiddenFilterCount > 0
-              ? "min-w-[6.25rem] gap-2 border-slate-300 px-3 hover:border-slate-400"
-              : "w-14 border-slate-200 hover:border-slate-300"
-          }`}
-          aria-label="Open more filters"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-            <path d="M4 7h16" />
-            <path d="M7 12h10" />
-            <path d="M10 17h4" />
-          </svg>
-          {hiddenFilterCount > 0 ? (
-            <span className="flex flex-col items-start leading-none">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Stays</span>
-              <span className="mt-1 text-sm font-semibold text-slate-900">{loading ? "..." : total.toLocaleString()}</span>
-            </span>
-          ) : null}
-          {hiddenFilterCount > 0 ? (
-            <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[11px] font-semibold text-white">
-              {hiddenFilterCount}
-            </span>
-          ) : null}
-        </button>
       </div>
 
       {openPanel ? (

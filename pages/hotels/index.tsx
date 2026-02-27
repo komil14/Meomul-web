@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { HotelsActiveFilterChips } from "@/components/hotels/hotels-active-filter-chips";
 import { HotelsDiscoveryToolbar } from "@/components/hotels/hotels-discovery-toolbar";
 import { HotelsFiltersDrawer } from "@/components/hotels/hotels-filters-drawer";
-import { HotelsMobileResultsBar } from "@/components/hotels/hotels-mobile-results-bar";
 import { HotelsResultsSkeleton } from "@/components/hotels/hotels-results-skeleton";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
@@ -123,17 +122,6 @@ export default function HotelsPage() {
           <HotelsActiveFilterChips state={queryState} />
         </ScrollReveal>
 
-        {isHydrated ? (
-          <HotelsMobileResultsBar
-            total={total}
-            loading={loading}
-            activeFilterCount={queryState.activeFilterCount}
-            onOpenFilters={() => {
-              setIsFiltersOpen(true);
-            }}
-          />
-        ) : null}
-
         {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
         {showInitialSkeleton ? <HotelsResultsSkeleton /> : null}
@@ -171,18 +159,19 @@ export default function HotelsPage() {
             </ScrollReveal>
 
             <ScrollReveal delayMs={50}>
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 sm:px-4 sm:py-3">
+              <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4 sm:py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-slate-600">
                   Page {queryState.page} of {totalPages} · {total} hotels
                 </p>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:flex">
                   <button
                     type="button"
                     disabled={queryState.page <= 1}
                     onClick={() => {
                       queryState.patchQuery({ page: String(Math.max(1, queryState.page - 1)) }, false);
                     }}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-1.5"
                   >
                     Prev
                   </button>
@@ -192,10 +181,11 @@ export default function HotelsPage() {
                     onClick={() => {
                       queryState.patchQuery({ page: String(Math.min(totalPages, queryState.page + 1)) }, false);
                     }}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-1.5"
                   >
                     Next
                   </button>
+                </div>
                 </div>
               </div>
             </ScrollReveal>

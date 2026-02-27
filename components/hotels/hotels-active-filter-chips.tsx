@@ -148,20 +148,22 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   }
 
   return (
-    <section className="flex flex-wrap items-center gap-2">
-      {chips.map((chip) => (
-        <button
-          key={chip.id}
-          type="button"
-          onClick={() => {
-            state.patchQuery(chip.clearPatch);
-          }}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-500"
-        >
-          <span>{chip.label}</span>
-          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-slate-600">x</span>
-        </button>
-      ))}
+    <section className="-mx-1 overflow-x-auto px-1 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+      <div className="flex w-max items-center gap-2 sm:w-auto sm:flex-wrap">
+        {chips.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            onClick={() => {
+              state.patchQuery(chip.clearPatch);
+            }}
+            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-500"
+          >
+            <span>{chip.label}</span>
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-slate-600">x</span>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }
