@@ -6,8 +6,8 @@ interface HotelsFlagsFiltersProps {
 
 export function HotelsFlagsFilters({ state }: HotelsFlagsFiltersProps) {
   return (
-    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-      <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+    <div className="grid gap-3 sm:grid-cols-3">
+      <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
         <input
           type="checkbox"
           checked={state.verifiedOnly}
@@ -18,7 +18,7 @@ export function HotelsFlagsFilters({ state }: HotelsFlagsFiltersProps) {
         />
         Verified only
       </label>
-      <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+      <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
         <input
           type="checkbox"
           checked={state.petsAllowed}
@@ -29,7 +29,7 @@ export function HotelsFlagsFilters({ state }: HotelsFlagsFiltersProps) {
         />
         Pets allowed
       </label>
-      <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+      <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
         <input
           type="checkbox"
           checked={state.wheelchairAccessible}

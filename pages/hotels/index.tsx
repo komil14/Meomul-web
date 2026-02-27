@@ -1,5 +1,4 @@
 import { useApolloClient, useQuery } from "@apollo/client/react";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { HotelsActiveFilterChips } from "@/components/hotels/hotels-active-filter-chips";
 import { HotelsDiscoveryToolbar } from "@/components/hotels/hotels-discovery-toolbar";
@@ -40,12 +39,12 @@ export default function HotelsPage() {
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
     notifyOnNetworkStatusChange: true,
-    returnPartialData: true,
   });
 
   const resultData = data ?? previousData;
-  const hotels = resultData?.getHotels.list ?? [];
-  const total = resultData?.getHotels.metaCounter.total ?? 0;
+  const hotelsData = resultData?.getHotels;
+  const hotels = hotelsData?.list ?? [];
+  const total = hotelsData?.metaCounter?.total ?? 0;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / HOTELS_PAGE_SIZE)), [total]);
 
   const showInitialSkeleton = !isHydrated || (loading && hotels.length === 0);
@@ -95,26 +94,21 @@ export default function HotelsPage() {
           setIsFiltersOpen(false);
         }}
         state={queryState}
+        appliedTotal={total}
       />
 
       <main className={`space-y-6 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
         <ScrollReveal delayMs={20}>
-          <header className="flex flex-wrap items-end justify-between gap-3">
+          <header>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Discover</p>
               <h1 className="mt-2 text-3xl font-semibold text-slate-900">Public Hotels</h1>
               <p className="mt-2 text-sm text-slate-600">Search quickly, compare confidently, and book without friction.</p>
             </div>
-            <Link
-              href="/dashboard"
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
-            >
-              Open dashboard
-            </Link>
           </header>
         </ScrollReveal>
 
-        <ScrollReveal delayMs={30}>
+        <ScrollReveal delayMs={30} className="relative z-50">
           <HotelsDiscoveryToolbar
             state={queryState}
             total={total}
@@ -129,14 +123,16 @@ export default function HotelsPage() {
           <HotelsActiveFilterChips state={queryState} />
         </ScrollReveal>
 
-        <HotelsMobileResultsBar
-          total={total}
-          loading={loading}
-          activeFilterCount={queryState.activeFilterCount}
-          onOpenFilters={() => {
-            setIsFiltersOpen(true);
-          }}
-        />
+        {isHydrated ? (
+          <HotelsMobileResultsBar
+            total={total}
+            loading={loading}
+            activeFilterCount={queryState.activeFilterCount}
+            onOpenFilters={() => {
+              setIsFiltersOpen(true);
+            }}
+          />
+        ) : null}
 
         {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 

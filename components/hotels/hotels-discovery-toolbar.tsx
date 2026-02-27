@@ -1,13 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
-import {
-  HOTEL_LOCATIONS,
-  HOTELS_SORT_OPTIONS,
-  STAY_PURPOSE_OPTIONS,
-} from "@/lib/hotels/hotels-filter-config";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { HOTEL_LOCATIONS, HOTELS_SORT_OPTIONS } from "@/lib/hotels/hotels-filter-config";
 import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
-
-const FEATURED_LOCATIONS = HOTEL_LOCATIONS.slice(0, 4);
-const FEATURED_PURPOSES = STAY_PURPOSE_OPTIONS.slice(0, 4);
+import type { HotelLocation } from "@/types/hotel";
 
 interface HotelsDiscoveryToolbarProps {
   state: HotelsPageQueryState;
@@ -16,175 +10,735 @@ interface HotelsDiscoveryToolbarProps {
   onOpenFilters: () => void;
 }
 
+type OpenPanel = "location" | "dates" | "guests" | null;
+
+interface CalendarCell {
+  date: Date | null;
+  inMonth: boolean;
+  key: string;
+}
+
+const MONTH_LABELS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const SHORT_MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+const isIsoDateInput = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+const createUtcDate = (year: number, monthIndex: number, day: number): Date => new Date(Date.UTC(year, monthIndex, day));
+
+const parseIsoDate = (value: string): Date | null => {
+  if (!isIsoDateInput(value)) {
+    return null;
+  }
+
+  const [yearText, monthText, dayText] = value.split("-");
+  return createUtcDate(Number(yearText), Number(monthText) - 1, Number(dayText));
+};
+
+const toIsoDate = (value: Date): string => {
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(value.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const startOfUtcMonth = (value: Date): Date => createUtcDate(value.getUTCFullYear(), value.getUTCMonth(), 1);
+
+const addUtcMonths = (value: Date, amount: number): Date => createUtcDate(value.getUTCFullYear(), value.getUTCMonth() + amount, 1);
+
+const isSameUtcDay = (first: Date | null, second: Date | null): boolean =>
+  Boolean(first && second && first.getTime() === second.getTime());
+
+const isBeforeUtcDay = (first: Date, second: Date): boolean => first.getTime() < second.getTime();
+
+const formatLocationLabel = (value: HotelLocation): string =>
+  value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const formatDateLabel = (value: string): string => {
+  const parsed = parseIsoDate(value);
+  if (!parsed) {
+    return "";
+  }
+
+  const month = SHORT_MONTH_LABELS[parsed.getUTCMonth()] ?? "";
+  return `${month} ${parsed.getUTCDate()}`;
+};
+
+const buildDateSummary = (checkIn: string, checkOut: string): string => {
+  const start = formatDateLabel(checkIn);
+  const end = formatDateLabel(checkOut);
+
+  if (start && end) {
+    return `${start} - ${end}`;
+  }
+  if (start) {
+    return `From ${start}`;
+  }
+  if (end) {
+    return `Until ${end}`;
+  }
+  return "Add dates";
+};
+
+const parseGuestCount = (value: string): number => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 2;
+};
+
+const getInitialVisibleMonth = (checkInInput: string): Date => {
+  const selected = parseIsoDate(checkInInput);
+  if (selected) {
+    return startOfUtcMonth(selected);
+  }
+
+  const now = new Date();
+  return createUtcDate(now.getFullYear(), now.getMonth(), 1);
+};
+
+const buildMonthCells = (monthStart: Date): CalendarCell[] => {
+  const year = monthStart.getUTCFullYear();
+  const month = monthStart.getUTCMonth();
+  const firstWeekday = monthStart.getUTCDay();
+  const daysInCurrentMonth = createUtcDate(year, month + 1, 0).getUTCDate();
+
+  const cells: CalendarCell[] = [];
+
+  for (let index = 0; index < firstWeekday; index += 1) {
+    cells.push({
+      date: null,
+      inMonth: false,
+      key: `leading-${year}-${month}-${index}`,
+    });
+  }
+
+  for (let day = 1; day <= daysInCurrentMonth; day += 1) {
+    cells.push({
+      date: createUtcDate(year, month, day),
+      inMonth: true,
+      key: `day-${year}-${month}-${day}`,
+    });
+  }
+
+  while (cells.length < 42) {
+    cells.push({
+      date: null,
+      inMonth: false,
+      key: `trailing-${year}-${month}-${cells.length}`,
+    });
+  }
+
+  return cells;
+};
+
+const formatMonthTitle = (monthStart: Date): string =>
+  `${MONTH_LABELS[monthStart.getUTCMonth()] ?? ""} ${monthStart.getUTCFullYear()}`;
+
+const getNightCount = (checkIn: Date | null, checkOut: Date | null): number => {
+  if (!checkIn || !checkOut) {
+    return 0;
+  }
+
+  return Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+};
+
 export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }: HotelsDiscoveryToolbarProps) {
-  const [searchDraft, setSearchDraft] = useState(state.textInput);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  const [draftText, setDraftText] = useState(state.textInput);
+  const [draftCheckIn, setDraftCheckIn] = useState(state.checkInInput);
+  const [draftCheckOut, setDraftCheckOut] = useState(state.checkOutInput);
+  const [draftGuests, setDraftGuests] = useState<number>(parseGuestCount(state.guestCountInput));
+  const [visibleMonthStart, setVisibleMonthStart] = useState<Date | null>(null);
+  const [todayDate, setTodayDate] = useState<Date | null>(null);
 
   useEffect(() => {
-    setSearchDraft(state.textInput);
+    setDraftText(state.textInput);
   }, [state.textInput]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    state.patchQuery({ q: searchDraft.trim() || undefined });
+  useEffect(() => {
+    const now = new Date();
+    setTodayDate(createUtcDate(now.getFullYear(), now.getMonth(), now.getDate()));
+  }, []);
+
+  useEffect(() => {
+    if (!openPanel) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current) {
+        return;
+      }
+
+      if (!containerRef.current.contains(event.target as Node)) {
+        setOpenPanel(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [openPanel]);
+
+  const hiddenFilterCount = useMemo(() => {
+    const quickFilterCount =
+      (state.textInput.trim() ? 1 : 0) +
+      (state.selectedLocation ? 1 : 0) +
+      (state.checkInInput || state.checkOutInput ? 1 : 0) +
+      (state.guestCountInput ? 1 : 0);
+
+    return Math.max(0, state.activeFilterCount - quickFilterCount);
+  }, [
+    state.activeFilterCount,
+    state.checkInInput,
+    state.checkOutInput,
+    state.guestCountInput,
+    state.selectedLocation,
+    state.textInput,
+  ]);
+
+  const selectedCheckInDate = useMemo(() => parseIsoDate(draftCheckIn), [draftCheckIn]);
+  const selectedCheckOutDate = useMemo(() => parseIsoDate(draftCheckOut), [draftCheckOut]);
+  const hasDraftDateError = Boolean(
+    selectedCheckInDate && selectedCheckOutDate && !isBeforeUtcDay(selectedCheckInDate, selectedCheckOutDate),
+  );
+
+  const primaryMonth = visibleMonthStart;
+  const secondaryMonth = primaryMonth ? addUtcMonths(primaryMonth, 1) : null;
+  const minimumVisibleMonth = todayDate ? startOfUtcMonth(todayDate) : null;
+  const canGoToPreviousMonth = Boolean(primaryMonth && minimumVisibleMonth && isBeforeUtcDay(minimumVisibleMonth, primaryMonth));
+
+  const locationSummary = state.selectedLocation ? formatLocationLabel(state.selectedLocation) : "Anywhere";
+  const dateSummary = buildDateSummary(state.checkInInput, state.checkOutInput);
+  const guestSummary = state.guestCountInput
+    ? `${state.guestCountInput} guest${state.guestCountInput === "1" ? "" : "s"}`
+    : "Add guests";
+  const stayNightCount = getNightCount(selectedCheckInDate, selectedCheckOutDate);
+
+  const openLocationPanel = () => {
+    setOpenPanel((current) => (current === "location" ? null : "location"));
   };
 
-  return (
-    <section className="relative overflow-hidden rounded-3xl border border-sky-100/70 bg-gradient-to-br from-white via-sky-50/60 to-emerald-50/45 p-3.5 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.35)] sm:p-5">
-      <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-sky-200/30 blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-emerald-200/30 blur-2xl" />
+  const openDatesPanel = () => {
+    if (openPanel === "dates") {
+      setOpenPanel(null);
+      return;
+    }
 
-      <div className="relative">
-        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 sm:mb-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Find Stays Faster</p>
-            <p className="mt-1 text-sm text-slate-600">
-              {loading ? "Refreshing results..." : `${total.toLocaleString()} stays matched`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenFilters}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
-            >
-              Filters {state.activeFilterCount > 0 ? `(${state.activeFilterCount})` : ""}
-            </button>
-            {state.activeFilterCount > 0 ? (
-              <button
-                type="button"
-                onClick={() => {
-                  state.clearQuery();
-                }}
-                className="rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-white/80 hover:text-slate-900"
-              >
-                Clear all
-              </button>
-            ) : null}
-          </div>
+    setDraftCheckIn(state.checkInInput);
+    setDraftCheckOut(state.checkOutInput);
+    setVisibleMonthStart(getInitialVisibleMonth(state.checkInInput));
+    setOpenPanel("dates");
+  };
+
+  const openGuestsPanel = () => {
+    if (openPanel === "guests") {
+      setOpenPanel(null);
+      return;
+    }
+
+    setDraftGuests(parseGuestCount(state.guestCountInput));
+    setOpenPanel("guests");
+  };
+
+  const applySearch = (additionalPatch?: Record<string, string | undefined>) => {
+    state.patchQuery({
+      q: draftText.trim() || undefined,
+      ...additionalPatch,
+    });
+  };
+
+  const applyDateDraft = () => {
+    if (hasDraftDateError) {
+      return;
+    }
+
+    applySearch({
+      checkIn: draftCheckIn || undefined,
+      checkOut: draftCheckOut || undefined,
+    });
+    setOpenPanel(null);
+  };
+
+  const clearDateDraft = () => {
+    setDraftCheckIn("");
+    setDraftCheckOut("");
+    applySearch({
+      checkIn: undefined,
+      checkOut: undefined,
+    });
+  };
+
+  const applyGuestDraft = () => {
+    applySearch({
+      guests: String(draftGuests),
+    });
+    setOpenPanel(null);
+  };
+
+  const clearGuestDraft = () => {
+    setDraftGuests(2);
+    applySearch({
+      guests: undefined,
+    });
+  };
+
+  const handleSearch = () => {
+    if (openPanel === "dates" && hasDraftDateError) {
+      applySearch();
+      return;
+    }
+
+    if (openPanel === "dates") {
+      applySearch({
+        checkIn: draftCheckIn || undefined,
+        checkOut: draftCheckOut || undefined,
+      });
+      setOpenPanel(null);
+      return;
+    }
+
+    if (openPanel === "guests") {
+      applySearch({
+        guests: String(draftGuests),
+      });
+      setOpenPanel(null);
+      return;
+    }
+
+    applySearch();
+    setOpenPanel(null);
+  };
+
+  const handleCalendarDayClick = (date: Date) => {
+    if (todayDate && isBeforeUtcDay(date, todayDate)) {
+      return;
+    }
+
+    const isoDate = toIsoDate(date);
+
+    if (!selectedCheckInDate || (selectedCheckInDate && selectedCheckOutDate)) {
+      setDraftCheckIn(isoDate);
+      setDraftCheckOut("");
+      return;
+    }
+
+    if (!selectedCheckOutDate) {
+      if (!isBeforeUtcDay(selectedCheckInDate, date)) {
+        setDraftCheckIn(isoDate);
+        setDraftCheckOut("");
+        return;
+      }
+
+      setDraftCheckOut(isoDate);
+    }
+  };
+
+  const renderCalendarMonth = (monthStart: Date) => {
+    const cells = buildMonthCells(monthStart);
+
+    return (
+      <div key={monthStart.toISOString()} className="rounded-[1.15rem] border border-slate-200 bg-white/90 p-2 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.4)]">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-900">{formatMonthTitle(monthStart)}</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Exact dates</p>
         </div>
 
-        <form onSubmit={submitSearch} className="grid gap-2 md:grid-cols-[2fr_1fr_auto]">
-          <input
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-            placeholder="Search by hotel name, mood, or vibe"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none ring-slate-900 transition focus:ring-2"
-          />
-          <select
-            value={state.sortBy}
-            onChange={(event) => {
-              state.patchQuery({ sort: event.target.value || undefined }, false);
-            }}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none ring-slate-900 transition focus:ring-2"
-          >
-            {HOTELS_SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-          >
-            Search
-          </button>
-        </form>
-
-        <div className="mt-2 hidden gap-2 md:grid md:grid-cols-2 xl:grid-cols-5">
-          <select
-            value={state.selectedLocation}
-            onChange={(event) => {
-              state.patchQuery({ location: event.target.value || undefined });
-            }}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 transition focus:ring-2"
-          >
-            <option value="">All locations</option>
-            {HOTEL_LOCATIONS.map((location) => (
-              <option key={location} value={location}>
-                {location}
-              </option>
-            ))}
-          </select>
-          <select
-            value={state.selectedPurpose}
-            onChange={(event) => {
-              state.patchQuery({ purpose: event.target.value || undefined });
-            }}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 transition focus:ring-2"
-          >
-            <option value="">Any purpose</option>
-            {STAY_PURPOSE_OPTIONS.map((purpose) => (
-              <option key={purpose.value} value={purpose.value}>
-                {purpose.label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={state.checkInInput}
-            onChange={(event) => {
-              state.patchQuery({ checkIn: event.target.value || undefined });
-            }}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 transition focus:ring-2"
-          />
-          <input
-            type="date"
-            value={state.checkOutInput}
-            onChange={(event) => {
-              state.patchQuery({ checkOut: event.target.value || undefined });
-            }}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 transition focus:ring-2"
-          />
-          <input
-            value={state.guestCountInput}
-            onChange={(event) => {
-              const digits = event.target.value.replace(/\D/g, "");
-              state.patchQuery({ guests: digits || undefined });
-            }}
-            inputMode="numeric"
-            placeholder="Guests"
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-900 transition focus:ring-2"
-          />
+        <div className="grid grid-cols-7 gap-0.5 text-center text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+          {WEEKDAY_LABELS.map((label) => (
+            <span key={`${monthStart.toISOString()}-${label}`} className="py-0.5">
+              {label}
+            </span>
+          ))}
         </div>
 
-        <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1 sm:mt-3 sm:flex-wrap sm:overflow-visible sm:pb-0">
-          {FEATURED_LOCATIONS.map((location) => {
-            const selected = state.selectedLocation === location;
-            return (
-              <button
-                key={location}
-                type="button"
-                onClick={() => {
-                  state.patchQuery({ location: selected ? undefined : location });
-                }}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.08em] transition ${
-                  selected ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-500"
-                }`}
-              >
-                {location}
-              </button>
+        <div className="mt-1 grid grid-cols-7 gap-0.5">
+          {cells.map((cell) => {
+            const cellDate = cell.date;
+
+            if (!cellDate) {
+              return <div key={cell.key} className="h-8 rounded-md border border-transparent" aria-hidden="true" />;
+            }
+
+            const isPastDate = Boolean(todayDate && isBeforeUtcDay(cellDate, todayDate));
+            const isStart = isSameUtcDay(selectedCheckInDate, cellDate);
+            const isEnd = isSameUtcDay(selectedCheckOutDate, cellDate);
+            const isBoundary = isStart || isEnd;
+            const isInRange = Boolean(
+              selectedCheckInDate &&
+                selectedCheckOutDate &&
+                isBeforeUtcDay(selectedCheckInDate, cellDate) &&
+                isBeforeUtcDay(cellDate, selectedCheckOutDate),
             );
-          })}
-          {FEATURED_PURPOSES.map((purpose) => {
-            const selected = state.selectedPurpose === purpose.value;
+
             return (
               <button
-                key={purpose.value}
+                key={cell.key}
                 type="button"
+                disabled={isPastDate}
                 onClick={() => {
-                  state.patchQuery({ purpose: selected ? undefined : purpose.value });
+                  handleCalendarDayClick(cellDate);
                 }}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold tracking-[0.08em] transition ${
-                  selected ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-600 hover:border-slate-500"
+                className={`flex h-8 items-center justify-center rounded-md border text-[12px] font-semibold transition ${
+                  isBoundary
+                    ? "border-indigo-600 bg-indigo-600 text-white shadow-[0_12px_24px_-16px_rgba(79,70,229,0.8)]"
+                    : isInRange
+                      ? "border-slate-300 bg-slate-200 text-slate-900"
+                      : isPastDate
+                        ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300"
+                        : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50"
                 }`}
               >
-                {purpose.label}
+                {cellDate.getUTCDate()}
               </button>
             );
           })}
         </div>
       </div>
-    </section>
+    );
+  };
+
+  return (
+    <div ref={containerRef} className="relative z-30 rounded-[2rem] border border-slate-200/90 bg-white/95 p-3 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.45)] backdrop-blur">
+      {openPanel ? (
+        <button
+          type="button"
+          aria-label="Close quick filter panel"
+          onClick={() => {
+            setOpenPanel(null);
+          }}
+          className="fixed inset-0 z-10 bg-slate-950/8 backdrop-blur-[2px]"
+        />
+      ) : null}
+
+      <div className="relative z-20 rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <label className="flex-1 rounded-[1.3rem] bg-white px-4 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)]">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Search stays</span>
+            <input
+              value={draftText}
+              onChange={(event) => {
+                setDraftText(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleSearch();
+                }
+              }}
+              placeholder="Hotel name, district, or landmark"
+              className="mt-1 w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={handleSearch}
+            className="inline-flex items-center justify-center gap-2 rounded-[1.3rem] bg-rose-500 px-5 py-4 text-sm font-semibold text-white transition hover:bg-rose-600 md:min-w-[9.5rem]"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+              <path d="m21 21-4.35-4.35" />
+              <circle cx="11" cy="11" r="6" />
+            </svg>
+              Search
+            </button>
+
+          <label className="flex items-center gap-2 rounded-[1.3rem] bg-white px-4 py-3 text-sm text-slate-600 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)] md:min-w-[13rem]">
+            <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Sort</span>
+            <select
+              value={state.sortBy}
+              onChange={(event) => {
+                state.patchQuery({ sort: event.target.value });
+              }}
+              className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none"
+            >
+              {HOTELS_SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="relative z-20 mt-3 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="flex-1 rounded-[1.7rem] border border-slate-200 bg-slate-50/90 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+          <div className="grid gap-1.5 md:grid-cols-3">
+            <button
+              type="button"
+              onClick={openLocationPanel}
+              className={`rounded-[1.35rem] px-4 py-3 text-left transition ${
+                openPanel === "location" ? "bg-white shadow-sm" : "hover:bg-white/80"
+              }`}
+            >
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Location</span>
+              <span className="mt-1 block text-sm font-medium text-slate-900">{locationSummary}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={openDatesPanel}
+              className={`rounded-[1.35rem] px-4 py-3 text-left transition ${
+                openPanel === "dates" ? "bg-white shadow-sm" : "hover:bg-white/80"
+              }`}
+            >
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">When</span>
+              <span className="mt-1 block text-sm font-medium text-slate-900">{dateSummary}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={openGuestsPanel}
+              className={`rounded-[1.35rem] px-4 py-3 text-left transition ${
+                openPanel === "guests" ? "bg-white shadow-sm" : "hover:bg-white/80"
+              }`}
+            >
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Guests</span>
+              <span className="mt-1 block text-sm font-medium text-slate-900">{guestSummary}</span>
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onOpenFilters}
+          className={`relative inline-flex h-14 shrink-0 items-center justify-center self-end rounded-2xl border bg-white text-slate-700 shadow-[0_14px_34px_-24px_rgba(15,23,42,0.45)] transition hover:text-slate-900 lg:self-auto ${
+            hiddenFilterCount > 0
+              ? "min-w-[6.25rem] gap-2 border-slate-300 px-3 hover:border-slate-400"
+              : "w-14 border-slate-200 hover:border-slate-300"
+          }`}
+          aria-label="Open more filters"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+            <path d="M4 7h16" />
+            <path d="M7 12h10" />
+            <path d="M10 17h4" />
+          </svg>
+          {hiddenFilterCount > 0 ? (
+            <span className="flex flex-col items-start leading-none">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Stays</span>
+              <span className="mt-1 text-sm font-semibold text-slate-900">{loading ? "..." : total.toLocaleString()}</span>
+            </span>
+          ) : null}
+          {hiddenFilterCount > 0 ? (
+            <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-slate-900 px-1.5 text-[11px] font-semibold text-white">
+              {hiddenFilterCount}
+            </span>
+          ) : null}
+        </button>
+      </div>
+
+      {openPanel ? (
+        <div
+          className={`absolute top-full z-40 mt-3 rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_20px_44px_-34px_rgba(15,23,42,0.35)] sm:p-5 ${
+            openPanel === "dates"
+              ? "left-0 right-0 md:left-1/2 md:right-auto md:w-full md:max-w-4xl md:-translate-x-1/2"
+              : openPanel === "location"
+                ? "left-0 right-0 md:right-auto md:w-full md:max-w-4xl"
+                : "left-0 right-0 md:left-auto md:w-full md:max-w-2xl"
+          }`}
+        >
+          {openPanel === "location" ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Where to</p>
+                  <p className="mt-1 text-sm text-slate-600">Choose a city first. Detailed transport filters stay in More filters.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    state.patchQuery({ location: undefined });
+                    setOpenPanel(null);
+                  }}
+                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  Anywhere
+                </button>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                {HOTEL_LOCATIONS.map((location) => {
+                  const isActive = state.selectedLocation === location;
+
+                  return (
+                    <button
+                      key={location}
+                      type="button"
+                      onClick={() => {
+                        state.patchQuery({ location });
+                        setOpenPanel(null);
+                      }}
+                      className={`rounded-2xl border px-4 py-3 text-left transition ${
+                        isActive
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : "border-slate-200 bg-slate-50/70 text-slate-800 hover:border-slate-300 hover:bg-white"
+                      }`}
+                    >
+                      <span className="block text-xs font-semibold uppercase tracking-[0.18em] opacity-70">Stay in</span>
+                      <span className="mt-1 block text-sm font-semibold">{formatLocationLabel(location)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {openPanel === "dates" ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Choose your stay</p>
+                  <p className="mt-1 text-sm text-slate-600">Pick check-in and check-out from a compact two-month calendar, then apply once.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (primaryMonth && canGoToPreviousMonth) {
+                        setVisibleMonthStart(addUtcMonths(primaryMonth, -1));
+                      }
+                    }}
+                    disabled={!canGoToPreviousMonth}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-300"
+                    aria-label="Previous months"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <path d="m15 18-6-6 6-6" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (primaryMonth) {
+                        setVisibleMonthStart(addUtcMonths(primaryMonth, 1));
+                      }
+                    }}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                    aria-label="Next months"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                      <path d="m9 18 6-6-6-6" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="mx-auto w-full rounded-[1.2rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,1))] p-2">
+                <div className="grid gap-2 md:grid-cols-2">
+                  {primaryMonth ? renderCalendarMonth(primaryMonth) : null}
+                  {secondaryMonth ? renderCalendarMonth(secondaryMonth) : null}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-[1.35rem] border border-slate-200 bg-slate-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Selected stay</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {selectedCheckInDate
+                      ? selectedCheckOutDate
+                        ? `${formatDateLabel(draftCheckIn)} - ${formatDateLabel(draftCheckOut)}`
+                        : `${formatDateLabel(draftCheckIn)} check-in`
+                      : "No exact dates selected"}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {stayNightCount > 0
+                      ? `${stayNightCount} night${stayNightCount === 1 ? "" : "s"}`
+                      : "Pick a start date, then an end date, then apply the range."}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={clearDateDraft}
+                    className="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                  >
+                    Clear dates
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyDateDraft}
+                    disabled={hasDraftDateError}
+                    className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Apply dates
+                  </button>
+                </div>
+              </div>
+
+              {hasDraftDateError ? (
+                <p className="text-xs font-medium text-rose-600">Check-out must be later than check-in.</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {openPanel === "guests" ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Who is staying</p>
+                  <p className="mt-1 text-sm text-slate-600">Match rooms that comfortably fit your group size.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearGuestDraft}
+                  className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                  Any guests
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-[1.5rem] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Guests</p>
+                  <p className="mt-1 text-xs text-slate-500">Use this to filter rooms with enough capacity.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftGuests((current) => Math.max(1, current - 1));
+                    }}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-lg font-semibold text-slate-700 transition hover:border-slate-400"
+                    aria-label="Decrease guests"
+                  >
+                    -
+                  </button>
+                  <div className="min-w-12 text-center text-lg font-semibold text-slate-900">{draftGuests}</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftGuests((current) => Math.min(20, current + 1));
+                    }}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-lg font-semibold text-slate-700 transition hover:border-slate-400"
+                    aria-label="Increase guests"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={applyGuestDraft}
+                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Apply guests
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

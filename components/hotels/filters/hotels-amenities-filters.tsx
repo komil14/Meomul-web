@@ -8,14 +8,14 @@ interface HotelsAmenitiesFiltersProps {
 
 export function HotelsAmenitiesFilters({ state }: HotelsAmenitiesFiltersProps) {
   return (
-    <fieldset className="mt-4">
+    <fieldset>
       <legend className="mb-2 text-sm font-medium text-slate-700">Amenities</legend>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {AMENITY_OPTIONS.map((amenity) => {
           const checked = state.selectedAmenities.includes(amenity.key);
 
           return (
-            <label key={amenity.key} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+            <label key={amenity.key} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
               <input
                 type="checkbox"
                 checked={checked}

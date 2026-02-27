@@ -1,5 +1,7 @@
+import { useQuery } from "@apollo/client/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HotelsFiltersPanel } from "@/components/hotels/hotels-filters-panel";
+import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import {
   AMENITY_OPTIONS,
   HOTEL_LOCATIONS,
@@ -9,12 +11,22 @@ import {
   STAY_PURPOSE_OPTIONS,
 } from "@/lib/hotels/hotels-filter-config";
 import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
-import type { HotelAmenityKey, HotelLocation, HotelType, RoomType, StayPurpose } from "@/types/hotel";
+import type {
+  GetHotelsQueryData,
+  GetHotelsQueryVars,
+  HotelAmenityKey,
+  HotelLocation,
+  HotelSearchInput,
+  HotelType,
+  RoomType,
+  StayPurpose,
+} from "@/types/hotel";
 
 interface HotelsFiltersDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   state: HotelsPageQueryState;
+  appliedTotal: number;
 }
 
 type FilterQueryKey =
@@ -113,7 +125,7 @@ const buildApplyPatch = (draft: DraftQuery): Record<string, string | undefined> 
   return patch;
 };
 
-export function HotelsFiltersDrawer({ isOpen, onClose, state }: HotelsFiltersDrawerProps) {
+export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: HotelsFiltersDrawerProps) {
   const sourceDraft = useMemo(
     () => ({
       q: state.textInput.trim() || undefined,
@@ -236,11 +248,131 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state }: HotelsFiltersDra
 
   const minPrice = parseInteger(minInput);
   const maxPrice = parseInteger(maxInput);
+  const minRating = minRatingInput ? Number(minRatingInput) : undefined;
+  const maxWalkingDistance = parseInteger(maxWalkingDistanceInput, 1);
+  const subwayLines = parseIntCsv(subwayLinesInput);
   const hasPriceRangeError = minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice;
   const hasDateRangeError =
     isIsoDateInput(checkInInput) &&
     isIsoDateInput(checkOutInput) &&
     new Date(`${checkInInput}T00:00:00.000Z`).getTime() >= new Date(`${checkOutInput}T00:00:00.000Z`).getTime();
+
+  const previewSearch = useMemo<HotelSearchInput | undefined>(() => {
+    const next: HotelSearchInput = {};
+    const text = textInput.trim();
+    const dong = dongInput.trim();
+    const nearestSubway = nearestSubwayInput.trim();
+
+    if (text) {
+      next.text = text;
+    }
+    if (selectedLocation) {
+      next.location = selectedLocation;
+    }
+    if (selectedPurpose) {
+      next.purpose = selectedPurpose;
+    }
+    if (dong) {
+      next.dong = dong;
+    }
+    if (nearestSubway) {
+      next.nearestSubway = nearestSubway;
+    }
+    if (subwayLines.length > 0) {
+      next.subwayLines = subwayLines;
+    }
+    if (maxWalkingDistance !== undefined) {
+      next.maxWalkingDistance = maxWalkingDistance;
+    }
+    if (selectedTypes.length > 0) {
+      next.hotelTypes = selectedTypes;
+    }
+    if (selectedRoomTypes.length > 0) {
+      next.roomTypes = selectedRoomTypes;
+    }
+    if (selectedStarRatings.length > 0) {
+      next.starRatings = selectedStarRatings;
+    }
+    if (minRating !== undefined && Number.isFinite(minRating) && minRating > 0) {
+      next.minRating = minRating;
+    }
+    if (selectedAmenities.length > 0) {
+      next.amenities = selectedAmenities;
+    }
+    if (verifiedOnly) {
+      next.verifiedOnly = true;
+    }
+    if (petsAllowed) {
+      next.petsAllowed = true;
+    }
+    if (wheelchairAccessible) {
+      next.wheelchairAccessible = true;
+    }
+    const guestCount = parseInteger(guestCountInput, 1);
+    if (guestCount !== undefined) {
+      next.guestCount = guestCount;
+    }
+    if (!hasDateRangeError) {
+      if (isIsoDateInput(checkInInput)) {
+        next.checkInDate = `${checkInInput}T00:00:00.000Z`;
+      }
+      if (isIsoDateInput(checkOutInput)) {
+        next.checkOutDate = `${checkOutInput}T00:00:00.000Z`;
+      }
+    }
+    if (!hasPriceRangeError && (minPrice !== undefined || maxPrice !== undefined)) {
+      next.priceRange = {
+        ...(minPrice !== undefined ? { start: minPrice } : {}),
+        ...(maxPrice !== undefined ? { end: maxPrice } : {}),
+      };
+    }
+
+    return Object.keys(next).length > 0 ? next : undefined;
+  }, [
+    checkInInput,
+    checkOutInput,
+    dongInput,
+    guestCountInput,
+    hasDateRangeError,
+    hasPriceRangeError,
+    maxPrice,
+    maxWalkingDistance,
+    minPrice,
+    minRating,
+    nearestSubwayInput,
+    petsAllowed,
+    selectedAmenities,
+    selectedLocation,
+    selectedPurpose,
+    selectedRoomTypes,
+    selectedStarRatings,
+    selectedTypes,
+    subwayLines,
+    textInput,
+    verifiedOnly,
+    wheelchairAccessible,
+  ]);
+
+  const { data: previewData, previousData: previousPreviewData, loading: previewLoading } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(
+    GET_HOTELS_QUERY,
+    {
+      skip: !isOpen || hasDateRangeError || hasPriceRangeError,
+      variables: {
+        input: {
+          page: 1,
+          limit: 1,
+          sort: state.sortField,
+          direction: state.sortDirection,
+        },
+        search: previewSearch,
+      },
+      fetchPolicy: "cache-first",
+      nextFetchPolicy: "cache-first",
+      notifyOnNetworkStatusChange: true,
+    },
+  );
+
+  const previewTotal = (previewData ?? previousPreviewData)?.getHotels?.metaCounter?.total ?? appliedTotal;
 
   const draftPanelState: HotelsPageQueryState = useMemo(
     () => ({
@@ -305,54 +437,84 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state }: HotelsFiltersDra
   }, [draft, onClose, state]);
 
   const hasDraftValidationError = hasPriceRangeError || hasDateRangeError;
+  const showMatchesSummary = !hasDraftValidationError;
+  const primaryButtonLabel = hasDraftValidationError
+    ? "Fix filters to continue"
+    : previewLoading
+      ? "Updating stays..."
+      : `Show ${previewTotal.toLocaleString()} stay${previewTotal === 1 ? "" : "s"}`;
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
-    <div className={`fixed inset-0 z-[80] ${isOpen ? "" : "pointer-events-none"}`}>
+    <div className="fixed inset-0 z-[80]">
       <button
         type="button"
         aria-label="Close filters"
         onClick={onClose}
-        className={`absolute inset-0 bg-slate-900/45 transition duration-300 ${isOpen ? "opacity-100" : "opacity-0"}`}
+        className="absolute inset-0 bg-slate-900/45 transition duration-300"
       />
 
-      <aside
-        className={`absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto border-l border-slate-200 bg-[#f6f9fd] p-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] shadow-2xl transition-transform duration-300 sm:p-4 sm:pb-[calc(env(safe-area-inset-bottom)+0.75rem)] ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-        aria-hidden={!isOpen}
-      >
-        <div className="sticky top-0 z-10 mb-2 rounded-2xl border border-slate-200 bg-white/95 p-2.5 backdrop-blur sm:mb-3 sm:p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Advanced filters</p>
-              <p className="mt-1 text-sm text-slate-600">Everything supported by backend search.</p>
+      <div className="absolute inset-0 flex items-end justify-center p-0 md:items-center md:p-6">
+        <aside
+          className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-[0_32px_120px_-40px_rgba(15,23,42,0.45)] transition duration-300 md:h-auto md:max-h-[88vh] md:max-w-4xl md:rounded-[2rem] translate-y-0 opacity-100"
+          aria-hidden={false}
+        >
+          <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
+            <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 md:hidden" />
+            <div className="mt-3 flex items-start justify-between gap-3 md:mt-0">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-900">Refine your stay</h2>
+                <p className="mt-1 text-sm text-slate-600">Choose your trip details, then apply once.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearDraftQuery}
+                  className="rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                  aria-label="Close"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+            <HotelsFiltersPanel state={draftPanelState} />
+          </div>
+
+          <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
+            <p className="mb-3 text-sm text-slate-600">
+              {showMatchesSummary
+                ? `${previewLoading ? "Checking" : `${previewTotal.toLocaleString()}`} stay${previewTotal === 1 ? "" : "s"} match these filters${
+                    previewTotal !== appliedTotal ? ` • currently showing ${appliedTotal.toLocaleString()}` : ""
+                  }`
+                : "Fix the highlighted filters to preview matching stays."}
+            </p>
             <button
               type="button"
-              onClick={onClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:border-slate-500"
-              aria-label="Close"
+              onClick={applyDraftFilters}
+              disabled={hasDraftValidationError}
+              className="w-full rounded-full bg-rose-500 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
+              {primaryButtonLabel}
             </button>
           </div>
-        </div>
-
-        <HotelsFiltersPanel state={draftPanelState} />
-
-        <div className="sticky bottom-0 mt-3 border-t border-slate-200 bg-[#f6f9fd]/95 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] pt-2.5 backdrop-blur sm:pt-3">
-          <button
-            type="button"
-            onClick={applyDraftFilters}
-            disabled={hasDraftValidationError}
-            className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Show Results
-          </button>
-        </div>
-      </aside>
+        </aside>
+      </div>
     </div>
   );
 }

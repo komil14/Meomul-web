@@ -11,11 +11,38 @@ interface HotelsFiltersPanelProps {
 
 export function HotelsFiltersPanel({ state }: HotelsFiltersPanelProps) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-      <HotelsBasicFilters state={state} />
-      <HotelsFlagsFilters state={state} />
-      <HotelsCategoriesFilters state={state} />
-      <HotelsAmenitiesFilters state={state} />
+    <section className="space-y-4">
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+        <header className="mb-4 space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Trip basics</p>
+          <p className="text-sm text-slate-600">Set where, when, and how you want to stay.</p>
+        </header>
+        <HotelsBasicFilters state={state} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+        <header className="mb-4 space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Booking options</p>
+          <p className="text-sm text-slate-600">Keep only stays that fit your booking requirements.</p>
+        </header>
+        <HotelsFlagsFilters state={state} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+        <header className="mb-4 space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Stay type</p>
+          <p className="text-sm text-slate-600">Narrow by property style, room category, and rating.</p>
+        </header>
+        <HotelsCategoriesFilters state={state} />
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+        <header className="mb-4 space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Amenities</p>
+          <p className="text-sm text-slate-600">Choose the comforts and practical features you need.</p>
+        </header>
+        <HotelsAmenitiesFilters state={state} />
+      </section>
 
       {state.hasPriceRangeError ? (
         <ErrorNotice className="mt-3" tone="warn" message="Min price must be less than or equal to max price." />
