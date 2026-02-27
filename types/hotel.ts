@@ -428,9 +428,23 @@ export interface RecommendationMetaDto {
   generalStageCount: number;
 }
 
+export interface RecommendationExplanationDto {
+  hotelId: string;
+  stage: string;
+  fromFallback: boolean;
+  matchedLocation: boolean;
+  matchedType: boolean;
+  matchedPrice: boolean;
+  likedSimilar: boolean;
+  matchedPurposes: string[];
+  matchedAmenities: string[];
+  signals: string[];
+}
+
 export interface RecommendedHotelsV2Dto {
   list: HotelListItem[];
   meta: RecommendationMetaDto;
+  explanations: RecommendationExplanationDto[];
 }
 
 export interface GetRecommendedHotelsV2QueryData {

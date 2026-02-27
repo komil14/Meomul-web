@@ -93,6 +93,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     trendingLoading,
     trendingErrorMessage,
     recommendedHotels,
+    recommendedExplanationMap,
     recommendedMeta,
     recommendedLoading,
     recommendedErrorMessage,
@@ -272,6 +273,7 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
                     loadingText="Loading personalized recommendations..."
                     errorMessage={recommendedErrorMessage}
                     layout="horizontal"
+                    recommendationExplanations={recommendedExplanationMap}
                     trackingContext={{
                       source: "recommended_v2",
                       section: "hotel_detail_recommended",

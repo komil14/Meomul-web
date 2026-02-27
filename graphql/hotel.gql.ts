@@ -367,6 +367,18 @@ export const GET_RECOMMENDED_HOTELS_V2_QUERY = gql`
         relaxedStageCount
         generalStageCount
       }
+      explanations {
+        hotelId
+        stage
+        fromFallback
+        matchedLocation
+        matchedType
+        matchedPrice
+        likedSimilar
+        matchedPurposes
+        matchedAmenities
+        signals
+      }
     }
   }
 `;

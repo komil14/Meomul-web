@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { HotelCard } from "@/components/hotels/hotel-card";
+import { RecommendationReasonPanel } from "@/components/hotels/recommendation-reason-panel";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_RECOMMENDED_HOTELS_V2_QUERY, GET_TRENDING_HOTELS_QUERY } from "@/graphql/hotel.gql";
@@ -110,6 +111,10 @@ export default function HomePage() {
     const behaviorPercent = Math.round(recommendationMeta.behaviorWeight * 100);
     return `Blend: onboarding ${onboardingPercent}% · behavior ${behaviorPercent}%`;
   }, [recommendationMeta]);
+  const recommendationExplanationMap = useMemo(() => {
+    const explanations = recommendedData?.getRecommendedHotelsV2.explanations ?? [];
+    return new Map(explanations.map((item) => [item.hotelId, item]));
+  }, [recommendedData?.getRecommendedHotelsV2.explanations]);
   const trendingHotels = trendingData?.getTrendingHotels ?? [];
 
   const getRecommendedTrackingContext = (
@@ -206,15 +211,21 @@ export default function HomePage() {
             ) : null}
             {recommendedHotels.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {recommendedHotels.map((hotel, index) => (
-                  <HotelCard
-                    key={hotel._id}
-                    hotel={hotel}
-                    trackingContext={getRecommendedTrackingContext(recommendationMeta)}
-                    imagePriority={index < 2}
-                    imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 25vw, 18rem"
-                  />
-                ))}
+                {recommendedHotels.map((hotel, index) => {
+                  const explanation = recommendationExplanationMap.get(hotel._id);
+
+                  return (
+                    <div key={hotel._id} className="space-y-3">
+                      <HotelCard
+                        hotel={hotel}
+                        trackingContext={getRecommendedTrackingContext(recommendationMeta)}
+                        imagePriority={index < 2}
+                        imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 25vw, 18rem"
+                      />
+                      <RecommendationReasonPanel explanation={explanation} />
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
           </section>

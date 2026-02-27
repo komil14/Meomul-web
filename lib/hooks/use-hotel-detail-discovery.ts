@@ -15,6 +15,7 @@ import type {
   GetTrendingByLocationQueryData,
   GetTrendingByLocationQueryVars,
   HotelLocation,
+  RecommendationExplanationDto,
 } from "@/types/hotel";
 
 interface UseHotelDetailDiscoveryInput {
@@ -184,6 +185,19 @@ export const useHotelDetailDiscovery = ({
     () => (shouldLoadDiscovery ? uniqueHotels(recommendedData?.getRecommendedHotelsV2.list ?? [], hotelId) : []),
     [hotelId, recommendedData?.getRecommendedHotelsV2.list, shouldLoadDiscovery],
   );
+  const recommendedExplanationMap = useMemo(() => {
+    if (!shouldLoadDiscovery) {
+      return new Map<string, RecommendationExplanationDto>();
+    }
+
+    const explanations = recommendedData?.getRecommendedHotelsV2.explanations ?? [];
+    const allowedHotelIds = new Set(recommendedHotels.map((hotel) => hotel._id));
+    return new Map(
+      explanations
+        .filter((item) => allowedHotelIds.has(item.hotelId))
+        .map((item) => [item.hotelId, item]),
+    );
+  }, [recommendedData?.getRecommendedHotelsV2.explanations, recommendedHotels, shouldLoadDiscovery]);
 
   return {
     discoverySectionRef,
@@ -197,6 +211,7 @@ export const useHotelDetailDiscovery = ({
     trendingLoading,
     trendingErrorMessage: trendingError ? getErrorMessage(trendingError) : null,
     recommendedHotels,
+    recommendedExplanationMap,
     recommendedMeta: recommendedData?.getRecommendedHotelsV2.meta ?? null,
     recommendedLoading,
     recommendedErrorMessage: recommendedError ? getErrorMessage(recommendedError) : null,
