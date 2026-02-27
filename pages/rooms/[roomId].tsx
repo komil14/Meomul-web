@@ -171,9 +171,7 @@ export default function RoomDetailPage() {
           </section>
 
           {showBottomLockBar ? (
-            <div className="motion-fade-up motion-delay-3">
-              <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={handleLockPrice} />
-            </div>
+            <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={handleLockPrice} />
           ) : null}
           <LiveInterestFabContainer roomId={room._id} availableRooms={selectedStayMinAvailable ?? room.availableRooms} />
         </>

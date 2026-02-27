@@ -5186,6 +5186,11 @@ swap-case@^2.0.2:
   dependencies:
     tslib "^2.0.3"
 
+sweetalert2@^11.26.20:
+  version "11.26.20"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.26.20.tgz#947a53ccbaaac1c010517098a01692e000c5f770"
+  integrity sha512-mG3guPRzmpqGufTQ05Kr7WQIe1xfBEB9JwPIJbR2plL0ezVzS3qmazuzse0J8+/YYGCGrAL4Us2Sm5VCgHyuRg==
+
 sync-fetch@0.6.0:
   version "0.6.0"
   resolved "https://registry.yarnpkg.com/sync-fetch/-/sync-fetch-0.6.0.tgz#5759e775f3d5202e1b3d14821bc152fec32aa180"

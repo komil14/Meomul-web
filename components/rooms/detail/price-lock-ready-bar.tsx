@@ -9,7 +9,7 @@ interface PriceLockReadyBarProps {
 
 export const PriceLockReadyBar = memo(function PriceLockReadyBar({ basePrice, locking, onLockPrice }: PriceLockReadyBarProps) {
   return (
-    <section className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-12px_28px_-18px_rgba(15,23,42,0.65)] backdrop-blur [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]">
+    <section className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-12px_28px_-18px_rgba(15,23,42,0.65)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Price lock ready</p>
