@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CANCEL_PRICE_LOCK_MUTATION, GET_MY_PRICE_LOCK_QUERY, GET_MY_PRICE_LOCKS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -102,6 +103,16 @@ export function PriceLockFab() {
   const buttonBottomClass = "bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] sm:bottom-24";
 
   const handleCancel = async (lock: PriceLockDto): Promise<void> => {
+    const confirmed = await confirmDanger({
+      title: "Cancel this price lock?",
+      text: `Room ${lock.roomId} · ₩ ${formatNumber(lock.lockedPrice)}`,
+      warningText: "The locked rate will be released immediately.",
+      confirmText: "Cancel lock",
+    });
+    if (!confirmed) {
+      return;
+    }
+
     setActionError(null);
     setCancellingId(lock._id);
     try {
@@ -113,8 +124,11 @@ export function PriceLockFab() {
         ],
         awaitRefetchQueries: true,
       });
+      await successAlert("Lock cancelled", "Your price lock has been cancelled.");
     } catch (error) {
-      setActionError(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      setActionError(message);
+      await errorAlert("Cancel failed", message);
     } finally {
       setCancellingId(null);
     }
