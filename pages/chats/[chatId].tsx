@@ -57,6 +57,12 @@ interface TypingEventPayload extends ChatRoomEventPayload {
   userId: string;
 }
 
+const logBackgroundChatError = (context: string, error: unknown): void => {
+  if (process.env.NODE_ENV !== "production") {
+    console.error(`[Chat background] ${context}: ${getErrorMessage(error)}`);
+  }
+};
+
 const ChatThreadPage: NextPageWithAuth = () => {
   const router = useRouter();
   const toast = useToast();
@@ -116,9 +122,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
         chatId: chat._id,
       },
     }).catch((mutationError: unknown) => {
-      toast.error(getErrorMessage(mutationError));
+      logBackgroundChatError("mark-as-read failed", mutationError);
     });
-  }, [chat, markRead, toast, unreadForMe]);
+  }, [chat, markRead, unreadForMe]);
 
   useEffect(() => {
     if (!chatId || socketConnected || !isPageVisible) {
