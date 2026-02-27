@@ -4,16 +4,15 @@ import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   CANCEL_BOOKING_BY_OPERATOR_MUTATION,
   CANCEL_BOOKING_MUTATION,
   GET_BOOKING_QUERY,
 } from "@/graphql/booking.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { confirmDanger, errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatDateTimeKst, formatNumber } from "@/lib/utils/format";
-import { showMutationError } from "@/lib/utils/toast";
 import type {
   BookingStatus,
   CancelBookingByOperatorMutationData,
@@ -36,7 +35,6 @@ const parseEvidencePhotos = (value: string): string[] => {
 
 const BookingDetailPage: NextPageWithAuth = () => {
   const router = useRouter();
-  const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
   const bookingId = typeof router.query.bookingId === "string" ? router.query.bookingId : "";
 
@@ -75,16 +73,25 @@ const BookingDetailPage: NextPageWithAuth = () => {
 
     const trimmedReason = reason.trim();
     if (trimmedReason.length < 5 || trimmedReason.length > 500) {
-      toast.error("Cancellation reason must be between 5 and 500 characters.");
+      await errorAlert("Invalid cancellation reason", "Reason must be between 5 and 500 characters.");
       return;
     }
 
     if (!isCancellable) {
-      toast.info("Only PENDING/CONFIRMED bookings can be cancelled.");
+      await infoAlert("Cancellation not allowed", "Only PENDING or CONFIRMED bookings can be cancelled.");
       return;
     }
 
     const evidencePhotos = parseEvidencePhotos(evidenceRaw);
+    const confirmed = await confirmDanger({
+      title: `Cancel booking ${booking.bookingCode}?`,
+      text: "This action will move the booking to CANCELLED and apply cancellation rules.",
+      warningText: "You cannot undo this from the current UI.",
+      confirmText: "Yes, cancel booking",
+    });
+    if (!confirmed) {
+      return;
+    }
 
     try {
       if (canCancelAsGuest) {
@@ -104,16 +111,16 @@ const BookingDetailPage: NextPageWithAuth = () => {
           },
         });
       } else {
-        toast.error("You do not have permission to cancel this booking.");
+        await errorAlert("Permission denied", "You do not have permission to cancel this booking.");
         return;
       }
 
       await refetch();
       setReason("");
       setEvidenceRaw("");
-      toast.success(`Booking ${booking.bookingCode} cancelled.`);
+      await successAlert("Booking cancelled", `Booking ${booking.bookingCode} has been cancelled.`);
     } catch (mutationError) {
-      showMutationError(toast, mutationError);
+      await errorAlert("Cancellation failed", getErrorMessage(mutationError));
     }
   };
 

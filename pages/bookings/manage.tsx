@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { StatusPills } from "@/components/ui/status-pills";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   CANCEL_BOOKING_BY_OPERATOR_MUTATION,
   GET_AGENT_BOOKINGS_QUERY,
@@ -14,9 +13,9 @@ import {
 import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
+import { confirmAction, confirmDanger, errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatDateKst, formatNumber } from "@/lib/utils/format";
-import { showMutationError } from "@/lib/utils/toast";
 import type {
   BookingListItem,
   BookingStatus,
@@ -73,7 +72,6 @@ interface OptimisticPatch {
 }
 
 const StaffBookingManagementPage: NextPageWithAuth = () => {
-  const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
   const memberType = member?.memberType;
   const isAgent = memberType === "AGENT";
@@ -273,7 +271,16 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const handleStatusUpdate = async (booking: BookingListItem) => {
     const nextStatus = statusDrafts[booking._id] ?? booking.bookingStatus;
     if (nextStatus === booking.bookingStatus) {
-      toast.info(`Booking ${booking.bookingCode} already has status ${nextStatus}.`);
+      await infoAlert("No change detected", `Booking ${booking.bookingCode} already has status ${nextStatus}.`);
+      return;
+    }
+
+    const confirmed = await confirmAction({
+      title: `Update status for ${booking.bookingCode}?`,
+      text: `${booking.bookingStatus} -> ${nextStatus}`,
+      confirmText: "Update status",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -295,10 +302,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         delete next[booking._id];
         return next;
       });
-      toast.success(`Booking ${booking.bookingCode} status updated to ${nextStatus}.`);
+      await successAlert("Status updated", `Booking ${booking.bookingCode} status is now ${nextStatus}.`);
     } catch (error) {
       replacePatch(booking._id, previousPatch);
-      showMutationError(toast, error);
+      await errorAlert("Status update failed", getErrorMessage(error));
     } finally {
       setUpdating(setStatusUpdating, booking._id, false);
     }
@@ -307,19 +314,30 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const handlePaymentUpdate = async (booking: BookingListItem) => {
     const nextPaymentStatus = paymentStatusDrafts[booking._id] ?? booking.paymentStatus;
     if (nextPaymentStatus === "REFUNDED") {
-      toast.info("Use cancellation flow to mark bookings as refunded.");
+      await infoAlert("Use cancellation flow", "Use cancellation flow to mark bookings as refunded.");
       return;
     }
 
     const paidAmountRaw = paidAmountDrafts[booking._id] ?? String(booking.paidAmount);
     const nextPaidAmount = Number(paidAmountRaw);
     if (!Number.isInteger(nextPaidAmount) || nextPaidAmount < 0) {
-      toast.error("Paid amount must be a non-negative integer.");
+      await errorAlert("Invalid paid amount", "Paid amount must be a non-negative integer.");
       return;
     }
 
     if (nextPaymentStatus === booking.paymentStatus && nextPaidAmount === booking.paidAmount) {
-      toast.info(`Payment values are unchanged for booking ${booking.bookingCode}.`);
+      await infoAlert("No change detected", `Payment values are unchanged for booking ${booking.bookingCode}.`);
+      return;
+    }
+
+    const confirmed = await confirmAction({
+      title: `Update payment for ${booking.bookingCode}?`,
+      text: `Status: ${booking.paymentStatus} -> ${nextPaymentStatus}\nPaid: ₩ ${formatNumber(
+        booking.paidAmount,
+      )} -> ₩ ${formatNumber(nextPaidAmount)}`,
+      confirmText: "Update payment",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -347,10 +365,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         delete next[booking._id];
         return next;
       });
-      toast.success(`Payment updated for booking ${booking.bookingCode}.`);
+      await successAlert("Payment updated", `Payment updated for booking ${booking.bookingCode}.`);
     } catch (error) {
       replacePatch(booking._id, previousPatch);
-      showMutationError(toast, error);
+      await errorAlert("Payment update failed", getErrorMessage(error));
     } finally {
       setUpdating(setPaymentUpdating, booking._id, false);
     }
@@ -358,13 +376,23 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
   const handleOperatorCancel = async (booking: BookingListItem) => {
     if (booking.bookingStatus !== "PENDING" && booking.bookingStatus !== "CONFIRMED") {
-      toast.info("Only PENDING or CONFIRMED bookings can be cancelled.");
+      await infoAlert("Cancellation not allowed", "Only PENDING or CONFIRMED bookings can be cancelled.");
       return;
     }
 
     const reason = (cancelReasonDrafts[booking._id] ?? "").trim();
     if (reason.length < 5 || reason.length > 500) {
-      toast.error("Cancellation reason must be between 5 and 500 characters.");
+      await errorAlert("Invalid cancellation reason", "Cancellation reason must be between 5 and 500 characters.");
+      return;
+    }
+
+    const confirmed = await confirmDanger({
+      title: `Cancel booking ${booking.bookingCode}?`,
+      text: "This action sets booking status to CANCELLED and follows operator cancellation policy.",
+      warningText: "This should only be used for approved cancellation cases.",
+      confirmText: "Yes, cancel booking",
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -393,10 +421,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         delete next[booking._id];
         return next;
       });
-      toast.success(`Booking ${booking.bookingCode} cancelled.`);
+      await successAlert("Booking cancelled", `Booking ${booking.bookingCode} has been cancelled.`);
     } catch (error) {
       replacePatch(booking._id, previousPatch);
-      showMutationError(toast, error);
+      await errorAlert("Cancellation failed", getErrorMessage(error));
     } finally {
       setUpdating(setCancelUpdating, booking._id, false);
     }
