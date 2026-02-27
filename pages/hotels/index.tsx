@@ -5,6 +5,7 @@ import { HotelsActiveFilterChips } from "@/components/hotels/hotels-active-filte
 import { HotelsDiscoveryToolbar } from "@/components/hotels/hotels-discovery-toolbar";
 import { HotelsFiltersDrawer } from "@/components/hotels/hotels-filters-drawer";
 import { HotelsMobileResultsBar } from "@/components/hotels/hotels-mobile-results-bar";
+import { HotelsResultsSkeleton } from "@/components/hotels/hotels-results-skeleton";
 import { HotelCard } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
@@ -25,7 +26,7 @@ export default function HotelsPage() {
     setIsHydrated(true);
   }, []);
 
-  const { data, loading, error } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
+  const { data, previousData, loading, error } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
     variables: {
       input: {
         page: queryState.page,
@@ -37,15 +38,19 @@ export default function HotelsPage() {
     },
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
+    notifyOnNetworkStatusChange: true,
+    returnPartialData: true,
   });
 
-  const hotels = data?.getHotels.list ?? [];
-  const total = data?.getHotels.metaCounter.total ?? 0;
+  const resultData = data ?? previousData;
+  const hotels = resultData?.getHotels.list ?? [];
+  const total = resultData?.getHotels.metaCounter.total ?? 0;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / HOTELS_PAGE_SIZE)), [total]);
 
-  const showLoadingState = !isHydrated || (loading && hotels.length === 0);
+  const showInitialSkeleton = !isHydrated || (loading && hotels.length === 0);
   const showEmptyState = isHydrated && !loading && hotels.length === 0;
   const showResults = isHydrated && hotels.length > 0;
+  const showResultsOverlay = isHydrated && loading && hotels.length > 0;
 
   return (
     <>
@@ -100,9 +105,7 @@ export default function HotelsPage() {
 
         {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
-        {showLoadingState ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading hotels...</div>
-        ) : null}
+        {showInitialSkeleton ? <HotelsResultsSkeleton /> : null}
 
         {showEmptyState ? (
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
@@ -113,10 +116,21 @@ export default function HotelsPage() {
         {showResults ? (
           <>
             <ScrollReveal delayMs={40}>
-              <div className="grid gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3">
-                {hotels.map((hotel) => (
-                  <HotelCard key={hotel._id} hotel={hotel} />
-                ))}
+              <div className="relative">
+                <div className={`grid gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 transition duration-200 ${showResultsOverlay ? "opacity-75" : "opacity-100"}`}>
+                  {hotels.map((hotel) => (
+                    <HotelCard key={hotel._id} hotel={hotel} />
+                  ))}
+                </div>
+
+                {showResultsOverlay ? (
+                  <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-3xl bg-white/24 p-3 backdrop-blur-[1.5px]">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-sm">
+                      <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-sky-500" />
+                      Refreshing results
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </ScrollReveal>
 
