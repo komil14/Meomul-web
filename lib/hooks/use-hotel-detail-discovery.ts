@@ -145,8 +145,8 @@ export const useHotelDetailDiscovery = ({
   } = useQuery<GetSimilarHotelsQueryData, GetSimilarHotelsQueryVars>(GET_SIMILAR_HOTELS_QUERY, {
     skip: !hotelId || !shouldLoadDiscovery,
     variables: similarQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const {
@@ -156,8 +156,8 @@ export const useHotelDetailDiscovery = ({
   } = useQuery<GetTrendingByLocationQueryData, GetTrendingByLocationQueryVars>(GET_TRENDING_BY_LOCATION_QUERY, {
     skip: !trendingLocation || !shouldLoadDiscovery,
     variables: trendingQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const {
@@ -167,8 +167,8 @@ export const useHotelDetailDiscovery = ({
   } = useQuery<GetRecommendedHotelsV2QueryData, GetRecommendedHotelsV2QueryVars>(GET_RECOMMENDED_HOTELS_V2_QUERY, {
     skip: !canUseRecommendedQuery || !shouldLoadDiscovery,
     variables: recommendedQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const similarHotels = useMemo(

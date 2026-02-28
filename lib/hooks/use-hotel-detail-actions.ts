@@ -42,8 +42,8 @@ export const useHotelDetailActions = ({ hotelId, canUseLikeActions }: UseHotelDe
   } = useQuery<HasLikedQueryData, HasLikedQueryVars>(HAS_LIKED_QUERY, {
     skip: !hotelId || !canUseLikeActions,
     variables: likedQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const [toggleLikeMutation, { loading: togglingHotelLike }] = useMutation<ToggleLikeMutationData, ToggleLikeMutationVars>(

@@ -364,8 +364,8 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
       variables: {
         search: previewSearch,
       },
-      fetchPolicy: "cache-first",
-      nextFetchPolicy: "cache-first",
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
       notifyOnNetworkStatusChange: true,
     },
   );

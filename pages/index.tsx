@@ -1,272 +1,326 @@
 import { useQuery } from "@apollo/client/react";
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/router";
+import Script from "next/script";
 import { useEffect, useMemo, useState } from "react";
-import { HotelCard } from "@/components/hotels/hotel-card";
-import { RecommendationReasonPanel } from "@/components/hotels/recommendation-reason-panel";
-import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { GET_RECOMMENDED_HOTELS_V2_QUERY, GET_TRENDING_HOTELS_QUERY } from "@/graphql/hotel.gql";
-import { getSessionMember } from "@/lib/auth/session";
-import { canUsePersonalizedRecommendations } from "@/lib/hotels/detail-page-helpers";
+import { GET_HOTELS_QUERY, GET_HOTEL_REVIEWS_QUERY } from "@/graphql/hotel.gql";
+import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { getErrorMessage } from "@/lib/utils/error";
-import type {
-  GetRecommendedHotelsV2QueryData,
-  GetRecommendedHotelsV2QueryVars,
-  GetTrendingHotelsQueryData,
-  GetTrendingHotelsQueryVars,
-  RecommendationMetaDto,
-} from "@/types/hotel";
+import type { GetHotelReviewsQueryData, GetHotelReviewsQueryVars, GetHotelsQueryData, GetHotelsQueryVars, HotelListItem, PaginationInput, ReviewDto } from "@/types/hotel";
+import styles from "@/styles/home-landing-ovastin.module.css";
 
-const HOME_HOTEL_LIMIT = 8;
-const ONBOARDING_REFRESH_QUERY_VALUE = "complete";
-const HOME_MOTION_INTENSITY_CLASS = "motion-intensity-balanced";
+const HERO_LIMIT = 5;
+const HERO_ROTATION_MS = 4000;
+const REVIEW_LIMIT = 5;
+
+const HERO_QUERY_INPUT: PaginationInput = {
+  page: 1,
+  limit: HERO_LIMIT,
+  sort: "hotelRank",
+  direction: -1,
+};
+
+const REVIEW_QUERY_INPUT: PaginationInput = {
+  page: 1,
+  limit: REVIEW_LIMIT,
+  sort: "createdAt",
+  direction: -1,
+};
+
+interface HeroSlide {
+  _id: string;
+  title: string;
+  location: string;
+  hotelType: string;
+  rating: number;
+  likes: number;
+  imageUrl: string;
+}
+
+const createFallbackSlide = (index: number): HeroSlide => ({
+  _id: `fallback-${index}`,
+  title: "Premium Curated Stay",
+  location: "SEOUL",
+  hotelType: "HOTEL",
+  rating: 4.8,
+  likes: 0,
+  imageUrl: "",
+});
+
+const toHeroSlides = (hotels: HotelListItem[]): HeroSlide[] => {
+  const slides = hotels.slice(0, HERO_LIMIT).map((hotel) => ({
+    _id: hotel._id,
+    title: hotel.hotelTitle,
+    location: hotel.hotelLocation,
+    hotelType: hotel.hotelType,
+    rating: Number.isFinite(hotel.hotelRating) ? hotel.hotelRating : 0,
+    likes: Number.isFinite(hotel.hotelLikes) ? hotel.hotelLikes : 0,
+    imageUrl: resolveMediaUrl(hotel.hotelImages[0]),
+  }));
+
+  if (slides.length >= HERO_LIMIT) {
+    return slides;
+  }
+
+  const fallbackSlides = Array.from({ length: HERO_LIMIT - slides.length }, (_, index) => createFallbackSlide(index));
+  return [...slides, ...fallbackSlides];
+};
+
+const formatRatingStars = (rating: number): string => {
+  const safeRating = Math.max(0, Math.min(5, Math.round(rating)));
+  return `${"★".repeat(safeRating)}${"☆".repeat(5 - safeRating)}`;
+};
+
+const toReviewerInitial = (review: ReviewDto, index: number): string => {
+  const nickname = review.reviewerNick?.trim();
+  if (nickname) {
+    return nickname.charAt(0).toUpperCase();
+  }
+
+  return `${(index + 1) % 10}`;
+};
 
 export default function HomePage() {
-  const router = useRouter();
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
-  const [forceRecommendationRefresh, setForceRecommendationRefresh] = useState(false);
-  const [showOnboardingRefreshNotice, setShowOnboardingRefreshNotice] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isSliderPaused, setIsSliderPaused] = useState(false);
+
+  const {
+    data: topHotelsData,
+    error: topHotelsError,
+  } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
+    variables: { input: HERO_QUERY_INPUT },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
+
+  const topHotels = useMemo(() => topHotelsData?.getHotels.list ?? [], [topHotelsData?.getHotels.list]);
+  const stableTopHotels = useMemo(() => (isMounted ? topHotels : []), [isMounted, topHotels]);
+  const heroSlides = useMemo(() => toHeroSlides(stableTopHotels), [stableTopHotels]);
+  const featuredHotelId = stableTopHotels[0]?._id ?? "";
+
+  const { data: featuredReviewsData, loading: featuredReviewsLoading } = useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(
+    GET_HOTEL_REVIEWS_QUERY,
+    {
+      skip: !featuredHotelId,
+      variables: {
+        hotelId: featuredHotelId,
+        input: REVIEW_QUERY_INPUT,
+      },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
   useEffect(() => {
-    setIsHydrated(true);
-    setMember(getSessionMember());
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isHydrated || !router.isReady) {
-      return;
-    }
-
-    const onboardingFlag = typeof router.query.onboarding === "string" ? router.query.onboarding : null;
-    if (onboardingFlag !== ONBOARDING_REFRESH_QUERY_VALUE) {
-      return;
-    }
-
-    setShowOnboardingRefreshNotice(true);
-    setForceRecommendationRefresh(true);
-
-    const restQuery = { ...router.query };
-    delete restQuery.onboarding;
-    void router.replace(
-      {
-        pathname: router.pathname,
-        query: restQuery,
-      },
-      undefined,
-      { shallow: true, scroll: false },
-    );
-  }, [isHydrated, router]);
-
-  const memberType = member?.memberType;
-  const isUser = memberType === "USER";
-  const canUseRecommendedHotels = canUsePersonalizedRecommendations(memberType);
-
-  const {
-    data: recommendedData,
-    loading: recommendedLoading,
-    error: recommendedError,
-  } = useQuery<GetRecommendedHotelsV2QueryData, GetRecommendedHotelsV2QueryVars>(GET_RECOMMENDED_HOTELS_V2_QUERY, {
-    skip: !isHydrated || !canUseRecommendedHotels,
-    variables: { limit: HOME_HOTEL_LIMIT },
-    fetchPolicy: forceRecommendationRefresh ? "network-only" : "cache-first",
-    nextFetchPolicy: "cache-first",
-  });
-
-  const {
-    data: trendingData,
-    loading: trendingLoading,
-    error: trendingError,
-  } = useQuery<GetTrendingHotelsQueryData, GetTrendingHotelsQueryVars>(GET_TRENDING_HOTELS_QUERY, {
-    skip: !isHydrated,
-    variables: { limit: HOME_HOTEL_LIMIT },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
-  });
+    setActiveSlide(0);
+  }, [heroSlides.length]);
 
   useEffect(() => {
-    if (!forceRecommendationRefresh || recommendedLoading) {
+    if (heroSlides.length <= 1 || isSliderPaused) {
       return;
     }
 
-    setForceRecommendationRefresh(false);
-  }, [forceRecommendationRefresh, recommendedLoading]);
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length);
+    }, HERO_ROTATION_MS);
 
-  const recommendedHotels = recommendedData?.getRecommendedHotelsV2.list ?? [];
-  const recommendationMeta = recommendedData?.getRecommendedHotelsV2.meta ?? null;
-  const recommendationSourceLabel = useMemo(() => {
-    if (!recommendationMeta) {
-      return null;
-    }
+    return () => window.clearInterval(timer);
+  }, [heroSlides.length, isSliderPaused]);
 
-    return recommendationMeta.profileSource === "onboarding" ? "Onboarding-led" : "Behavior-led";
-  }, [recommendationMeta]);
-  const recommendationBlendText = useMemo(() => {
-    if (!recommendationMeta) {
-      return null;
-    }
-
-    const onboardingPercent = Math.round(recommendationMeta.onboardingWeight * 100);
-    const behaviorPercent = Math.round(recommendationMeta.behaviorWeight * 100);
-    return `Blend: onboarding ${onboardingPercent}% · behavior ${behaviorPercent}%`;
-  }, [recommendationMeta]);
-  const recommendationExplanationMap = useMemo(() => {
-    const explanations = recommendedData?.getRecommendedHotelsV2.explanations ?? [];
-    return new Map(explanations.map((item) => [item.hotelId, item]));
-  }, [recommendedData?.getRecommendedHotelsV2.explanations]);
-  const trendingHotels = trendingData?.getTrendingHotels ?? [];
-
-  const getRecommendedTrackingContext = (
-    meta: RecommendationMetaDto | null,
-  ): {
-    source: string;
-    section: string;
-    profileSource?: "onboarding" | "computed";
-    onboardingWeight?: number;
-    behaviorWeight?: number;
-  } => ({
-    source: "recommended_v2",
-    section: "home_recommended",
-    profileSource: meta?.profileSource,
-    onboardingWeight: meta?.onboardingWeight,
-    behaviorWeight: meta?.behaviorWeight,
-  });
+  const activeSlideData = heroSlides[activeSlide] ?? heroSlides[0];
+  const activeSlideHref = activeSlideData?._id.startsWith("fallback-") ? "/hotels" : `/hotels/${activeSlideData?._id ?? ""}`;
+  const featuredReviews = featuredReviewsData?.getHotelReviews.list ?? [];
+  const ratingsSummary = featuredReviewsData?.getHotelReviews.ratingsSummary;
+  const reviewCount = ratingsSummary?.totalReviews ?? featuredReviewsData?.getHotelReviews.metaCounter.total ?? 0;
+  const reviewRating = ratingsSummary?.overallRating ?? activeSlideData?.rating ?? 0;
+  const reviewStars = formatRatingStars(reviewRating);
 
   return (
-    <main className={`space-y-10 ${HOME_MOTION_INTENSITY_CLASS}`}>
-      <ScrollReveal delayMs={20}>
-        <section className="rounded-3xl border border-slate-200 bg-white px-6 py-8 sm:px-8 sm:py-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Meomul Discovery</p>
-          <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">Find your next stay faster</h1>
-          <p className="mt-4 max-w-3xl text-sm text-slate-600 sm:text-base">
-            Your homepage now combines personalized recommendations with market-wide trending hotels.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/hotels" className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-              Browse all hotels
+    <>
+      <Script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js" strategy="afterInteractive" />
+      <Script id="ovastin-font-loader" strategy="afterInteractive">
+        {`if (window.WebFont) { window.WebFont.load({ google: { families: ["Plus Jakarta Sans:300,400,500,600,700"] } }); }`}
+      </Script>
+
+      <main className={styles.page}>
+        <div className={styles.shell}>
+          <header className={styles.navbar}>
+            <Link href="/" className={styles.logo}>
+              <span className={styles.logoMark} aria-hidden>
+                <span />
+                <span />
+                <span />
+              </span>
+              <span className={styles.logoText}>Meomul</span>
             </Link>
-            {isUser ? (
-              <Link
-                href="/settings/preferences"
-                className="rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-800 transition hover:border-slate-500"
-              >
-                Update preferences
+
+            <nav className={styles.navLinks}>
+              <Link href="/" className={styles.navLink}>
+                Home
               </Link>
-            ) : null}
-          </div>
-        </section>
-      </ScrollReveal>
+              <Link href="/hotels" className={styles.navLink}>
+                Hotels
+              </Link>
+              <Link href="/hotels" className={styles.navLink}>
+                Rooms
+              </Link>
+              <Link href="/bookings/new" className={styles.navLink}>
+                Bookings
+              </Link>
+            </nav>
 
-      {showOnboardingRefreshNotice ? (
-        <ScrollReveal delayMs={30}>
-          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-            <p className="text-sm font-semibold text-emerald-800">Preferences saved and recommendations refreshed.</p>
-            <p className="mt-1 text-xs text-emerald-700">
-              Your onboarding answers now drive the first recommendation stage on this page.
-            </p>
-          </section>
-        </ScrollReveal>
-      ) : null}
-
-      {canUseRecommendedHotels ? (
-        <ScrollReveal delayMs={40}>
-          <section className="space-y-4">
-            <header className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">For You</p>
-                <h2 className="mt-1 text-2xl font-semibold text-slate-900">Personalized recommendations</h2>
-                {recommendationMeta ? (
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
-                      {recommendationSourceLabel}
-                    </span>
-                    <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
-                      {recommendationMeta.matchedLocationCount} location match
-                      {recommendationMeta.matchedLocationCount === 1 ? "" : "es"}
-                    </span>
-                    <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
-                      {recommendationMeta.fallbackCount} fallback
-                    </span>
-                    {recommendationBlendText ? (
-                      <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-slate-700">
-                        {recommendationBlendText}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </header>
-
-            {recommendedError ? <ErrorNotice message={getErrorMessage(recommendedError)} /> : null}
-            {recommendedLoading ? (
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-                Loading personalized hotels...
-              </div>
-            ) : null}
-            {!recommendedLoading && recommendedHotels.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-                We need a little more activity to personalize deeply. Trending hotels are shown below.
-              </div>
-            ) : null}
-            {recommendedHotels.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {recommendedHotels.map((hotel, index) => {
-                  const explanation = recommendationExplanationMap.get(hotel._id);
-
-                  return (
-                    <div key={hotel._id} className="space-y-3">
-                      <HotelCard
-                        hotel={hotel}
-                        trackingContext={getRecommendedTrackingContext(recommendationMeta)}
-                        imagePriority={index < 2}
-                        imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 25vw, 18rem"
-                      />
-                      <RecommendationReasonPanel explanation={explanation} />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-          </section>
-        </ScrollReveal>
-      ) : null}
-
-      <ScrollReveal delayMs={50}>
-        <section className="space-y-4">
-          <header className="flex items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Trending</p>
-              <h2 className="mt-1 text-2xl font-semibold text-slate-900">Popular right now</h2>
+            <div className={styles.navCta}>
+              <Link href="/hotels" className={styles.startButton}>
+                Start Booking
+              </Link>
+              <Link href="/hotels" className={styles.arrowButton} aria-label="Start booking now">
+                ↗
+              </Link>
             </div>
           </header>
 
-          {trendingError ? <ErrorNotice message={getErrorMessage(trendingError)} /> : null}
-          {trendingLoading ? (
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-              Loading trending hotels...
+          {topHotelsError ? <ErrorNotice message={getErrorMessage(topHotelsError)} /> : null}
+
+          <section className={styles.hero}>
+            <div className={styles.heroLeft}>
+              <div className={styles.subtitle}>
+                <span className={styles.subtitleSlash} />
+                <span>Smart Hotel Stays Start Here</span>
+                <span className={styles.subtitleSlash} />
+              </div>
+
+              <h1 className={styles.title}>Book the Right Stay for Every Trip</h1>
+
+              <div className={styles.primaryRow}>
+                <Link href="/hotels" className={styles.serviceButton}>
+                  <span>Explore Hotels</span>
+                  <span className={styles.serviceButtonArrow}>↗</span>
+                </Link>
+
+                <div className={styles.reviewWrap}>
+                  <div className={styles.reviewLabel}>★ Guest Reviews</div>
+                  <div className={styles.reviewBottom}>
+                    <div className={styles.avatarStack}>
+                      {featuredReviews.length > 0
+                        ? featuredReviews.slice(0, REVIEW_LIMIT).map((review, index) => {
+                            const reviewerImageUrl = resolveMediaUrl(review.reviewerImage);
+
+                            return (
+                              <div key={`review-avatar-${review._id}`} className={styles.avatarItem}>
+                                {reviewerImageUrl ? (
+                                  <Image src={reviewerImageUrl} alt={review.reviewerNick ?? "Guest reviewer"} fill sizes="22px" className={styles.avatarImage} />
+                                ) : (
+                                  <span className={styles.avatarFallback}>{toReviewerInitial(review, index)}</span>
+                                )}
+                              </div>
+                            );
+                          })
+                        : heroSlides.slice(0, REVIEW_LIMIT).map((slide, index) => (
+                            <div key={`review-fallback-avatar-${slide._id}-${index}`} className={styles.avatarItem}>
+                              {slide.imageUrl ? (
+                                <Image src={slide.imageUrl} alt={slide.title} fill sizes="22px" className={styles.avatarImage} />
+                              ) : (
+                                <span className={styles.avatarFallback}>{index + 1}</span>
+                              )}
+                            </div>
+                          ))}
+                    </div>
+                    <div className={styles.reviewMeta}>
+                      <div className={styles.stars}>{featuredReviewsLoading ? "★★★★★" : reviewStars}</div>
+                      <div>
+                        {featuredReviewsLoading
+                          ? "Loading reviews..."
+                          : reviewCount > 0
+                            ? `${reviewCount.toLocaleString()} verified reviews`
+                            : "No reviews yet"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.bottomRow}>
+                <p className={styles.description}>
+                  Compare real ratings, room types, and date-based availability to book with confidence on Meomul.
+                </p>
+                <Link href={activeSlideHref} className={styles.watchBubble}>
+                  {activeSlideData?.imageUrl ? (
+                    <Image src={activeSlideData.imageUrl} alt={activeSlideData.title} fill sizes="120px" className={styles.watchImage} />
+                  ) : (
+                    <div className={styles.watchFallback} />
+                  )}
+                  <div className={styles.watchOverlay}>
+                    <span>Preview</span>
+                    <span>▶</span>
+                  </div>
+                </Link>
+              </div>
             </div>
-          ) : null}
-          {!trendingLoading && trendingHotels.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-              No trending hotels available yet.
+
+            <div className={styles.heroRight} onMouseEnter={() => setIsSliderPaused(true)} onMouseLeave={() => setIsSliderPaused(false)}>
+              <div className={styles.sliderViewport}>
+                {heroSlides.map((slide, index) => {
+                  const isActive = index === activeSlide;
+                  const slideHref = slide._id.startsWith("fallback-") ? "/hotels" : `/hotels/${slide._id}`;
+
+                  return (
+                    <Link
+                      key={`${slide._id}-${index}`}
+                      href={slideHref}
+                      className={`${styles.slide} ${isActive ? styles.slideActive : ""}`}
+                      aria-hidden={!isActive}
+                      tabIndex={isActive ? 0 : -1}
+                    >
+                      {slide.imageUrl ? (
+                        <Image
+                          src={slide.imageUrl}
+                          alt={slide.title}
+                          fill
+                          priority={index === 0}
+                          sizes="(max-width: 767px) 100vw, (max-width: 991px) 720px, 900px"
+                          className={styles.slideImage}
+                        />
+                      ) : (
+                        <div className={styles.slideFallback} />
+                      )}
+                      <div className={styles.slideShade} />
+                      <div className={styles.slideMeta}>
+                        <div className={styles.slideTags}>
+                          <span>{formatHotelLocationLabel(slide.location)}</span>
+                          <span>{slide.hotelType}</span>
+                        </div>
+                        <h3>{slide.title}</h3>
+                        <p>
+                          ⭐ {slide.rating.toFixed(1)} · {slide.likes.toLocaleString()} likes
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className={styles.dots}>
+                {heroSlides.map((slide, index) => (
+                  <button
+                    key={`dot-${slide._id}-${index}`}
+                    type="button"
+                    className={`${styles.dot} ${index === activeSlide ? styles.dotActive : ""}`}
+                    onClick={() => setActiveSlide(index)}
+                    aria-label={`Show slide ${index + 1}`}
+                  />
+                ))}
+              </div>
             </div>
-          ) : null}
-          {trendingHotels.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {trendingHotels.map((hotel, index) => (
-                <HotelCard
-                  key={hotel._id}
-                  hotel={hotel}
-                  trackingContext={{ source: "trending", section: "home_trending" }}
-                  imagePriority={index < 2}
-                  imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 25vw, 18rem"
-                />
-              ))}
-            </div>
-          ) : null}
-        </section>
-      </ScrollReveal>
-    </main>
+          </section>
+        </div>
+      </main>
+    </>
   );
 }

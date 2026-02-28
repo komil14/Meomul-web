@@ -44,8 +44,8 @@ const PreferencesPage: NextPageWithAuth = () => {
   const [hasTrackedViewEvent, setHasTrackedViewEvent] = useState(false);
 
   const { data, loading, error, refetch } = useQuery<GetMyRecommendationProfileQueryData>(GET_MY_RECOMMENDATION_PROFILE_QUERY, {
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   useEffect(() => {

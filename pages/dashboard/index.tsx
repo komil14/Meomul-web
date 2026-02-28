@@ -132,8 +132,8 @@ const DashboardPage: NextPageWithAuth = () => {
     error: authError,
     refetch: refetchAuth,
   } = useQuery<CheckAuthQueryData>(CHECK_AUTH_QUERY, {
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const {
@@ -143,8 +143,8 @@ const DashboardPage: NextPageWithAuth = () => {
   } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
     skip: !isUser,
     variables: { input: DASHBOARD_LIST_INPUT },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const {
@@ -154,8 +154,8 @@ const DashboardPage: NextPageWithAuth = () => {
   } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(GET_AGENT_HOTELS_QUERY, {
     skip: !isAgent,
     variables: { input: DASHBOARD_LIST_INPUT },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const {
@@ -165,8 +165,8 @@ const DashboardPage: NextPageWithAuth = () => {
     refetch: refetchDashboardStats,
   } = useQuery<GetDashboardStatsQueryData>(GET_DASHBOARD_STATS_QUERY, {
     skip: !isAdminArea,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const {
@@ -185,8 +185,8 @@ const DashboardPage: NextPageWithAuth = () => {
       },
       ...(analyticsSearch ? { search: analyticsSearch } : {}),
     },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const logout = async () => {

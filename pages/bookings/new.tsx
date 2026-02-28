@@ -128,8 +128,8 @@ const NewBookingPage: NextPageWithAuth = () => {
   } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
     skip: !hotelId,
     variables: { hotelId },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const { data: roomData, loading: roomLoading, error: roomError, refetch: refetchRoom } = useQuery<
@@ -138,8 +138,8 @@ const NewBookingPage: NextPageWithAuth = () => {
   >(GET_ROOM_QUERY, {
     skip: !roomId,
     variables: { roomId },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const memberType = member?.memberType;
@@ -154,8 +154,8 @@ const NewBookingPage: NextPageWithAuth = () => {
   } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(GET_MY_PRICE_LOCK_QUERY, {
     skip: !roomId || isStaffCreator,
     variables: { roomId },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const {
@@ -168,8 +168,8 @@ const NewBookingPage: NextPageWithAuth = () => {
       keyword: debouncedGuestKeyword,
       limit: 8,
     },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const [createBooking, { loading: creating, data: createdBookingData, error: createError }] = useMutation<

@@ -89,8 +89,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const { data, loading, error, refetch, startPolling, stopPolling } = useQuery<GetChatQueryData, GetChatQueryVars>(GET_CHAT_QUERY, {
     skip: !chatId,
     variables: { chatId },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const [sendMessage, { loading: sending }] = useMutation<SendMessageMutationData, SendMessageMutationVars>(SEND_MESSAGE_MUTATION);

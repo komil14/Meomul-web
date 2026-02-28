@@ -184,8 +184,8 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
     skip: !hotelId || !enableInitialNetworkFetch,
     variables: hotelQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const queriedHotel = hotelData?.getHotel ?? null;
@@ -200,8 +200,8 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   } = useQuery<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>(GET_ROOMS_BY_HOTEL_QUERY, {
     skip: !hotelId || !enableInitialNetworkFetch,
     variables: roomsQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const {
@@ -212,8 +212,8 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   } = useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(GET_HOTEL_REVIEWS_QUERY, {
     skip: !hotelId || !shouldLoadReviews,
     variables: reviewsQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   useEffect(() => {

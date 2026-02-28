@@ -35,6 +35,7 @@ const isActive = (pathname: string, href: string): boolean => {
 export function SiteFrame({ children }: PropsWithChildren) {
   const router = useRouter();
   const toast = useToast();
+  const isHomeRoute = router.pathname === "/";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const member = useMemo(() => getSessionMember(), []);
   const isPageVisible = usePageVisible();
@@ -46,8 +47,8 @@ export function SiteFrame({ children }: PropsWithChildren) {
 
   const { data: unreadData, refetch: refetchUnread } = useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
     skip: !canPollUnread,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
     pollInterval: UNREAD_POLL_INTERVAL_MS,
   });
 
@@ -85,6 +86,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
 
     previousUnreadRef.current = unreadCount;
   }, [canPollUnread, canTrackUnread, router.pathname, toast, unreadCount]);
+
+  if (isHomeRoute) {
+    return <div className="min-h-screen w-screen overflow-x-clip">{children}</div>;
+  }
 
   return (
     <div className="min-h-screen w-screen overflow-x-clip">

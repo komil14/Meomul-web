@@ -56,8 +56,8 @@ const MyBookingsPage: NextPageWithAuth = () => {
     variables: {
       input: paginationInput,
     },
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const allBookings = data?.getMyBookings.list ?? [];

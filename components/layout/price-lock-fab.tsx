@@ -39,8 +39,8 @@ export function PriceLockFab() {
 
   const { data, loading, startPolling, stopPolling, refetch } = useQuery<GetMyPriceLocksQueryData>(GET_MY_PRICE_LOCKS_QUERY, {
     skip: !isHydrated || !canUse || !isPageVisible,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
   const [cancelPriceLockMutation] = useMutation<CancelPriceLockMutationData, CancelPriceLockMutationVars>(CANCEL_PRICE_LOCK_MUTATION);
 

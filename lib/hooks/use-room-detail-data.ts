@@ -97,8 +97,8 @@ export const useRoomDetailData = (): UseRoomDetailDataResult => {
   } = useQuery<GetRoomQueryData, GetRoomQueryVars>(GET_ROOM_QUERY, {
     skip: !isHydrated || !roomId,
     variables: roomQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
   });
 
   const room = roomData?.getRoom;
@@ -118,8 +118,8 @@ export const useRoomDetailData = (): UseRoomDetailDataResult => {
   } = useQuery<GetPriceCalendarQueryData, GetPriceCalendarQueryVars>(GET_PRICE_CALENDAR_QUERY, {
     skip: !isHydrated || !roomId,
     variables: priceCalendarQueryVariables,
-    fetchPolicy: "cache-first",
-    nextFetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
   });
 
@@ -187,7 +187,7 @@ export const useRoomDetailData = (): UseRoomDetailDataResult => {
   const { data: hotelData, error: hotelError } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(GET_HOTEL_CONTEXT_QUERY, {
     skip: !isHydrated || !roomHotelId,
     variables: hotelContextQueryVariables,
-    fetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
   });
 
   const hotel = hotelData?.getHotel;

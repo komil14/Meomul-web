@@ -55,12 +55,12 @@ export const createApolloClient = () => {
     cache,
     defaultOptions: {
       watchQuery: {
-        fetchPolicy: "cache-first",
-        nextFetchPolicy: "cache-first",
+        fetchPolicy: "cache-and-network",
+        nextFetchPolicy: "cache-and-network",
         returnPartialData: true,
       },
       query: {
-        fetchPolicy: "cache-first",
+        fetchPolicy: "cache-and-network",
       },
     },
     link: from([errorLink, authLink, httpLink]),
