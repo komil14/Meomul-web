@@ -60,7 +60,7 @@ export const createApolloClient = () => {
         returnPartialData: true,
       },
       query: {
-        fetchPolicy: "cache-and-network",
+        fetchPolicy: "network-only",
       },
     },
     link: from([errorLink, authLink, httpLink]),

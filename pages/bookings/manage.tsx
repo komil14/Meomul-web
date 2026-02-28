@@ -13,7 +13,13 @@ import {
 import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
-import { confirmAction, confirmDanger, errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
+import {
+  confirmAction,
+  confirmDanger,
+  errorAlert,
+  infoAlert,
+  successAlert,
+} from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatDateKst, formatNumber } from "@/lib/utils/format";
 import type {
@@ -40,9 +46,21 @@ import type {
 import type { NextPageWithAuth } from "@/types/page";
 
 const PAGE_LIMIT = 10;
-const HOTEL_LIST_LIMIT = 200;
-const BOOKING_STATUSES: BookingStatus[] = ["PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED", "NO_SHOW"];
-const PAYMENT_UPDATE_OPTIONS: PaymentStatus[] = ["PENDING", "PARTIAL", "PAID", "FAILED"];
+const HOTEL_LIST_LIMIT = 100;
+const BOOKING_STATUSES: BookingStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+  "CHECKED_IN",
+  "CHECKED_OUT",
+  "CANCELLED",
+  "NO_SHOW",
+];
+const PAYMENT_UPDATE_OPTIONS: PaymentStatus[] = [
+  "PENDING",
+  "PARTIAL",
+  "PAID",
+  "FAILED",
+];
 
 const STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   PENDING: ["CONFIRMED"],
@@ -75,11 +93,15 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const member = useMemo(() => getSessionMember(), []);
   const memberType = member?.memberType;
   const isAgent = memberType === "AGENT";
-  const canAccess = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
-  const { page, statusFilter, getParam, pushQuery, replaceQuery } = usePaginationQueryState<BookingStatus>({
-    pathname: "/bookings/manage",
-    statusValues: BOOKING_STATUSES,
-  });
+  const canAccess =
+    memberType === "AGENT" ||
+    memberType === "ADMIN" ||
+    memberType === "ADMIN_OPERATOR";
+  const { page, statusFilter, getParam, pushQuery, replaceQuery } =
+    usePaginationQueryState<BookingStatus>({
+      pathname: "/bookings/manage",
+      statusValues: BOOKING_STATUSES,
+    });
   const hotelIdFromQuery = getParam("hotelId");
 
   const hotelListInput = useMemo<GetAgentHotelsQueryVars["input"]>(
@@ -92,22 +114,27 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     [],
   );
 
-  const { data: agentHotelsData, loading: agentHotelsLoading, error: agentHotelsError } = useQuery<
-    GetAgentHotelsQueryData,
-    GetAgentHotelsQueryVars
-  >(GET_AGENT_HOTELS_QUERY, {
-    skip: !isAgent,
-    variables: {
-      input: hotelListInput,
+  const {
+    data: agentHotelsData,
+    loading: agentHotelsLoading,
+    error: agentHotelsError,
+  } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(
+    GET_AGENT_HOTELS_QUERY,
+    {
+      skip: !isAgent,
+      variables: {
+        input: hotelListInput,
+      },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
     },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  );
 
-  const { data: publicHotelsData, loading: publicHotelsLoading, error: publicHotelsError } = useQuery<
-    GetHotelsQueryData,
-    GetHotelsQueryVars
-  >(GET_HOTELS_QUERY, {
+  const {
+    data: publicHotelsData,
+    loading: publicHotelsLoading,
+    error: publicHotelsError,
+  } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
     skip: !canAccess || isAgent,
     variables: {
       input: hotelListInput,
@@ -122,7 +149,11 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     }
 
     return publicHotelsData?.getHotels.list ?? [];
-  }, [agentHotelsData?.getAgentHotels.list, isAgent, publicHotelsData?.getHotels.list]);
+  }, [
+    agentHotelsData?.getAgentHotels.list,
+    isAgent,
+    publicHotelsData?.getHotels.list,
+  ]);
 
   const selectedHotelId = hotelIdFromQuery || availableHotels[0]?._id || "";
 
@@ -151,36 +182,59 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     loading: bookingsLoading,
     error: bookingsError,
     refetch: refetchBookings,
-  } = useQuery<GetAgentBookingsQueryData, GetAgentBookingsQueryVars>(GET_AGENT_BOOKINGS_QUERY, {
-    skip: !selectedHotelId,
-    variables: {
-      hotelId: selectedHotelId,
-      input: bookingInput,
+  } = useQuery<GetAgentBookingsQueryData, GetAgentBookingsQueryVars>(
+    GET_AGENT_BOOKINGS_QUERY,
+    {
+      skip: !selectedHotelId,
+      variables: {
+        hotelId: selectedHotelId,
+        input: bookingInput,
+      },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
     },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  );
 
-  const [updateBookingStatus] = useMutation<UpdateBookingStatusMutationData, UpdateBookingStatusMutationVars>(
-    UPDATE_BOOKING_STATUS_MUTATION,
-  );
-  const [updatePaymentStatus] = useMutation<UpdatePaymentStatusMutationData, UpdatePaymentStatusMutationVars>(
-    UPDATE_PAYMENT_STATUS_MUTATION,
-  );
+  const [updateBookingStatus] = useMutation<
+    UpdateBookingStatusMutationData,
+    UpdateBookingStatusMutationVars
+  >(UPDATE_BOOKING_STATUS_MUTATION);
+  const [updatePaymentStatus] = useMutation<
+    UpdatePaymentStatusMutationData,
+    UpdatePaymentStatusMutationVars
+  >(UPDATE_PAYMENT_STATUS_MUTATION);
   const [cancelBookingByOperator] = useMutation<
     CancelBookingByOperatorMutationData,
     CancelBookingByOperatorMutationVars
   >(CANCEL_BOOKING_BY_OPERATOR_MUTATION);
 
-  const [statusDrafts, setStatusDrafts] = useState<Record<string, BookingStatus>>({});
-  const [paymentStatusDrafts, setPaymentStatusDrafts] = useState<Record<string, PaymentStatus>>({});
-  const [paidAmountDrafts, setPaidAmountDrafts] = useState<Record<string, string>>({});
-  const [cancelReasonDrafts, setCancelReasonDrafts] = useState<Record<string, string>>({});
-  const [cancelEvidenceDrafts, setCancelEvidenceDrafts] = useState<Record<string, string>>({});
-  const [optimisticPatches, setOptimisticPatches] = useState<Record<string, OptimisticPatch>>({});
-  const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
-  const [paymentUpdating, setPaymentUpdating] = useState<Record<string, boolean>>({});
-  const [cancelUpdating, setCancelUpdating] = useState<Record<string, boolean>>({});
+  const [statusDrafts, setStatusDrafts] = useState<
+    Record<string, BookingStatus>
+  >({});
+  const [paymentStatusDrafts, setPaymentStatusDrafts] = useState<
+    Record<string, PaymentStatus>
+  >({});
+  const [paidAmountDrafts, setPaidAmountDrafts] = useState<
+    Record<string, string>
+  >({});
+  const [cancelReasonDrafts, setCancelReasonDrafts] = useState<
+    Record<string, string>
+  >({});
+  const [cancelEvidenceDrafts, setCancelEvidenceDrafts] = useState<
+    Record<string, string>
+  >({});
+  const [optimisticPatches, setOptimisticPatches] = useState<
+    Record<string, OptimisticPatch>
+  >({});
+  const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [paymentUpdating, setPaymentUpdating] = useState<
+    Record<string, boolean>
+  >({});
+  const [cancelUpdating, setCancelUpdating] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const setUpdating = (
     setter: Dispatch<SetStateAction<Record<string, boolean>>>,
@@ -220,7 +274,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     }));
   };
 
-  const clearPatchFields = (bookingId: string, fields: Array<keyof OptimisticPatch>) => {
+  const clearPatchFields = (
+    bookingId: string,
+    fields: Array<keyof OptimisticPatch>,
+  ) => {
     setOptimisticPatches((prev) => {
       const existing = prev[bookingId];
       if (!existing) {
@@ -255,12 +312,20 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     };
   });
   const visibleBookings =
-    statusFilter === "ALL" ? mergedBookings : mergedBookings.filter((booking) => booking.bookingStatus === statusFilter);
+    statusFilter === "ALL"
+      ? mergedBookings
+      : mergedBookings.filter(
+          (booking) => booking.bookingStatus === statusFilter,
+        );
 
   const total = bookingsData?.getAgentBookings.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
-  const pushManageQuery = (next: { hotelId?: string; status?: BookingStatus | "ALL"; page?: number }) => {
+  const pushManageQuery = (next: {
+    hotelId?: string;
+    status?: BookingStatus | "ALL";
+    page?: number;
+  }) => {
     pushQuery({
       page: next.page,
       status: next.status,
@@ -271,7 +336,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const handleStatusUpdate = async (booking: BookingListItem) => {
     const nextStatus = statusDrafts[booking._id] ?? booking.bookingStatus;
     if (nextStatus === booking.bookingStatus) {
-      await infoAlert("No change detected", `Booking ${booking.bookingCode} already has status ${nextStatus}.`);
+      await infoAlert(
+        "No change detected",
+        `Booking ${booking.bookingCode} already has status ${nextStatus}.`,
+      );
       return;
     }
 
@@ -302,7 +370,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         delete next[booking._id];
         return next;
       });
-      await successAlert("Status updated", `Booking ${booking.bookingCode} status is now ${nextStatus}.`);
+      await successAlert(
+        "Status updated",
+        `Booking ${booking.bookingCode} status is now ${nextStatus}.`,
+      );
     } catch (error) {
       replacePatch(booking._id, previousPatch);
       await errorAlert("Status update failed", getErrorMessage(error));
@@ -312,21 +383,35 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   };
 
   const handlePaymentUpdate = async (booking: BookingListItem) => {
-    const nextPaymentStatus = paymentStatusDrafts[booking._id] ?? booking.paymentStatus;
+    const nextPaymentStatus =
+      paymentStatusDrafts[booking._id] ?? booking.paymentStatus;
     if (nextPaymentStatus === "REFUNDED") {
-      await infoAlert("Use cancellation flow", "Use cancellation flow to mark bookings as refunded.");
+      await infoAlert(
+        "Use cancellation flow",
+        "Use cancellation flow to mark bookings as refunded.",
+      );
       return;
     }
 
-    const paidAmountRaw = paidAmountDrafts[booking._id] ?? String(booking.paidAmount);
+    const paidAmountRaw =
+      paidAmountDrafts[booking._id] ?? String(booking.paidAmount);
     const nextPaidAmount = Number(paidAmountRaw);
     if (!Number.isInteger(nextPaidAmount) || nextPaidAmount < 0) {
-      await errorAlert("Invalid paid amount", "Paid amount must be a non-negative integer.");
+      await errorAlert(
+        "Invalid paid amount",
+        "Paid amount must be a non-negative integer.",
+      );
       return;
     }
 
-    if (nextPaymentStatus === booking.paymentStatus && nextPaidAmount === booking.paidAmount) {
-      await infoAlert("No change detected", `Payment values are unchanged for booking ${booking.bookingCode}.`);
+    if (
+      nextPaymentStatus === booking.paymentStatus &&
+      nextPaidAmount === booking.paidAmount
+    ) {
+      await infoAlert(
+        "No change detected",
+        `Payment values are unchanged for booking ${booking.bookingCode}.`,
+      );
       return;
     }
 
@@ -342,7 +427,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     }
 
     const previousPatch = optimisticPatches[booking._id];
-    applyPatch(booking._id, { paymentStatus: nextPaymentStatus, paidAmount: nextPaidAmount });
+    applyPatch(booking._id, {
+      paymentStatus: nextPaymentStatus,
+      paidAmount: nextPaidAmount,
+    });
     setUpdating(setPaymentUpdating, booking._id, true);
 
     try {
@@ -365,7 +453,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         delete next[booking._id];
         return next;
       });
-      await successAlert("Payment updated", `Payment updated for booking ${booking.bookingCode}.`);
+      await successAlert(
+        "Payment updated",
+        `Payment updated for booking ${booking.bookingCode}.`,
+      );
     } catch (error) {
       replacePatch(booking._id, previousPatch);
       await errorAlert("Payment update failed", getErrorMessage(error));
@@ -375,14 +466,23 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   };
 
   const handleOperatorCancel = async (booking: BookingListItem) => {
-    if (booking.bookingStatus !== "PENDING" && booking.bookingStatus !== "CONFIRMED") {
-      await infoAlert("Cancellation not allowed", "Only PENDING or CONFIRMED bookings can be cancelled.");
+    if (
+      booking.bookingStatus !== "PENDING" &&
+      booking.bookingStatus !== "CONFIRMED"
+    ) {
+      await infoAlert(
+        "Cancellation not allowed",
+        "Only PENDING or CONFIRMED bookings can be cancelled.",
+      );
       return;
     }
 
     const reason = (cancelReasonDrafts[booking._id] ?? "").trim();
     if (reason.length < 5 || reason.length > 500) {
-      await errorAlert("Invalid cancellation reason", "Cancellation reason must be between 5 and 500 characters.");
+      await errorAlert(
+        "Invalid cancellation reason",
+        "Cancellation reason must be between 5 and 500 characters.",
+      );
       return;
     }
 
@@ -396,7 +496,9 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       return;
     }
 
-    const evidencePhotos = parseEvidencePhotos(cancelEvidenceDrafts[booking._id] ?? "");
+    const evidencePhotos = parseEvidencePhotos(
+      cancelEvidenceDrafts[booking._id] ?? "",
+    );
     const previousPatch = optimisticPatches[booking._id];
     applyPatch(booking._id, { bookingStatus: "CANCELLED" });
     setUpdating(setCancelUpdating, booking._id, true);
@@ -406,7 +508,8 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         variables: {
           bookingId: booking._id,
           reason,
-          evidencePhotos: evidencePhotos.length > 0 ? evidencePhotos : undefined,
+          evidencePhotos:
+            evidencePhotos.length > 0 ? evidencePhotos : undefined,
         },
       });
       await refetchBookings();
@@ -421,7 +524,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         delete next[booking._id];
         return next;
       });
-      await successAlert("Booking cancelled", `Booking ${booking.bookingCode} has been cancelled.`);
+      await successAlert(
+        "Booking cancelled",
+        `Booking ${booking.bookingCode} has been cancelled.`,
+      );
     } catch (error) {
       replacePatch(booking._id, previousPatch);
       await errorAlert("Cancellation failed", getErrorMessage(error));
@@ -430,16 +536,23 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     }
   };
 
-  const hotelsLoading = canAccess && (agentHotelsLoading || publicHotelsLoading);
+  const hotelsLoading =
+    canAccess && (agentHotelsLoading || publicHotelsLoading);
   const hotelsError = agentHotelsError ?? publicHotelsError;
 
   return (
     <main className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Operations</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Staff Booking Management</h1>
-          <p className="mt-2 text-sm text-slate-600">Manage booking state, payment, and cancellation per hotel.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Operations
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900">
+            Staff Booking Management
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Manage booking state, payment, and cancellation per hotel.
+          </p>
         </div>
         <Link
           href="/bookings/new"
@@ -452,14 +565,20 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       <section className="rounded-2xl border border-slate-200 bg-white p-4">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">Hotel</span>
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Hotel
+            </span>
             <select
               value={selectedHotelId}
-              onChange={(event) => pushManageQuery({ hotelId: event.target.value, page: 1 })}
+              onChange={(event) =>
+                pushManageQuery({ hotelId: event.target.value, page: 1 })
+              }
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-slate-900 focus:ring-2"
               disabled={availableHotels.length === 0}
             >
-              {availableHotels.length === 0 ? <option value="">No hotels available</option> : null}
+              {availableHotels.length === 0 ? (
+                <option value="">No hotels available</option>
+              ) : null}
               {availableHotels.map((hotel) => (
                 <option key={hotel._id} value={hotel._id}>
                   {hotel.hotelTitle} ({hotel.hotelLocation})
@@ -469,22 +588,35 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
           </label>
 
           <div>
-            <p className="mb-2 block text-sm font-medium text-slate-700">Status Filter</p>
+            <p className="mb-2 block text-sm font-medium text-slate-700">
+              Status Filter
+            </p>
             <StatusPills
               label="Status"
               options={BOOKING_STATUSES}
               selected={statusFilter}
-              onSelect={(nextStatus) => pushManageQuery({ status: nextStatus as BookingStatus | "ALL", page: 1 })}
+              onSelect={(nextStatus) =>
+                pushManageQuery({
+                  status: nextStatus as BookingStatus | "ALL",
+                  page: 1,
+                })
+              }
             />
           </div>
         </div>
       </section>
 
       {hotelsLoading ? (
-        <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">Loading hotel list...</section>
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          Loading hotel list...
+        </section>
       ) : null}
-      {hotelsError ? <ErrorNotice message={getErrorMessage(hotelsError)} /> : null}
-      {bookingsError ? <ErrorNotice message={getErrorMessage(bookingsError)} /> : null}
+      {hotelsError ? (
+        <ErrorNotice message={getErrorMessage(hotelsError)} />
+      ) : null}
+      {bookingsError ? (
+        <ErrorNotice message={getErrorMessage(bookingsError)} />
+      ) : null}
 
       {!selectedHotelId && !hotelsLoading ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
@@ -493,10 +625,15 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       ) : null}
 
       {bookingsLoading && sourceBookings.length === 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading bookings...</section>
+        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+          Loading bookings...
+        </section>
       ) : null}
 
-      {!bookingsLoading && !bookingsError && selectedHotelId && visibleBookings.length === 0 ? (
+      {!bookingsLoading &&
+      !bookingsError &&
+      selectedHotelId &&
+      visibleBookings.length === 0 ? (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
           No bookings found for this hotel/filter.
         </section>
@@ -506,31 +643,54 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         <section className="grid gap-4">
           {visibleBookings.map((booking) => {
             const statusOptions = getStatusOptions(booking.bookingStatus);
-            const selectedStatus = statusDrafts[booking._id] ?? booking.bookingStatus;
-            const selectedPaymentStatus = paymentStatusDrafts[booking._id] ?? booking.paymentStatus;
-            const paidAmountInput = paidAmountDrafts[booking._id] ?? String(booking.paidAmount);
-            const paymentOptions = PAYMENT_UPDATE_OPTIONS.includes(selectedPaymentStatus)
+            const selectedStatus =
+              statusDrafts[booking._id] ?? booking.bookingStatus;
+            const selectedPaymentStatus =
+              paymentStatusDrafts[booking._id] ?? booking.paymentStatus;
+            const paidAmountInput =
+              paidAmountDrafts[booking._id] ?? String(booking.paidAmount);
+            const paymentOptions = PAYMENT_UPDATE_OPTIONS.includes(
+              selectedPaymentStatus,
+            )
               ? PAYMENT_UPDATE_OPTIONS
               : [selectedPaymentStatus, ...PAYMENT_UPDATE_OPTIONS];
-            const canUpdateStatus = statusOptions.length > 1 && selectedStatus !== booking.bookingStatus;
-            const paymentLocked = booking.bookingStatus === "CANCELLED" || booking.bookingStatus === "NO_SHOW";
+            const canUpdateStatus =
+              statusOptions.length > 1 &&
+              selectedStatus !== booking.bookingStatus;
+            const paymentLocked =
+              booking.bookingStatus === "CANCELLED" ||
+              booking.bookingStatus === "NO_SHOW";
             const canUpdatePayment =
               !paymentLocked &&
-              (selectedPaymentStatus !== booking.paymentStatus || Number(paidAmountInput) !== booking.paidAmount);
-            const canCancel = booking.bookingStatus === "PENDING" || booking.bookingStatus === "CONFIRMED";
+              (selectedPaymentStatus !== booking.paymentStatus ||
+                Number(paidAmountInput) !== booking.paidAmount);
+            const canCancel =
+              booking.bookingStatus === "PENDING" ||
+              booking.bookingStatus === "CONFIRMED";
 
             return (
-              <article key={booking._id} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+              <article
+                key={booking._id}
+                className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Booking</p>
-                    <h2 className="mt-1 text-lg font-semibold text-slate-900">{booking.bookingCode}</h2>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Booking
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                      {booking.bookingCode}
+                    </h2>
                     <p className="mt-1 text-sm text-slate-600">
-                      {formatDateKst(booking.checkInDate)} - {formatDateKst(booking.checkOutDate)}
+                      {formatDateKst(booking.checkInDate)} -{" "}
+                      {formatDateKst(booking.checkOutDate)}
                     </p>
                     {memberType !== "ADMIN_OPERATOR" ? (
                       <p className="mt-1">
-                        <Link href={`/bookings/${booking._id}`} className="text-xs font-semibold text-slate-700 underline underline-offset-4">
+                        <Link
+                          href={`/bookings/${booking._id}`}
+                          className="text-xs font-semibold text-slate-700 underline underline-offset-4"
+                        >
                           View details
                         </Link>
                       </p>
@@ -539,13 +699,17 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                   <div className="text-right text-sm text-slate-700">
                     <p>Total: ₩ {formatNumber(booking.totalPrice)}</p>
                     <p>Paid: ₩ {formatNumber(booking.paidAmount)}</p>
-                    <p className="font-mono text-xs text-slate-500">Guest: {booking.guestId}</p>
+                    <p className="font-mono text-xs text-slate-500">
+                      Guest: {booking.guestId}
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-semibold text-slate-800">Booking Status</p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Booking Status
+                    </p>
                     <select
                       value={selectedStatus}
                       onChange={(event) =>
@@ -567,15 +731,21 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                       onClick={() => {
                         void handleStatusUpdate(booking);
                       }}
-                      disabled={!canUpdateStatus || Boolean(statusUpdating[booking._id])}
+                      disabled={
+                        !canUpdateStatus || Boolean(statusUpdating[booking._id])
+                      }
                       className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {statusUpdating[booking._id] ? "Updating..." : "Update status"}
+                      {statusUpdating[booking._id]
+                        ? "Updating..."
+                        : "Update status"}
                     </button>
                   </div>
 
                   <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-semibold text-slate-800">Payment Status</p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      Payment Status
+                    </p>
                     <select
                       value={selectedPaymentStatus}
                       onChange={(event) =>
@@ -598,7 +768,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                       onChange={(event) =>
                         setPaidAmountDrafts((prev) => ({
                           ...prev,
-                          [booking._id]: event.target.value.replace(/[^\d]/g, ""),
+                          [booking._id]: event.target.value.replace(
+                            /[^\d]/g,
+                            "",
+                          ),
                         }))
                       }
                       inputMode="numeric"
@@ -611,19 +784,30 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                       onClick={() => {
                         void handlePaymentUpdate(booking);
                       }}
-                      disabled={!canUpdatePayment || paymentLocked || Boolean(paymentUpdating[booking._id])}
+                      disabled={
+                        !canUpdatePayment ||
+                        paymentLocked ||
+                        Boolean(paymentUpdating[booking._id])
+                      }
                       className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {paymentUpdating[booking._id] ? "Updating..." : "Update payment"}
+                      {paymentUpdating[booking._id]
+                        ? "Updating..."
+                        : "Update payment"}
                     </button>
                     {paymentLocked ? (
-                      <p className="text-xs text-slate-500">Payment updates are blocked for CANCELLED/NO_SHOW bookings.</p>
+                      <p className="text-xs text-slate-500">
+                        Payment updates are blocked for CANCELLED/NO_SHOW
+                        bookings.
+                      </p>
                     ) : null}
                   </div>
                 </div>
 
                 <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-sm font-semibold text-slate-800">Operator Cancellation</p>
+                  <p className="text-sm font-semibold text-slate-800">
+                    Operator Cancellation
+                  </p>
                   <textarea
                     value={cancelReasonDrafts[booking._id] ?? ""}
                     onChange={(event) =>
@@ -653,10 +837,14 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                     onClick={() => {
                       void handleOperatorCancel(booking);
                     }}
-                    disabled={!canCancel || Boolean(cancelUpdating[booking._id])}
+                    disabled={
+                      !canCancel || Boolean(cancelUpdating[booking._id])
+                    }
                     className="rounded-md bg-rose-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {cancelUpdating[booking._id] ? "Cancelling..." : "Cancel booking"}
+                    {cancelUpdating[booking._id]
+                      ? "Cancelling..."
+                      : "Cancel booking"}
                   </button>
                 </div>
               </article>

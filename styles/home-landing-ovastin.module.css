@@ -1,8 +1,27 @@
 .page {
+  --home-bg: #f3f7fb;
+  --home-surface: #ffffff;
+  --home-surface-muted: #f8fafc;
+  --home-border: #e2e8f0;
+  --home-border-strong: #cbd5e1;
+  --home-text: #0f172a;
+  --home-text-muted: #475569;
+  --home-text-subtle: #64748b;
+  --home-accent: #0f172a;
+  --home-accent-hover: #1e293b;
+  --home-accent-soft: #e2e8f0;
+  --home-ink: #0f172a;
+  --home-ink-hover: #1e293b;
+  --home-radius-xl: 1.5rem;
+  --home-radius-lg: 1rem;
+  --home-radius-md: 0.75rem;
+  --home-shadow-soft: 0 12px 26px -20px rgba(15, 23, 42, 0.28);
+  --home-shadow-card: 0 18px 40px -32px rgba(15, 23, 42, 0.45);
   min-height: 100vh;
-  background: #f4f4f5;
-  color: #12100b;
-  font-family: "Plus Jakarta Sans", var(--font-manrope), sans-serif;
+  background: radial-gradient(circle at top right, #d9f5ef 0%, transparent 45%),
+    radial-gradient(circle at bottom left, #e2ebff 0%, transparent 40%), var(--home-bg);
+  color: var(--home-text);
+  font-family: var(--font-manrope), sans-serif;
   overflow-x: clip;
 }
 
@@ -20,12 +39,12 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 1.2rem;
-  background: #fafafa;
-  border: 1px solid #e7e5e4;
-  border-radius: 2rem;
+  background: var(--home-surface);
+  border: 1px solid var(--home-border);
+  border-radius: var(--home-radius-xl);
   min-height: 4.75rem;
   padding: 0 1.6rem;
-  box-shadow: 0 14px 36px -30px rgba(0, 0, 0, 0.34);
+  box-shadow: var(--home-shadow-card);
   animation: navEnter 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -46,7 +65,7 @@
 .logoMark span {
   width: 0.36rem;
   border-radius: 0.12rem;
-  background: #facc15;
+  background: var(--home-accent);
 }
 
 .logoMark span:nth-child(1) {
@@ -62,7 +81,7 @@
 }
 
 .logoText {
-  color: #191919;
+  color: var(--home-text);
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.015em;
@@ -80,7 +99,7 @@
   align-items: center;
   gap: 0.34rem;
   text-decoration: none;
-  color: #1e1e1e;
+  color: var(--home-text);
   font-size: 1.03rem;
   font-weight: 500;
   border-radius: 999px;
@@ -94,8 +113,8 @@
 }
 
 .navLink:hover {
-  background: #efede9;
-  color: #0f0f0f;
+  background: var(--home-surface-muted);
+  color: var(--home-text);
   transform: translateY(-1px);
 }
 
@@ -112,9 +131,9 @@
   text-decoration: none;
   min-height: 2.75rem;
   border-radius: 999px;
-  border: 1px solid #1b1708;
-  background: #1b1708;
-  color: #fdfcf6;
+  border: 1px solid var(--home-ink);
+  background: var(--home-ink);
+  color: #ffffff;
   padding: 0 1.42rem;
   font-size: 1.06rem;
   font-weight: 600;
@@ -129,22 +148,22 @@
   justify-content: center;
   text-decoration: none;
   border-radius: 999px;
-  border: 1px solid #1b1708;
-  background: #1b1708;
-  color: #fdfcf6;
+  border: 1px solid var(--home-ink);
+  background: var(--home-ink);
+  color: #ffffff;
   font-size: 1.24rem;
   transition: transform 220ms ease, background-color 220ms ease, color 220ms ease;
 }
 
 .startButton:hover,
 .arrowButton:hover {
-  background: #facc15;
-  color: #141007;
+  background: var(--home-ink-hover);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
 .hero {
-  margin-top: 1.45rem;
+  margin-top: 0.6rem;
   display: grid;
   grid-template-columns: 0.82fr 1fr;
   gap: 1.4rem;
@@ -154,9 +173,9 @@
 }
 
 .heroLeft {
-  background: #f1ede7;
-  border: 1px solid #e2ddd4;
-  border-radius: 1rem;
+  background: var(--home-surface);
+  border: 1px solid var(--home-border);
+  border-radius: var(--home-radius-xl);
   padding: clamp(2.25rem, 4vh, 3.55rem) clamp(2.35rem, 3.1vw, 3.5rem) clamp(1.65rem, 2.6vh, 2.25rem);
   min-height: 100%;
   height: 100%;
@@ -169,7 +188,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.72rem;
-  color: #1c1a14;
+  color: var(--home-text-muted);
   font-size: 1.02rem;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -180,7 +199,7 @@
   width: 0.35rem;
   height: 1.4rem;
   border-radius: 999px;
-  background: #facc15;
+  background: var(--home-accent);
   transform: rotate(-20deg);
 }
 
@@ -208,9 +227,9 @@
   align-items: center;
   text-decoration: none;
   border-radius: 999px;
-  background: #facc15;
-  border: 1px solid #f0be15;
-  color: #151108;
+  background: var(--home-accent);
+  border: 1px solid var(--home-accent);
+  color: #ffffff;
   padding: 0.15rem 0.16rem 0.15rem 1.25rem;
   min-height: 2.95rem;
   font-size: 1.56rem;
@@ -221,7 +240,7 @@
 
 .serviceButton:hover {
   transform: translateY(-1px);
-  box-shadow: 0 16px 28px -24px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--home-shadow-soft);
 }
 
 .serviceButtonArrow {
@@ -231,15 +250,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #d7a915;
-  background: #facc15;
+  border: 1px solid var(--home-accent-hover);
+  background: var(--home-accent);
   font-size: 1.34rem;
   transition: transform 220ms ease, background-color 220ms ease;
 }
 
 .serviceButton:hover .serviceButtonArrow {
   transform: rotate(35deg);
-  background: #efbe14;
+  background: var(--home-accent-hover);
 }
 
 .reviewWrap {
@@ -248,7 +267,7 @@
 }
 
 .reviewLabel {
-  color: #111111;
+  color: var(--home-text);
   font-size: 1.5rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -269,10 +288,10 @@
   width: 1.62rem;
   height: 1.62rem;
   border-radius: 999px;
-  border: 2px solid #f1ede7;
+  border: 2px solid var(--home-surface);
   margin-left: -0.32rem;
   overflow: hidden;
-  background: #d8dce3;
+  background: #cbd5e1;
   transition: transform 180ms ease;
 }
 
@@ -302,13 +321,13 @@
 .reviewMeta {
   display: grid;
   gap: 0.02rem;
-  color: #161616;
+  color: var(--home-text-muted);
   font-size: 0.98rem;
   font-weight: 500;
 }
 
 .stars {
-  color: #f4c516;
+  color: #3b82f6;
   font-size: 1.06rem;
   letter-spacing: 0.08em;
 }
@@ -316,7 +335,7 @@
 .bottomRow {
   margin-top: auto;
   padding-top: 2.1rem;
-  border-top: 1px solid #d5d1ca;
+  border-top: 1px solid var(--home-border);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -327,7 +346,7 @@
 .description {
   margin: 0;
   max-width: 22rem;
-  color: #2a2722;
+  color: var(--home-text-muted);
   font-size: 1.02rem;
   line-height: 1.5;
   font-weight: 500;
@@ -340,7 +359,7 @@
   position: relative;
   overflow: hidden;
   text-decoration: none;
-  border: 1px solid #e0ddd7;
+  border: 1px solid var(--home-border);
   flex-shrink: 0;
   transition: transform 240ms ease;
 }
@@ -356,7 +375,7 @@
 .watchFallback {
   position: absolute;
   inset: 0;
-  background: linear-gradient(130deg, #7992b8 0%, #d2def2 100%);
+  background: linear-gradient(130deg, #94a3b8 0%, #dbeafe 100%);
 }
 
 .watchOverlay {
@@ -377,9 +396,9 @@
   position: relative;
   min-height: 100%;
   height: 100%;
-  border-radius: 1rem;
+  border-radius: var(--home-radius-xl);
   overflow: hidden;
-  background: #d8d8dd;
+  background: #cbd5e1;
   animation: panelEnterRight 880ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -411,7 +430,7 @@
 .slideFallback {
   position: absolute;
   inset: 0;
-  background: linear-gradient(130deg, #7f96be 0%, #d4e2f8 100%);
+  background: linear-gradient(130deg, #94a3b8 0%, #dbeafe 100%);
 }
 
 .slideShade {
@@ -514,7 +533,7 @@
 
 .signatureTitle {
   margin: 0.45rem 0 0;
-  color: #19160e;
+  color: var(--home-text);
   font-size: clamp(2.2rem, 4.8vw, 4.2rem);
   line-height: 0.94;
   letter-spacing: -0.03em;
@@ -523,7 +542,7 @@
 .signatureDescription {
   margin: 0.78rem auto 0;
   max-width: 42rem;
-  color: #3d3a34;
+  color: var(--home-text-muted);
   font-size: 1.04rem;
   line-height: 1.54;
   font-weight: 500;
@@ -544,9 +563,9 @@
   position: relative;
   flex: 1 1 0;
   min-width: 0;
-  border-radius: 1.14rem;
+  border-radius: var(--home-radius-xl);
   overflow: hidden;
-  border: 1px solid #ddd8ce;
+  border: 1px solid var(--home-border);
   background: #111827;
   transition: flex 420ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms ease, box-shadow 260ms ease;
   animation: revealUp 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -567,7 +586,7 @@
 .signatureCardActive {
   flex: 1.42 1 0;
   transform: translateY(-2px);
-  box-shadow: 0 26px 48px -40px rgba(15, 23, 42, 0.7);
+  box-shadow: var(--home-shadow-card);
 }
 
 .signatureCardLink {
@@ -586,7 +605,7 @@
 .signatureCardFallback {
   position: absolute;
   inset: 0;
-  background: linear-gradient(140deg, #7f96be 0%, #d4e2f8 100%);
+  background: linear-gradient(140deg, #94a3b8 0%, #dbeafe 100%);
 }
 
 .signatureCardShade {
@@ -648,9 +667,9 @@
   gap: 0.48rem;
   width: fit-content;
   border-radius: 999px;
-  border: 1px solid #f0be15;
-  background: #facc15;
-  color: #141007;
+  border: 1px solid var(--home-accent);
+  background: var(--home-accent);
+  color: #ffffff;
   font-size: 1.06rem;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -666,7 +685,7 @@
 
 .signatureCard:is(:hover, :focus-within) {
   transform: translateY(-2px);
-  box-shadow: 0 26px 48px -40px rgba(15, 23, 42, 0.7);
+  box-shadow: var(--home-shadow-card);
 }
 
 .signatureCard:is(:hover, :focus-within) .signatureCardImage,
@@ -685,6 +704,477 @@
 .signatureCardActive .signatureCardCta {
   opacity: 1;
   transform: translateY(0);
+}
+
+.trendingSection {
+  margin-top: 0.8rem;
+  padding: 0.9rem 0 1.05rem;
+}
+
+.trendingHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.9rem;
+  margin-bottom: 0.92rem;
+}
+
+.trendingEyebrow {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.trendingTitle {
+  margin: 0.36rem 0 0;
+  color: var(--home-text);
+  font-size: clamp(1.72rem, 3.4vw, 2.4rem);
+  line-height: 1;
+  letter-spacing: -0.022em;
+}
+
+.trendingLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  text-decoration: none;
+  border-radius: 999px;
+  border: 1px solid var(--home-border);
+  background: var(--home-surface);
+  color: var(--home-text);
+  min-height: 2.3rem;
+  padding: 0 0.88rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease;
+}
+
+.trendingLink:hover {
+  transform: translateY(-1px);
+  border-color: var(--home-border-strong);
+  background: var(--home-surface-muted);
+}
+
+.trendingRail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(17rem, 20rem);
+  gap: 0.84rem;
+  overflow-x: auto;
+  padding-bottom: 0.22rem;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.trendingCard {
+  position: relative;
+  border-radius: var(--home-radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--home-border);
+  min-height: 15rem;
+  background: #111827;
+  animation: revealUp 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.trendingCardLink {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+}
+
+.trendingCardImage {
+  object-fit: cover;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), filter 300ms ease;
+}
+
+.trendingCardFallback {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(138deg, #94a3b8 0%, #dbeafe 100%);
+}
+
+.trendingCardShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 25%, rgba(0, 0, 0, 0.72) 100%);
+  transition: background 280ms ease;
+}
+
+.trendingCardContent {
+  position: absolute;
+  inset: auto 0.86rem 0.92rem;
+  z-index: 2;
+  display: grid;
+  gap: 0.24rem;
+  color: #f8fafc;
+}
+
+.trendingRank {
+  margin: 0;
+  font-size: 1.34rem;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  font-weight: 700;
+}
+
+.trendingCardContent h3 {
+  margin: 0;
+  font-size: 1.42rem;
+  line-height: 1.08;
+  letter-spacing: -0.012em;
+  color: #ffffff;
+}
+
+.trendingMeta {
+  margin: 0;
+  color: rgba(241, 245, 249, 0.9);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
+.trendingStats {
+  margin-top: 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.62rem;
+  color: rgba(241, 245, 249, 0.95);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.trendingCard:is(:hover, :focus-within) .trendingCardImage {
+  transform: scale(1.05);
+}
+
+.trendingCard:is(:hover, :focus-within) .trendingCardShade {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.16) 25%, rgba(0, 0, 0, 0.8) 100%);
+}
+
+.valueSection {
+  margin-top: 0.64rem;
+  margin-bottom: 0.9rem;
+  padding: 1rem 0 0.8rem;
+}
+
+.valueHeader {
+  display: grid;
+  gap: 0.36rem;
+  margin-bottom: 0.86rem;
+}
+
+.valueEyebrow {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.valueTitle {
+  margin: 0;
+  color: var(--home-text);
+  font-size: clamp(1.72rem, 3.1vw, 2.36rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+.valueGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.72rem;
+}
+
+.valueCard {
+  border-radius: var(--home-radius-lg);
+  border: 1px solid var(--home-border);
+  background: var(--home-surface);
+  min-height: 10.6rem;
+  padding: 0.96rem 0.92rem 0.9rem;
+  display: grid;
+  gap: 0.52rem;
+  align-content: start;
+  animation: revealUp 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 10px 24px -24px rgba(15, 23, 42, 0.42);
+}
+
+.valueCardTitle {
+  margin: 0;
+  color: var(--home-text-subtle);
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.valueCardMetric {
+  margin: 0;
+  color: var(--home-text);
+  font-size: 1.42rem;
+  line-height: 1.06;
+  letter-spacing: -0.018em;
+  font-weight: 700;
+}
+
+.valueCardDetail {
+  margin: 0;
+  color: var(--home-text-muted);
+  font-size: 0.91rem;
+  line-height: 1.42;
+  font-weight: 500;
+}
+
+.testimonialsSection {
+  margin-top: 1.6rem;
+  margin-bottom: 1.3rem;
+  padding: 1.5rem 0 1rem;
+}
+
+.testimonialsHeader {
+  text-align: center;
+  max-width: 64rem;
+  margin: 0 auto 1.4rem;
+  display: grid;
+  gap: 0.74rem;
+}
+
+.testimonialsTopRow {
+  display: block;
+}
+
+.testimonialsEyebrow {
+  margin: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.8rem;
+  color: var(--home-text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.testimonialsSlash {
+  width: 0.28rem;
+  height: 1.24rem;
+  border-radius: 999px;
+  background: #60a5fa;
+  transform: rotate(-20deg);
+}
+
+.testimonialsTitle {
+  margin: 0;
+  color: var(--home-text);
+  font-size: clamp(2.2rem, 4.8vw, 4.2rem);
+  font-weight: 700;
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+}
+
+.testimonialsDescription {
+  margin: 0.78rem auto 0;
+  max-width: 42rem;
+  color: var(--home-text-muted);
+  font-size: 1.04rem;
+  line-height: 1.54;
+  font-weight: 500;
+}
+
+.testimonialsRail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(21.5rem, 25.4rem);
+  gap: 1.08rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.24rem 0.06rem 0.2rem;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 0.08rem;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.testimonialsRail::-webkit-scrollbar {
+  height: 0;
+}
+
+.testimonialCard {
+  border-radius: var(--home-radius-xl);
+  border: 1px solid var(--home-border);
+  background: var(--home-surface);
+  min-height: 29rem;
+  padding: 1.34rem 1.3rem 1.18rem;
+  display: grid;
+  align-content: start;
+  gap: 1.15rem;
+  scroll-snap-align: start;
+  transition: background-color 240ms ease, color 240ms ease, border-color 240ms ease, transform 240ms ease, box-shadow 240ms ease;
+  animation: revealUp 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.testimonialCardActive {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: var(--home-shadow-card);
+}
+
+.testimonialCardAccent {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #111827;
+}
+
+.testimonialCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.testimonialAvatar {
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--home-border);
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.testimonialAvatarImage {
+  object-fit: cover;
+}
+
+.testimonialAvatarFallback {
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--home-text);
+}
+
+.testimonialReviewer {
+  min-width: 0;
+}
+
+.testimonialReviewer h3 {
+  margin: 0;
+  font-size: 1.075rem;
+  font-weight: 650;
+  color: var(--home-text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.testimonialReviewer p {
+  margin: 0.18rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--home-text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.testimonialCardActive .testimonialAvatar {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.testimonialCardActive .testimonialReviewer h3 {
+  color: #ffffff;
+}
+
+.testimonialCardActive .testimonialReviewer p {
+  color: rgba(241, 245, 249, 0.8);
+}
+
+.testimonialCardActive .testimonialAvatarFallback {
+  color: #ffffff;
+}
+
+.testimonialCardAccent .testimonialReviewer h3,
+.testimonialCardAccent .testimonialReviewer p,
+.testimonialCardAccent .testimonialAvatarFallback {
+  color: #111827;
+}
+
+.testimonialDivider {
+  height: 1px;
+  background: var(--home-border);
+}
+
+.testimonialCardActive .testimonialDivider {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.testimonialCardAccent .testimonialDivider {
+  background: rgba(37, 99, 235, 0.22);
+}
+
+.testimonialStars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.testimonialStarFilled {
+  color: #f59e0b;
+}
+
+.testimonialStarEmpty {
+  color: #cbd5e1;
+}
+
+.testimonialCardActive .testimonialStarEmpty {
+  color: rgba(241, 245, 249, 0.42);
+}
+
+.testimonialQuote {
+  margin: 0;
+  color: var(--home-text);
+  font-size: clamp(1.04rem, 1.225vw, 1.45rem);
+  font-weight: 600;
+  line-height: 1.34;
+  letter-spacing: -0.015em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+}
+
+.testimonialCardActive .testimonialQuote {
+  color: #f8fafc;
+}
+
+.testimonialCardAccent .testimonialQuote {
+  color: #111827;
+}
+
+.testimonialCardAccent .testimonialStarFilled {
+  color: #1d4ed8;
+}
+
+.testimonialCardAccent .testimonialStarEmpty {
+  color: rgba(29, 78, 216, 0.28);
 }
 
 @keyframes navEnter {
@@ -851,6 +1341,96 @@
   .signatureCardContent h3 {
     font-size: clamp(1.42rem, 3.5vw, 1.94rem);
   }
+
+  .trendingSection {
+    margin-top: 0.6rem;
+    padding-bottom: 0.8rem;
+  }
+
+  .trendingHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 0.76rem;
+  }
+
+  .trendingTitle {
+    font-size: clamp(1.46rem, 5vw, 1.92rem);
+  }
+
+  .trendingRail {
+    grid-auto-columns: minmax(15.2rem, 17.6rem);
+  }
+
+  .trendingCard {
+    min-height: 13.6rem;
+  }
+
+  .trendingCardContent h3 {
+    font-size: 1.24rem;
+  }
+
+  .valueSection {
+    margin-top: 0.48rem;
+    margin-bottom: 0.56rem;
+  }
+
+  .valueGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.64rem;
+  }
+
+  .valueCard {
+    min-height: 10.1rem;
+  }
+
+  .testimonialsSection {
+    margin-top: 0.74rem;
+    margin-bottom: 0.86rem;
+    padding-top: 0.78rem;
+  }
+
+  .testimonialsHeader {
+    text-align: left;
+    margin-bottom: 0.88rem;
+  }
+
+  .testimonialsTopRow {
+    display: block;
+  }
+
+  .testimonialsEyebrow {
+    justify-content: flex-start;
+  }
+
+  .testimonialsTitle {
+    font-size: clamp(2.2rem, 4.8vw, 4.2rem);
+  }
+
+  .testimonialsDescription {
+    margin-left: 0;
+    margin-right: 0;
+    font-size: 1.04rem;
+  }
+
+  .testimonialsRail {
+    grid-auto-columns: minmax(19rem, 22rem);
+  }
+
+  .testimonialCard {
+    min-height: 24rem;
+  }
+
+  .testimonialReviewer h3 {
+    font-size: 0.75rem;
+  }
+
+  .testimonialReviewer p {
+    font-size: 0.66rem;
+  }
+
+  .testimonialQuote {
+    font-size: clamp(0.725rem, 1.4vw, 1rem);
+  }
 }
 
 @media (max-width: 640px) {
@@ -1002,6 +1582,128 @@
     font-size: 0.92rem;
     padding: 0.46rem 0.88rem;
   }
+
+  .trendingSection {
+    margin-top: 0.44rem;
+    padding: 0.58rem 0 0.68rem;
+  }
+
+  .trendingTitle {
+    font-size: clamp(1.34rem, 8vw, 1.75rem);
+  }
+
+  .trendingLink {
+    min-height: 2.06rem;
+    padding: 0 0.74rem;
+    font-size: 0.82rem;
+  }
+
+  .trendingRail {
+    grid-auto-columns: minmax(13.6rem, 15.4rem);
+    gap: 0.62rem;
+  }
+
+  .trendingCard {
+    min-height: 12.4rem;
+    border-radius: 0.92rem;
+  }
+
+  .trendingRank {
+    font-size: 1.04rem;
+  }
+
+  .trendingCardContent h3 {
+    font-size: 1.08rem;
+  }
+
+  .trendingMeta {
+    font-size: 0.69rem;
+  }
+
+  .trendingStats {
+    font-size: 0.76rem;
+    gap: 0.48rem;
+  }
+
+  .valueSection {
+    margin-top: 0.36rem;
+    margin-bottom: 0.38rem;
+    padding-top: 0.72rem;
+  }
+
+  .valueTitle {
+    font-size: clamp(1.34rem, 9vw, 1.74rem);
+  }
+
+  .valueGrid {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .valueCard {
+    min-height: auto;
+    padding: 0.82rem 0.78rem;
+  }
+
+  .valueCardMetric {
+    font-size: 1.2rem;
+  }
+
+  .valueCardDetail {
+    font-size: 0.85rem;
+  }
+
+  .testimonialsSection {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-top: 0.6rem;
+  }
+
+  .testimonialsTitle {
+    font-size: clamp(1.9rem, 12vw, 2.8rem);
+  }
+
+  .testimonialsDescription {
+    font-size: 0.94rem;
+  }
+
+  .testimonialsTopRow {
+    display: block;
+  }
+
+  .testimonialsRail {
+    grid-auto-columns: minmax(16rem, 18rem);
+    gap: 0.64rem;
+  }
+
+  .testimonialCard {
+    border-radius: 1rem;
+    min-height: 20rem;
+    padding: 0.92rem 0.88rem 0.84rem;
+    gap: 0.7rem;
+  }
+
+  .testimonialAvatar {
+    width: 2.7rem;
+    height: 2.7rem;
+  }
+
+  .testimonialReviewer h3 {
+    font-size: 0.57rem;
+  }
+
+  .testimonialReviewer p {
+    font-size: 0.62rem;
+  }
+
+  .testimonialStars {
+    font-size: 0.525rem;
+  }
+
+  .testimonialQuote {
+    font-size: clamp(0.62rem, 2.6vw, 0.86rem);
+    -webkit-line-clamp: 5;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1027,7 +1729,13 @@
   .signatureCardImage,
   .signatureCardShade,
   .signatureCardSignal,
-  .signatureCardCta {
+  .signatureCardCta,
+  .trendingLink,
+  .trendingCard,
+  .trendingCardImage,
+  .trendingCardShade,
+  .valueCard,
+  .testimonialCard {
     animation: none !important;
     transition: none !important;
     transform: none !important;
