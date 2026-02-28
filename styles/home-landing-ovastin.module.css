@@ -491,6 +491,202 @@
   background: #ffffff;
 }
 
+.signatureSection {
+  margin-top: 1.6rem;
+  padding: 0.9rem 0 1.4rem;
+}
+
+.signatureHeader {
+  text-align: center;
+  max-width: 64rem;
+  margin: 0 auto 1.35rem;
+  animation: revealUp 820ms cubic-bezier(0.22, 1, 0.36, 1) 430ms both;
+}
+
+.signatureEyebrow {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.signatureTitle {
+  margin: 0.45rem 0 0;
+  color: #19160e;
+  font-size: clamp(2.2rem, 4.8vw, 4.2rem);
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+}
+
+.signatureDescription {
+  margin: 0.78rem auto 0;
+  max-width: 42rem;
+  color: #3d3a34;
+  font-size: 1.04rem;
+  line-height: 1.54;
+  font-weight: 500;
+}
+
+.signatureRows {
+  display: grid;
+  gap: 1rem;
+}
+
+.signatureRow {
+  display: flex;
+  gap: 1rem;
+  min-height: 22.6rem;
+}
+
+.signatureCard {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 1.14rem;
+  overflow: hidden;
+  border: 1px solid #ddd8ce;
+  background: #111827;
+  transition: flex 420ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms ease, box-shadow 260ms ease;
+  animation: revealUp 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.signatureCard:nth-child(1) {
+  animation-delay: 470ms;
+}
+
+.signatureCard:nth-child(2) {
+  animation-delay: 540ms;
+}
+
+.signatureCard:nth-child(3) {
+  animation-delay: 610ms;
+}
+
+.signatureCardActive {
+  flex: 1.42 1 0;
+  transform: translateY(-2px);
+  box-shadow: 0 26px 48px -40px rgba(15, 23, 42, 0.7);
+}
+
+.signatureCardLink {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+}
+
+.signatureCardImage {
+  object-fit: cover;
+  transition: transform 440ms cubic-bezier(0.22, 1, 0.36, 1), filter 320ms ease;
+}
+
+.signatureCardFallback {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(140deg, #7f96be 0%, #d4e2f8 100%);
+}
+
+.signatureCardShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04) 30%, rgba(0, 0, 0, 0.76) 100%);
+  transition: background 300ms ease;
+}
+
+.signatureCardContent {
+  position: absolute;
+  inset: auto 1.05rem 1.08rem;
+  color: #f8fafc;
+  display: grid;
+  gap: 0.34rem;
+  z-index: 2;
+}
+
+.signatureCardIndex {
+  margin: 0;
+  font-size: 2.34rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.signatureCardContent h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.64rem, 2vw, 2.28rem);
+  line-height: 1.02;
+  letter-spacing: -0.016em;
+}
+
+.signatureCardMeta {
+  margin: 0;
+  color: rgba(241, 245, 249, 0.92);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.signatureCardSignal {
+  margin: 0.24rem 0 0;
+  color: rgba(241, 245, 249, 0.93);
+  font-size: 1.02rem;
+  line-height: 1.42;
+  max-width: 32rem;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 220ms ease, transform 260ms ease;
+}
+
+.signatureCardCta {
+  margin-top: 0.36rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48rem;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid #f0be15;
+  background: #facc15;
+  color: #141007;
+  font-size: 1.06rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding: 0.58rem 1.04rem;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 220ms ease, transform 260ms ease;
+}
+
+.signatureCardCta span {
+  font-size: 1.02rem;
+}
+
+.signatureCard:is(:hover, :focus-within) {
+  transform: translateY(-2px);
+  box-shadow: 0 26px 48px -40px rgba(15, 23, 42, 0.7);
+}
+
+.signatureCard:is(:hover, :focus-within) .signatureCardImage,
+.signatureCardActive .signatureCardImage {
+  transform: scale(1.045);
+}
+
+.signatureCard:is(:hover, :focus-within) .signatureCardShade,
+.signatureCardActive .signatureCardShade {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18) 22%, rgba(0, 0, 0, 0.78) 100%);
+}
+
+.signatureCard:is(:hover, :focus-within) .signatureCardSignal,
+.signatureCardActive .signatureCardSignal,
+.signatureCard:is(:hover, :focus-within) .signatureCardCta,
+.signatureCardActive .signatureCardCta {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @keyframes navEnter {
   0% {
     opacity: 0;
@@ -613,6 +809,48 @@
   .heroRight {
     min-height: 28rem;
   }
+
+  .signatureSection {
+    margin-top: 1.18rem;
+    padding-bottom: 1rem;
+  }
+
+  .signatureHeader {
+    text-align: left;
+    margin-bottom: 0.95rem;
+  }
+
+  .signatureDescription {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .signatureRows {
+    gap: 0.86rem;
+  }
+
+  .signatureRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: auto;
+  }
+
+  .signatureCard,
+  .signatureCardActive {
+    flex: initial;
+    min-height: 16.8rem;
+    transform: none;
+  }
+
+  .signatureCardSignal,
+  .signatureCardCta {
+    opacity: 1;
+    transform: none;
+  }
+
+  .signatureCardContent h3 {
+    font-size: clamp(1.42rem, 3.5vw, 1.94rem);
+  }
 }
 
 @media (max-width: 640px) {
@@ -719,6 +957,51 @@
   .dotActive {
     width: 1.2rem;
   }
+
+  .signatureSection {
+    margin-top: 0.82rem;
+    padding-bottom: 0.62rem;
+  }
+
+  .signatureTitle {
+    font-size: clamp(1.9rem, 12vw, 2.8rem);
+  }
+
+  .signatureDescription {
+    font-size: 0.94rem;
+  }
+
+  .signatureRows {
+    gap: 0.72rem;
+  }
+
+  .signatureRow {
+    grid-template-columns: 1fr;
+    gap: 0.72rem;
+  }
+
+  .signatureCard,
+  .signatureCardActive {
+    min-height: 14.8rem;
+  }
+
+  .signatureCardIndex {
+    font-size: 1.72rem;
+  }
+
+  .signatureCardMeta {
+    font-size: 0.78rem;
+  }
+
+  .signatureCardSignal {
+    margin-top: 0.1rem;
+    font-size: 0.9rem;
+  }
+
+  .signatureCardCta {
+    font-size: 0.92rem;
+    padding: 0.46rem 0.88rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -738,7 +1021,13 @@
   .serviceButtonArrow,
   .watchBubble,
   .dot,
-  .avatarItem {
+  .avatarItem,
+  .signatureHeader,
+  .signatureCard,
+  .signatureCardImage,
+  .signatureCardShade,
+  .signatureCardSignal,
+  .signatureCardCta {
     animation: none !important;
     transition: none !important;
     transform: none !important;
