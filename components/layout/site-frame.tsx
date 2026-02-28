@@ -544,7 +544,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
   ) : null;
 
   const sharedHeader = (
-    <header className="sticky top-0 z-30 w-screen border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
+    <header className="sticky top-0 z-90 w-screen border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
       <div className="mx-auto flex h-[57px] w-full max-w-6xl items-center justify-between px-3 sm:px-6">
         {/* Logo */}
         <Link

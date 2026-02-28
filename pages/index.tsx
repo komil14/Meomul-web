@@ -1,5 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import type { GetServerSideProps } from "next";
+import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
@@ -52,6 +53,20 @@ const RECOMMENDED_GRID_LIMIT = 6;
 const TRENDING_RAIL_LIMIT = 10;
 const TESTIMONIAL_LIMIT = 6;
 const LAST_MINUTE_DEALS_LIMIT = 8;
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
 
 const HERO_QUERY_INPUT: PaginationInput = {
   page: 1,
@@ -233,10 +248,17 @@ const formatDealExpiryLabel = (validUntil: string): string => {
     return "Ends soon";
   }
 
-  return `Ends ${expiresAt.toLocaleDateString("en-CA", {
-    month: "short",
-    day: "numeric",
-  })}`;
+  return `Ends ${MONTH_LABELS[expiresAt.getUTCMonth()]} ${expiresAt.getUTCDate()}`;
+};
+
+const toReviewerDisplayName = (review: ReviewDto, index: number): string => {
+  const nickname = review.reviewerNick?.trim();
+  if (nickname) {
+    return nickname;
+  }
+
+  const suffix = review.reviewerId?.slice(-4) ?? `${index + 1}`;
+  return `guest${suffix}`;
 };
 
 const toIsoLocalDate = (value: Date): string => {
@@ -391,6 +413,27 @@ export default function HomePage({
   const reviewCount = ratingsSummary?.totalReviews ?? featuredReviews.length;
   const reviewRating = ratingsSummary?.overallRating ?? activeSlideData?.rating ?? 0;
   const reviewStars = formatRatingStars(reviewRating);
+  const canonicalBaseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
+    "http://localhost:3000";
+  const canonicalUrl = `${canonicalBaseUrl}/`;
+  const primaryHotel = topHotels[0];
+  const metaTitle = primaryHotel
+    ? `${primaryHotel.hotelTitle} and curated stays across Korea | Meomul`
+    : "Meomul | Book the right stay for every trip";
+  const metaDescription =
+    "Discover verified hotels, real guest reviews, live deals, and personalized recommendations across Korea.";
+  const homepageStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Meomul",
+    url: canonicalUrl,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${canonicalBaseUrl}/hotels?text={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
 
   const recommendationSignalsByHotelId = useMemo(() => {
     const signalMap = new Map<string, string>();
@@ -601,10 +644,7 @@ export default function HomePage({
       },
       {
         title: "Guest trust layer",
-        metric:
-          reviewCount > 0
-            ? `${reviewCount.toLocaleString()}k+ verified reviews`
-            : "Live review scoring",
+        metric: reviewCount > 0 ? formatReviewCountLabel(reviewCount) : "Live review scoring",
         detail:
           "Review scores and helpful feedback continuously shape ranking, visibility, and recommendations.",
       },
@@ -741,6 +781,26 @@ export default function HomePage({
 
   return (
     <>
+      <Head>
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDescription} />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:site_name" content="Meomul" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <script
+          type="application/ld+json"
+          // Keep deterministic JSON-LD for SSR and hydration stability.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(homepageStructuredData),
+          }}
+        />
+      </Head>
       <Script
         src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"
         strategy="afterInteractive"
@@ -1283,8 +1343,7 @@ export default function HomePage({
                   const reviewerImageUrl = resolveMediaUrl(
                     review.reviewerImage,
                   );
-                  const reviewerName =
-                    review.reviewerNick?.trim() || "Verified guest";
+                  const reviewerName = toReviewerDisplayName(review, index);
                   const featuredHotelTitle = entry.hotelTitle || "Meomul stay";
 
                   return (
