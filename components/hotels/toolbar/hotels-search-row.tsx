@@ -1,5 +1,38 @@
+import { useLazyQuery, useMutation } from "@apollo/client/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ChangeEvent, KeyboardEvent } from "react";
-import { HOTELS_SORT_OPTIONS, type HotelsSortBy } from "@/lib/hotels/hotels-filter-config";
+import {
+  CLEAR_MY_SEARCH_HISTORY_MUTATION,
+  DELETE_SEARCH_HISTORY_ITEM_MUTATION,
+  GET_MY_SEARCH_HISTORY_QUERY,
+} from "@/graphql/search-history.gql";
+import { getSessionMember } from "@/lib/auth/session";
+import {
+  HOTELS_SORT_OPTIONS,
+  type HotelsSortBy,
+} from "@/lib/hotels/hotels-filter-config";
+import { Clock, X } from "lucide-react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SearchHistoryItem {
+  _id: string;
+  location?: string | null;
+  hotelTypes?: string[] | null;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  purpose?: string | null;
+  amenities?: string[] | null;
+  starRatings?: number[] | null;
+  guestCount?: number | null;
+  text?: string | null;
+  createdAt: string;
+}
+
+interface GetMySearchHistoryData {
+  getMySearchHistory: SearchHistoryItem[];
+}
 
 interface HotelsSearchRowProps {
   draftText: string;
@@ -7,7 +40,51 @@ interface HotelsSearchRowProps {
   onDraftTextChange: (value: string) => void;
   onSearch: () => void;
   onSortChange: (value: HotelsSortBy) => void;
+  onRestoreHistory?: (item: SearchHistoryItem) => void;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function summarizeHistoryItem(item: SearchHistoryItem): string {
+  const parts: string[] = [];
+
+  if (item.text) parts.push(`"${item.text}"`);
+  if (item.location) parts.push(item.location);
+  if (item.hotelTypes?.length) parts.push(item.hotelTypes.join(", "));
+  if (item.purpose) parts.push(item.purpose);
+  if (item.guestCount)
+    parts.push(`${item.guestCount} guest${item.guestCount > 1 ? "s" : ""}`);
+  if (item.priceMin != null || item.priceMax != null) {
+    const min =
+      item.priceMin != null ? `₩${item.priceMin.toLocaleString()}` : "";
+    const max =
+      item.priceMax != null ? `₩${item.priceMax.toLocaleString()}` : "";
+    if (min && max) parts.push(`${min}–${max}`);
+    else if (min) parts.push(`from ${min}`);
+    else if (max) parts.push(`up to ${max}`);
+  }
+  if (item.starRatings?.length) parts.push(`${item.starRatings.join(",")}★`);
+  if (item.amenities?.length) parts.push(item.amenities.slice(0, 2).join(", "));
+
+  return parts.length > 0 ? parts.join(" · ") : "All hotels";
+}
+
+function timeAgo(dateStr: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diffMs / 60000);
+  const h = Math.floor(diffMs / 3600000);
+  const d = Math.floor(diffMs / 86400000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
+  if (h < 24) return `${h}h`;
+  if (d < 7) return `${d}d`;
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function HotelsSearchRow({
   draftText,
@@ -15,7 +92,77 @@ export function HotelsSearchRow({
   onDraftTextChange,
   onSearch,
   onSortChange,
+  onRestoreHistory,
 }: HotelsSearchRowProps) {
+  const member = useRef(getSessionMember());
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+  const [fetchHistory, { data: historyData, loading: historyLoading }] =
+    useLazyQuery<GetMySearchHistoryData>(GET_MY_SEARCH_HISTORY_QUERY, {
+      fetchPolicy: "network-only",
+    });
+
+  const [deleteItem] = useMutation(DELETE_SEARCH_HISTORY_ITEM_MUTATION, {
+    refetchQueries: [
+      { query: GET_MY_SEARCH_HISTORY_QUERY, variables: { limit: 5 } },
+    ],
+  });
+
+  const [clearAll] = useMutation(CLEAR_MY_SEARCH_HISTORY_MUTATION, {
+    refetchQueries: [
+      { query: GET_MY_SEARCH_HISTORY_QUERY, variables: { limit: 5 } },
+    ],
+  });
+
+  const historyItems = historyData?.getMySearchHistory ?? [];
+
+  const updateDropdownPosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setDropdownStyle({
+      position: "fixed",
+      top: rect.bottom + 8,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+    });
+  }, []);
+
+  const handleFocus = useCallback(() => {
+    if (!member.current) return;
+    setShowDropdown(true);
+    updateDropdownPosition();
+    void fetchHistory({ variables: { limit: 5 } });
+  }, [fetchHistory, updateDropdownPosition]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!showDropdown) return;
+
+    const handlePointerDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const inContainer = containerRef.current?.contains(target);
+      const inDropdown = dropdownRef.current?.contains(target);
+      if (!inContainer && !inDropdown) {
+        setShowDropdown(false);
+      }
+    };
+
+    const handleScroll = () => updateDropdownPosition();
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleScroll);
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [showDropdown, updateDropdownPosition]);
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     onDraftTextChange(event.target.value);
   };
@@ -23,19 +170,60 @@ export function HotelsSearchRow({
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
+      setShowDropdown(false);
       onSearch();
+    }
+    if (event.key === "Escape") {
+      setShowDropdown(false);
     }
   };
 
+  const handleSelectHistory = (item: SearchHistoryItem) => {
+    setShowDropdown(false);
+    if (onRestoreHistory) {
+      onRestoreHistory(item);
+    } else if (item.text) {
+      onDraftTextChange(item.text);
+      // Trigger search on next tick so draft propagates
+      setTimeout(onSearch, 0);
+    }
+  };
+
+  const handleDeleteItem = async (e: React.MouseEvent, historyId: string) => {
+    e.stopPropagation();
+    try {
+      await deleteItem({ variables: { historyId } });
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await clearAll();
+      setShowDropdown(false);
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const showHistory = showDropdown && member.current && !draftText.trim();
+
   return (
-    <div className="relative z-20 rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+    <div
+      ref={containerRef}
+      className="relative z-20 rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+    >
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <label className="flex-1 rounded-[1.3rem] bg-white px-4 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)]">
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Search stays</span>
+          <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Search stays
+          </span>
           <input
             value={draftText}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
             placeholder="Hotel name, district, or landmark"
             className="mt-1 w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
           />
@@ -44,10 +232,19 @@ export function HotelsSearchRow({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
           <button
             type="button"
-            onClick={onSearch}
+            onClick={() => {
+              setShowDropdown(false);
+              onSearch();
+            }}
             className="inline-flex items-center justify-center gap-2 rounded-[1.3rem] bg-rose-500 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-rose-600 md:min-w-[9.5rem] md:px-5 md:py-4"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-4 w-4"
+            >
               <path d="m21 21-4.35-4.35" />
               <circle cx="11" cy="11" r="6" />
             </svg>
@@ -55,7 +252,9 @@ export function HotelsSearchRow({
           </button>
 
           <label className="flex items-center gap-2 rounded-[1.3rem] bg-white px-3 py-3 text-sm text-slate-600 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)] md:min-w-[13rem] md:px-4">
-            <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 md:text-[11px]">Sort</span>
+            <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 md:text-[11px]">
+              Sort
+            </span>
             <select
               value={sortBy}
               onChange={(event) => {
@@ -72,6 +271,81 @@ export function HotelsSearchRow({
           </label>
         </div>
       </div>
+
+      {/* Search history dropdown — portalled to body */}
+      {showHistory &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={dropdownStyle}
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_48px_-24px_rgba(15,23,42,0.25)]"
+          >
+            {historyLoading && historyItems.length === 0 ? (
+              <div className="px-4 py-5 text-center">
+                <div className="mx-auto h-3 w-24 animate-pulse rounded-full bg-slate-100" />
+              </div>
+            ) : historyItems.length === 0 ? (
+              <div className="px-4 py-5 text-center text-sm text-slate-400">
+                No recent searches
+              </div>
+            ) : (
+              <>
+                <div className="px-3 pb-1 pt-2.5">
+                  <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Recent searches
+                  </p>
+                </div>
+
+                <div className="max-h-[260px] overflow-y-auto">
+                  {historyItems.map((item) => (
+                    <button
+                      key={item._id}
+                      type="button"
+                      onClick={() => handleSelectHistory(item)}
+                      className="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-slate-50 active:bg-slate-100"
+                    >
+                      <Clock
+                        size={14}
+                        className="flex-shrink-0 text-slate-300"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-700">
+                          {summarizeHistoryItem(item)}
+                        </p>
+                      </div>
+                      <span className="flex-shrink-0 text-[11px] text-slate-300">
+                        {timeAgo(item.createdAt)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          void handleDeleteItem(e, item._id);
+                        }}
+                        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
+                        aria-label="Remove search"
+                      >
+                        <X size={12} />
+                      </button>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="border-t border-slate-100 px-4 py-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleClearAll();
+                    }}
+                    className="text-xs font-medium text-slate-400 transition hover:text-rose-500"
+                  >
+                    Clear all history
+                  </button>
+                </div>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

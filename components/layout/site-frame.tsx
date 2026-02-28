@@ -1,19 +1,26 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PropsWithChildren } from "react";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { PriceLockFab } from "@/components/layout/price-lock-fab";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
-import { clearAuthSession, getSessionMember } from "@/lib/auth/session";
+import { GET_UNREAD_COUNT_QUERY } from "@/graphql/notification.gql";
+import {
+  clearAuthSession,
+  getAccessToken,
+  getSessionMember,
+} from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { createNotificationSocket } from "@/lib/socket/notification";
 import type { SessionMember } from "@/types/auth";
 import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
-import { LogOut, MessageSquare, Settings } from "lucide-react";
+import { Bell, LogOut, MessageSquare, Settings } from "lucide-react";
 
 const UNREAD_POLL_INTERVAL_MS = 120000;
+const NOTIFICATION_POLL_INTERVAL_MS = 60000;
 
 // ─── Role-aware navigation ────────────────────────────────────────────────────
 
@@ -58,7 +65,11 @@ function memberAvatar(member: SessionMember) {
     return (
       <div className={`h-full w-full overflow-hidden rounded-full ${bg}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={member.memberImage} alt={initials} className="h-full w-full object-cover" />
+        <img
+          src={member.memberImage}
+          alt={initials}
+          className="h-full w-full object-cover"
+        />
       </div>
     );
   }
@@ -79,7 +90,8 @@ function UserAvatarMenu({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -103,7 +115,9 @@ function UserAvatarMenu({
       {open && (
         <div className="absolute right-0 top-10 z-50 w-52 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl">
           <div className="border-b border-slate-50 px-4 pb-3 pt-3">
-            <p className="truncate text-sm font-semibold text-slate-900">{member.memberNick}</p>
+            <p className="truncate text-sm font-semibold text-slate-900">
+              {member.memberNick}
+            </p>
             <p className="text-[11px] capitalize text-slate-400">{roleLabel}</p>
           </div>
           <div className="py-1">
@@ -150,7 +164,8 @@ export function SiteFrame({ children }: PropsWithChildren) {
 
   const isPageVisible = usePageVisible();
   const canTrackUnread = Boolean(member);
-  const isChatRoute = router.pathname === "/chats" || router.pathname === "/chats/[chatId]";
+  const isChatRoute =
+    router.pathname === "/chats" || router.pathname === "/chats/[chatId]";
   const canPollUnread = canTrackUnread && isPageVisible && !isChatRoute;
   const previousUnreadRef = useRef<number | null>(null);
   const hasPolledOnVisibleRef = useRef(false);
@@ -162,17 +177,57 @@ export function SiteFrame({ children }: PropsWithChildren) {
     void router.push("/auth/login");
   };
 
-  const { data: unreadData, refetch: refetchUnread } = useQuery<GetMyUnreadChatCountQueryData>(
-    GET_MY_UNREAD_CHAT_COUNT_QUERY,
-    {
+  const { data: unreadData, refetch: refetchUnread } =
+    useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
       skip: !canPollUnread,
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
       pollInterval: UNREAD_POLL_INTERVAL_MS,
-    },
-  );
+    });
 
   const unreadCount = unreadData?.getMyUnreadChatCount ?? 0;
+
+  // ── Notification unread count ──
+  const { data: notifUnreadData, refetch: refetchNotifUnread } = useQuery<{
+    getUnreadCount: number;
+  }>(GET_UNREAD_COUNT_QUERY, {
+    skip: !canTrackUnread,
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+    pollInterval: NOTIFICATION_POLL_INTERVAL_MS,
+  });
+
+  const notifUnreadCount = notifUnreadData?.getUnreadCount ?? 0;
+
+  // ── Notification socket ──
+  const handleNotificationEvent = useCallback(
+    (payload: { title?: string; message?: string }) => {
+      void refetchNotifUnread();
+      const text =
+        payload?.title || payload?.message || "You have a new notification.";
+      toast.info(text);
+    },
+    [refetchNotifUnread, toast],
+  );
+
+  useEffect(() => {
+    if (!member) return;
+    const token = getAccessToken();
+    if (!token) return;
+
+    const socket = createNotificationSocket(token);
+
+    socket.on("connect", () => {
+      socket.emit("authenticate", { token: `Bearer ${token}` });
+    });
+
+    socket.on("notification", handleNotificationEvent);
+
+    return () => {
+      socket.off("notification", handleNotificationEvent);
+      socket.disconnect();
+    };
+  }, [member, handleNotificationEvent]);
 
   useEffect(() => {
     if (!canPollUnread) {
@@ -205,7 +260,9 @@ export function SiteFrame({ children }: PropsWithChildren) {
     ) {
       const delta = unreadCount - previousUnread;
       toast.info(
-        delta === 1 ? "You have 1 new chat message." : `You have ${delta} new chat messages.`,
+        delta === 1
+          ? "You have 1 new chat message."
+          : `You have ${delta} new chat messages.`,
       );
     }
 
@@ -229,6 +286,22 @@ export function SiteFrame({ children }: PropsWithChildren) {
         )}
       </button>
     ) : null;
+
+  // Notification bell button
+  const notifBellButton = member ? (
+    <Link
+      href="/notifications"
+      className="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
+      aria-label="Notifications"
+    >
+      <Bell size={17} />
+      {notifUnreadCount > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold text-white">
+          {notifUnreadCount > 99 ? "99+" : notifUnreadCount}
+        </span>
+      )}
+    </Link>
+  ) : null;
 
   const sharedHeader = (
     <header className="sticky top-0 z-30 w-screen border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
@@ -266,6 +339,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
           <div className="ml-2 flex items-center gap-2 border-l border-slate-200 pl-2">
             {member ? (
               <>
+                {notifBellButton}
                 {chatIconButton}
                 <UserAvatarMenu member={member} onLogout={handleLogout} />
               </>
@@ -288,8 +362,9 @@ export function SiteFrame({ children }: PropsWithChildren) {
           </div>
         </div>
 
-        {/* Mobile: chat icon + hamburger */}
+        {/* Mobile: notification bell + chat icon + hamburger */}
         <div className="flex items-center gap-1.5 md:hidden">
+          {notifBellButton}
           {chatIconButton}
           <button
             type="button"
@@ -418,7 +493,9 @@ export function SiteFrame({ children }: PropsWithChildren) {
       {isHomeRoute ? (
         children
       ) : (
-        <div className="mx-auto w-full max-w-6xl px-3 py-8 sm:px-6 sm:py-10">{children}</div>
+        <div className="mx-auto w-full max-w-6xl px-3 py-8 sm:px-6 sm:py-10">
+          {children}
+        </div>
       )}
       {!isHomeRoute && <PriceLockFab />}
       <ChatDrawer

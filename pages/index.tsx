@@ -1,16 +1,19 @@
-import { useApolloClient, useQuery } from "@apollo/client/react";
+import { useQuery } from "@apollo/client/react";
+import type { GetServerSideProps } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
+  GET_HOME_LAST_MINUTE_DEALS_QUERY,
+  GET_HOME_TESTIMONIALS_QUERY,
   GET_HOTELS_QUERY,
   GET_HOTEL_REVIEWS_QUERY,
   GET_RECOMMENDED_HOTELS_V2_QUERY,
-  GET_ROOMS_BY_HOTEL_QUERY,
   GET_TRENDING_HOTELS_QUERY,
 } from "@/graphql/hotel.gql";
+import { createApolloClient } from "@/lib/apollo/client";
 import { getAccessToken } from "@/lib/auth/session";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
 import {
@@ -19,24 +22,26 @@ import {
   type RecentlyViewedHotelEntry,
 } from "@/lib/hotels/recently-viewed";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
-import { getErrorMessage } from "@/lib/utils/error";
 import type {
   GetHotelReviewsQueryData,
   GetHotelReviewsQueryVars,
   GetHotelsQueryData,
   GetHotelsQueryVars,
+  GetHomeLastMinuteDealsQueryData,
+  GetHomeLastMinuteDealsQueryVars,
+  GetHomeTestimonialsQueryData,
+  GetHomeTestimonialsQueryVars,
   GetRecommendedHotelsV2QueryData,
   GetRecommendedHotelsV2QueryVars,
-  GetRoomsByHotelQueryData,
-  GetRoomsByHotelQueryVars,
   GetTrendingHotelsQueryData,
   GetTrendingHotelsQueryVars,
   HotelLocation,
   HotelListItem,
   PaginationInput,
-  RoomListItem,
-  StayPurpose,
+  ReviewRatingsSummaryDto,
   ReviewDto,
+  RoomType,
+  StayPurpose,
 } from "@/types/hotel";
 import styles from "@/styles/home-landing-ovastin.module.css";
 
@@ -46,8 +51,6 @@ const REVIEW_LIMIT = 5;
 const RECOMMENDED_GRID_LIMIT = 6;
 const TRENDING_RAIL_LIMIT = 10;
 const TESTIMONIAL_LIMIT = 6;
-const LAST_MINUTE_HOTELS_LIMIT = 8;
-const LAST_MINUTE_ROOMS_PER_HOTEL = 8;
 const LAST_MINUTE_DEALS_LIMIT = 8;
 
 const HERO_QUERY_INPUT: PaginationInput = {
@@ -97,7 +100,7 @@ interface LastMinuteDealCard {
   hotelTitle: string;
   hotelLocation: string;
   roomName: string;
-  roomType: string;
+  roomType: RoomType | string;
   imageUrl: string;
   basePrice: number;
   dealPrice: number;
@@ -118,6 +121,18 @@ interface EditorialGuideCard {
   types?: string;
   href: string;
   imageUrl: string;
+}
+
+interface HomePageProps {
+  initialTopHotels: HotelListItem[];
+  initialHotelInventoryTotal: number;
+  initialTrendingHotels: HotelListItem[];
+  initialFeaturedReviews: ReviewDto[];
+  initialFeaturedRatingsSummary: ReviewRatingsSummaryDto | null;
+  initialTestimonials: TestimonialReviewEntry[];
+  initialLastMinuteDeals: LastMinuteDealCard[];
+  serverTodayIso: string;
+  initialLoadError: string | null;
 }
 
 const createFallbackSlide = (index: number): HeroSlide => ({
@@ -172,6 +187,18 @@ const formatRatingStars = (rating: number): string => {
   return `${"★".repeat(safeRating)}${"☆".repeat(5 - safeRating)}`;
 };
 
+const formatReviewCountLabel = (count: number): string => {
+  if (!Number.isFinite(count) || count <= 0) {
+    return "No reviews yet";
+  }
+
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}k verified reviews`;
+  }
+
+  return `${count.toLocaleString()} verified reviews`;
+};
+
 const toReviewerInitial = (review: ReviewDto, index: number): string => {
   const nickname = review.reviewerNick?.trim();
   if (nickname) {
@@ -201,23 +228,15 @@ const toStayPeriodLabel = (review: ReviewDto): string => {
 };
 
 const formatDealExpiryLabel = (validUntil: string): string => {
-  const expiresAt = new Date(validUntil).getTime();
-  if (!Number.isFinite(expiresAt)) {
+  const expiresAt = new Date(validUntil);
+  if (Number.isNaN(expiresAt.getTime())) {
     return "Ends soon";
   }
 
-  const diffMs = expiresAt - Date.now();
-  if (diffMs <= 0) {
-    return "Expired";
-  }
-
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (hours > 0) {
-    return `Ends in ${hours}h ${minutes}m`;
-  }
-  return `Ends in ${minutes}m`;
+  return `Ends ${expiresAt.toLocaleDateString("en-CA", {
+    month: "short",
+    day: "numeric",
+  })}`;
 };
 
 const toIsoLocalDate = (value: Date): string => {
@@ -233,9 +252,7 @@ const addDays = (value: Date, amount: number): Date => {
   return next;
 };
 
-const getNextWeekendRange = (): { checkIn: string; checkOut: string } => {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+const getNextWeekendRange = (today: Date): { checkIn: string; checkOut: string } => {
   const day = today.getDay();
   const daysUntilSaturday = (6 - day + 7) % 7;
   const checkInDate = addDays(today, daysUntilSaturday);
@@ -246,9 +263,7 @@ const getNextWeekendRange = (): { checkIn: string; checkOut: string } => {
   };
 };
 
-const getNextBusinessRange = (): { checkIn: string; checkOut: string } => {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+const getNextBusinessRange = (today: Date): { checkIn: string; checkOut: string } => {
   const day = today.getDay();
   const daysUntilMonday = ((8 - day) % 7) || 7;
   const checkInDate = addDays(today, daysUntilMonday);
@@ -272,9 +287,19 @@ const buildHotelsFilteredHref = (
   return query ? `/hotels?${query}` : "/hotels";
 };
 
-export default function HomePage() {
-  const apolloClient = useApolloClient();
+export default function HomePage({
+  initialTopHotels,
+  initialHotelInventoryTotal,
+  initialTrendingHotels,
+  initialFeaturedReviews,
+  initialFeaturedRatingsSummary,
+  initialTestimonials,
+  initialLastMinuteDeals,
+  serverTodayIso,
+  initialLoadError,
+}: HomePageProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [hasAccessToken, setHasAccessToken] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
   const [isSliderPaused, setIsSliderPaused] = useState(false);
@@ -283,50 +308,14 @@ export default function HomePage() {
   const [recentlyViewedHotels, setRecentlyViewedHotels] = useState<
     RecentlyViewedHotelEntry[]
   >([]);
-  const [lastMinuteDeals, setLastMinuteDeals] = useState<LastMinuteDealCard[]>(
-    [],
-  );
-  const [testimonialEntries, setTestimonialEntries] = useState<
-    TestimonialReviewEntry[]
-  >([]);
   const testimonialsRailRef = useRef<HTMLDivElement | null>(null);
 
-  const { data: topHotelsData, error: topHotelsError } = useQuery<
-    GetHotelsQueryData,
-    GetHotelsQueryVars
-  >(GET_HOTELS_QUERY, {
-    variables: { input: HERO_QUERY_INPUT },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
-
-  const topHotels = useMemo(
-    () => topHotelsData?.getHotels.list ?? [],
-    [topHotelsData?.getHotels.list],
-  );
-  const stableTopHotels = useMemo(
-    () => (isMounted ? topHotels : []),
-    [isMounted, topHotels],
-  );
+  const topHotels = useMemo(() => initialTopHotels, [initialTopHotels]);
   const heroSlides = useMemo(
-    () => toHeroSlides(stableTopHotels),
-    [stableTopHotels],
+    () => toHeroSlides(topHotels),
+    [topHotels],
   );
-  const featuredHotelId = stableTopHotels[0]?._id ?? "";
-
-  const { data: featuredReviewsData, loading: featuredReviewsLoading } =
-    useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(
-      GET_HOTEL_REVIEWS_QUERY,
-      {
-        skip: !featuredHotelId,
-        variables: {
-          hotelId: featuredHotelId,
-          input: REVIEW_QUERY_INPUT,
-        },
-        fetchPolicy: "cache-and-network",
-        nextFetchPolicy: "cache-and-network",
-      },
-    );
+  const featuredReviewsLoading = false;
 
   const { data: recommendedHotelsData } = useQuery<
     GetRecommendedHotelsV2QueryData,
@@ -339,19 +328,35 @@ export default function HomePage() {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const { data: trendingHotelsData } = useQuery<
-    GetTrendingHotelsQueryData,
-    GetTrendingHotelsQueryVars
-  >(GET_TRENDING_HOTELS_QUERY, {
-    variables: { limit: RECOMMENDED_GRID_LIMIT },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
-
   useEffect(() => {
     setIsMounted(true);
     setHasAccessToken(Boolean(getAccessToken()));
     setRecentlyViewedHotels(readRecentlyViewedHotels());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = (): void => {
+      setPrefersReducedMotion(mediaQuery.matches);
+    };
+
+    syncPreference();
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", syncPreference);
+    } else {
+      mediaQuery.addListener(syncPreference);
+    }
+    return () => {
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", syncPreference);
+      } else {
+        mediaQuery.removeListener(syncPreference);
+      }
+    };
   }, []);
 
   const handleClearRecentlyViewed = useCallback(() => {
@@ -364,7 +369,7 @@ export default function HomePage() {
   }, [heroSlides.length]);
 
   useEffect(() => {
-    if (heroSlides.length <= 1 || isSliderPaused) {
+    if (heroSlides.length <= 1 || isSliderPaused || prefersReducedMotion) {
       return;
     }
 
@@ -373,113 +378,23 @@ export default function HomePage() {
     }, HERO_ROTATION_MS);
 
     return () => window.clearInterval(timer);
-  }, [heroSlides.length, isSliderPaused]);
+  }, [heroSlides.length, isSliderPaused, prefersReducedMotion]);
 
   const activeSlideData = heroSlides[activeSlide] ?? heroSlides[0];
   const activeSlideHref = activeSlideData?._id.startsWith("fallback-")
     ? "/hotels"
     : `/hotels/${activeSlideData?._id ?? ""}`;
-  const featuredReviews = useMemo(
-    () => (isMounted ? (featuredReviewsData?.getHotelReviews.list ?? []) : []),
-    [featuredReviewsData?.getHotelReviews.list, isMounted],
-  );
-  const ratingsSummary = isMounted
-    ? featuredReviewsData?.getHotelReviews.ratingsSummary
-    : undefined;
-  const reviewCount = isMounted
-    ? (ratingsSummary?.totalReviews ??
-      featuredReviewsData?.getHotelReviews.metaCounter.total ??
-      0)
-    : 0;
-  const reviewRating = isMounted
-    ? (ratingsSummary?.overallRating ?? activeSlideData?.rating ?? 0)
-    : (activeSlideData?.rating ?? 0);
+  const featuredReviews = useMemo(() => initialFeaturedReviews, [
+    initialFeaturedReviews,
+  ]);
+  const ratingsSummary = initialFeaturedRatingsSummary ?? undefined;
+  const reviewCount = ratingsSummary?.totalReviews ?? featuredReviews.length;
+  const reviewRating = ratingsSummary?.overallRating ?? activeSlideData?.rating ?? 0;
   const reviewStars = formatRatingStars(reviewRating);
-  const testimonialSourceHotels = useMemo(
-    () =>
-      stableTopHotels.slice(0, 4).map((hotel) => ({
-        hotelId: hotel._id,
-        hotelTitle: hotel.hotelTitle,
-      })),
-    [stableTopHotels],
-  );
-
-  useEffect(() => {
-    if (!isMounted || testimonialSourceHotels.length === 0) {
-      setTestimonialEntries([]);
-      return;
-    }
-
-    let isCancelled = false;
-
-    const loadTestimonials = async (): Promise<void> => {
-      try {
-        const reviewGroups = await Promise.all(
-          testimonialSourceHotels.map(async (hotel) => {
-            const result = await apolloClient.query<
-              GetHotelReviewsQueryData,
-              GetHotelReviewsQueryVars
-            >({
-              query: GET_HOTEL_REVIEWS_QUERY,
-              variables: {
-                hotelId: hotel.hotelId,
-                input: {
-                  ...REVIEW_QUERY_INPUT,
-                  limit: 3,
-                },
-              },
-              fetchPolicy: "network-only",
-            });
-
-            return {
-              hotelId: hotel.hotelId,
-              hotelTitle: hotel.hotelTitle,
-              reviews: result.data?.getHotelReviews.list ?? [],
-            };
-          }),
-        );
-
-        if (isCancelled) {
-          return;
-        }
-
-        const mergedEntries = reviewGroups
-          .flatMap((group) =>
-            group.reviews.map((review) => ({
-              review,
-              hotelId: group.hotelId,
-              hotelTitle: group.hotelTitle,
-            })),
-          )
-          .sort((a, b) => {
-            const aTimestamp = new Date(
-              a.review.stayDate || a.review.createdAt,
-            ).getTime();
-            const bTimestamp = new Date(
-              b.review.stayDate || b.review.createdAt,
-            ).getTime();
-            return bTimestamp - aTimestamp;
-          })
-          .slice(0, TESTIMONIAL_LIMIT);
-
-        setTestimonialEntries(mergedEntries);
-      } catch {
-        if (!isCancelled) {
-          setTestimonialEntries([]);
-        }
-      }
-    };
-
-    void loadTestimonials();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [apolloClient, isMounted, testimonialSourceHotels]);
 
   const recommendationSignalsByHotelId = useMemo(() => {
     const signalMap = new Map<string, string>();
-    const explanations = isMounted
+    const explanations = hasAccessToken
       ? (recommendedHotelsData?.getRecommendedHotelsV2.explanations ?? [])
       : [];
     explanations.forEach((explanation) => {
@@ -489,19 +404,17 @@ export default function HomePage() {
       }
     });
     return signalMap;
-  }, [isMounted, recommendedHotelsData?.getRecommendedHotelsV2.explanations]);
+  }, [hasAccessToken, recommendedHotelsData?.getRecommendedHotelsV2.explanations]);
 
   const recommendedCards = useMemo<RecommendedCard[]>(() => {
-    const personalized = isMounted
+    const personalized = hasAccessToken
       ? (recommendedHotelsData?.getRecommendedHotelsV2.list ?? [])
       : [];
-    const trending = isMounted
-      ? (trendingHotelsData?.getTrendingHotels ?? [])
-      : [];
+    const trending = initialTrendingHotels;
     const merged = uniqueHotelsById([
       ...personalized,
       ...trending,
-      ...stableTopHotels,
+      ...topHotels,
     ]).slice(0, RECOMMENDED_GRID_LIMIT);
 
     return merged.map((hotel) => ({
@@ -517,11 +430,11 @@ export default function HomePage() {
         "Popular with guests for consistent service quality and strong recent ratings.",
     }));
   }, [
-    isMounted,
+    hasAccessToken,
+    initialTrendingHotels,
     recommendedHotelsData?.getRecommendedHotelsV2.list,
     recommendationSignalsByHotelId,
-    stableTopHotels,
-    trendingHotelsData?.getTrendingHotels,
+    topHotels,
   ]);
 
   const recommendedRows = useMemo(
@@ -533,36 +446,35 @@ export default function HomePage() {
   );
 
   const trendingRailCards = useMemo(() => {
-    const trendingHotels = isMounted
-      ? (trendingHotelsData?.getTrendingHotels ?? [])
-      : [];
-    const recommendationHotels = isMounted
+    const trendingHotels = initialTrendingHotels;
+    const recommendationHotels = hasAccessToken
       ? (recommendedHotelsData?.getRecommendedHotelsV2.list ?? [])
       : [];
     return uniqueHotelsById([
       ...trendingHotels,
       ...recommendationHotels,
-      ...stableTopHotels,
+      ...topHotels,
     ]).slice(0, TRENDING_RAIL_LIMIT);
   }, [
-    isMounted,
+    hasAccessToken,
+    initialTrendingHotels,
     recommendedHotelsData?.getRecommendedHotelsV2.list,
-    stableTopHotels,
-    trendingHotelsData?.getTrendingHotels,
+    topHotels,
   ]);
   const recentViewedCards = useMemo(
     () => recentlyViewedHotels.slice(0, 6),
     [recentlyViewedHotels],
   );
+  const lastMinuteDeals = useMemo(
+    () => initialLastMinuteDeals,
+    [initialLastMinuteDeals],
+  );
   const editorialGuideCards = useMemo<EditorialGuideCard[]>(() => {
-    if (!isMounted) {
-      return [];
-    }
-
-    const weekendRange = getNextWeekendRange();
-    const businessRange = getNextBusinessRange();
+    const baseDate = new Date(`${serverTodayIso}T00:00:00`);
+    const weekendRange = getNextWeekendRange(baseDate);
+    const businessRange = getNextBusinessRange(baseDate);
     const imageCandidates = uniqueHotelsById([
-      ...stableTopHotels,
+      ...topHotels,
       ...trendingRailCards,
     ]);
 
@@ -652,132 +564,22 @@ export default function HomePage() {
       }),
       imageUrl: pickImageByLocation(guide.location, index),
     }));
-  }, [heroSlides, isMounted, stableTopHotels, trendingRailCards]);
-  const dealSourceHotels = useMemo(() => {
-    const personalized = isMounted
-      ? (recommendedHotelsData?.getRecommendedHotelsV2.list ?? [])
-      : [];
-    const trending = isMounted
-      ? (trendingHotelsData?.getTrendingHotels ?? [])
-      : [];
-
-    return uniqueHotelsById([
-      ...personalized,
-      ...trending,
-      ...stableTopHotels,
-    ]).slice(0, LAST_MINUTE_HOTELS_LIMIT);
-  }, [
-    isMounted,
-    recommendedHotelsData?.getRecommendedHotelsV2.list,
-    stableTopHotels,
-    trendingHotelsData?.getTrendingHotels,
-  ]);
-
-  useEffect(() => {
-    if (!isMounted || dealSourceHotels.length === 0) {
-      setLastMinuteDeals([]);
-      return;
-    }
-
-    let isCancelled = false;
-
-    const loadLastMinuteDeals = async (): Promise<void> => {
-      try {
-        const roomGroups = await Promise.all(
-          dealSourceHotels.map(async (hotel) => {
-            const result = await apolloClient.query<
-              GetRoomsByHotelQueryData,
-              GetRoomsByHotelQueryVars
-            >({
-              query: GET_ROOMS_BY_HOTEL_QUERY,
-              variables: {
-                hotelId: hotel._id,
-                input: {
-                  page: 1,
-                  limit: LAST_MINUTE_ROOMS_PER_HOTEL,
-                  sort: "updatedAt",
-                  direction: -1,
-                },
-              },
-              fetchPolicy: "network-only",
-            });
-
-            return {
-              hotel,
-              rooms: result.data?.getRoomsByHotel.list ?? [],
-            };
-          }),
-        );
-
-        if (isCancelled) {
-          return;
-        }
-
-        const now = Date.now();
-        const deals = roomGroups
-          .flatMap(({ hotel, rooms }) =>
-            rooms
-              .filter((room: RoomListItem) => {
-                if (!room.lastMinuteDeal?.isActive) {
-                  return false;
-                }
-
-                const expiresAt = new Date(room.lastMinuteDeal.validUntil).getTime();
-                return Number.isFinite(expiresAt) && expiresAt > now;
-              })
-              .map((room: RoomListItem) => ({
-                roomId: room._id,
-                hotelId: hotel._id,
-                hotelTitle: hotel.hotelTitle,
-                hotelLocation: hotel.hotelLocation,
-                roomName: room.roomName,
-                roomType: room.roomType,
-                imageUrl: resolveMediaUrl(room.roomImages[0] || hotel.hotelImages[0]),
-                basePrice: room.lastMinuteDeal?.originalPrice ?? room.basePrice,
-                dealPrice: room.lastMinuteDeal?.dealPrice ?? room.basePrice,
-                discountPercent: room.lastMinuteDeal?.discountPercent ?? 0,
-                validUntil: room.lastMinuteDeal?.validUntil ?? "",
-              })),
-          )
-          .sort((a, b) => {
-            if (b.discountPercent !== a.discountPercent) {
-              return b.discountPercent - a.discountPercent;
-            }
-            return new Date(a.validUntil).getTime() - new Date(b.validUntil).getTime();
-          })
-          .slice(0, LAST_MINUTE_DEALS_LIMIT);
-
-        setLastMinuteDeals(deals);
-      } catch {
-        if (!isCancelled) {
-          setLastMinuteDeals([]);
-        }
-      }
-    };
-
-    void loadLastMinuteDeals();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [apolloClient, dealSourceHotels, isMounted]);
+  }, [heroSlides, serverTodayIso, topHotels, trendingRailCards]);
 
   const valuePillars = useMemo(() => {
-    const hotelInventoryTotal = isMounted
-      ? (topHotelsData?.getHotels.metaCounter.total ?? 0)
-      : 0;
+    const hotelInventoryTotal = initialHotelInventoryTotal;
     const averageHeroRating =
-      stableTopHotels.length > 0
-        ? stableTopHotels.reduce(
+      topHotels.length > 0
+        ? topHotels.reduce(
             (sum, hotel) => sum + (hotel.hotelRating ?? 0),
             0,
-          ) / stableTopHotels.length
+          ) / topHotels.length
         : 0;
     const trendingLikes = trendingRailCards.reduce(
       (sum, hotel) => sum + (hotel.hotelLikes ?? 0),
       0,
     );
-    const recommendationMeta = isMounted
+    const recommendationMeta = hasAccessToken
       ? recommendedHotelsData?.getRecommendedHotelsV2.meta
       : undefined;
 
@@ -826,12 +628,11 @@ export default function HomePage() {
       },
     ];
   }, [
-    isMounted,
+    initialHotelInventoryTotal,
     hasAccessToken,
     recommendedHotelsData?.getRecommendedHotelsV2.meta,
     reviewCount,
-    stableTopHotels,
-    topHotelsData?.getHotels.metaCounter.total,
+    topHotels,
     trendingRailCards,
   ]);
 
@@ -845,8 +646,8 @@ export default function HomePage() {
   }, [activeRecommendedCard, recommendedCards.length]);
 
   const testimonialReviews = useMemo(
-    () => testimonialEntries,
-    [testimonialEntries],
+    () => initialTestimonials,
+    [initialTestimonials],
   );
   const loopedTestimonialReviews = useMemo(() => {
     if (testimonialReviews.length <= 1) {
@@ -912,7 +713,12 @@ export default function HomePage() {
 
   useEffect(() => {
     const rail = testimonialsRailRef.current;
-    if (!isMounted || !rail || testimonialReviews.length <= 1) {
+    if (
+      !isMounted ||
+      !rail ||
+      testimonialReviews.length <= 1 ||
+      prefersReducedMotion
+    ) {
       return;
     }
 
@@ -931,7 +737,7 @@ export default function HomePage() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [isMounted, testimonialReviews.length]);
+  }, [isMounted, prefersReducedMotion, testimonialReviews.length]);
 
   return (
     <>
@@ -945,8 +751,8 @@ export default function HomePage() {
 
       <main className={styles.page}>
         <div className={styles.shell}>
-          {topHotelsError ? (
-            <ErrorNotice message={getErrorMessage(topHotelsError)} />
+          {initialLoadError ? (
+            <ErrorNotice message={initialLoadError} />
           ) : null}
 
           <section className={styles.hero}>
@@ -1030,9 +836,7 @@ export default function HomePage() {
                       <div>
                         {featuredReviewsLoading
                           ? "Loading reviews..."
-                          : reviewCount > 0
-                            ? `${reviewCount.toLocaleString()}k+ verified reviews`
-                            : "No reviews yet"}
+                          : formatReviewCountLabel(reviewCount)}
                       </div>
                     </div>
                   </div>
@@ -1193,7 +997,60 @@ export default function HomePage() {
             </section>
           ) : null}
 
-          {isMounted && recommendedCards.length > 0 ? (
+          {editorialGuideCards.length > 0 ? (
+            <section className={styles.guidesSection}>
+              <div className={styles.guidesHeader}>
+                <p className={styles.guidesEyebrow}>Editorial Guides</p>
+                <h2 className={styles.guidesTitle}>
+                  Start with a trip plan, not a blank search
+                </h2>
+                <p className={styles.guidesDescription}>
+                  Curated routes into pre-filtered results so guests can move
+                  from idea to booking faster.
+                </p>
+              </div>
+
+              <div className={styles.guidesGrid}>
+                {editorialGuideCards.map((guide) => (
+                  <article key={guide.id} className={styles.guideCard}>
+                    <Link href={guide.href} className={styles.guideCardLink}>
+                      {guide.imageUrl ? (
+                        <Image
+                          src={guide.imageUrl}
+                          alt={guide.title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1180px) 50vw, 25vw"
+                          className={styles.guideCardImage}
+                        />
+                      ) : (
+                        <div className={styles.guideCardFallback} />
+                      )}
+                      <div className={styles.guideCardShade} />
+                      <div className={styles.guideCardContent}>
+                        <p className={styles.guideCardEyebrow}>
+                          {guide.eyebrow}
+                        </p>
+                        <h3>{guide.title}</h3>
+                        <p className={styles.guideCardDescription}>
+                          {guide.description}
+                        </p>
+                        <p className={styles.guideCardMeta}>
+                          {formatHotelLocationLabel(guide.location)} ·{" "}
+                          {guide.checkIn} - {guide.checkOut} · {guide.guests}{" "}
+                          guest{guide.guests === "1" ? "" : "s"}
+                        </p>
+                        <span className={styles.guideCardCta}>
+                          Open plan <span aria-hidden>↗</span>
+                        </span>
+                      </div>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {recommendedCards.length > 0 ? (
             <section className={styles.signatureSection}>
               <div className={styles.signatureHeader}>
                 <p className={styles.signatureEyebrow}>Recommended Stays</p>
@@ -1264,7 +1121,7 @@ export default function HomePage() {
             </section>
           ) : null}
 
-          {isMounted && trendingRailCards.length > 0 ? (
+          {trendingRailCards.length > 0 ? (
             <section className={styles.trendingSection}>
               <div className={styles.trendingHeader}>
                 <div>
@@ -1319,7 +1176,7 @@ export default function HomePage() {
             </section>
           ) : null}
 
-          {isMounted ? (
+          {valuePillars.length > 0 ? (
             <section className={styles.valueSection}>
               <div className={styles.valueHeader}>
                 <p className={styles.valueEyebrow}>Why guests choose Meomul</p>
@@ -1340,7 +1197,7 @@ export default function HomePage() {
             </section>
           ) : null}
 
-          {isMounted && lastMinuteDeals.length > 0 ? (
+          {lastMinuteDeals.length > 0 ? (
             <section className={styles.dealsSection}>
               <div className={styles.dealsHeader}>
                 <div>
@@ -1388,7 +1245,7 @@ export default function HomePage() {
             </section>
           ) : null}
 
-          {isMounted && testimonialReviews.length > 0 ? (
+          {testimonialReviews.length > 0 ? (
             <section className={styles.testimonialsSection}>
               <div className={styles.testimonialsHeader}>
                 <div className={styles.testimonialsTopRow}>
@@ -1495,63 +1352,127 @@ export default function HomePage() {
               </div>
             </section>
           ) : null}
-
-
-          {isMounted && editorialGuideCards.length > 0 ? (
-            <section className={styles.guidesSection}>
-              <div className={styles.guidesHeader}>
-                <p className={styles.guidesEyebrow}>Editorial Guides</p>
-                <h2 className={styles.guidesTitle}>
-                  Start with a trip plan, not a blank search
-                </h2>
-                <p className={styles.guidesDescription}>
-                  Curated routes into pre-filtered results so guests can move
-                  from idea to booking faster.
-                </p>
-              </div>
-
-              <div className={styles.guidesGrid}>
-                {editorialGuideCards.map((guide) => (
-                  <article key={guide.id} className={styles.guideCard}>
-                    <Link href={guide.href} className={styles.guideCardLink}>
-                      {guide.imageUrl ? (
-                        <Image
-                          src={guide.imageUrl}
-                          alt={guide.title}
-                          fill
-                          sizes="(max-width: 640px) 100vw, (max-width: 1180px) 50vw, 25vw"
-                          className={styles.guideCardImage}
-                        />
-                      ) : (
-                        <div className={styles.guideCardFallback} />
-                      )}
-                      <div className={styles.guideCardShade} />
-                      <div className={styles.guideCardContent}>
-                        <p className={styles.guideCardEyebrow}>
-                          {guide.eyebrow}
-                        </p>
-                        <h3>{guide.title}</h3>
-                        <p className={styles.guideCardDescription}>
-                          {guide.description}
-                        </p>
-                        <p className={styles.guideCardMeta}>
-                          {formatHotelLocationLabel(guide.location)} ·{" "}
-                          {guide.checkIn} - {guide.checkOut} · {guide.guests}{" "}
-                          guest{guide.guests === "1" ? "" : "s"}
-                        </p>
-                        <span className={styles.guideCardCta}>
-                          Open plan <span aria-hidden>↗</span>
-                        </span>
-                      </div>
-                    </Link>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
         </div>
       </main>
     </>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<HomePageProps> = async (
+  context,
+) => {
+  if (context.res) {
+    context.res.setHeader(
+      "Cache-Control",
+      process.env.NODE_ENV === "production"
+        ? "public, s-maxage=60, stale-while-revalidate=300"
+        : "no-store",
+    );
+  }
+
+  const client = createApolloClient();
+  const fallbackToday = new Date();
+  const serverTodayIso = `${fallbackToday.getFullYear()}-${`${fallbackToday.getMonth() + 1}`.padStart(2, "0")}-${`${fallbackToday.getDate()}`.padStart(2, "0")}`;
+
+  try {
+    const [hotelsResult, trendingResult, dealsResult, testimonialsResult] =
+      await Promise.all([
+        client.query<GetHotelsQueryData, GetHotelsQueryVars>({
+          query: GET_HOTELS_QUERY,
+          variables: { input: HERO_QUERY_INPUT },
+          fetchPolicy: "no-cache",
+        }),
+        client.query<GetTrendingHotelsQueryData, GetTrendingHotelsQueryVars>({
+          query: GET_TRENDING_HOTELS_QUERY,
+          variables: { limit: TRENDING_RAIL_LIMIT },
+          fetchPolicy: "no-cache",
+        }),
+        client.query<
+          GetHomeLastMinuteDealsQueryData,
+          GetHomeLastMinuteDealsQueryVars
+        >({
+          query: GET_HOME_LAST_MINUTE_DEALS_QUERY,
+          variables: { limit: LAST_MINUTE_DEALS_LIMIT },
+          fetchPolicy: "no-cache",
+        }),
+        client.query<GetHomeTestimonialsQueryData, GetHomeTestimonialsQueryVars>(
+          {
+            query: GET_HOME_TESTIMONIALS_QUERY,
+            variables: { limit: TESTIMONIAL_LIMIT },
+            fetchPolicy: "no-cache",
+          },
+        ),
+      ]);
+
+    const initialTopHotels = hotelsResult.data?.getHotels.list ?? [];
+    const initialHotelInventoryTotal =
+      hotelsResult.data?.getHotels.metaCounter.total ?? 0;
+    const initialTrendingHotels = trendingResult.data?.getTrendingHotels ?? [];
+    const initialLastMinuteDeals =
+      dealsResult.data?.getHomeLastMinuteDeals.map((deal) => ({
+        ...deal,
+        validUntil: String(deal.validUntil),
+      })) ?? [];
+    const initialTestimonials =
+      testimonialsResult.data?.getHomeTestimonials.map((entry) => ({
+        hotelId: entry.hotelId,
+        hotelTitle: entry.hotelTitle,
+        review: entry.review,
+      })) ?? [];
+
+    let initialFeaturedReviews: ReviewDto[] = [];
+    let initialFeaturedRatingsSummary: ReviewRatingsSummaryDto | null = null;
+
+    const featuredHotelId = initialTopHotels[0]?._id;
+    if (featuredHotelId) {
+      try {
+        const reviewsResult = await client.query<
+          GetHotelReviewsQueryData,
+          GetHotelReviewsQueryVars
+        >({
+          query: GET_HOTEL_REVIEWS_QUERY,
+          variables: {
+            hotelId: featuredHotelId,
+            input: REVIEW_QUERY_INPUT,
+          },
+          fetchPolicy: "no-cache",
+        });
+
+        initialFeaturedReviews = reviewsResult.data?.getHotelReviews.list ?? [];
+        initialFeaturedRatingsSummary =
+          reviewsResult.data?.getHotelReviews.ratingsSummary ?? null;
+      } catch {
+        initialFeaturedReviews = [];
+        initialFeaturedRatingsSummary = null;
+      }
+    }
+
+    return {
+      props: {
+        initialTopHotels,
+        initialHotelInventoryTotal,
+        initialTrendingHotels,
+        initialFeaturedReviews,
+        initialFeaturedRatingsSummary,
+        initialTestimonials,
+        initialLastMinuteDeals,
+        serverTodayIso,
+        initialLoadError: null,
+      },
+    };
+  } catch {
+    return {
+      props: {
+        initialTopHotels: [],
+        initialHotelInventoryTotal: 0,
+        initialTrendingHotels: [],
+        initialFeaturedReviews: [],
+        initialFeaturedRatingsSummary: null,
+        initialTestimonials: [],
+        initialLastMinuteDeals: [],
+        serverTodayIso,
+        initialLoadError: "Failed to load homepage data right now.",
+      },
+    };
+  }
+};

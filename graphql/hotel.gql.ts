@@ -297,6 +297,60 @@ export const GET_HOTEL_REVIEWS_QUERY = gql`
   }
 `;
 
+export const GET_HOME_TESTIMONIALS_QUERY = gql`
+  query GetHomeTestimonials($limit: Int) {
+    getHomeTestimonials(limit: $limit) {
+      hotelId
+      hotelTitle
+      review {
+        _id
+        reviewerId
+        reviewerNick
+        reviewerImage
+        bookingId
+        hotelId
+        overallRating
+        cleanlinessRating
+        locationRating
+        serviceRating
+        amenitiesRating
+        valueRating
+        reviewTitle
+        reviewText
+        guestPhotos
+        helpfulCount
+        reviewStatus
+        verifiedStay
+        stayDate
+        createdAt
+        hotelResponse {
+          responseText
+          respondedBy
+          respondedAt
+        }
+      }
+    }
+  }
+`;
+
+export const GET_HOME_LAST_MINUTE_DEALS_QUERY = gql`
+  query GetHomeLastMinuteDeals($limit: Int) {
+    getHomeLastMinuteDeals(limit: $limit) {
+      roomId
+      hotelId
+      hotelTitle
+      hotelLocation
+      roomName
+      roomType
+      imageUrl
+      basePrice
+      dealPrice
+      discountPercent
+      validUntil
+    }
+  }
+`;
+
 export const GET_SIMILAR_HOTELS_QUERY = gql`
   query GetSimilarHotels($hotelId: String!, $limit: Int) {
     getSimilarHotels(hotelId: $hotelId, limit: $limit) {

@@ -28,12 +28,27 @@ interface CalendarCell {
   key: string;
 }
 
-const MONTH_LABELS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTH_LABELS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-const isIsoDateInput = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
+const isIsoDateInput = (value: string): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value);
 
-const createUtcDate = (year: number, monthIndex: number, day: number): Date => new Date(Date.UTC(year, monthIndex, day));
+const createUtcDate = (year: number, monthIndex: number, day: number): Date =>
+  new Date(Date.UTC(year, monthIndex, day));
 
 const parseIsoDate = (value: string): Date | null => {
   if (!isIsoDateInput(value)) {
@@ -41,7 +56,11 @@ const parseIsoDate = (value: string): Date | null => {
   }
 
   const [yearText, monthText, dayText] = value.split("-");
-  return createUtcDate(Number(yearText), Number(monthText) - 1, Number(dayText));
+  return createUtcDate(
+    Number(yearText),
+    Number(monthText) - 1,
+    Number(dayText),
+  );
 };
 
 const toIsoDate = (value: Date): string => {
@@ -51,14 +70,17 @@ const toIsoDate = (value: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-const startOfUtcMonth = (value: Date): Date => createUtcDate(value.getUTCFullYear(), value.getUTCMonth(), 1);
+const startOfUtcMonth = (value: Date): Date =>
+  createUtcDate(value.getUTCFullYear(), value.getUTCMonth(), 1);
 
-const addUtcMonths = (value: Date, amount: number): Date => createUtcDate(value.getUTCFullYear(), value.getUTCMonth() + amount, 1);
+const addUtcMonths = (value: Date, amount: number): Date =>
+  createUtcDate(value.getUTCFullYear(), value.getUTCMonth() + amount, 1);
 
 const isSameUtcDay = (first: Date | null, second: Date | null): boolean =>
   Boolean(first && second && first.getTime() === second.getTime());
 
-const isBeforeUtcDay = (first: Date, second: Date): boolean => first.getTime() < second.getTime();
+const isBeforeUtcDay = (first: Date, second: Date): boolean =>
+  first.getTime() < second.getTime();
 
 const parseGuestCount = (value: string): number => {
   const parsed = Number(value);
@@ -115,10 +137,17 @@ const getNightCount = (checkIn: Date | null, checkOut: Date | null): number => {
     return 0;
   }
 
-  return Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.round(
+    (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24),
+  );
 };
 
-export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }: HotelsDiscoveryToolbarProps) {
+export function HotelsDiscoveryToolbar({
+  state,
+  total,
+  loading,
+  onOpenFilters,
+}: HotelsDiscoveryToolbarProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const desktopPanelRef = useRef<HTMLDivElement | null>(null);
   const mobilePanelRef = useRef<HTMLDivElement | null>(null);
@@ -126,7 +155,9 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
   const [draftText, setDraftText] = useState(state.textInput);
   const [draftCheckIn, setDraftCheckIn] = useState(state.checkInInput);
   const [draftCheckOut, setDraftCheckOut] = useState(state.checkOutInput);
-  const [draftGuests, setDraftGuests] = useState<number>(parseGuestCount(state.guestCountInput));
+  const [draftGuests, setDraftGuests] = useState<number>(
+    parseGuestCount(state.guestCountInput),
+  );
   const [visibleMonthStart, setVisibleMonthStart] = useState<Date | null>(null);
   const [todayDate, setTodayDate] = useState<Date | null>(null);
 
@@ -136,7 +167,9 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
 
   useEffect(() => {
     const now = new Date();
-    setTodayDate(createUtcDate(now.getFullYear(), now.getMonth(), now.getDate()));
+    setTodayDate(
+      createUtcDate(now.getFullYear(), now.getMonth(), now.getDate()),
+    );
   }, []);
 
   useEffect(() => {
@@ -147,7 +180,10 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
     const handlePointerDown = (event: MouseEvent) => {
       const targetNode = event.target as Node;
 
-      if (mobilePanelRef.current?.contains(targetNode) || desktopPanelRef.current?.contains(targetNode)) {
+      if (
+        mobilePanelRef.current?.contains(targetNode) ||
+        desktopPanelRef.current?.contains(targetNode)
+      ) {
         return;
       }
 
@@ -197,27 +233,75 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
     state.textInput,
   ]);
 
-  const selectedCheckInDate = useMemo(() => parseIsoDate(draftCheckIn), [draftCheckIn]);
-  const selectedCheckOutDate = useMemo(() => parseIsoDate(draftCheckOut), [draftCheckOut]);
+  const selectedCheckInDate = useMemo(
+    () => parseIsoDate(draftCheckIn),
+    [draftCheckIn],
+  );
+  const selectedCheckOutDate = useMemo(
+    () => parseIsoDate(draftCheckOut),
+    [draftCheckOut],
+  );
   const hasDraftDateError = Boolean(
-    selectedCheckInDate && selectedCheckOutDate && !isBeforeUtcDay(selectedCheckInDate, selectedCheckOutDate),
+    selectedCheckInDate &&
+    selectedCheckOutDate &&
+    !isBeforeUtcDay(selectedCheckInDate, selectedCheckOutDate),
   );
 
   const primaryMonth = visibleMonthStart;
   const secondaryMonth = primaryMonth ? addUtcMonths(primaryMonth, 1) : null;
   const minimumVisibleMonth = todayDate ? startOfUtcMonth(todayDate) : null;
-  const canGoToPreviousMonth = Boolean(primaryMonth && minimumVisibleMonth && isBeforeUtcDay(minimumVisibleMonth, primaryMonth));
+  const canGoToPreviousMonth = Boolean(
+    primaryMonth &&
+    minimumVisibleMonth &&
+    isBeforeUtcDay(minimumVisibleMonth, primaryMonth),
+  );
 
-  const locationSummary = state.selectedLocation ? formatHotelLocationLabel(state.selectedLocation) : "Anywhere";
-  const dateSummary = formatHotelDateSummary(state.checkInInput, state.checkOutInput);
+  const locationSummary = state.selectedLocation
+    ? formatHotelLocationLabel(state.selectedLocation)
+    : "Anywhere";
+  const dateSummary = formatHotelDateSummary(
+    state.checkInInput,
+    state.checkOutInput,
+  );
   const guestSummary = formatHotelGuestSummary(state.guestCountInput);
-  const stayNightCount = getNightCount(selectedCheckInDate, selectedCheckOutDate);
+  const stayNightCount = getNightCount(
+    selectedCheckInDate,
+    selectedCheckOutDate,
+  );
 
-  const applySearch = (additionalPatch?: Record<string, string | undefined>) => {
+  const applySearch = (
+    additionalPatch?: Record<string, string | undefined>,
+  ) => {
     state.patchQuery({
       q: draftText.trim() || undefined,
       ...additionalPatch,
     });
+  };
+
+  const handleRestoreHistory = (item: {
+    text?: string | null;
+    location?: string | null;
+    hotelTypes?: string[] | null;
+    priceMin?: number | null;
+    priceMax?: number | null;
+    purpose?: string | null;
+    amenities?: string[] | null;
+    starRatings?: number[] | null;
+    guestCount?: number | null;
+  }) => {
+    const patch: Record<string, string | undefined> = {
+      q: item.text || undefined,
+      location: item.location || undefined,
+      types: item.hotelTypes?.length ? item.hotelTypes.join(",") : undefined,
+      min: item.priceMin != null ? String(item.priceMin) : undefined,
+      max: item.priceMax != null ? String(item.priceMax) : undefined,
+      purpose: item.purpose || undefined,
+      amenities: item.amenities?.length ? item.amenities.join(",") : undefined,
+      stars: item.starRatings?.length ? item.starRatings.join(",") : undefined,
+      guests: item.guestCount != null ? String(item.guestCount) : undefined,
+    };
+    setDraftText(item.text || "");
+    state.patchQuery(patch, true);
   };
 
   const togglePanel = (nextPanel: Exclude<OpenPanel, null>) => {
@@ -340,15 +424,25 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
     const cells = buildMonthCells(monthStart);
 
     return (
-      <div key={monthStart.toISOString()} className="rounded-[1.15rem] border border-slate-200 bg-white/90 p-2 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.4)]">
+      <div
+        key={monthStart.toISOString()}
+        className="rounded-[1.15rem] border border-slate-200 bg-white/90 p-2 shadow-[0_16px_30px_-26px_rgba(15,23,42,0.4)]"
+      >
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-900">{formatMonthTitle(monthStart)}</p>
-          <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Exact dates</p>
+          <p className="text-sm font-semibold text-slate-900">
+            {formatMonthTitle(monthStart)}
+          </p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Exact dates
+          </p>
         </div>
 
         <div className="grid grid-cols-7 gap-0.5 text-center text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">
           {WEEKDAY_LABELS.map((label) => (
-            <span key={`${monthStart.toISOString()}-${label}`} className="py-0.5">
+            <span
+              key={`${monthStart.toISOString()}-${label}`}
+              className="py-0.5"
+            >
               {label}
             </span>
           ))}
@@ -359,18 +453,26 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
             const cellDate = cell.date;
 
             if (!cellDate) {
-              return <div key={cell.key} className="h-8 rounded-md border border-transparent" aria-hidden="true" />;
+              return (
+                <div
+                  key={cell.key}
+                  className="h-8 rounded-md border border-transparent"
+                  aria-hidden="true"
+                />
+              );
             }
 
-            const isPastDate = Boolean(todayDate && isBeforeUtcDay(cellDate, todayDate));
+            const isPastDate = Boolean(
+              todayDate && isBeforeUtcDay(cellDate, todayDate),
+            );
             const isStart = isSameUtcDay(selectedCheckInDate, cellDate);
             const isEnd = isSameUtcDay(selectedCheckOutDate, cellDate);
             const isBoundary = isStart || isEnd;
             const isInRange = Boolean(
               selectedCheckInDate &&
-                selectedCheckOutDate &&
-                isBeforeUtcDay(selectedCheckInDate, cellDate) &&
-                isBeforeUtcDay(cellDate, selectedCheckOutDate),
+              selectedCheckOutDate &&
+              isBeforeUtcDay(selectedCheckInDate, cellDate) &&
+              isBeforeUtcDay(cellDate, selectedCheckOutDate),
             );
 
             return (
@@ -469,7 +571,11 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
         : "left-0 right-0 md:left-auto md:w-full md:max-w-2xl";
 
   const mobilePanelTitle =
-    openPanel === "location" ? "Choose location" : openPanel === "dates" ? "Choose dates" : "Choose guests";
+    openPanel === "location"
+      ? "Choose location"
+      : openPanel === "dates"
+        ? "Choose dates"
+        : "Choose guests";
 
   const mobileQuickFilterLayer =
     openPanel && typeof document !== "undefined"
@@ -492,8 +598,12 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
                 <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-200" />
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Quick filter</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">{mobilePanelTitle}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Quick filter
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {mobilePanelTitle}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -503,14 +613,22 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                     aria-label="Close panel"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="h-4 w-4"
+                    >
                       <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">{panelContent}</div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                {panelContent}
+              </div>
             </div>
           </div>,
           document.body,
@@ -528,6 +646,7 @@ export function HotelsDiscoveryToolbar({ state, total, loading, onOpenFilters }:
           onSortChange={(value) => {
             state.patchQuery({ sort: value });
           }}
+          onRestoreHistory={handleRestoreHistory}
         />
 
         <HotelsQuickFiltersRow

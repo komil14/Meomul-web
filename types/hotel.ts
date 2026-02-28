@@ -417,6 +417,42 @@ export interface GetTrendingHotelsQueryVars {
   limit?: number;
 }
 
+export interface HomeTestimonialDto {
+  hotelId: string;
+  hotelTitle: string;
+  review: ReviewDto;
+}
+
+export interface HomeLastMinuteDealDto {
+  roomId: string;
+  hotelId: string;
+  hotelTitle: string;
+  hotelLocation: HotelLocation | string;
+  roomName: string;
+  roomType: RoomType | string;
+  imageUrl: string;
+  basePrice: number;
+  dealPrice: number;
+  discountPercent: number;
+  validUntil: string;
+}
+
+export interface GetHomeTestimonialsQueryData {
+  getHomeTestimonials: HomeTestimonialDto[];
+}
+
+export interface GetHomeTestimonialsQueryVars {
+  limit?: number;
+}
+
+export interface GetHomeLastMinuteDealsQueryData {
+  getHomeLastMinuteDeals: HomeLastMinuteDealDto[];
+}
+
+export interface GetHomeLastMinuteDealsQueryVars {
+  limit?: number;
+}
+
 export interface GetRecommendedHotelsQueryData {
   getRecommendedHotels: HotelListItem[];
 }
