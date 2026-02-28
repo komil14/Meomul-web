@@ -37,6 +37,7 @@ import {
   CheckCheck,
   Download,
   File,
+  MessageSquare,
   Send,
   Wifi,
   WifiOff,
@@ -128,13 +129,19 @@ function isSameDay(a: string, b: string): boolean {
 
 function TypingIndicator() {
   return (
-    <div className="flex items-center gap-2 px-1 py-1">
-      <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-        {[0, 150, 300].map((delay) => (
+    <div className="flex items-end gap-2 py-1">
+      <div
+        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-bold text-slate-400"
+        aria-hidden
+      >
+        H
+      </div>
+      <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-slate-100 bg-white px-3.5 py-2.5 shadow-sm">
+        {[0, 160, 320].map((delay) => (
           <span
             key={delay}
-            className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400"
-            style={{ animationDelay: `${delay}ms`, animationDuration: "0.9s" }}
+            className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300"
+            style={{ animationDelay: `${delay}ms`, animationDuration: "1s" }}
           />
         ))}
       </div>
@@ -148,21 +155,24 @@ function MessageBubble({
   message,
   isOwn,
   showTime,
+  isLastInGroup,
 }: {
   message: MessageDto;
   isOwn: boolean;
   showTime: boolean;
+  isLastInGroup: boolean;
 }) {
   const time = formatMessageTime(message.timestamp);
 
-  const sentCls = "bg-sky-500 text-white rounded-xl";
-  const recvCls = "bg-white border border-slate-200 text-slate-900 rounded-xl shadow-sm";
-  const bubble = isOwn ? sentCls : recvCls;
+  // Tail only on last message in a group for a more modern look
+  const sentCls = `bg-sky-500 text-white ${isLastInGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`;
+  const recvCls = `bg-white text-slate-900 border border-slate-100 shadow-sm ${isLastInGroup ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`;
 
   return (
     <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
-      <div className={`relative max-w-[75%] overflow-hidden sm:max-w-[65%] ${bubble}`}>
-
+      <div
+        className={`relative max-w-[78%] overflow-hidden sm:max-w-[68%] ${isOwn ? sentCls : recvCls}`}
+      >
         {/* IMAGE */}
         {message.messageType === "IMAGE" && message.imageUrl && (
           <a href={message.imageUrl} target="_blank" rel="noreferrer" className="block">
@@ -187,11 +197,11 @@ function MessageBubble({
             }`}
           >
             <div
-              className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${
+              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${
                 isOwn ? "bg-white/20" : "bg-sky-50"
               }`}
             >
-              <File size={18} className={isOwn ? "text-white" : "text-sky-600"} />
+              <File size={16} className={isOwn ? "text-white" : "text-sky-600"} />
             </div>
             <div className="min-w-0 flex-1">
               <p
@@ -205,28 +215,36 @@ function MessageBubble({
                 Attachment
               </p>
             </div>
-            <Download size={14} className={isOwn ? "text-white/60" : "text-slate-400"} />
+            <Download size={13} className={isOwn ? "text-white/60" : "text-slate-400"} />
           </a>
         )}
 
         {/* TEXT */}
         {message.messageType === "TEXT" && (
-          <p className={`break-words px-3.5 py-2.5 text-sm leading-relaxed ${showTime ? "pb-1.5" : ""}`}>
+          <p
+            className={`break-words px-3.5 py-2.5 text-sm leading-relaxed ${
+              showTime ? "pb-1.5" : ""
+            }`}
+          >
             {message.content}
           </p>
         )}
 
         {/* Timestamp + read receipt */}
         {showTime && (
-          <div className={`flex items-center gap-1 px-3.5 pb-2 ${isOwn ? "justify-end" : "justify-end"}`}>
+          <div
+            className={`flex items-center gap-1 px-3.5 pb-2 ${
+              isOwn ? "justify-end" : "justify-start"
+            }`}
+          >
             <span className={`text-[10px] ${isOwn ? "text-white/60" : "text-slate-400"}`}>
               {time}
             </span>
             {isOwn &&
               (message.read ? (
-                <CheckCheck size={12} className="text-white/80" />
+                <CheckCheck size={11} className="text-white/80" />
               ) : (
-                <Check size={12} className="text-white/50" />
+                <Check size={11} className="text-white/50" />
               ))}
           </div>
         )}
@@ -246,7 +264,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const isUser = memberType === "USER";
   const isOperatorSide = !isUser;
   const isAgent = memberType === "AGENT";
-  const chatId = typeof router.query.chatId === "string" ? router.query.chatId : "";
+  const chatId =
+    typeof router.query.chatId === "string" ? router.query.chatId : "";
 
   const [messageInput, setMessageInput] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
@@ -262,6 +281,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const socketJoinFailedRef = useRef(false);
   const lastEventRefetchAtRef = useRef(0);
   const queuedEventRefetchTimeoutRef = useRef<number | null>(null);
+  // Track count to know which messages are "new" (for entry animation)
+  const prevMessageCountRef = useRef(0);
 
   /** QUERIES **/
 
@@ -305,7 +326,11 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
   /** EFFECTS **/
 
-  const unreadForMe = chat ? (isUser ? chat.unreadGuestMessages : chat.unreadAgentMessages) : 0;
+  const unreadForMe = chat
+    ? isUser
+      ? chat.unreadGuestMessages
+      : chat.unreadAgentMessages
+    : 0;
 
   // Auto mark-as-read
   useEffect(() => {
@@ -339,6 +364,11 @@ const ChatThreadPage: NextPageWithAuth = () => {
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat?.messages.length]);
+
+  // Track previous message count for animation
+  useEffect(() => {
+    prevMessageCountRef.current = chat?.messages.length ?? 0;
   }, [chat?.messages.length]);
 
   // Socket setup
@@ -415,7 +445,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
       if (!payload?.chatId || payload.chatId !== chatId) return;
       if (!payload.userId || payload.userId === member?._id) return;
       setTypingUserId(payload.userId);
-      if (remoteTypingTimeoutRef.current) window.clearTimeout(remoteTypingTimeoutRef.current);
+      if (remoteTypingTimeoutRef.current)
+        window.clearTimeout(remoteTypingTimeoutRef.current);
       remoteTypingTimeoutRef.current = window.setTimeout(() => {
         setTypingUserId(null);
         remoteTypingTimeoutRef.current = null;
@@ -576,23 +607,20 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
   /** COMPUTED **/
 
-  const canClaim = Boolean(chat && isAgent && !chat.assignedAgentId && chat.chatStatus !== "CLOSED");
-  const canSend  = Boolean(chat && chat.chatStatus !== "CLOSED");
+  const canClaim = Boolean(
+    chat && isAgent && !chat.assignedAgentId && chat.chatStatus !== "CLOSED",
+  );
+  const canSend = Boolean(chat && chat.chatStatus !== "CLOSED");
   const canClose = Boolean(chat && chat.chatStatus !== "CLOSED" && isOperatorSide);
 
   const hotelTitle = hotelData?.getHotel.hotelTitle ?? "Hotel Support";
   const hotelLocation = hotelData?.getHotel.hotelLocation ?? "";
   const hotelAvatarColor = avatarBg(chat?.hotelId ?? hotelTitle);
 
-  const STATUS_LABEL: Record<string, string> = {
-    WAITING: "Waiting for agent",
-    ACTIVE: "Active",
-    CLOSED: "Closed",
-  };
-  const STATUS_DOT: Record<string, string> = {
-    WAITING: "bg-amber-400",
-    ACTIVE: "bg-emerald-400",
-    CLOSED: "bg-slate-300",
+  const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
+    WAITING: { label: "Waiting for agent", color: "text-amber-600", dot: "bg-amber-400" },
+    ACTIVE: { label: "Active", color: "text-emerald-600", dot: "bg-emerald-400" },
+    CLOSED: { label: "Closed", color: "text-slate-400", dot: "bg-slate-300" },
   };
 
   if (!chatId) {
@@ -606,239 +634,288 @@ const ChatThreadPage: NextPageWithAuth = () => {
     );
   }
 
+  const statusCfg = chat ? (STATUS_CONFIG[chat.chatStatus] ?? STATUS_CONFIG.CLOSED) : null;
+
   return (
-    <main
-      className="-mx-3 -my-8 flex flex-col overflow-hidden sm:-mx-6 sm:-my-10"
-      style={{ height: "calc(100svh - 57px)" }}
-    >
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="flex flex-none items-center gap-3 border-b border-slate-200 bg-white px-3 py-3 shadow-sm">
-        {/* Back */}
-        <Link
-          href="/chats"
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100"
-        >
-          <ArrowLeft size={18} />
-        </Link>
+    <>
+      <style>{`
+        @keyframes msgSlideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes typingFade {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes headerFade {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-        {/* Avatar */}
-        <div
-          className={`relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${hotelAvatarColor} text-sm font-bold uppercase text-white`}
+      <main
+        className="-mx-3 -my-8 flex flex-col overflow-hidden sm:-mx-6 sm:-my-10"
+        style={{ height: "calc(100svh - 57px)" }}
+      >
+        {/* ── Header ── */}
+        <header
+          className="flex flex-none items-center gap-3 border-b border-slate-100 bg-white px-4 py-3.5 shadow-sm"
+          style={{ animation: "headerFade 0.25s ease-out both" }}
         >
-          {hotelTitle.charAt(0)}
-          {chat && (
-            <span
-              className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-white ${
-                STATUS_DOT[chat.chatStatus] ?? "bg-slate-300"
-              }`}
-            />
-          )}
-        </div>
+          {/* Back */}
+          <Link
+            href="/chats"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
+          >
+            <ArrowLeft size={18} />
+          </Link>
 
-        {/* Name + status */}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900">{hotelTitle}</p>
-          <div className="flex items-center gap-1.5">
-            {chat ? (
-              <p className="text-xs text-slate-400">
-                {STATUS_LABEL[chat.chatStatus] ?? chat.chatStatus}
-                {hotelLocation ? ` · ${hotelLocation}` : ""}
-              </p>
-            ) : (
-              <div className="h-3 w-24 animate-pulse rounded-full bg-slate-100" />
+          {/* Avatar */}
+          <div
+            className={`relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${hotelAvatarColor} text-sm font-bold uppercase text-white`}
+          >
+            {hotelTitle.charAt(0)}
+            {chat && statusCfg && (
+              <span
+                className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white ${statusCfg.dot}`}
+              />
             )}
-            <span title={socketConnected ? "Live" : "Polling fallback"}>
-              {socketConnected ? (
-                <Wifi size={11} className="text-emerald-400" />
-              ) : (
-                <WifiOff size={11} className="text-slate-300" />
-              )}
-            </span>
           </div>
-        </div>
 
-        {/* Agent actions */}
-        <div className="flex flex-shrink-0 items-center gap-2">
-          {canClaim && (
-            <button
-              type="button"
-              onClick={() => { void onClaimChat(); }}
-              disabled={claiming}
-              className="rounded-full bg-sky-500 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-600 disabled:opacity-60 active:scale-95"
-            >
-              {claiming ? "Claiming…" : "Claim"}
-            </button>
-          )}
-          {canClose && (
-            <button
-              type="button"
-              onClick={() => { void onCloseChat(); }}
-              disabled={closing}
-              className="rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 disabled:opacity-60 active:scale-95"
-            >
-              {closing ? "Closing…" : "Close"}
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* ── Error banner ─────────────────────────────────────────────────── */}
-      {error && (
-        <div className="flex-none bg-rose-50 px-4 py-2 text-xs font-medium text-rose-700">
-          Failed to load chat: {getErrorMessage(error)}
-        </div>
-      )}
-
-      {/* ── Messages area ────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto bg-slate-50">
-        {/* Loading skeletons */}
-        {loading && !chat && (
-          <div className="flex flex-col gap-4 px-4 py-8">
-            {[false, true, false, true, false].map((own, i) => (
-              <div key={i} className={`flex ${own ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`h-10 animate-pulse rounded-xl ${
-                    own ? "w-48 bg-sky-200/60" : "w-56 bg-white"
-                  }`}
-                />
+          {/* Name + status */}
+          <div className="min-w-0 flex-1">
+            {chat ? (
+              <>
+                <p className="truncate text-[15px] font-semibold text-slate-900">
+                  {hotelTitle}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className={`text-xs ${statusCfg?.color ?? "text-slate-400"}`}>
+                    {statusCfg?.label ?? chat.chatStatus}
+                    {hotelLocation ? ` · ${hotelLocation}` : ""}
+                  </p>
+                  <span title={socketConnected ? "Live connection" : "Polling fallback"}>
+                    {socketConnected ? (
+                      <Wifi size={10} className="text-emerald-400" />
+                    ) : (
+                      <WifiOff size={10} className="text-slate-300" />
+                    )}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="h-3.5 w-32 animate-pulse rounded-full bg-slate-100" />
+                <div className="h-3 w-20 animate-pulse rounded-full bg-slate-100" />
               </div>
-            ))}
+            )}
+          </div>
+
+          {/* Agent actions */}
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {canClaim && (
+              <button
+                type="button"
+                onClick={() => {
+                  void onClaimChat();
+                }}
+                disabled={claiming}
+                className="rounded-full bg-sky-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600 disabled:opacity-60 active:scale-95"
+              >
+                {claiming ? "Claiming…" : "Claim"}
+              </button>
+            )}
+            {canClose && (
+              <button
+                type="button"
+                onClick={() => {
+                  void onCloseChat();
+                }}
+                disabled={closing}
+                className="rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 disabled:opacity-60 active:scale-95"
+              >
+                {closing ? "Closing…" : "Close"}
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* ── Error banner ── */}
+        {error && (
+          <div className="flex-none border-b border-rose-100 bg-rose-50 px-5 py-2 text-xs font-medium text-rose-700">
+            Failed to load: {getErrorMessage(error)}
           </div>
         )}
 
-        {/* Empty state */}
-        {chat && chat.messages.length === 0 && (
-          <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <span className="text-2xl">💬</span>
-            </div>
-            <p className="text-sm font-semibold text-slate-700">No messages yet</p>
-            <p className="mt-1 text-xs text-slate-400">Send a message to start the conversation</p>
-          </div>
-        )}
-
-        {/* Messages */}
-        {chat && chat.messages.length > 0 && (
-          <div className="space-y-0.5 px-4 py-4">
-            {chat.messages.map((message, index) => {
-              const isOwn =
-                (message.senderType === "GUEST" && isUser) ||
-                (message.senderType === "AGENT" && isOperatorSide);
-
-              const prevMessage = index > 0 ? chat.messages[index - 1] : null;
-              const nextMessage =
-                index < chat.messages.length - 1 ? chat.messages[index + 1] : null;
-
-              const showDateSep =
-                !prevMessage || !isSameDay(prevMessage.timestamp, message.timestamp);
-              const isLastInGroup =
-                !nextMessage || nextMessage.senderType !== message.senderType;
-              const isFirstInGroup =
-                !prevMessage || prevMessage.senderType !== message.senderType;
-              const showTime = isLastInGroup || message.messageType !== "TEXT";
-
-              return (
-                <div key={`${message.senderId}-${message.timestamp}-${index}`}>
-                  {/* Date separator */}
-                  {showDateSep && (
-                    <div className="my-5 flex items-center gap-3">
-                      <div className="h-px flex-1 bg-slate-200" />
-                      <span className="text-[11px] font-medium text-slate-400">
-                        {formatDateSeparator(message.timestamp)}
-                      </span>
-                      <div className="h-px flex-1 bg-slate-200" />
-                    </div>
-                  )}
-
-                  {/* Message row */}
+        {/* ── Messages area ── */}
+        <div className="flex-1 overflow-y-auto bg-slate-50">
+          {/* Loading skeletons */}
+          {loading && !chat && (
+            <div className="flex flex-col gap-4 px-5 py-8">
+              {[false, true, false, true, false].map((own, i) => (
+                <div key={i} className={`flex ${own ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`flex ${isOwn ? "justify-end" : "justify-start"} ${
-                      isLastInGroup ? "mb-3" : "mb-0.5"
+                    className={`h-10 animate-pulse rounded-2xl ${
+                      own ? "w-44 bg-sky-200/50" : "w-56 bg-white shadow-sm"
                     }`}
-                  >
-                    {/* Other side avatar */}
-                    {!isOwn && (
-                      <div className="mr-2 mt-auto flex-shrink-0">
-                        {isLastInGroup ? (
-                          <div
-                            className={`flex h-7 w-7 items-center justify-center rounded-full ${hotelAvatarColor} text-[9px] font-bold uppercase text-white`}
-                          >
-                            {hotelTitle.charAt(0)}
-                          </div>
-                        ) : (
-                          <div className="h-7 w-7" />
-                        )}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {chat && chat.messages.length === 0 && (
+            <div className="flex h-full flex-col items-center justify-center py-24 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm">
+                <MessageSquare size={22} className="text-slate-300" />
+              </div>
+              <p className="text-sm font-semibold text-slate-700">Start the conversation</p>
+              <p className="mt-1 text-xs text-slate-400">
+                Your message goes directly to the hotel team
+              </p>
+            </div>
+          )}
+
+          {/* Messages */}
+          {chat && chat.messages.length > 0 && (
+            <div className="space-y-0.5 px-4 py-5">
+              {chat.messages.map((message, index) => {
+                const isOwn =
+                  (message.senderType === "GUEST" && isUser) ||
+                  (message.senderType === "AGENT" && isOperatorSide);
+
+                const prevMessage = index > 0 ? chat.messages[index - 1] : null;
+                const nextMessage =
+                  index < chat.messages.length - 1 ? chat.messages[index + 1] : null;
+
+                const showDateSep =
+                  !prevMessage || !isSameDay(prevMessage.timestamp, message.timestamp);
+                const isLastInGroup =
+                  !nextMessage || nextMessage.senderType !== message.senderType;
+                const isFirstInGroup =
+                  !prevMessage || prevMessage.senderType !== message.senderType;
+                const showTime = isLastInGroup || message.messageType !== "TEXT";
+
+                // New messages (arrived after initial load) animate in
+                const isNewMsg = index >= prevMessageCountRef.current;
+
+                return (
+                  <div key={`${message.senderId}-${message.timestamp}-${index}`}>
+                    {/* Date separator */}
+                    {showDateSep && (
+                      <div className="my-6 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-slate-200/70" />
+                        <span className="rounded-full border border-slate-200 bg-white px-3 py-0.5 text-[10px] font-semibold tracking-wide text-slate-400 shadow-sm">
+                          {formatDateSeparator(message.timestamp)}
+                        </span>
+                        <div className="h-px flex-1 bg-slate-200/70" />
                       </div>
                     )}
 
-                    <div className="flex max-w-[75%] flex-col gap-0.5 sm:max-w-[65%]">
-                      {/* Sender label on first in group (other side) */}
-                      {!isOwn && isFirstInGroup && (
-                        <p className="ml-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                          Hotel Staff
-                        </p>
+                    {/* Message row */}
+                    <div
+                      className={`flex ${isOwn ? "justify-end" : "justify-start"} ${
+                        isLastInGroup ? "mb-3" : "mb-0.5"
+                      }`}
+                      style={
+                        isNewMsg
+                          ? { animation: "msgSlideIn 0.2s ease-out both" }
+                          : undefined
+                      }
+                    >
+                      {/* Received: hotel avatar placeholder */}
+                      {!isOwn && (
+                        <div className="mr-2 mt-auto flex-shrink-0">
+                          {isLastInGroup ? (
+                            <div
+                              className={`flex h-7 w-7 items-center justify-center rounded-full ${hotelAvatarColor} text-[9px] font-bold uppercase text-white`}
+                            >
+                              {hotelTitle.charAt(0)}
+                            </div>
+                          ) : (
+                            <div className="h-7 w-7" />
+                          )}
+                        </div>
                       )}
-                      <MessageBubble
-                        message={message}
-                        isOwn={isOwn}
-                        showTime={showTime}
-                      />
+
+                      <div className="flex max-w-[78%] flex-col gap-0.5 sm:max-w-[68%]">
+                        {/* Sender label */}
+                        {!isOwn && isFirstInGroup && (
+                          <p className="ml-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                            Hotel Staff
+                          </p>
+                        )}
+                        <MessageBubble
+                          message={message}
+                          isOwn={isOwn}
+                          showTime={showTime}
+                          isLastInGroup={isLastInGroup}
+                        />
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+
+              {/* Typing indicator */}
+              {typingUserId && (
+                <div style={{ animation: "typingFade 0.2s ease-out both" }}>
+                  <TypingIndicator />
                 </div>
-              );
-            })}
+              )}
 
-            {/* Typing indicator */}
-            {typingUserId && <TypingIndicator />}
-
-            {/* Scroll anchor */}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </div>
-
-      {/* ── Input area ───────────────────────────────────────────────────── */}
-      <div className="flex-none border-t border-slate-200 bg-white px-4 py-3">
-        {!canSend ? (
-          <div className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 py-3">
-            <p className="text-sm text-slate-500">This conversation is closed</p>
-          </div>
-        ) : (
-          <form onSubmit={onSendMessage}>
-            <div className="flex items-end gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-              <textarea
-                ref={textareaRef}
-                value={messageInput}
-                onChange={onInputChange}
-                onKeyDown={onKeyDown}
-                onBlur={() => { stopTypingSignal(); }}
-                rows={1}
-                placeholder="Write a message…"
-                disabled={sending}
-                className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
-                style={{ minHeight: "32px", maxHeight: "160px" }}
-              />
-              <button
-                type="submit"
-                disabled={!messageInput.trim() || sending}
-                className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all ${
-                  messageInput.trim()
-                    ? "bg-sky-500 text-white hover:bg-sky-600 active:scale-95"
-                    : "text-slate-300"
-                }`}
-                aria-label="Send message"
-              >
-                <Send size={15} />
-              </button>
+              {/* Scroll anchor */}
+              <div ref={messagesEndRef} />
             </div>
-            {messageInput.trim() && (
-              <p className="mt-1 text-right text-[10px] text-slate-400">⌘↩ to send</p>
-            )}
-          </form>
-        )}
-      </div>
-    </main>
+          )}
+        </div>
+
+        {/* ── Input area ── */}
+        <div className="flex-none border-t border-slate-100 bg-white px-4 py-3.5 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
+          {!canSend ? (
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 py-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+              <p className="text-sm text-slate-500">This conversation is closed</p>
+            </div>
+          ) : (
+            <form onSubmit={(e) => { void onSendMessage(e); }}>
+              <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
+                <textarea
+                  ref={textareaRef}
+                  value={messageInput}
+                  onChange={onInputChange}
+                  onKeyDown={onKeyDown}
+                  onBlur={() => {
+                    stopTypingSignal();
+                  }}
+                  rows={1}
+                  placeholder="Write a message…"
+                  disabled={sending}
+                  className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
+                  style={{ minHeight: "32px", maxHeight: "160px" }}
+                />
+                <button
+                  type="submit"
+                  disabled={!messageInput.trim() || sending}
+                  className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
+                    messageInput.trim()
+                      ? "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
+                      : "text-slate-300"
+                  }`}
+                  aria-label="Send message"
+                >
+                  <Send size={15} />
+                </button>
+              </div>
+              {messageInput.trim() && (
+                <p className="mt-1.5 text-right text-[10px] text-slate-400">⌘↩ to send</p>
+              )}
+            </form>
+          )}
+        </div>
+      </main>
+    </>
   );
 };
 

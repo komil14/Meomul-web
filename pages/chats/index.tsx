@@ -105,8 +105,8 @@ function avatarBg(id: string): string {
 function getLastMessagePreview(chat: ChatDto): string {
   const msg = chat.messages.at(-1);
   if (!msg) return "Start the conversation";
-  if (msg.messageType === "IMAGE") return "📷 Photo";
-  if (msg.messageType === "FILE") return "📎 Attachment";
+  if (msg.messageType === "IMAGE") return "Photo";
+  if (msg.messageType === "FILE") return "Attachment";
   return msg.content?.trim() || "Message";
 }
 
@@ -136,7 +136,7 @@ function HotelAvatar({
       ? "h-9 w-9 text-xs"
       : size === "lg"
         ? "h-14 w-14 text-lg"
-        : "h-12 w-12 text-sm";
+        : "h-11 w-11 text-sm";
   return (
     <div className="relative flex-shrink-0">
       <div
@@ -145,10 +145,10 @@ function HotelAvatar({
         {name.charAt(0)}
       </div>
       {status === "ACTIVE" && (
-        <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-white" />
+        <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
       )}
       {status === "WAITING" && (
-        <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full bg-amber-400 ring-2 ring-white" />
+        <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-white" />
       )}
     </div>
   );
@@ -160,21 +160,20 @@ function NewChatOverlay({
   availableHotels,
   myBookings,
   hotelsMap,
+  preselectedHotelId = "",
   onClose,
   onSuccess,
 }: {
   availableHotels: HotelListItem[];
   myBookings: BookingListItem[];
   hotelsMap: Map<string, HotelListItem>;
+  preselectedHotelId?: string;
   onClose: () => void;
   onSuccess: (chatId: string) => void;
 }) {
   const [step, setStep] = useState<"select" | "compose">("select");
-  const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(
-    null,
-  );
-  const [selectedBooking, setSelectedBooking] =
-    useState<BookingListItem | null>(null);
+  const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<BookingListItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -185,16 +184,25 @@ function NewChatOverlay({
     StartChatMutationVars
   >(START_CHAT_MUTATION);
 
+  // Auto-select hotel from query param once hotels are loaded
+  useEffect(() => {
+    if (!preselectedHotelId || selectedHotel || availableHotels.length === 0) return;
+    const hotel = availableHotels.find((h) => h._id === preselectedHotelId);
+    if (hotel) {
+      setSelectedHotel(hotel);
+      setStep("compose");
+    }
+  }, [availableHotels, preselectedHotelId, selectedHotel]);
+
   useEffect(() => {
     if (step === "select") setTimeout(() => searchRef.current?.focus(), 80);
     if (step === "compose") setTimeout(() => textareaRef.current?.focus(), 80);
   }, [step]);
 
-  // Unique booked hotels (most-recent booking per hotel, hotel must exist in map)
+  // Unique booked hotels (most-recent booking per hotel)
   const bookedHotels = useMemo(() => {
     const seen = new Set<string>();
-    const result: Array<{ booking: BookingListItem; hotel: HotelListItem }> =
-      [];
+    const result: Array<{ booking: BookingListItem; hotel: HotelListItem }> = [];
     for (const booking of myBookings) {
       const hotel = hotelsMap.get(booking.hotelId);
       if (!seen.has(booking.hotelId) && hotel) {
@@ -205,7 +213,6 @@ function NewChatOverlay({
     return result;
   }, [myBookings, hotelsMap]);
 
-  // Hotels filtered by search query
   const filteredHotels = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return availableHotels.slice(0, 40);
@@ -216,10 +223,7 @@ function NewChatOverlay({
     );
   }, [availableHotels, searchQuery]);
 
-  const handleSelectHotel = (
-    hotel: HotelListItem,
-    booking?: BookingListItem,
-  ) => {
+  const handleSelectHotel = (hotel: HotelListItem, booking?: BookingListItem) => {
     setSelectedHotel(hotel);
     setSelectedBooking(booking ?? null);
     setStep("compose");
@@ -230,15 +234,12 @@ function NewChatOverlay({
     const content = message.trim();
     if (!content) return;
     try {
-      const res = await startChat({
-        variables: {
-          input: {
-            hotelId: selectedHotel._id,
-            initialMessage: content,
-            bookingId: selectedBooking?._id,
-          },
-        },
-      });
+      const input: StartChatMutationVars["input"] = {
+        hotelId: selectedHotel._id,
+        initialMessage: content,
+      };
+      if (selectedBooking?._id) input.bookingId = selectedBooking._id;
+      const res = await startChat({ variables: { input } });
       const chatId = res.data?.startChat._id;
       if (!chatId) {
         await errorAlert("Error", "Chat was created but ID is missing.");
@@ -251,172 +252,197 @@ function NewChatOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      {/* Overlay header */}
-      <div className="flex flex-none items-center gap-3 border-b border-slate-100 px-4 py-3.5 shadow-sm">
-        <button
-          type="button"
-          onClick={step === "compose" ? () => setStep("select") : onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-50"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex-1 min-w-0">
-          {step === "select" ? (
-            <p className="font-semibold text-slate-900">New Message</p>
-          ) : (
-            <>
-              <p className="truncate font-semibold text-slate-900">
-                {selectedHotel?.hotelTitle}
-              </p>
-              <p className="text-xs text-slate-400">
-                {selectedHotel?.hotelLocation}
-              </p>
-            </>
-          )}
+    <>
+      <style>{`
+        @keyframes overlaySlideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes overlayFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes stepSlideLeft {
+          from { opacity: 0; transform: translateX(16px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+        style={{ animation: "overlayFadeIn 0.2s ease-out both" }}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[80vh] sm:w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+        style={{ animation: "overlaySlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both" }}
+      >
+        {/* Drag handle (mobile) */}
+        <div className="flex flex-none justify-center pt-3 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-slate-200" />
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100"
-        >
-          <X size={18} />
-        </button>
-      </div>
 
-      {/* ── Step 1: Select hotel ─────────────────────────────────────── */}
-      {step === "select" && (
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Search bar */}
-          <div className="px-4 py-3">
-            <div className="flex items-center gap-2.5 rounded-xl bg-slate-100 px-3.5 py-2.5">
-              <Search size={15} className="flex-shrink-0 text-slate-400" />
-              <input
-                ref={searchRef}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search hotels by name or city…"
-                className="flex-1 bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="flex-shrink-0 text-slate-400 hover:text-slate-600"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {/* From your bookings */}
-            {!searchQuery && bookedHotels.length > 0 && (
-              <div className="mb-1">
-                <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-                  From your bookings
+        {/* Header */}
+        <div className="flex flex-none items-center gap-3 px-5 py-4">
+          <button
+            type="button"
+            onClick={step === "compose" ? () => setStep("select") : onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
+          >
+            <ArrowLeft size={17} />
+          </button>
+          <div className="flex-1 min-w-0">
+            {step === "select" ? (
+              <p className="font-semibold text-slate-900">New conversation</p>
+            ) : (
+              <>
+                <p className="truncate font-semibold text-slate-900">
+                  {selectedHotel?.hotelTitle}
                 </p>
-                {bookedHotels.map(({ booking, hotel }) => (
+                <p className="text-xs text-slate-400">
+                  {selectedHotel?.hotelLocation}
+                </p>
+              </>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-slate-100" />
+
+        {/* ── Step 1: Select hotel ── */}
+        {step === "select" && (
+          <div
+            className="flex flex-1 flex-col overflow-hidden"
+            style={{ animation: "stepSlideLeft 0.2s ease-out both" }}
+          >
+            <div className="px-5 pt-4 pb-3">
+              <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 transition focus-within:border-slate-300 focus-within:bg-white">
+                <Search size={14} className="flex-shrink-0 text-slate-400" />
+                <input
+                  ref={searchRef}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search hotels by name or city…"
+                  className="flex-1 bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none"
+                />
+                {searchQuery && (
                   <button
-                    key={booking._id}
                     type="button"
-                    onClick={() => handleSelectHotel(hotel, booking)}
-                    className="flex w-full items-center gap-3.5 px-4 py-3 text-left transition hover:bg-slate-50 active:bg-slate-100"
+                    onClick={() => setSearchQuery("")}
+                    className="flex-shrink-0 text-slate-400 transition hover:text-slate-600"
                   >
-                    <HotelAvatar name={hotel.hotelTitle} id={hotel._id} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {hotel.hotelTitle}
-                      </p>
-                      <div className="mt-0.5 flex items-center gap-1.5">
-                        <CalendarCheck
-                          size={11}
-                          className="flex-shrink-0 text-slate-400"
-                        />
-                        <p className="truncate text-xs text-slate-500">
-                          #{booking.bookingCode} ·{" "}
-                          {fmtDate(booking.checkInDate)} –{" "}
-                          {fmtDate(booking.checkOutDate)}
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pb-4">
+              {/* From bookings */}
+              {!searchQuery && bookedHotels.length > 0 && (
+                <div className="mb-2">
+                  <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                    From your bookings
+                  </p>
+                  {bookedHotels.map(({ booking, hotel }) => (
+                    <button
+                      key={booking._id}
+                      type="button"
+                      onClick={() => handleSelectHotel(hotel, booking)}
+                      className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition hover:bg-slate-50"
+                    >
+                      <HotelAvatar name={hotel.hotelTitle} id={hotel._id} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {hotel.hotelTitle}
+                        </p>
+                        <div className="mt-0.5 flex items-center gap-1">
+                          <CalendarCheck size={10} className="flex-shrink-0 text-slate-400" />
+                          <p className="truncate text-xs text-slate-400">
+                            #{booking.bookingCode} · {fmtDate(booking.checkInDate)} –{" "}
+                            {fmtDate(booking.checkOutDate)}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          booking.bookingStatus === "CONFIRMED" ||
+                          booking.bookingStatus === "CHECKED_IN"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : booking.bookingStatus === "CANCELLED"
+                              ? "bg-rose-50 text-rose-600"
+                              : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {booking.bookingStatus}
+                      </span>
+                    </button>
+                  ))}
+                  <div className="mx-5 my-2 h-px bg-slate-100" />
+                </div>
+              )}
+
+              {/* All hotels */}
+              <div>
+                <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                  {searchQuery ? `Results (${filteredHotels.length})` : "All hotels"}
+                </p>
+                {filteredHotels.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Building2 size={24} className="mb-2 text-slate-200" />
+                    <p className="text-sm text-slate-400">No hotels found</p>
+                  </div>
+                ) : (
+                  filteredHotels.map((hotel) => (
+                    <button
+                      key={hotel._id}
+                      type="button"
+                      onClick={() => handleSelectHotel(hotel)}
+                      className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition hover:bg-slate-50"
+                    >
+                      <HotelAvatar name={hotel.hotelTitle} id={hotel._id} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {hotel.hotelTitle}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-slate-400">
+                          {hotel.hotelLocation} · {hotel.hotelType}
                         </p>
                       </div>
-                    </div>
-                    <span
-                      className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        booking.bookingStatus === "CONFIRMED" ||
-                        booking.bookingStatus === "CHECKED_IN"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : booking.bookingStatus === "CANCELLED"
-                            ? "bg-rose-50 text-rose-600"
-                            : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {booking.bookingStatus}
-                    </span>
-                  </button>
-                ))}
-                <div className="mx-4 my-2 h-px bg-slate-100" />
+                    </button>
+                  ))
+                )}
               </div>
-            )}
-
-            {/* All hotels / search results */}
-            <div>
-              <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-                {searchQuery
-                  ? `Results (${filteredHotels.length})`
-                  : "All hotels"}
-              </p>
-              {filteredHotels.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Building2 size={28} className="mb-3 text-slate-200" />
-                  <p className="text-sm text-slate-400">
-                    No hotels found for "{searchQuery}"
-                  </p>
-                </div>
-              ) : (
-                filteredHotels.map((hotel) => (
-                  <button
-                    key={hotel._id}
-                    type="button"
-                    onClick={() => handleSelectHotel(hotel)}
-                    className="flex w-full items-center gap-3.5 px-4 py-3 text-left transition hover:bg-slate-50 active:bg-slate-100"
-                  >
-                    <HotelAvatar name={hotel.hotelTitle} id={hotel._id} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {hotel.hotelTitle}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-slate-400">
-                        {hotel.hotelLocation} · {hotel.hotelType}
-                      </p>
-                    </div>
-                  </button>
-                ))
-              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Step 2: Compose message ──────────────────────────────────── */}
-      {step === "compose" && selectedHotel && (
-        <div className="flex flex-1 flex-col overflow-hidden bg-slate-50">
-          {/* Hotel info center */}
-          <div className="flex flex-1 items-center justify-center px-4">
-            <div className="text-center">
-              <HotelAvatar
-                name={selectedHotel.hotelTitle}
-                id={selectedHotel._id}
-                size="lg"
-              />
-              <p className="mt-3 text-base font-bold text-slate-900">
+        {/* ── Step 2: Compose ── */}
+        {step === "compose" && selectedHotel && (
+          <div
+            className="flex flex-1 flex-col overflow-hidden"
+            style={{ animation: "stepSlideLeft 0.2s ease-out both" }}
+          >
+            {/* Hotel info */}
+            <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
+              <HotelAvatar name={selectedHotel.hotelTitle} id={selectedHotel._id} size="lg" />
+              <p className="mt-4 text-base font-bold text-slate-900">
                 {selectedHotel.hotelTitle}
               </p>
-              <p className="mt-0.5 text-sm text-slate-500">
-                {selectedHotel.hotelLocation}
-              </p>
+              <p className="mt-0.5 text-sm text-slate-500">{selectedHotel.hotelLocation}</p>
               {selectedBooking && (
-                <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-sky-50 px-3 py-1.5 text-xs text-sky-700">
+                <div className="mt-4 flex items-center gap-1.5 rounded-xl bg-sky-50 px-3.5 py-2 text-xs text-sky-700">
                   <CalendarCheck size={12} />
                   <span>
                     Booking{" "}
@@ -430,60 +456,61 @@ function NewChatOverlay({
                   <button
                     type="button"
                     onClick={() => setSelectedBooking(null)}
-                    className="ml-1 text-sky-400 hover:text-sky-600"
+                    className="ml-0.5 text-sky-400 transition hover:text-sky-600"
                   >
                     <X size={11} />
                   </button>
                 </div>
               )}
-              <p className="mt-4 text-xs text-slate-400">
-                Messages are between you and the hotel staff
+              <p className="mt-5 max-w-[260px] text-xs text-slate-400">
+                Messages are private between you and the hotel team.
               </p>
             </div>
-          </div>
 
-          {/* Input */}
-          <div className="flex-none border-t border-slate-200 bg-white px-3 py-3">
-            <div className="flex items-end gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-              <textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  const el = e.target;
-                  el.style.height = "auto";
-                  el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
-                }}
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    void handleSend();
-                  }
-                }}
-                placeholder="Message…"
-                rows={1}
-                className="flex-1 resize-none bg-transparent py-1.5 text-sm text-slate-900 placeholder-slate-400 outline-none"
-                style={{ minHeight: "36px", maxHeight: "140px" }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  void handleSend();
-                }}
-                disabled={!message.trim() || loading}
-                className={`mb-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all ${
-                  message.trim()
-                    ? "bg-sky-500 text-white hover:bg-sky-600 active:scale-95"
-                    : "bg-transparent text-slate-300"
-                }`}
-              >
-                <Send size={17} />
-              </button>
+            {/* Input */}
+            <div className="flex-none border-t border-slate-100 bg-white px-4 pb-5 pt-3">
+              <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
+                <textarea
+                  ref={textareaRef}
+                  value={message}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                    const el = e.target;
+                    el.style.height = "auto";
+                    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+                  }}
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                      e.preventDefault();
+                      void handleSend();
+                    }
+                  }}
+                  placeholder="Write your message…"
+                  rows={1}
+                  className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
+                  style={{ minHeight: "36px", maxHeight: "140px" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => { void handleSend(); }}
+                  disabled={!message.trim() || loading}
+                  className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
+                    message.trim()
+                      ? "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
+                      : "text-slate-300"
+                  }`}
+                >
+                  <Send size={15} />
+                </button>
+              </div>
+              {message.trim() && (
+                <p className="mt-1 text-right text-[10px] text-slate-400">⌘↩ to send</p>
+              )}
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -500,6 +527,11 @@ const ChatsPage: NextPageWithAuth = () => {
 
   const [showNewChat, setShowNewChat] = useState(false);
   const [manualStaffHotelId, setManualStaffHotelId] = useState("");
+
+  // Query param support: ?openNew=1&openHotelId=XXX
+  const openNewFromQuery = router.query.openNew === "1";
+  const openHotelIdFromQuery =
+    typeof router.query.openHotelId === "string" ? router.query.openHotelId : "";
 
   const { page, statusFilter, getParam, pushQuery, replaceQuery } =
     usePaginationQueryState<ChatStatus>({
@@ -538,23 +570,21 @@ const ChatsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const { data: publicHotelsData } = useQuery<
-    GetHotelsQueryData,
-    GetHotelsQueryVars
-  >(GET_HOTELS_QUERY, {
-    variables: { input: hotelsInput },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  const { data: publicHotelsData } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(
+    GET_HOTELS_QUERY,
+    {
+      variables: { input: hotelsInput },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
-  // Hotel names map — always from public hotels query
   const hotelsMap = useMemo<Map<string, HotelListItem>>(() => {
     const map = new Map<string, HotelListItem>();
     for (const h of publicHotelsData?.getHotels.list ?? []) map.set(h._id, h);
     return map;
   }, [publicHotelsData]);
 
-  // Hotels for staff hotel selector
   const availableHotels = useMemo<HotelListItem[]>(
     () =>
       isAgent
@@ -563,25 +593,22 @@ const ChatsPage: NextPageWithAuth = () => {
     [agentHotelsData, isAgent, publicHotelsData],
   );
 
-  const { data: bookingsData } = useQuery<
-    GetMyBookingsQueryData,
-    GetMyBookingsQueryVars
-  >(GET_MY_BOOKINGS_QUERY, {
-    skip: !isUser,
-    variables: { input: bookingsInput },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  const { data: bookingsData } = useQuery<GetMyBookingsQueryData, GetMyBookingsQueryVars>(
+    GET_MY_BOOKINGS_QUERY,
+    {
+      skip: !isUser,
+      variables: { input: bookingsInput },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
   const myBookings = useMemo(
     () => bookingsData?.getMyBookings.list ?? [],
     [bookingsData],
   );
 
   const selectedHotelId = isStaff
-    ? hotelIdFromQuery ||
-      manualStaffHotelId.trim() ||
-      availableHotels[0]?._id ||
-      ""
+    ? hotelIdFromQuery || manualStaffHotelId.trim() || availableHotels[0]?._id || ""
     : "";
 
   const {
@@ -625,6 +652,14 @@ const ChatsPage: NextPageWithAuth = () => {
     replaceQuery({ extra: { hotelId: availableHotels[0]._id } });
   }, [availableHotels, hotelIdFromQuery, isStaff, replaceQuery]);
 
+  // Auto-open overlay from query param (e.g. from hotel detail page)
+  useEffect(() => {
+    if (!openNewFromQuery || !isUser) return;
+    setShowNewChat(true);
+    void router.replace("/chats", undefined, { shallow: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openNewFromQuery, isUser]);
+
   /** COMPUTED **/
 
   const chats = isStaff
@@ -655,12 +690,20 @@ const ChatsPage: NextPageWithAuth = () => {
 
   return (
     <>
-      {/* Full-screen new chat overlay */}
+      <style>{`
+        @keyframes chatFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      {/* New chat overlay */}
       {showNewChat && isUser && (
         <NewChatOverlay
           availableHotels={publicHotelsData?.getHotels.list ?? []}
           myBookings={myBookings}
           hotelsMap={hotelsMap}
+          preselectedHotelId={openHotelIdFromQuery}
           onClose={() => setShowNewChat(false)}
           onSuccess={(chatId) => {
             setShowNewChat(false);
@@ -669,25 +712,31 @@ const ChatsPage: NextPageWithAuth = () => {
         />
       )}
 
-      <main className="mx-auto max-w-2xl">
+      <main className="mx-auto max-w-2xl space-y-4">
         {/* ── Page header ── */}
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-slate-900">Messages</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Inbox
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold text-slate-900">Messages</h1>
+          </div>
           {isUser && (
             <button
               type="button"
               onClick={() => setShowNewChat(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-50"
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:shadow"
               aria-label="New conversation"
             >
-              <SquarePen size={20} />
+              <SquarePen size={15} className="text-slate-500" />
+              New message
             </button>
           )}
         </div>
 
         {/* ── Staff: property + status filters ── */}
         {isStaff && (
-          <div className="mb-4 space-y-3">
+          <div className="space-y-3">
             {hotelsLoading ? (
               <div className="h-11 animate-pulse rounded-xl bg-slate-100" />
             ) : (
@@ -719,20 +768,19 @@ const ChatsPage: NextPageWithAuth = () => {
                     key={s}
                     type="button"
                     onClick={() =>
-                      pushChatsQuery({
-                        status: s as ChatStatus | "ALL",
-                        page: 1,
-                      })
+                      pushChatsQuery({ status: s as ChatStatus | "ALL", page: 1 })
                     }
                     className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                       isSelected
-                        ? "bg-sky-500 text-white"
+                        ? "bg-slate-900 text-white"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }`}
                   >
                     {cfg && (
                       <span
-                        className={`h-1.5 w-1.5 rounded-full ${isSelected ? "bg-white/70" : cfg.dot}`}
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          isSelected ? "bg-white/70" : cfg.dot
+                        }`}
                       />
                     )}
                     {s === "ALL" ? "All" : cfg?.label}
@@ -748,13 +796,13 @@ const ChatsPage: NextPageWithAuth = () => {
 
         {/* ── Loading skeletons ── */}
         {loading && chats.length === 0 && (
-          <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3.5 border-b border-slate-50 px-4 py-3.5 last:border-b-0"
+                className="flex items-center gap-3.5 border-b border-slate-50 px-5 py-4 last:border-b-0"
               >
-                <div className="h-12 w-12 flex-shrink-0 animate-pulse rounded-full bg-slate-100" />
+                <div className="h-11 w-11 flex-shrink-0 animate-pulse rounded-full bg-slate-100" />
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="h-3.5 w-1/3 animate-pulse rounded-full bg-slate-100" />
@@ -769,23 +817,23 @@ const ChatsPage: NextPageWithAuth = () => {
 
         {/* ── Empty state ── */}
         {!loading && !error && chats.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-2xl bg-white py-16 text-center shadow-sm">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-50">
-              <MessageSquare size={28} className="text-sky-500" />
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-20 text-center shadow-sm">
+            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50">
+              <MessageSquare size={22} className="text-slate-400" />
             </div>
             <p className="font-semibold text-slate-800">No conversations yet</p>
-            <p className="mt-1.5 max-w-xs text-sm text-slate-400">
+            <p className="mt-1.5 max-w-[220px] text-sm text-slate-400">
               {isUser
-                ? "Tap the compose button to start a conversation with any hotel"
+                ? "Start a conversation with any hotel"
                 : "No chats match the current filter"}
             </p>
             {isUser && (
               <button
                 type="button"
                 onClick={() => setShowNewChat(true)}
-                className="mt-5 flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600 active:scale-95"
+                className="mt-6 flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 active:scale-95"
               >
-                <SquarePen size={15} />
+                <SquarePen size={14} />
                 New conversation
               </button>
             )}
@@ -794,7 +842,7 @@ const ChatsPage: NextPageWithAuth = () => {
 
         {/* ── Chat list ── */}
         {chats.length > 0 && (
-          <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {chats.map((chat, i) => {
               const hotel = hotelsMap.get(chat.hotelId);
               const hotelName = hotel?.hotelTitle ?? "Hotel Support";
@@ -811,20 +859,21 @@ const ChatsPage: NextPageWithAuth = () => {
                 <Link
                   key={chat._id}
                   href={`/chats/${chat._id}`}
-                  className={`flex items-center gap-3.5 px-4 py-3.5 transition hover:bg-slate-50 active:bg-slate-100 ${
+                  className={`group flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50 ${
                     i < chats.length - 1 ? "border-b border-slate-50" : ""
                   }`}
+                  style={{
+                    animation: "chatFadeIn 0.25s ease-out both",
+                    animationDelay: `${i * 35}ms`,
+                  }}
                 >
-                  <HotelAvatar
-                    name={hotelName}
-                    id={chat._id}
-                    status={chat.chatStatus}
-                  />
+                  <HotelAvatar name={hotelName} id={chat._id} status={chat.chatStatus} />
 
                   <div className="min-w-0 flex-1">
+                    {/* Row 1: name + time */}
                     <div className="flex items-baseline justify-between gap-2">
                       <p
-                        className={`truncate text-[14.5px] ${
+                        className={`truncate text-sm ${
                           unread > 0
                             ? "font-bold text-slate-900"
                             : "font-semibold text-slate-800"
@@ -834,22 +883,18 @@ const ChatsPage: NextPageWithAuth = () => {
                       </p>
                       <span
                         className={`flex-shrink-0 text-[11px] ${
-                          unread > 0
-                            ? "font-semibold text-sky-500"
-                            : "text-slate-400"
+                          unread > 0 ? "font-semibold text-sky-500" : "text-slate-400"
                         }`}
                       >
                         {time}
                       </span>
                     </div>
 
+                    {/* Row 2: preview + unread */}
                     <div className="mt-0.5 flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-1">
                         {isLastMsgFromMe && !isUser && (
-                          <Check
-                            size={13}
-                            className="flex-shrink-0 text-slate-400"
-                          />
+                          <Check size={12} className="flex-shrink-0 text-slate-400" />
                         )}
                         <p
                           className={`truncate text-sm ${
@@ -868,9 +913,14 @@ const ChatsPage: NextPageWithAuth = () => {
                       )}
                     </div>
 
-                    <div className="mt-1 flex items-center gap-1.5">
+                    {/* Row 3: status */}
+                    <div className="mt-1 flex items-center gap-1">
                       <span
-                        className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`}
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          chat.chatStatus === "ACTIVE"
+                            ? "animate-pulse bg-emerald-400"
+                            : statusCfg.dot
+                        }`}
                       />
                       <span className={`text-[10px] ${statusCfg.text}`}>
                         {statusCfg.label}
@@ -885,10 +935,9 @@ const ChatsPage: NextPageWithAuth = () => {
 
         {/* ── Pagination ── */}
         {total > PAGE_LIMIT && (
-          <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <p className="text-sm text-slate-500">
-              Page <span className="font-semibold text-slate-800">{page}</span>{" "}
-              of{" "}
+              Page <span className="font-semibold text-slate-800">{page}</span> of{" "}
               <span className="font-semibold text-slate-800">{totalPages}</span>
             </p>
             <div className="flex gap-1.5">
@@ -896,7 +945,7 @@ const ChatsPage: NextPageWithAuth = () => {
                 type="button"
                 onClick={() => pushChatsQuery({ page: page - 1 })}
                 disabled={page <= 1}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -904,7 +953,7 @@ const ChatsPage: NextPageWithAuth = () => {
                 type="button"
                 onClick={() => pushChatsQuery({ page: page + 1 })}
                 disabled={page >= totalPages}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronRight size={16} />
               </button>

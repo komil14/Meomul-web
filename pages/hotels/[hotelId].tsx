@@ -1,6 +1,9 @@
 import type { GetServerSideProps } from "next";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useEffect, useMemo, useRef } from "react";
+import { MessageSquare } from "lucide-react";
+import { getSessionMember } from "@/lib/auth/session";
 import { createApolloClient } from "@/lib/apollo/client";
 import { HotelFeaturesSection } from "@/components/hotels/detail/hotel-features-section";
 import { HotelGallerySection } from "@/components/hotels/detail/hotel-gallery-section";
@@ -13,6 +16,8 @@ import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_HOTEL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { useHotelDetailPageData } from "@/lib/hooks/use-hotel-detail-page-data";
 import { ROOM_PAGE_SIZE } from "@/lib/hotels/detail-page-helpers";
+import { pushRecentlyViewedHotel } from "@/lib/hotels/recently-viewed";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type {
   GetHotelQueryData,
   GetHotelQueryVars,
@@ -41,6 +46,9 @@ const HotelListSection = dynamic(
 const HOTEL_DETAIL_MOTION_INTENSITY_CLASS = "motion-intensity-bold";
 
 export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDetailPageProps) {
+  const member = useMemo(() => getSessionMember(), []);
+  const isUser = member?.memberType === "USER";
+  const trackedHotelIdRef = useRef<string>("");
   const {
     hotelId,
     hotel,
@@ -101,6 +109,23 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
     reviewsSectionRef,
   } = useHotelDetailPageData({ initialHotel, initialRooms });
 
+  useEffect(() => {
+    if (!hotel || trackedHotelIdRef.current === hotel._id) {
+      return;
+    }
+
+    trackedHotelIdRef.current = hotel._id;
+    pushRecentlyViewedHotel({
+      hotelId: hotel._id,
+      hotelTitle: hotel.hotelTitle,
+      hotelLocation: hotel.hotelLocation,
+      hotelType: hotel.hotelType,
+      hotelRating: Number.isFinite(hotel.hotelRating) ? hotel.hotelRating : 0,
+      hotelLikes: Number.isFinite(hotel.hotelLikes) ? hotel.hotelLikes : 0,
+      imageUrl: resolveMediaUrl(hotel.hotelImages[0]),
+    });
+  }, [hotel]);
+
   if (!hotelId) {
     return (
       <main className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
@@ -145,9 +170,20 @@ export default function HotelDetailPage({ initialHotel, initialRooms }: HotelDet
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
           Back to hotels
         </Link>
-        <p className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
-          {hotel.hotelLocation} · {hotel.hotelType}
-        </p>
+        <div className="flex items-center gap-2">
+          {isUser && (
+            <Link
+              href={`/chats?openNew=1&openHotelId=${hotelId}`}
+              className="flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
+            >
+              <MessageSquare size={12} />
+              Chat with hotel
+            </Link>
+          )}
+          <p className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
+            {hotel.hotelLocation} · {hotel.hotelType}
+          </p>
+        </div>
       </div>
 
       {hotelErrorMessage ? <ErrorNotice message={hotelErrorMessage} /> : null}

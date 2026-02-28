@@ -8,10 +8,16 @@ import {
   GET_HOTELS_QUERY,
   GET_HOTEL_REVIEWS_QUERY,
   GET_RECOMMENDED_HOTELS_V2_QUERY,
+  GET_ROOMS_BY_HOTEL_QUERY,
   GET_TRENDING_HOTELS_QUERY,
 } from "@/graphql/hotel.gql";
 import { getAccessToken } from "@/lib/auth/session";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import {
+  clearRecentlyViewedHotels,
+  readRecentlyViewedHotels,
+  type RecentlyViewedHotelEntry,
+} from "@/lib/hotels/recently-viewed";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -21,10 +27,15 @@ import type {
   GetHotelsQueryVars,
   GetRecommendedHotelsV2QueryData,
   GetRecommendedHotelsV2QueryVars,
+  GetRoomsByHotelQueryData,
+  GetRoomsByHotelQueryVars,
   GetTrendingHotelsQueryData,
   GetTrendingHotelsQueryVars,
+  HotelLocation,
   HotelListItem,
   PaginationInput,
+  RoomListItem,
+  StayPurpose,
   ReviewDto,
 } from "@/types/hotel";
 import styles from "@/styles/home-landing-ovastin.module.css";
@@ -35,6 +46,9 @@ const REVIEW_LIMIT = 5;
 const RECOMMENDED_GRID_LIMIT = 6;
 const TRENDING_RAIL_LIMIT = 10;
 const TESTIMONIAL_LIMIT = 6;
+const LAST_MINUTE_HOTELS_LIMIT = 8;
+const LAST_MINUTE_ROOMS_PER_HOTEL = 8;
+const LAST_MINUTE_DEALS_LIMIT = 8;
 
 const HERO_QUERY_INPUT: PaginationInput = {
   page: 1,
@@ -77,6 +91,35 @@ interface TestimonialReviewEntry {
   hotelTitle: string;
 }
 
+interface LastMinuteDealCard {
+  roomId: string;
+  hotelId: string;
+  hotelTitle: string;
+  hotelLocation: string;
+  roomName: string;
+  roomType: string;
+  imageUrl: string;
+  basePrice: number;
+  dealPrice: number;
+  discountPercent: number;
+  validUntil: string;
+}
+
+interface EditorialGuideCard {
+  id: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  location: HotelLocation;
+  purpose: StayPurpose;
+  checkIn: string;
+  checkOut: string;
+  guests: string;
+  types?: string;
+  href: string;
+  imageUrl: string;
+}
+
 const createFallbackSlide = (index: number): HeroSlide => ({
   _id: `fallback-${index}`,
   title: "Premium Curated Stay",
@@ -102,7 +145,10 @@ const toHeroSlides = (hotels: HotelListItem[]): HeroSlide[] => {
     return slides;
   }
 
-  const fallbackSlides = Array.from({ length: HERO_LIMIT - slides.length }, (_, index) => createFallbackSlide(index));
+  const fallbackSlides = Array.from(
+    { length: HERO_LIMIT - slides.length },
+    (_, index) => createFallbackSlide(index),
+  );
   return [...slides, ...fallbackSlides];
 };
 
@@ -136,7 +182,10 @@ const toReviewerInitial = (review: ReviewDto, index: number): string => {
 };
 
 const toTestimonialQuote = (review: ReviewDto): string => {
-  const source = review.reviewText?.trim() || review.reviewTitle?.trim() || "Great stay experience.";
+  const source =
+    review.reviewText?.trim() ||
+    review.reviewTitle?.trim() ||
+    "Great stay experience.";
   if (source.length <= 160) {
     return source;
   }
@@ -151,6 +200,65 @@ const toStayPeriodLabel = (review: ReviewDto): string => {
   return `Stayed ${date}`;
 };
 
+const formatDealExpiryLabel = (validUntil: string): string => {
+  const expiresAt = new Date(validUntil).getTime();
+  if (!Number.isFinite(expiresAt)) {
+    return "Ends soon";
+  }
+
+  const diffMs = expiresAt - Date.now();
+  if (diffMs <= 0) {
+    return "Expired";
+  }
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) {
+    return `Ends in ${hours}h ${minutes}m`;
+  }
+  return `Ends in ${minutes}m`;
+};
+
+const toIsoLocalDate = (value: Date): string => {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const addDays = (value: Date, amount: number): Date => {
+  const next = new Date(value);
+  next.setDate(next.getDate() + amount);
+  return next;
+};
+
+const getNextWeekendRange = (): { checkIn: string; checkOut: string } => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = today.getDay();
+  const daysUntilSaturday = (6 - day + 7) % 7;
+  const checkInDate = addDays(today, daysUntilSaturday);
+  const checkOutDate = addDays(checkInDate, 2);
+  return {
+    checkIn: toIsoLocalDate(checkInDate),
+    checkOut: toIsoLocalDate(checkOutDate),
+  };
+};
+
+const buildHotelsFilteredHref = (
+  input: Record<string, string | undefined>,
+): string => {
+  const params = new URLSearchParams();
+  Object.entries(input).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+  const query = params.toString();
+  return query ? `/hotels?${query}` : "/hotels";
+};
+
 export default function HomePage() {
   const apolloClient = useApolloClient();
   const [isMounted, setIsMounted] = useState(false);
@@ -159,59 +267,83 @@ export default function HomePage() {
   const [isSliderPaused, setIsSliderPaused] = useState(false);
   const [activeRecommendedCard, setActiveRecommendedCard] = useState(1);
   const [activeTestimonialCard, setActiveTestimonialCard] = useState(0);
-  const [testimonialEntries, setTestimonialEntries] = useState<TestimonialReviewEntry[]>([]);
+  const [recentlyViewedHotels, setRecentlyViewedHotels] = useState<
+    RecentlyViewedHotelEntry[]
+  >([]);
+  const [lastMinuteDeals, setLastMinuteDeals] = useState<LastMinuteDealCard[]>(
+    [],
+  );
+  const [testimonialEntries, setTestimonialEntries] = useState<
+    TestimonialReviewEntry[]
+  >([]);
   const testimonialsRailRef = useRef<HTMLDivElement | null>(null);
 
-  const {
-    data: topHotelsData,
-    error: topHotelsError,
-  } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
+  const { data: topHotelsData, error: topHotelsError } = useQuery<
+    GetHotelsQueryData,
+    GetHotelsQueryVars
+  >(GET_HOTELS_QUERY, {
     variables: { input: HERO_QUERY_INPUT },
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
   });
 
-  const topHotels = useMemo(() => topHotelsData?.getHotels.list ?? [], [topHotelsData?.getHotels.list]);
-  const stableTopHotels = useMemo(() => (isMounted ? topHotels : []), [isMounted, topHotels]);
-  const heroSlides = useMemo(() => toHeroSlides(stableTopHotels), [stableTopHotels]);
+  const topHotels = useMemo(
+    () => topHotelsData?.getHotels.list ?? [],
+    [topHotelsData?.getHotels.list],
+  );
+  const stableTopHotels = useMemo(
+    () => (isMounted ? topHotels : []),
+    [isMounted, topHotels],
+  );
+  const heroSlides = useMemo(
+    () => toHeroSlides(stableTopHotels),
+    [stableTopHotels],
+  );
   const featuredHotelId = stableTopHotels[0]?._id ?? "";
 
-  const { data: featuredReviewsData, loading: featuredReviewsLoading } = useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(
-    GET_HOTEL_REVIEWS_QUERY,
-    {
-      skip: !featuredHotelId,
-      variables: {
-        hotelId: featuredHotelId,
-        input: REVIEW_QUERY_INPUT,
+  const { data: featuredReviewsData, loading: featuredReviewsLoading } =
+    useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(
+      GET_HOTEL_REVIEWS_QUERY,
+      {
+        skip: !featuredHotelId,
+        variables: {
+          hotelId: featuredHotelId,
+          input: REVIEW_QUERY_INPUT,
+        },
+        fetchPolicy: "cache-and-network",
+        nextFetchPolicy: "cache-and-network",
       },
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-    },
-  );
+    );
 
-  const { data: recommendedHotelsData } = useQuery<GetRecommendedHotelsV2QueryData, GetRecommendedHotelsV2QueryVars>(
-    GET_RECOMMENDED_HOTELS_V2_QUERY,
-    {
-      variables: { limit: RECOMMENDED_GRID_LIMIT },
-      skip: !hasAccessToken,
-      errorPolicy: "ignore",
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-    },
-  );
+  const { data: recommendedHotelsData } = useQuery<
+    GetRecommendedHotelsV2QueryData,
+    GetRecommendedHotelsV2QueryVars
+  >(GET_RECOMMENDED_HOTELS_V2_QUERY, {
+    variables: { limit: RECOMMENDED_GRID_LIMIT },
+    skip: !hasAccessToken,
+    errorPolicy: "ignore",
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
 
-  const { data: trendingHotelsData } = useQuery<GetTrendingHotelsQueryData, GetTrendingHotelsQueryVars>(
-    GET_TRENDING_HOTELS_QUERY,
-    {
-      variables: { limit: RECOMMENDED_GRID_LIMIT },
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-    },
-  );
+  const { data: trendingHotelsData } = useQuery<
+    GetTrendingHotelsQueryData,
+    GetTrendingHotelsQueryVars
+  >(GET_TRENDING_HOTELS_QUERY, {
+    variables: { limit: RECOMMENDED_GRID_LIMIT },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
 
   useEffect(() => {
     setIsMounted(true);
     setHasAccessToken(Boolean(getAccessToken()));
+    setRecentlyViewedHotels(readRecentlyViewedHotels());
+  }, []);
+
+  const handleClearRecentlyViewed = useCallback(() => {
+    clearRecentlyViewedHotels();
+    setRecentlyViewedHotels([]);
   }, []);
 
   useEffect(() => {
@@ -231,23 +363,31 @@ export default function HomePage() {
   }, [heroSlides.length, isSliderPaused]);
 
   const activeSlideData = heroSlides[activeSlide] ?? heroSlides[0];
-  const activeSlideHref = activeSlideData?._id.startsWith("fallback-") ? "/hotels" : `/hotels/${activeSlideData?._id ?? ""}`;
+  const activeSlideHref = activeSlideData?._id.startsWith("fallback-")
+    ? "/hotels"
+    : `/hotels/${activeSlideData?._id ?? ""}`;
   const featuredReviews = useMemo(
-    () => (isMounted ? featuredReviewsData?.getHotelReviews.list ?? [] : []),
+    () => (isMounted ? (featuredReviewsData?.getHotelReviews.list ?? []) : []),
     [featuredReviewsData?.getHotelReviews.list, isMounted],
   );
-  const ratingsSummary = isMounted ? featuredReviewsData?.getHotelReviews.ratingsSummary : undefined;
-  const reviewCount = isMounted ? ratingsSummary?.totalReviews ?? featuredReviewsData?.getHotelReviews.metaCounter.total ?? 0 : 0;
-  const reviewRating = isMounted ? ratingsSummary?.overallRating ?? activeSlideData?.rating ?? 0 : activeSlideData?.rating ?? 0;
+  const ratingsSummary = isMounted
+    ? featuredReviewsData?.getHotelReviews.ratingsSummary
+    : undefined;
+  const reviewCount = isMounted
+    ? (ratingsSummary?.totalReviews ??
+      featuredReviewsData?.getHotelReviews.metaCounter.total ??
+      0)
+    : 0;
+  const reviewRating = isMounted
+    ? (ratingsSummary?.overallRating ?? activeSlideData?.rating ?? 0)
+    : (activeSlideData?.rating ?? 0);
   const reviewStars = formatRatingStars(reviewRating);
   const testimonialSourceHotels = useMemo(
     () =>
-      stableTopHotels
-        .slice(0, 4)
-        .map((hotel) => ({
-          hotelId: hotel._id,
-          hotelTitle: hotel.hotelTitle,
-        })),
+      stableTopHotels.slice(0, 4).map((hotel) => ({
+        hotelId: hotel._id,
+        hotelTitle: hotel.hotelTitle,
+      })),
     [stableTopHotels],
   );
 
@@ -263,7 +403,10 @@ export default function HomePage() {
       try {
         const reviewGroups = await Promise.all(
           testimonialSourceHotels.map(async (hotel) => {
-            const result = await apolloClient.query<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>({
+            const result = await apolloClient.query<
+              GetHotelReviewsQueryData,
+              GetHotelReviewsQueryVars
+            >({
               query: GET_HOTEL_REVIEWS_QUERY,
               variables: {
                 hotelId: hotel.hotelId,
@@ -296,8 +439,12 @@ export default function HomePage() {
             })),
           )
           .sort((a, b) => {
-            const aTimestamp = new Date(a.review.stayDate || a.review.createdAt).getTime();
-            const bTimestamp = new Date(b.review.stayDate || b.review.createdAt).getTime();
+            const aTimestamp = new Date(
+              a.review.stayDate || a.review.createdAt,
+            ).getTime();
+            const bTimestamp = new Date(
+              b.review.stayDate || b.review.createdAt,
+            ).getTime();
             return bTimestamp - aTimestamp;
           })
           .slice(0, TESTIMONIAL_LIMIT);
@@ -319,7 +466,9 @@ export default function HomePage() {
 
   const recommendationSignalsByHotelId = useMemo(() => {
     const signalMap = new Map<string, string>();
-    const explanations = isMounted ? recommendedHotelsData?.getRecommendedHotelsV2.explanations ?? [] : [];
+    const explanations = isMounted
+      ? (recommendedHotelsData?.getRecommendedHotelsV2.explanations ?? [])
+      : [];
     explanations.forEach((explanation) => {
       const topSignal = explanation.signals?.[0];
       if (topSignal) {
@@ -330,9 +479,17 @@ export default function HomePage() {
   }, [isMounted, recommendedHotelsData?.getRecommendedHotelsV2.explanations]);
 
   const recommendedCards = useMemo<RecommendedCard[]>(() => {
-    const personalized = isMounted ? recommendedHotelsData?.getRecommendedHotelsV2.list ?? [] : [];
-    const trending = isMounted ? trendingHotelsData?.getTrendingHotels ?? [] : [];
-    const merged = uniqueHotelsById([...personalized, ...trending, ...stableTopHotels]).slice(0, RECOMMENDED_GRID_LIMIT);
+    const personalized = isMounted
+      ? (recommendedHotelsData?.getRecommendedHotelsV2.list ?? [])
+      : [];
+    const trending = isMounted
+      ? (trendingHotelsData?.getTrendingHotels ?? [])
+      : [];
+    const merged = uniqueHotelsById([
+      ...personalized,
+      ...trending,
+      ...stableTopHotels,
+    ]).slice(0, RECOMMENDED_GRID_LIMIT);
 
     return merged.map((hotel) => ({
       _id: hotel._id,
@@ -355,22 +512,162 @@ export default function HomePage() {
   ]);
 
   const recommendedRows = useMemo(
-    () => [recommendedCards.slice(0, 3), recommendedCards.slice(3, 6)].filter((row) => row.length > 0),
+    () =>
+      [recommendedCards.slice(0, 3), recommendedCards.slice(3, 6)].filter(
+        (row) => row.length > 0,
+      ),
     [recommendedCards],
   );
 
   const trendingRailCards = useMemo(() => {
-    const trendingHotels = isMounted ? trendingHotelsData?.getTrendingHotels ?? [] : [];
-    const recommendationHotels = isMounted ? recommendedHotelsData?.getRecommendedHotelsV2.list ?? [] : [];
-    return uniqueHotelsById([...trendingHotels, ...recommendationHotels, ...stableTopHotels]).slice(0, TRENDING_RAIL_LIMIT);
-  }, [isMounted, recommendedHotelsData?.getRecommendedHotelsV2.list, stableTopHotels, trendingHotelsData?.getTrendingHotels]);
+    const trendingHotels = isMounted
+      ? (trendingHotelsData?.getTrendingHotels ?? [])
+      : [];
+    const recommendationHotels = isMounted
+      ? (recommendedHotelsData?.getRecommendedHotelsV2.list ?? [])
+      : [];
+    return uniqueHotelsById([
+      ...trendingHotels,
+      ...recommendationHotels,
+      ...stableTopHotels,
+    ]).slice(0, TRENDING_RAIL_LIMIT);
+  }, [
+    isMounted,
+    recommendedHotelsData?.getRecommendedHotelsV2.list,
+    stableTopHotels,
+    trendingHotelsData?.getTrendingHotels,
+  ]);
+  const recentViewedCards = useMemo(
+    () => recentlyViewedHotels.slice(0, 6),
+    [recentlyViewedHotels],
+  );
+  const dealSourceHotels = useMemo(() => {
+    const personalized = isMounted
+      ? (recommendedHotelsData?.getRecommendedHotelsV2.list ?? [])
+      : [];
+    const trending = isMounted
+      ? (trendingHotelsData?.getTrendingHotels ?? [])
+      : [];
+
+    return uniqueHotelsById([
+      ...personalized,
+      ...trending,
+      ...stableTopHotels,
+    ]).slice(0, LAST_MINUTE_HOTELS_LIMIT);
+  }, [
+    isMounted,
+    recommendedHotelsData?.getRecommendedHotelsV2.list,
+    stableTopHotels,
+    trendingHotelsData?.getTrendingHotels,
+  ]);
+
+  useEffect(() => {
+    if (!isMounted || dealSourceHotels.length === 0) {
+      setLastMinuteDeals([]);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadLastMinuteDeals = async (): Promise<void> => {
+      try {
+        const roomGroups = await Promise.all(
+          dealSourceHotels.map(async (hotel) => {
+            const result = await apolloClient.query<
+              GetRoomsByHotelQueryData,
+              GetRoomsByHotelQueryVars
+            >({
+              query: GET_ROOMS_BY_HOTEL_QUERY,
+              variables: {
+                hotelId: hotel._id,
+                input: {
+                  page: 1,
+                  limit: LAST_MINUTE_ROOMS_PER_HOTEL,
+                  sort: "updatedAt",
+                  direction: -1,
+                },
+              },
+              fetchPolicy: "network-only",
+            });
+
+            return {
+              hotel,
+              rooms: result.data?.getRoomsByHotel.list ?? [],
+            };
+          }),
+        );
+
+        if (isCancelled) {
+          return;
+        }
+
+        const now = Date.now();
+        const deals = roomGroups
+          .flatMap(({ hotel, rooms }) =>
+            rooms
+              .filter((room: RoomListItem) => {
+                if (!room.lastMinuteDeal?.isActive) {
+                  return false;
+                }
+
+                const expiresAt = new Date(room.lastMinuteDeal.validUntil).getTime();
+                return Number.isFinite(expiresAt) && expiresAt > now;
+              })
+              .map((room: RoomListItem) => ({
+                roomId: room._id,
+                hotelId: hotel._id,
+                hotelTitle: hotel.hotelTitle,
+                hotelLocation: hotel.hotelLocation,
+                roomName: room.roomName,
+                roomType: room.roomType,
+                imageUrl: resolveMediaUrl(room.roomImages[0] || hotel.hotelImages[0]),
+                basePrice: room.lastMinuteDeal?.originalPrice ?? room.basePrice,
+                dealPrice: room.lastMinuteDeal?.dealPrice ?? room.basePrice,
+                discountPercent: room.lastMinuteDeal?.discountPercent ?? 0,
+                validUntil: room.lastMinuteDeal?.validUntil ?? "",
+              })),
+          )
+          .sort((a, b) => {
+            if (b.discountPercent !== a.discountPercent) {
+              return b.discountPercent - a.discountPercent;
+            }
+            return new Date(a.validUntil).getTime() - new Date(b.validUntil).getTime();
+          })
+          .slice(0, LAST_MINUTE_DEALS_LIMIT);
+
+        setLastMinuteDeals(deals);
+      } catch {
+        if (!isCancelled) {
+          setLastMinuteDeals([]);
+        }
+      }
+    };
+
+    void loadLastMinuteDeals();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [apolloClient, dealSourceHotels, isMounted]);
 
   const valuePillars = useMemo(() => {
-    const hotelInventoryTotal = isMounted ? topHotelsData?.getHotels.metaCounter.total ?? 0 : 0;
+    const hotelInventoryTotal = isMounted
+      ? (topHotelsData?.getHotels.metaCounter.total ?? 0)
+      : 0;
     const averageHeroRating =
-      stableTopHotels.length > 0 ? stableTopHotels.reduce((sum, hotel) => sum + (hotel.hotelRating ?? 0), 0) / stableTopHotels.length : 0;
-    const trendingLikes = trendingRailCards.reduce((sum, hotel) => sum + (hotel.hotelLikes ?? 0), 0);
-    const recommendationMeta = isMounted ? recommendedHotelsData?.getRecommendedHotelsV2.meta : undefined;
+      stableTopHotels.length > 0
+        ? stableTopHotels.reduce(
+            (sum, hotel) => sum + (hotel.hotelRating ?? 0),
+            0,
+          ) / stableTopHotels.length
+        : 0;
+    const trendingLikes = trendingRailCards.reduce(
+      (sum, hotel) => sum + (hotel.hotelLikes ?? 0),
+      0,
+    );
+    const recommendationMeta = isMounted
+      ? recommendedHotelsData?.getRecommendedHotelsV2.meta
+      : undefined;
 
     const personalizationDetail = hasAccessToken
       ? recommendationMeta
@@ -381,17 +678,28 @@ export default function HomePage() {
     return [
       {
         title: "Destination coverage",
-        metric: hotelInventoryTotal > 0 ? `${hotelInventoryTotal.toLocaleString()} hotels` : "Curated inventory",
-        detail: "Active stays across major Korea destinations, ranked daily by quality and guest demand.",
+        metric:
+          hotelInventoryTotal > 0
+            ? `${hotelInventoryTotal.toLocaleString()} hotels`
+            : "Curated inventory",
+        detail:
+          "Active stays across major Korea destinations, ranked daily by quality and guest demand.",
       },
       {
         title: "Guest trust layer",
-        metric: reviewCount > 0 ? `${reviewCount.toLocaleString()} verified reviews` : "Live review scoring",
-        detail: "Review scores and helpful feedback continuously shape ranking, visibility, and recommendations.",
+        metric:
+          reviewCount > 0
+            ? `${reviewCount.toLocaleString()}k+ verified reviews`
+            : "Live review scoring",
+        detail:
+          "Review scores and helpful feedback continuously shape ranking, visibility, and recommendations.",
       },
       {
         title: "Demand intelligence",
-        metric: trendingLikes > 0 ? `${trendingLikes.toLocaleString()} demand signals` : "Real-time demand feed",
+        metric:
+          trendingLikes > 0
+            ? `${trendingLikes.toLocaleString()} demand signals`
+            : "Real-time demand feed",
         detail:
           averageHeroRating > 0
             ? `Top stays currently average ★ ${averageHeroRating.toFixed(1)} based on recent guest interactions.`
@@ -399,7 +707,9 @@ export default function HomePage() {
       },
       {
         title: "Personalized matching",
-        metric: hasAccessToken ? "Onboarding + behavior" : "Ready when you sign in",
+        metric: hasAccessToken
+          ? "Onboarding + behavior"
+          : "Ready when you sign in",
         detail: personalizationDetail,
       },
     ];
@@ -422,7 +732,16 @@ export default function HomePage() {
     }
   }, [activeRecommendedCard, recommendedCards.length]);
 
-  const testimonialReviews = useMemo(() => testimonialEntries, [testimonialEntries]);
+  const testimonialReviews = useMemo(
+    () => testimonialEntries,
+    [testimonialEntries],
+  );
+  const loopedTestimonialReviews = useMemo(() => {
+    if (testimonialReviews.length <= 1) {
+      return testimonialReviews;
+    }
+    return [...testimonialReviews, ...testimonialReviews];
+  }, [testimonialReviews]);
 
   const handleTestimonialsScroll = useCallback(() => {
     const rail = testimonialsRailRef.current;
@@ -430,7 +749,9 @@ export default function HomePage() {
       return;
     }
 
-    const cards = Array.from(rail.querySelectorAll<HTMLElement>("[data-testimonial-index]"));
+    const cards = Array.from(
+      rail.querySelectorAll<HTMLElement>("[data-testimonial-index]"),
+    );
     if (cards.length === 0) {
       return;
     }
@@ -448,8 +769,15 @@ export default function HomePage() {
       }
     });
 
-    setActiveTestimonialCard((current) => (current === nearestIndex ? current : nearestIndex));
-  }, []);
+    const normalizedIndex =
+      testimonialReviews.length > 0
+        ? nearestIndex % testimonialReviews.length
+        : 0;
+
+    setActiveTestimonialCard((current) =>
+      current === normalizedIndex ? current : normalizedIndex,
+    );
+  }, [testimonialReviews.length]);
 
   useEffect(() => {
     if (testimonialReviews.length === 0) {
@@ -461,26 +789,63 @@ export default function HomePage() {
     }
   }, [activeTestimonialCard, testimonialReviews.length]);
 
+  useEffect(() => {
+    const rail = testimonialsRailRef.current;
+    if (!isMounted || !rail) {
+      return;
+    }
+
+    rail.scrollLeft = 0;
+  }, [isMounted, loopedTestimonialReviews.length]);
+
+  useEffect(() => {
+    const rail = testimonialsRailRef.current;
+    if (!isMounted || !rail || testimonialReviews.length <= 1) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (rail.matches(":hover")) {
+        return;
+      }
+
+      rail.scrollLeft += 1.2;
+      const loopBoundary = rail.scrollWidth / 2;
+      if (loopBoundary > 0 && rail.scrollLeft >= loopBoundary) {
+        rail.scrollLeft -= loopBoundary;
+      }
+    }, 16);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isMounted, testimonialReviews.length]);
+
   return (
     <>
-      <Script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js" strategy="afterInteractive" />
+      <Script
+        src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"
+        strategy="afterInteractive"
+      />
       <Script id="ovastin-font-loader" strategy="afterInteractive">
         {`if (window.WebFont) { window.WebFont.load({ google: { families: ["Plus Jakarta Sans:300,400,500,600,700"] } }); }`}
       </Script>
 
       <main className={styles.page}>
         <div className={styles.shell}>
-          {topHotelsError ? <ErrorNotice message={getErrorMessage(topHotelsError)} /> : null}
+          {topHotelsError ? (
+            <ErrorNotice message={getErrorMessage(topHotelsError)} />
+          ) : null}
 
           <section className={styles.hero}>
             <div className={styles.heroLeft}>
               <div className={styles.subtitle}>
-                <span className={styles.subtitleSlash} />
                 <span>Smart Hotel Stays Start Here</span>
-                <span className={styles.subtitleSlash} />
               </div>
 
-              <h1 className={styles.title}>Book the Right Stay for Every Trip</h1>
+              <h1 className={styles.title}>
+                Book the Right Stay for Every Trip
+              </h1>
 
               <div className={styles.primaryRow}>
                 <Link href="/hotels" className={styles.serviceButton}>
@@ -493,36 +858,68 @@ export default function HomePage() {
                   <div className={styles.reviewBottom}>
                     <div className={styles.avatarStack}>
                       {featuredReviews.length > 0
-                        ? featuredReviews.slice(0, REVIEW_LIMIT).map((review, index) => {
-                            const reviewerImageUrl = resolveMediaUrl(review.reviewerImage);
+                        ? featuredReviews
+                            .slice(0, REVIEW_LIMIT)
+                            .map((review, index) => {
+                              const reviewerImageUrl = resolveMediaUrl(
+                                review.reviewerImage,
+                              );
 
-                            return (
-                              <div key={`review-avatar-${review._id}`} className={styles.avatarItem}>
-                                {reviewerImageUrl ? (
-                                  <Image src={reviewerImageUrl} alt={review.reviewerNick ?? "Guest reviewer"} fill sizes="22px" className={styles.avatarImage} />
+                              return (
+                                <div
+                                  key={`review-avatar-${review._id}`}
+                                  className={styles.avatarItem}
+                                >
+                                  {reviewerImageUrl ? (
+                                    <Image
+                                      src={reviewerImageUrl}
+                                      alt={
+                                        review.reviewerNick ?? "Guest reviewer"
+                                      }
+                                      fill
+                                      sizes="22px"
+                                      className={styles.avatarImage}
+                                    />
+                                  ) : (
+                                    <span className={styles.avatarFallback}>
+                                      {toReviewerInitial(review, index)}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })
+                        : heroSlides
+                            .slice(0, REVIEW_LIMIT)
+                            .map((slide, index) => (
+                              <div
+                                key={`review-fallback-avatar-${slide._id}-${index}`}
+                                className={styles.avatarItem}
+                              >
+                                {slide.imageUrl ? (
+                                  <Image
+                                    src={slide.imageUrl}
+                                    alt={slide.title}
+                                    fill
+                                    sizes="22px"
+                                    className={styles.avatarImage}
+                                  />
                                 ) : (
-                                  <span className={styles.avatarFallback}>{toReviewerInitial(review, index)}</span>
+                                  <span className={styles.avatarFallback}>
+                                    {index + 1}
+                                  </span>
                                 )}
                               </div>
-                            );
-                          })
-                        : heroSlides.slice(0, REVIEW_LIMIT).map((slide, index) => (
-                            <div key={`review-fallback-avatar-${slide._id}-${index}`} className={styles.avatarItem}>
-                              {slide.imageUrl ? (
-                                <Image src={slide.imageUrl} alt={slide.title} fill sizes="22px" className={styles.avatarImage} />
-                              ) : (
-                                <span className={styles.avatarFallback}>{index + 1}</span>
-                              )}
-                            </div>
-                          ))}
+                            ))}
                     </div>
                     <div className={styles.reviewMeta}>
-                      <div className={styles.stars}>{featuredReviewsLoading ? "★★★★★" : reviewStars}</div>
+                      <div className={styles.stars}>
+                        {featuredReviewsLoading ? "★★★★★" : reviewStars}
+                      </div>
                       <div>
                         {featuredReviewsLoading
                           ? "Loading reviews..."
                           : reviewCount > 0
-                            ? `${reviewCount.toLocaleString()} verified reviews`
+                            ? `${reviewCount.toLocaleString()}k+ verified reviews`
                             : "No reviews yet"}
                       </div>
                     </div>
@@ -532,11 +929,18 @@ export default function HomePage() {
 
               <div className={styles.bottomRow}>
                 <p className={styles.description}>
-                  Compare real ratings, room types, and date-based availability to book with confidence on Meomul.
+                  Compare real ratings, room types, and date-based availability
+                  to book with confidence on Meomul.
                 </p>
                 <Link href={activeSlideHref} className={styles.watchBubble}>
                   {activeSlideData?.imageUrl ? (
-                    <Image src={activeSlideData.imageUrl} alt={activeSlideData.title} fill sizes="120px" className={styles.watchImage} />
+                    <Image
+                      src={activeSlideData.imageUrl}
+                      alt={activeSlideData.title}
+                      fill
+                      sizes="120px"
+                      className={styles.watchImage}
+                    />
                   ) : (
                     <div className={styles.watchFallback} />
                   )}
@@ -548,11 +952,17 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className={styles.heroRight} onMouseEnter={() => setIsSliderPaused(true)} onMouseLeave={() => setIsSliderPaused(false)}>
+            <div
+              className={styles.heroRight}
+              onMouseEnter={() => setIsSliderPaused(true)}
+              onMouseLeave={() => setIsSliderPaused(false)}
+            >
               <div className={styles.sliderViewport}>
                 {heroSlides.map((slide, index) => {
                   const isActive = index === activeSlide;
-                  const slideHref = slide._id.startsWith("fallback-") ? "/hotels" : `/hotels/${slide._id}`;
+                  const slideHref = slide._id.startsWith("fallback-")
+                    ? "/hotels"
+                    : `/hotels/${slide._id}`;
 
                   return (
                     <Link
@@ -577,12 +987,15 @@ export default function HomePage() {
                       <div className={styles.slideShade} />
                       <div className={styles.slideMeta}>
                         <div className={styles.slideTags}>
-                          <span>{formatHotelLocationLabel(slide.location)}</span>
+                          <span>
+                            {formatHotelLocationLabel(slide.location)}
+                          </span>
                           <span>{slide.hotelType}</span>
                         </div>
                         <h3>{slide.title}</h3>
                         <p>
-                          ⭐ {slide.rating.toFixed(1)} · {slide.likes.toLocaleString()} likes
+                          ⭐ {slide.rating.toFixed(1)} ·{" "}
+                          {slide.likes.toLocaleString()} likes
                         </p>
                       </div>
                     </Link>
@@ -604,19 +1017,87 @@ export default function HomePage() {
             </div>
           </section>
 
+          {isMounted && recentViewedCards.length > 0 ? (
+            <section className={styles.trendingSection}>
+              <div className={styles.trendingHeader}>
+                <div>
+                  <p className={styles.trendingEyebrow}>Recently Viewed</p>
+                  <h2 className={styles.trendingTitle}>
+                    Pick up where you left off
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={styles.trendingLink}
+                    onClick={handleClearRecentlyViewed}
+                  >
+                    Clear history
+                  </button>
+                  <Link href="/hotels" className={styles.trendingLink}>
+                    Browse all stays <span aria-hidden>↗</span>
+                  </Link>
+                </div>
+              </div>
+
+              <div className={styles.trendingRail} role="list">
+                {recentViewedCards.map((hotel) => (
+                  <article
+                    key={`recent-hotel-${hotel.hotelId}`}
+                    className={styles.trendingCard}
+                    role="listitem"
+                  >
+                    <Link
+                      href={`/hotels/${hotel.hotelId}`}
+                      className={styles.trendingCardLink}
+                    >
+                      {hotel.imageUrl ? (
+                        <Image
+                          src={hotel.imageUrl}
+                          alt={hotel.hotelTitle}
+                          fill
+                          sizes="(max-width: 640px) 88vw, (max-width: 1180px) 46vw, 28vw"
+                          className={styles.trendingCardImage}
+                        />
+                      ) : (
+                        <div className={styles.trendingCardFallback} />
+                      )}
+                      <div className={styles.trendingCardShade} />
+                      <div className={styles.trendingCardContent}>
+                        <h3>{hotel.hotelTitle}</h3>
+                        <p className={styles.trendingMeta}>
+                          {formatHotelLocationLabel(hotel.hotelLocation)} ·{" "}
+                          {hotel.hotelType}
+                        </p>
+                        <div className={styles.trendingStats}>
+                          <span>★ {hotel.hotelRating.toFixed(1)}</span>
+                          <span>{hotel.hotelLikes.toLocaleString()} likes</span>
+                        </div>
+                      </div>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {isMounted && recommendedCards.length > 0 ? (
             <section className={styles.signatureSection}>
               <div className={styles.signatureHeader}>
                 <p className={styles.signatureEyebrow}>Recommended Stays</p>
-                <h2 className={styles.signatureTitle}>Our signature stay recommendations</h2>
+                <h2 className={styles.signatureTitle}>Recommendations</h2>
                 <p className={styles.signatureDescription}>
-                  Curated from your travel profile, live guest behavior, and top-performing hotels across the platform.
+                  Curated from your travel profile, live guest behavior, and
+                  top-performing hotels across the platform.
                 </p>
               </div>
 
               <div className={styles.signatureRows}>
                 {recommendedRows.map((row, rowIndex) => (
-                  <div key={`recommended-row-${rowIndex}`} className={styles.signatureRow}>
+                  <div
+                    key={`recommended-row-${rowIndex}`}
+                    className={styles.signatureRow}
+                  >
                     {row.map((hotel, colIndex) => {
                       const globalIndex = rowIndex * 3 + colIndex;
                       const isActive = globalIndex === activeRecommendedCard;
@@ -625,10 +1106,15 @@ export default function HomePage() {
                         <article
                           key={`recommended-hotel-${hotel._id}`}
                           className={`${styles.signatureCard} ${isActive ? styles.signatureCardActive : ""}`}
-                          onMouseEnter={() => setActiveRecommendedCard(globalIndex)}
+                          onMouseEnter={() =>
+                            setActiveRecommendedCard(globalIndex)
+                          }
                           onFocus={() => setActiveRecommendedCard(globalIndex)}
                         >
-                          <Link href={`/hotels/${hotel._id}`} className={styles.signatureCardLink}>
+                          <Link
+                            href={`/hotels/${hotel._id}`}
+                            className={styles.signatureCardLink}
+                          >
                             {hotel.imageUrl ? (
                               <Image
                                 src={hotel.imageUrl}
@@ -643,12 +1129,14 @@ export default function HomePage() {
 
                             <div className={styles.signatureCardShade} />
                             <div className={styles.signatureCardContent}>
-                              <p className={styles.signatureCardIndex}>#{String(globalIndex + 1).padStart(2, "0")}</p>
                               <h3>{hotel.title}</h3>
                               <p className={styles.signatureCardMeta}>
-                                {formatHotelLocationLabel(hotel.location)} · {hotel.hotelType} · ★ {hotel.rating.toFixed(1)}
+                                {formatHotelLocationLabel(hotel.location)} ·{" "}
+                                {hotel.hotelType} · ★ {hotel.rating.toFixed(1)}
                               </p>
-                              <p className={styles.signatureCardSignal}>{hotel.signal}</p>
+                              <p className={styles.signatureCardSignal}>
+                                {hotel.signal}
+                              </p>
                               <span className={styles.signatureCardCta}>
                                 View details
                                 <span aria-hidden>↗</span>
@@ -669,7 +1157,9 @@ export default function HomePage() {
               <div className={styles.trendingHeader}>
                 <div>
                   <p className={styles.trendingEyebrow}>Trending Now</p>
-                  <h2 className={styles.trendingTitle}>Stays guests are booking right now</h2>
+                  <h2 className={styles.trendingTitle}>
+                    Stays guests are booking right now
+                  </h2>
                 </div>
                 <Link href="/hotels" className={styles.trendingLink}>
                   Browse all stays <span aria-hidden>↗</span>
@@ -677,9 +1167,16 @@ export default function HomePage() {
               </div>
 
               <div className={styles.trendingRail} role="list">
-                {trendingRailCards.map((hotel, index) => (
-                  <article key={`trending-hotel-${hotel._id}`} className={styles.trendingCard} role="listitem">
-                    <Link href={`/hotels/${hotel._id}`} className={styles.trendingCardLink}>
+                {trendingRailCards.map((hotel) => (
+                  <article
+                    key={`trending-hotel-${hotel._id}`}
+                    className={styles.trendingCard}
+                    role="listitem"
+                  >
+                    <Link
+                      href={`/hotels/${hotel._id}`}
+                      className={styles.trendingCardLink}
+                    >
                       {hotel.hotelImages[0] ? (
                         <Image
                           src={resolveMediaUrl(hotel.hotelImages[0])}
@@ -693,10 +1190,10 @@ export default function HomePage() {
                       )}
                       <div className={styles.trendingCardShade} />
                       <div className={styles.trendingCardContent}>
-                        <p className={styles.trendingRank}>#{String(index + 1).padStart(2, "0")}</p>
                         <h3>{hotel.hotelTitle}</h3>
                         <p className={styles.trendingMeta}>
-                          {formatHotelLocationLabel(hotel.hotelLocation)} · {hotel.hotelType}
+                          {formatHotelLocationLabel(hotel.hotelLocation)} ·{" "}
+                          {hotel.hotelType}
                         </p>
                         <div className={styles.trendingStats}>
                           <span>★ {hotel.hotelRating.toFixed(1)}</span>
@@ -714,7 +1211,9 @@ export default function HomePage() {
             <section className={styles.valueSection}>
               <div className={styles.valueHeader}>
                 <p className={styles.valueEyebrow}>Why guests choose Meomul</p>
-                <h2 className={styles.valueTitle}>Built for decision speed and booking confidence</h2>
+                <h2 className={styles.valueTitle}>
+                  Built for decision speed and booking confidence
+                </h2>
               </div>
 
               <div className={styles.valueGrid}>
@@ -729,48 +1228,122 @@ export default function HomePage() {
             </section>
           ) : null}
 
+          {isMounted && lastMinuteDeals.length > 0 ? (
+            <section className={styles.dealsSection}>
+              <div className={styles.dealsHeader}>
+                <div>
+                  <p className={styles.dealsEyebrow}>Last Minute Deals</p>
+                  <h2 className={styles.dealsTitle}>Rooms with active limited-time pricing</h2>
+                </div>
+                <Link href="/hotels" className={styles.dealsLink}>
+                  Browse all stays <span aria-hidden>↗</span>
+                </Link>
+              </div>
+
+              <div className={styles.dealsRail} role="list">
+                {lastMinuteDeals.map((deal) => (
+                  <article key={`deal-room-${deal.roomId}`} className={styles.dealCard} role="listitem">
+                    <Link href={`/rooms/${deal.roomId}`} className={styles.dealCardLink}>
+                      {deal.imageUrl ? (
+                        <Image
+                          src={deal.imageUrl}
+                          alt={`${deal.roomName} at ${deal.hotelTitle}`}
+                          fill
+                          sizes="(max-width: 640px) 88vw, (max-width: 1180px) 46vw, 28vw"
+                          className={styles.dealCardImage}
+                        />
+                      ) : (
+                        <div className={styles.dealCardFallback} />
+                      )}
+                      <div className={styles.dealCardShade} />
+                      <div className={styles.dealBadge}>-{deal.discountPercent}%</div>
+                      <div className={styles.dealCardContent}>
+                        <p className={styles.dealHotelMeta}>
+                          {formatHotelLocationLabel(deal.hotelLocation)} · {deal.hotelTitle}
+                        </p>
+                        <h3>{deal.roomName}</h3>
+                        <p className={styles.dealRoomMeta}>{deal.roomType} room</p>
+                        <div className={styles.dealPriceRow}>
+                          <span className={styles.dealPrice}>₩ {deal.dealPrice.toLocaleString()}</span>
+                          <span className={styles.dealOriginalPrice}>₩ {deal.basePrice.toLocaleString()}</span>
+                        </div>
+                        <p className={styles.dealExpiry}>{formatDealExpiryLabel(deal.validUntil)}</p>
+                      </div>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {isMounted && testimonialReviews.length > 0 ? (
             <section className={styles.testimonialsSection}>
               <div className={styles.testimonialsHeader}>
                 <div className={styles.testimonialsTopRow}>
                   <p className={styles.testimonialsEyebrow}>
-                    <span className={styles.testimonialsSlash} />
                     <span>Testimonials</span>
-                    <span className={styles.testimonialsSlash} />
                   </p>
                 </div>
-                <h2 className={styles.testimonialsTitle}>Trusted by guests booking through Meomul</h2>
+                <h2 className={styles.testimonialsTitle}>
+                  Trusted by guests booking through Meomul
+                </h2>
                 <p className={styles.testimonialsDescription}>
-                  Real verified stays from our live booking flow, with review quality reflected directly in hotel ranking.
+                  Real verified stays from our live booking flow, with review
+                  quality reflected directly in hotel ranking.
                 </p>
               </div>
 
-              <div ref={testimonialsRailRef} className={styles.testimonialsRail} role="list" onScroll={handleTestimonialsScroll}>
-                {testimonialReviews.map((entry, index) => {
+              <div
+                ref={testimonialsRailRef}
+                className={styles.testimonialsRail}
+                role="list"
+                onScroll={handleTestimonialsScroll}
+              >
+                {loopedTestimonialReviews.map((entry, index) => {
                   const review = entry.review;
-                  const isActive = index === activeTestimonialCard;
+                  const normalizedIndex =
+                    testimonialReviews.length > 0
+                      ? index % testimonialReviews.length
+                      : index;
+                  const isActive = normalizedIndex === activeTestimonialCard;
                   const isAccentCard = !isActive && (index + 1) % 4 === 0;
-                  const filledStars = Math.max(0, Math.min(5, Math.round(review.overallRating || 0)));
-                  const reviewerImageUrl = resolveMediaUrl(review.reviewerImage);
-                  const reviewerName = review.reviewerNick?.trim() || "Verified guest";
+                  const filledStars = Math.max(
+                    0,
+                    Math.min(5, Math.round(review.overallRating || 0)),
+                  );
+                  const reviewerImageUrl = resolveMediaUrl(
+                    review.reviewerImage,
+                  );
+                  const reviewerName =
+                    review.reviewerNick?.trim() || "Verified guest";
                   const featuredHotelTitle = entry.hotelTitle || "Meomul stay";
 
                   return (
                     <article
-                      key={`testimonial-${review._id}-${entry.hotelId}`}
+                      key={`testimonial-${review._id}-${entry.hotelId}-${index}`}
                       className={`${styles.testimonialCard} ${isActive ? styles.testimonialCardActive : ""} ${isAccentCard ? styles.testimonialCardAccent : ""}`}
                       role="listitem"
                       data-testimonial-index={index}
-                      onMouseEnter={() => setActiveTestimonialCard(index)}
-                      onClick={() => setActiveTestimonialCard(index)}
-                      onFocus={() => setActiveTestimonialCard(index)}
+                      onMouseEnter={() =>
+                        setActiveTestimonialCard(normalizedIndex)
+                      }
+                      onClick={() => setActiveTestimonialCard(normalizedIndex)}
+                      onFocus={() => setActiveTestimonialCard(normalizedIndex)}
                     >
                       <header className={styles.testimonialCardHeader}>
                         <div className={styles.testimonialAvatar}>
                           {reviewerImageUrl ? (
-                            <Image src={reviewerImageUrl} alt={reviewerName} fill sizes="56px" className={styles.testimonialAvatarImage} />
+                            <Image
+                              src={reviewerImageUrl}
+                              alt={reviewerName}
+                              fill
+                              sizes="56px"
+                              className={styles.testimonialAvatarImage}
+                            />
                           ) : (
-                            <span className={styles.testimonialAvatarFallback}>{toReviewerInitial(review, index)}</span>
+                            <span className={styles.testimonialAvatarFallback}>
+                              {toReviewerInitial(review, index)}
+                            </span>
                           )}
                         </div>
                         <div className={styles.testimonialReviewer}>
@@ -783,9 +1356,19 @@ export default function HomePage() {
 
                       <div className={styles.testimonialDivider} />
 
-                      <div className={styles.testimonialStars} aria-label={`Rated ${filledStars} out of 5`}>
+                      <div
+                        className={styles.testimonialStars}
+                        aria-label={`Rated ${filledStars} out of 5`}
+                      >
                         {Array.from({ length: 5 }).map((_, starIndex) => (
-                          <span key={`review-star-${review._id}-${starIndex}`} className={starIndex < filledStars ? styles.testimonialStarFilled : styles.testimonialStarEmpty}>
+                          <span
+                            key={`review-star-${review._id}-${starIndex}`}
+                            className={
+                              starIndex < filledStars
+                                ? styles.testimonialStarFilled
+                                : styles.testimonialStarEmpty
+                            }
+                          >
                             ★
                           </span>
                         ))}
