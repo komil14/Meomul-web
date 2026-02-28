@@ -154,101 +154,58 @@ function TypingIndicator() {
 function MessageBubble({
   message,
   isOwn,
-  showTime,
   isLastInGroup,
 }: {
   message: MessageDto;
   isOwn: boolean;
-  showTime: boolean;
   isLastInGroup: boolean;
 }) {
-  const time = formatMessageTime(message.timestamp);
-
-  // Tail only on last message in a group for a more modern look
-  const sentCls = `bg-sky-500 text-white ${isLastInGroup ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`;
-  const recvCls = `bg-white text-slate-900 border border-slate-100 shadow-sm ${isLastInGroup ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`;
+  // Light blue for sent (matches iMessage/KakaoTalk soft palette), white for received
+  const sentCls = `bg-[#d4e5f7] text-slate-900 ${isLastInGroup ? "rounded-2xl rounded-br-sm" : "rounded-2xl"}`;
+  const recvCls = `bg-white text-slate-900 border border-slate-100 shadow-sm ${isLastInGroup ? "rounded-2xl rounded-bl-sm" : "rounded-2xl"}`;
 
   return (
-    <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
-      <div
-        className={`relative max-w-[78%] overflow-hidden sm:max-w-[68%] ${isOwn ? sentCls : recvCls}`}
-      >
-        {/* IMAGE */}
-        {message.messageType === "IMAGE" && message.imageUrl && (
-          <a href={message.imageUrl} target="_blank" rel="noreferrer" className="block">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={message.imageUrl}
-              alt="Shared image"
-              className="block max-h-64 w-full object-cover"
-            />
-          </a>
-        )}
+    <div className={`relative overflow-hidden ${isOwn ? sentCls : recvCls}`}>
+      {/* IMAGE */}
+      {message.messageType === "IMAGE" && message.imageUrl && (
+        <a href={message.imageUrl} target="_blank" rel="noreferrer" className="block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={message.imageUrl}
+            alt="Shared image"
+            className="block max-h-64 w-full object-cover"
+          />
+        </a>
+      )}
 
-        {/* FILE */}
-        {message.messageType === "FILE" && message.fileUrl && (
-          <a
-            href={message.fileUrl}
-            download
-            target="_blank"
-            rel="noreferrer"
-            className={`flex items-center gap-3 px-4 py-3 transition ${
-              isOwn ? "hover:bg-white/10" : "hover:bg-slate-50"
-            }`}
-          >
-            <div
-              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${
-                isOwn ? "bg-white/20" : "bg-sky-50"
-              }`}
-            >
-              <File size={16} className={isOwn ? "text-white" : "text-sky-600"} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p
-                className={`truncate text-sm font-medium ${
-                  isOwn ? "text-white" : "text-slate-800"
-                }`}
-              >
-                {message.fileUrl.split("/").pop() ?? "Download file"}
-              </p>
-              <p className={`text-xs ${isOwn ? "text-white/60" : "text-slate-400"}`}>
-                Attachment
-              </p>
-            </div>
-            <Download size={13} className={isOwn ? "text-white/60" : "text-slate-400"} />
-          </a>
-        )}
-
-        {/* TEXT */}
-        {message.messageType === "TEXT" && (
-          <p
-            className={`break-words px-3.5 py-2.5 text-sm leading-relaxed ${
-              showTime ? "pb-1.5" : ""
-            }`}
-          >
-            {message.content}
-          </p>
-        )}
-
-        {/* Timestamp + read receipt */}
-        {showTime && (
-          <div
-            className={`flex items-center gap-1 px-3.5 pb-2 ${
-              isOwn ? "justify-end" : "justify-start"
-            }`}
-          >
-            <span className={`text-[10px] ${isOwn ? "text-white/60" : "text-slate-400"}`}>
-              {time}
-            </span>
-            {isOwn &&
-              (message.read ? (
-                <CheckCheck size={11} className="text-white/80" />
-              ) : (
-                <Check size={11} className="text-white/50" />
-              ))}
+      {/* FILE */}
+      {message.messageType === "FILE" && message.fileUrl && (
+        <a
+          href={message.fileUrl}
+          download
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 px-4 py-3 transition hover:bg-black/5"
+        >
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/60">
+            <File size={16} className="text-slate-600" />
           </div>
-        )}
-      </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-slate-800">
+              {message.fileUrl.split("/").pop() ?? "Download file"}
+            </p>
+            <p className="text-xs text-slate-500">Attachment</p>
+          </div>
+          <Download size={13} className="text-slate-400" />
+        </a>
+      )}
+
+      {/* TEXT */}
+      {message.messageType === "TEXT" && (
+        <p className="break-words px-3.5 py-2.5 text-sm leading-relaxed">
+          {message.content}
+        </p>
+      )}
     </div>
   );
 }
@@ -756,7 +713,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 <div key={i} className={`flex ${own ? "justify-end" : "justify-start"}`}>
                   <div
                     className={`h-10 animate-pulse rounded-2xl ${
-                      own ? "w-44 bg-sky-200/50" : "w-56 bg-white shadow-sm"
+                      own ? "w-44 bg-blue-100/60" : "w-56 bg-white shadow-sm"
                     }`}
                   />
                 </div>
@@ -815,7 +772,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
                     {/* Message row */}
                     <div
-                      className={`flex ${isOwn ? "justify-end" : "justify-start"} ${
+                      className={`flex items-end gap-1.5 ${isOwn ? "justify-end" : "justify-start"} ${
                         isLastInGroup ? "mb-3" : "mb-0.5"
                       }`}
                       style={
@@ -824,9 +781,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
                           : undefined
                       }
                     >
-                      {/* Received: hotel avatar placeholder */}
+                      {/* Received: avatar */}
                       {!isOwn && (
-                        <div className="mr-2 mt-auto flex-shrink-0">
+                        <div className="flex-shrink-0">
                           {isLastInGroup ? (
                             <div
                               className={`flex h-7 w-7 items-center justify-center rounded-full ${hotelAvatarColor} text-[9px] font-bold uppercase text-white`}
@@ -839,8 +796,22 @@ const ChatThreadPage: NextPageWithAuth = () => {
                         </div>
                       )}
 
-                      <div className="flex max-w-[78%] flex-col gap-0.5 sm:max-w-[68%]">
-                        {/* Sender label */}
+                      {/* Sent: time shown to the LEFT of bubble */}
+                      {isOwn && showTime && (
+                        <div className="flex flex-shrink-0 flex-col items-end gap-0.5 pb-0.5">
+                          <span className="text-[10px] leading-none text-slate-400">
+                            {formatMessageTime(message.timestamp)}
+                          </span>
+                          {message.read ? (
+                            <CheckCheck size={10} className="text-blue-400" />
+                          ) : (
+                            <Check size={10} className="text-slate-300" />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Bubble (+ sender label for received) */}
+                      <div className="flex max-w-[72%] flex-col gap-0.5 sm:max-w-[62%]">
                         {!isOwn && isFirstInGroup && (
                           <p className="ml-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                             Hotel Staff
@@ -849,10 +820,16 @@ const ChatThreadPage: NextPageWithAuth = () => {
                         <MessageBubble
                           message={message}
                           isOwn={isOwn}
-                          showTime={showTime}
                           isLastInGroup={isLastInGroup}
                         />
                       </div>
+
+                      {/* Received: time shown to the RIGHT of bubble */}
+                      {!isOwn && showTime && (
+                        <span className="flex-shrink-0 pb-0.5 text-[10px] leading-none text-slate-400">
+                          {formatMessageTime(message.timestamp)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

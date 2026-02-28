@@ -246,6 +246,19 @@ const getNextWeekendRange = (): { checkIn: string; checkOut: string } => {
   };
 };
 
+const getNextBusinessRange = (): { checkIn: string; checkOut: string } => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = today.getDay();
+  const daysUntilMonday = ((8 - day) % 7) || 7;
+  const checkInDate = addDays(today, daysUntilMonday);
+  const checkOutDate = addDays(checkInDate, 3);
+  return {
+    checkIn: toIsoLocalDate(checkInDate),
+    checkOut: toIsoLocalDate(checkOutDate),
+  };
+};
+
 const buildHotelsFilteredHref = (
   input: Record<string, string | undefined>,
 ): string => {
@@ -541,6 +554,105 @@ export default function HomePage() {
     () => recentlyViewedHotels.slice(0, 6),
     [recentlyViewedHotels],
   );
+  const editorialGuideCards = useMemo<EditorialGuideCard[]>(() => {
+    if (!isMounted) {
+      return [];
+    }
+
+    const weekendRange = getNextWeekendRange();
+    const businessRange = getNextBusinessRange();
+    const imageCandidates = uniqueHotelsById([
+      ...stableTopHotels,
+      ...trendingRailCards,
+    ]);
+
+    const pickImageByLocation = (
+      location: HotelLocation,
+      fallbackIndex: number,
+    ): string => {
+      const matchedHotel = imageCandidates.find(
+        (hotel) => hotel.hotelLocation === location && hotel.hotelImages[0],
+      );
+
+      if (matchedHotel?.hotelImages[0]) {
+        return resolveMediaUrl(matchedHotel.hotelImages[0]);
+      }
+
+      const fallbackSlideImage =
+        heroSlides[fallbackIndex % Math.max(1, heroSlides.length)]?.imageUrl ??
+        "";
+      return fallbackSlideImage;
+    };
+
+    const guides: Omit<EditorialGuideCard, "href" | "imageUrl">[] = [
+      {
+        id: "guide-jeju-weekend",
+        eyebrow: "Weekend Escape",
+        title: "Best stays for a Jeju weekend",
+        description:
+          "Short recharge plan with resort and pension picks optimized for 2-night stays.",
+        location: "JEJU",
+        purpose: "STAYCATION",
+        checkIn: weekendRange.checkIn,
+        checkOut: weekendRange.checkOut,
+        guests: "2",
+        types: "RESORT,PENSION",
+      },
+      {
+        id: "guide-seoul-business",
+        eyebrow: "Business Route",
+        title: "Seoul hotels for business trips",
+        description:
+          "Central hotels with strong workspace amenities and smooth weekday availability.",
+        location: "SEOUL",
+        purpose: "BUSINESS",
+        checkIn: businessRange.checkIn,
+        checkOut: businessRange.checkOut,
+        guests: "1",
+        types: "HOTEL",
+      },
+      {
+        id: "guide-busan-romantic",
+        eyebrow: "Couple Stay",
+        title: "Busan romantic stay shortlist",
+        description:
+          "Ocean-facing and premium rooms popular for two-person romantic getaways.",
+        location: "BUSAN",
+        purpose: "ROMANTIC",
+        checkIn: weekendRange.checkIn,
+        checkOut: weekendRange.checkOut,
+        guests: "2",
+        types: "HOTEL,RESORT",
+      },
+      {
+        id: "guide-gangneung-family",
+        eyebrow: "Family Friendly",
+        title: "Gangneung family-ready stays",
+        description:
+          "Larger rooms and practical family setups for easier multi-guest planning.",
+        location: "GANGNEUNG",
+        purpose: "FAMILY",
+        checkIn: weekendRange.checkIn,
+        checkOut: weekendRange.checkOut,
+        guests: "4",
+        types: "RESORT,PENSION,HOTEL",
+      },
+    ];
+
+    return guides.map((guide, index) => ({
+      ...guide,
+      href: buildHotelsFilteredHref({
+        location: guide.location,
+        purpose: guide.purpose,
+        checkIn: guide.checkIn,
+        checkOut: guide.checkOut,
+        guests: guide.guests,
+        types: guide.types,
+        sort: "RECOMMENDED",
+      }),
+      imageUrl: pickImageByLocation(guide.location, index),
+    }));
+  }, [heroSlides, isMounted, stableTopHotels, trendingRailCards]);
   const dealSourceHotels = useMemo(() => {
     const personalized = isMounted
       ? (recommendedHotelsData?.getRecommendedHotelsV2.list ?? [])
@@ -1383,6 +1495,61 @@ export default function HomePage() {
               </div>
             </section>
           ) : null}
+
+
+          {isMounted && editorialGuideCards.length > 0 ? (
+            <section className={styles.guidesSection}>
+              <div className={styles.guidesHeader}>
+                <p className={styles.guidesEyebrow}>Editorial Guides</p>
+                <h2 className={styles.guidesTitle}>
+                  Start with a trip plan, not a blank search
+                </h2>
+                <p className={styles.guidesDescription}>
+                  Curated routes into pre-filtered results so guests can move
+                  from idea to booking faster.
+                </p>
+              </div>
+
+              <div className={styles.guidesGrid}>
+                {editorialGuideCards.map((guide) => (
+                  <article key={guide.id} className={styles.guideCard}>
+                    <Link href={guide.href} className={styles.guideCardLink}>
+                      {guide.imageUrl ? (
+                        <Image
+                          src={guide.imageUrl}
+                          alt={guide.title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1180px) 50vw, 25vw"
+                          className={styles.guideCardImage}
+                        />
+                      ) : (
+                        <div className={styles.guideCardFallback} />
+                      )}
+                      <div className={styles.guideCardShade} />
+                      <div className={styles.guideCardContent}>
+                        <p className={styles.guideCardEyebrow}>
+                          {guide.eyebrow}
+                        </p>
+                        <h3>{guide.title}</h3>
+                        <p className={styles.guideCardDescription}>
+                          {guide.description}
+                        </p>
+                        <p className={styles.guideCardMeta}>
+                          {formatHotelLocationLabel(guide.location)} ·{" "}
+                          {guide.checkIn} - {guide.checkOut} · {guide.guests}{" "}
+                          guest{guide.guests === "1" ? "" : "s"}
+                        </p>
+                        <span className={styles.guideCardCta}>
+                          Open plan <span aria-hidden>↗</span>
+                        </span>
+                      </div>
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
         </div>
       </main>
     </>

@@ -1049,6 +1049,169 @@
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.18) 25%, rgba(0, 0, 0, 0.8) 100%);
 }
 
+.guidesSection {
+  margin-top: 0.94rem;
+  padding: 0.92rem 0 0.98rem;
+}
+
+.guidesHeader {
+  margin-bottom: 0.88rem;
+  display: grid;
+  gap: 0.34rem;
+  text-align: center;
+}
+
+.guidesEyebrow {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.guidesTitle {
+  margin: 0;
+  color: var(--home-text);
+  font-size: clamp(1.68rem, 3.2vw, 2.18rem);
+  line-height: 1.03;
+  letter-spacing: -0.02em;
+}
+
+.guidesDescription {
+  margin: 0 auto;
+  max-width: 52rem;
+  color: var(--home-text-muted);
+  font-size: 0.98rem;
+  line-height: 1.48;
+}
+
+.guidesGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.72rem;
+}
+
+.guideCard {
+  position: relative;
+  border-radius: var(--home-radius-lg);
+  border: 1px solid var(--home-border);
+  overflow: hidden;
+  min-height: 15.2rem;
+  background: #111827;
+  box-shadow: 0 12px 30px -24px rgba(15, 23, 42, 0.72);
+  animation: revealUp 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.guideCard:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.guideCard:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.guideCard:nth-child(4) {
+  animation-delay: 210ms;
+}
+
+.guideCardLink {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+}
+
+.guideCardImage {
+  object-fit: cover;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.guideCardFallback {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #9ca3af 0%, #dbeafe 100%);
+}
+
+.guideCardShade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.12) 20%, rgba(15, 23, 42, 0.86) 100%);
+  transition: background 240ms ease;
+}
+
+.guideCardContent {
+  position: absolute;
+  inset: auto 0.84rem 0.84rem;
+  z-index: 2;
+  display: grid;
+  gap: 0.24rem;
+  color: #f8fafc;
+}
+
+.guideCardEyebrow {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.guideCardContent h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.guideCardDescription {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.42;
+  color: rgba(226, 232, 240, 0.9);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.guideCardMeta {
+  margin: 0.02rem 0 0;
+  font-size: 0.69rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.95);
+}
+
+.guideCardCta {
+  margin-top: 0.18rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.62);
+  color: #e2e8f0;
+  padding: 0.3rem 0.54rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.guideCard:is(:hover, :focus-within) .guideCardImage {
+  transform: scale(1.06);
+}
+
+.guideCard:is(:hover, :focus-within) .guideCardShade {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.16) 20%, rgba(2, 6, 23, 0.92) 100%);
+}
+
 .valueSection {
   margin-top: 0.64rem;
   margin-bottom: 0.9rem;
@@ -1588,6 +1751,38 @@
     font-size: 1.2rem;
   }
 
+  .guidesSection {
+    margin-top: 0.68rem;
+    padding-bottom: 0.82rem;
+  }
+
+  .guidesHeader {
+    margin-bottom: 0.72rem;
+    text-align: left;
+  }
+
+  .guidesTitle {
+    font-size: clamp(1.44rem, 5vw, 1.9rem);
+  }
+
+  .guidesDescription {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .guidesGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.64rem;
+  }
+
+  .guideCard {
+    min-height: 14.2rem;
+  }
+
+  .guideCardContent h3 {
+    font-size: 1.1rem;
+  }
+
   .valueSection {
     margin-top: 0.48rem;
     margin-bottom: 0.56rem;
@@ -1892,6 +2087,51 @@
   .dealPrice {
     font-size: 0.98rem;
     padding: 0.28rem 0.52rem;
+  }
+
+  .guidesSection {
+    margin-top: 0.48rem;
+    padding: 0.62rem 0 0.72rem;
+  }
+
+  .guidesTitle {
+    font-size: clamp(1.34rem, 8.6vw, 1.78rem);
+  }
+
+  .guidesDescription {
+    font-size: 0.86rem;
+  }
+
+  .guidesGrid {
+    grid-template-columns: 1fr;
+    gap: 0.58rem;
+  }
+
+  .guideCard {
+    min-height: 12.8rem;
+    border-radius: 0.92rem;
+  }
+
+  .guideCardContent {
+    inset: auto 0.74rem 0.78rem;
+    gap: 0.2rem;
+  }
+
+  .guideCardContent h3 {
+    font-size: 1rem;
+  }
+
+  .guideCardDescription {
+    font-size: 0.74rem;
+  }
+
+  .guideCardMeta {
+    font-size: 0.64rem;
+  }
+
+  .guideCardCta {
+    font-size: 0.62rem;
+    padding: 0.26rem 0.5rem;
   }
 
   .valueSection {

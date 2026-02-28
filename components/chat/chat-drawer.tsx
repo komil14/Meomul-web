@@ -105,14 +105,28 @@ function Bubble({
   isOwn: boolean;
   isLast: boolean;
 }) {
-  const sent = "bg-sky-500 text-white rounded-xl";
+  const sent = "bg-[#d4e5f7] text-slate-900 rounded-xl";
   const recv =
     "bg-white text-slate-900 border border-slate-200 shadow-sm rounded-xl";
 
   return (
     <div
-      className={`flex ${isOwn ? "justify-end" : "justify-start"} ${isLast ? "mb-2.5" : "mb-0.5"}`}
+      className={`flex items-end gap-1 ${isOwn ? "justify-end" : "justify-start"} ${isLast ? "mb-2.5" : "mb-0.5"}`}
     >
+      {/* Sent: time to the LEFT of bubble */}
+      {isOwn && isLast && (
+        <div className="flex flex-shrink-0 flex-col items-end gap-0.5 pb-0.5">
+          <span className="text-[9px] leading-none text-slate-400">
+            {fmtTime(message.timestamp)}
+          </span>
+          {message.read ? (
+            <CheckCheck size={9} className="text-blue-400" />
+          ) : (
+            <Check size={9} className="text-slate-300" />
+          )}
+        </div>
+      )}
+
       <div className={`max-w-[80%] overflow-hidden ${isOwn ? sent : recv}`}>
         {message.messageType === "IMAGE" && message.imageUrl && (
           <a
@@ -135,7 +149,7 @@ function Bubble({
             download
             target="_blank"
             rel="noreferrer"
-            className={`flex items-center gap-2 px-3 py-2 text-xs ${isOwn ? "text-white/80 hover:bg-white/10" : "text-sky-600 hover:bg-slate-50"} transition`}
+            className="flex items-center gap-2 px-3 py-2 text-xs text-slate-600 transition hover:bg-black/5"
           >
             📎 {message.fileUrl.split("/").pop() ?? "Download"}
           </a>
@@ -145,22 +159,14 @@ function Bubble({
             {message.content}
           </p>
         )}
-        {isLast && (
-          <div className="flex items-center justify-end gap-1 px-3 pb-2">
-            <span
-              className={`text-[9px] ${isOwn ? "text-white/55" : "text-slate-400"}`}
-            >
-              {fmtTime(message.timestamp)}
-            </span>
-            {isOwn &&
-              (message.read ? (
-                <CheckCheck size={10} className="text-white/70" />
-              ) : (
-                <Check size={10} className="text-white/40" />
-              ))}
-          </div>
-        )}
       </div>
+
+      {/* Received: time to the RIGHT of bubble */}
+      {!isOwn && isLast && (
+        <span className="flex-shrink-0 pb-0.5 text-[9px] leading-none text-slate-400">
+          {fmtTime(message.timestamp)}
+        </span>
+      )}
     </div>
   );
 }
@@ -646,7 +652,7 @@ function ThreadView({
               >
                 <div
                   className={`h-8 animate-pulse rounded-2xl ${
-                    own ? "w-32 bg-sky-200/60" : "w-44 bg-white"
+                    own ? "w-32 bg-blue-100/60" : "w-44 bg-white"
                   }`}
                 />
               </div>
