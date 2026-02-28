@@ -39,6 +39,7 @@ import type {
   HotelLocation,
   HotelListItem,
   PaginationInput,
+  RecommendationExplanationDto,
   ReviewRatingsSummaryDto,
   ReviewDto,
   RoomType,
@@ -67,6 +68,14 @@ const MONTH_LABELS = [
   "Nov",
   "Dec",
 ] as const;
+const GENERIC_RECOMMENDATION_SIGNALS = new Set<string>([
+  "Strong match for your saved travel preferences",
+  "Good match based on your core preferences",
+  "Balanced pick based on your recent browsing behavior",
+  "High-quality fallback aligned with your general taste",
+  "Popular with guests right now",
+  "Strong overall activity and engagement",
+]);
 
 const HERO_QUERY_INPUT: PaginationInput = {
   page: 1,
@@ -261,6 +270,40 @@ const toReviewerDisplayName = (review: ReviewDto, index: number): string => {
   return `guest${suffix}`;
 };
 
+const pickRecommendationSignal = (
+  explanation: RecommendationExplanationDto,
+): string => {
+  const specificSignal = explanation.signals.find(
+    (signal) => !GENERIC_RECOMMENDATION_SIGNALS.has(signal),
+  );
+  if (specificSignal) {
+    return specificSignal;
+  }
+
+  if (explanation.likedSimilar) {
+    return "Similar to hotels you previously liked";
+  }
+  if (explanation.matchedLocation) {
+    return "Matches your preferred location";
+  }
+  if (explanation.matchedPurposes.length > 0) {
+    return `Fits your trip purpose: ${explanation.matchedPurposes
+      .slice(0, 2)
+      .join(", ")}`;
+  }
+  if (explanation.matchedType) {
+    return "Matches your preferred hotel type";
+  }
+  if (explanation.matchedPrice) {
+    return "Within your usual budget range";
+  }
+
+  return (
+    explanation.signals[0] ??
+    "Popular with guests for consistent service quality and strong recent ratings."
+  );
+};
+
 const toIsoLocalDate = (value: Date): string => {
   const year = value.getFullYear();
   const month = `${value.getMonth() + 1}`.padStart(2, "0");
@@ -441,7 +484,7 @@ export default function HomePage({
       ? (recommendedHotelsData?.getRecommendedHotelsV2.explanations ?? [])
       : [];
     explanations.forEach((explanation) => {
-      const topSignal = explanation.signals?.[0];
+      const topSignal = pickRecommendationSignal(explanation);
       if (topSignal) {
         signalMap.set(explanation.hotelId, topSignal);
       }
