@@ -437,6 +437,26 @@ export interface HomeLastMinuteDealDto {
   validUntil: string;
 }
 
+export interface HomeFeedInput {
+  heroLimit?: number;
+  trendingLimit?: number;
+  dealsLimit?: number;
+  testimonialsLimit?: number;
+  featuredReviewLimit?: number;
+  recommendationLimit?: number;
+}
+
+export interface HomeFeedDto {
+  topHotels: HotelListItem[];
+  hotelInventoryTotal: number;
+  trendingHotels: HotelListItem[];
+  featuredReviews: ReviewDto[];
+  featuredRatingsSummary?: ReviewRatingsSummaryDto | null;
+  lastMinuteDeals: HomeLastMinuteDealDto[];
+  testimonials: HomeTestimonialDto[];
+  recommendationMeta?: RecommendationMetaDto | null;
+}
+
 export interface GetHomeTestimonialsQueryData {
   getHomeTestimonials: HomeTestimonialDto[];
 }
@@ -451,6 +471,14 @@ export interface GetHomeLastMinuteDealsQueryData {
 
 export interface GetHomeLastMinuteDealsQueryVars {
   limit?: number;
+}
+
+export interface GetHomeFeedQueryData {
+  getHomeFeed: HomeFeedDto;
+}
+
+export interface GetHomeFeedQueryVars {
+  input?: HomeFeedInput;
 }
 
 export interface GetRecommendedHotelsQueryData {

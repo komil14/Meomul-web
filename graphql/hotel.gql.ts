@@ -351,6 +351,122 @@ export const GET_HOME_LAST_MINUTE_DEALS_QUERY = gql`
   }
 `;
 
+export const GET_HOME_FEED_QUERY = gql`
+  query GetHomeFeed($input: HomeFeedInput) {
+    getHomeFeed(input: $input) {
+      topHotels {
+        _id
+        hotelTitle
+        hotelLocation
+        hotelType
+        hotelRating
+        hotelLikes
+        hotelImages
+      }
+      hotelInventoryTotal
+      trendingHotels {
+        _id
+        hotelTitle
+        hotelLocation
+        hotelType
+        hotelRating
+        hotelLikes
+        hotelImages
+      }
+      featuredReviews {
+        _id
+        reviewerId
+        reviewerNick
+        reviewerImage
+        bookingId
+        hotelId
+        overallRating
+        cleanlinessRating
+        locationRating
+        serviceRating
+        amenitiesRating
+        valueRating
+        reviewTitle
+        reviewText
+        guestPhotos
+        helpfulCount
+        reviewStatus
+        verifiedStay
+        stayDate
+        createdAt
+        hotelResponse {
+          responseText
+          respondedBy
+          respondedAt
+        }
+      }
+      featuredRatingsSummary {
+        totalReviews
+        overallRating
+        cleanlinessRating
+        locationRating
+        serviceRating
+        amenitiesRating
+        valueRating
+      }
+      lastMinuteDeals {
+        roomId
+        hotelId
+        hotelTitle
+        hotelLocation
+        roomName
+        roomType
+        imageUrl
+        basePrice
+        dealPrice
+        discountPercent
+        validUntil
+      }
+      testimonials {
+        hotelId
+        hotelTitle
+        review {
+          _id
+          reviewerId
+          reviewerNick
+          reviewerImage
+          bookingId
+          hotelId
+          overallRating
+          cleanlinessRating
+          locationRating
+          serviceRating
+          amenitiesRating
+          valueRating
+          reviewTitle
+          reviewText
+          guestPhotos
+          helpfulCount
+          reviewStatus
+          verifiedStay
+          stayDate
+          createdAt
+          hotelResponse {
+            responseText
+            respondedBy
+            respondedAt
+          }
+        }
+      }
+      recommendationMeta {
+        profileSource
+        onboardingWeight
+        behaviorWeight
+        matchedLocationCount
+        fallbackCount
+        strictStageCount
+        relaxedStageCount
+        generalStageCount
+      }
+    }
+  }
+`;
+
 export const GET_SIMILAR_HOTELS_QUERY = gql`
   query GetSimilarHotels($hotelId: String!, $limit: Int) {
     getSimilarHotels(hotelId: $hotelId, limit: $limit) {

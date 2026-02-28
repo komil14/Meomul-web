@@ -1343,23 +1343,31 @@
   font-weight: 500;
 }
 
-.testimonialsRail {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(21.5rem, 25.4rem);
-  gap: 1.08rem;
-  overflow-x: auto;
-  overflow-y: hidden;
+.testimonialsViewport {
+  position: relative;
+  overflow: hidden;
   padding: 0.24rem 0.06rem 0.2rem;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
-  scroll-padding-inline: 0.08rem;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
 }
 
-.testimonialsRail::-webkit-scrollbar {
-  height: 0;
+.testimonialsTrack {
+  --testimonial-card-width: minmax(21.5rem, 25.4rem);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--testimonial-card-width);
+  gap: 1.08rem;
+  width: max-content;
+  animation: testimonialMarquee 48s linear infinite;
+  will-change: transform;
+}
+
+.testimonialsTrackStatic {
+  animation: none;
+  transform: translateX(0);
+}
+
+.testimonialsViewport:hover .testimonialsTrack,
+.testimonialsViewport:focus-within .testimonialsTrack {
+  animation-play-state: paused;
 }
 
 .testimonialCard {
@@ -1595,6 +1603,15 @@
   }
 }
 
+@keyframes testimonialMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(calc(-50% - 0.54rem), 0, 0);
+  }
+}
+
 @media (max-width: 1400px) {
   .logoText {
     font-size: 1.82rem;
@@ -1826,8 +1843,9 @@
     font-size: 1.04rem;
   }
 
-  .testimonialsRail {
-    grid-auto-columns: minmax(19rem, 22rem);
+  .testimonialsTrack {
+    --testimonial-card-width: minmax(19rem, 22rem);
+    animation-duration: 52s;
   }
 
   .testimonialCard {
@@ -2180,9 +2198,10 @@
     display: block;
   }
 
-  .testimonialsRail {
-    grid-auto-columns: minmax(16rem, 18rem);
+  .testimonialsTrack {
+    --testimonial-card-width: minmax(16rem, 18rem);
     gap: 0.64rem;
+    animation-duration: 46s;
   }
 
   .testimonialCard {
@@ -2249,5 +2268,10 @@
     transition: none !important;
     transform: none !important;
     filter: none !important;
+  }
+
+  .testimonialsTrack {
+    animation: none !important;
+    transform: none !important;
   }
 }
