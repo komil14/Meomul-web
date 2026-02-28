@@ -172,8 +172,11 @@ function NewChatOverlay({
   onSuccess: (chatId: string) => void;
 }) {
   const [step, setStep] = useState<"select" | "compose">("select");
-  const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<BookingListItem | null>(null);
+  const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(
+    null,
+  );
+  const [selectedBooking, setSelectedBooking] =
+    useState<BookingListItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -186,7 +189,8 @@ function NewChatOverlay({
 
   // Auto-select hotel from query param once hotels are loaded
   useEffect(() => {
-    if (!preselectedHotelId || selectedHotel || availableHotels.length === 0) return;
+    if (!preselectedHotelId || selectedHotel || availableHotels.length === 0)
+      return;
     const hotel = availableHotels.find((h) => h._id === preselectedHotelId);
     if (hotel) {
       setSelectedHotel(hotel);
@@ -202,7 +206,8 @@ function NewChatOverlay({
   // Unique booked hotels (most-recent booking per hotel)
   const bookedHotels = useMemo(() => {
     const seen = new Set<string>();
-    const result: Array<{ booking: BookingListItem; hotel: HotelListItem }> = [];
+    const result: Array<{ booking: BookingListItem; hotel: HotelListItem }> =
+      [];
     for (const booking of myBookings) {
       const hotel = hotelsMap.get(booking.hotelId);
       if (!seen.has(booking.hotelId) && hotel) {
@@ -223,7 +228,10 @@ function NewChatOverlay({
     );
   }, [availableHotels, searchQuery]);
 
-  const handleSelectHotel = (hotel: HotelListItem, booking?: BookingListItem) => {
+  const handleSelectHotel = (
+    hotel: HotelListItem,
+    booking?: BookingListItem,
+  ) => {
     setSelectedHotel(hotel);
     setSelectedBooking(booking ?? null);
     setStep("compose");
@@ -278,7 +286,9 @@ function NewChatOverlay({
       {/* Panel */}
       <div
         className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[80vh] sm:w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
-        style={{ animation: "overlaySlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both" }}
+        style={{
+          animation: "overlaySlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
+        }}
       >
         {/* Drag handle (mobile) */}
         <div className="flex flex-none justify-center pt-3 sm:hidden">
@@ -362,15 +372,23 @@ function NewChatOverlay({
                       onClick={() => handleSelectHotel(hotel, booking)}
                       className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition hover:bg-slate-50"
                     >
-                      <HotelAvatar name={hotel.hotelTitle} id={hotel._id} size="sm" />
+                      <HotelAvatar
+                        name={hotel.hotelTitle}
+                        id={hotel._id}
+                        size="sm"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">
                           {hotel.hotelTitle}
                         </p>
                         <div className="mt-0.5 flex items-center gap-1">
-                          <CalendarCheck size={10} className="flex-shrink-0 text-slate-400" />
+                          <CalendarCheck
+                            size={10}
+                            className="flex-shrink-0 text-slate-400"
+                          />
                           <p className="truncate text-xs text-slate-400">
-                            #{booking.bookingCode} · {fmtDate(booking.checkInDate)} –{" "}
+                            #{booking.bookingCode} ·{" "}
+                            {fmtDate(booking.checkInDate)} –{" "}
                             {fmtDate(booking.checkOutDate)}
                           </p>
                         </div>
@@ -396,7 +414,9 @@ function NewChatOverlay({
               {/* All hotels */}
               <div>
                 <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                  {searchQuery ? `Results (${filteredHotels.length})` : "All hotels"}
+                  {searchQuery
+                    ? `Results (${filteredHotels.length})`
+                    : "All hotels"}
                 </p>
                 {filteredHotels.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -411,7 +431,11 @@ function NewChatOverlay({
                       onClick={() => handleSelectHotel(hotel)}
                       className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition hover:bg-slate-50"
                     >
-                      <HotelAvatar name={hotel.hotelTitle} id={hotel._id} size="sm" />
+                      <HotelAvatar
+                        name={hotel.hotelTitle}
+                        id={hotel._id}
+                        size="sm"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-900">
                           {hotel.hotelTitle}
@@ -436,11 +460,17 @@ function NewChatOverlay({
           >
             {/* Hotel info */}
             <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
-              <HotelAvatar name={selectedHotel.hotelTitle} id={selectedHotel._id} size="lg" />
+              <HotelAvatar
+                name={selectedHotel.hotelTitle}
+                id={selectedHotel._id}
+                size="lg"
+              />
               <p className="mt-4 text-base font-bold text-slate-900">
                 {selectedHotel.hotelTitle}
               </p>
-              <p className="mt-0.5 text-sm text-slate-500">{selectedHotel.hotelLocation}</p>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {selectedHotel.hotelLocation}
+              </p>
               {selectedBooking && (
                 <div className="mt-4 flex items-center gap-1.5 rounded-xl bg-sky-50 px-3.5 py-2 text-xs text-sky-700">
                   <CalendarCheck size={12} />
@@ -492,7 +522,9 @@ function NewChatOverlay({
                 />
                 <button
                   type="button"
-                  onClick={() => { void handleSend(); }}
+                  onClick={() => {
+                    void handleSend();
+                  }}
                   disabled={!message.trim() || loading}
                   className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
                     message.trim()
@@ -504,7 +536,9 @@ function NewChatOverlay({
                 </button>
               </div>
               {message.trim() && (
-                <p className="mt-1 text-right text-[10px] text-slate-400">⌘↩ to send</p>
+                <p className="mt-1 text-right text-[10px] text-slate-400">
+                  ⌘↩ to send
+                </p>
               )}
             </div>
           </div>
@@ -527,11 +561,14 @@ const ChatsPage: NextPageWithAuth = () => {
 
   const [showNewChat, setShowNewChat] = useState(false);
   const [manualStaffHotelId, setManualStaffHotelId] = useState("");
+  const [preselectedHotelId, setPreselectedHotelId] = useState("");
 
   // Query param support: ?openNew=1&openHotelId=XXX
   const openNewFromQuery = router.query.openNew === "1";
   const openHotelIdFromQuery =
-    typeof router.query.openHotelId === "string" ? router.query.openHotelId : "";
+    typeof router.query.openHotelId === "string"
+      ? router.query.openHotelId
+      : "";
 
   const { page, statusFilter, getParam, pushQuery, replaceQuery } =
     usePaginationQueryState<ChatStatus>({
@@ -570,14 +607,14 @@ const ChatsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const { data: publicHotelsData } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(
-    GET_HOTELS_QUERY,
-    {
-      variables: { input: hotelsInput },
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-    },
-  );
+  const { data: publicHotelsData } = useQuery<
+    GetHotelsQueryData,
+    GetHotelsQueryVars
+  >(GET_HOTELS_QUERY, {
+    variables: { input: hotelsInput },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
 
   const hotelsMap = useMemo<Map<string, HotelListItem>>(() => {
     const map = new Map<string, HotelListItem>();
@@ -593,22 +630,25 @@ const ChatsPage: NextPageWithAuth = () => {
     [agentHotelsData, isAgent, publicHotelsData],
   );
 
-  const { data: bookingsData } = useQuery<GetMyBookingsQueryData, GetMyBookingsQueryVars>(
-    GET_MY_BOOKINGS_QUERY,
-    {
-      skip: !isUser,
-      variables: { input: bookingsInput },
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-    },
-  );
+  const { data: bookingsData } = useQuery<
+    GetMyBookingsQueryData,
+    GetMyBookingsQueryVars
+  >(GET_MY_BOOKINGS_QUERY, {
+    skip: !isUser,
+    variables: { input: bookingsInput },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
   const myBookings = useMemo(
     () => bookingsData?.getMyBookings.list ?? [],
     [bookingsData],
   );
 
   const selectedHotelId = isStaff
-    ? hotelIdFromQuery || manualStaffHotelId.trim() || availableHotels[0]?._id || ""
+    ? hotelIdFromQuery ||
+      manualStaffHotelId.trim() ||
+      availableHotels[0]?._id ||
+      ""
     : "";
 
   const {
@@ -655,9 +695,12 @@ const ChatsPage: NextPageWithAuth = () => {
   // Auto-open overlay from query param (e.g. from hotel detail page)
   useEffect(() => {
     if (!openNewFromQuery || !isUser) return;
+    if (openHotelIdFromQuery) {
+      setPreselectedHotelId(openHotelIdFromQuery);
+    }
     setShowNewChat(true);
     void router.replace("/chats", undefined, { shallow: true });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openNewFromQuery, isUser]);
 
   /** COMPUTED **/
@@ -703,10 +746,14 @@ const ChatsPage: NextPageWithAuth = () => {
           availableHotels={publicHotelsData?.getHotels.list ?? []}
           myBookings={myBookings}
           hotelsMap={hotelsMap}
-          preselectedHotelId={openHotelIdFromQuery}
-          onClose={() => setShowNewChat(false)}
+          preselectedHotelId={preselectedHotelId}
+          onClose={() => {
+            setShowNewChat(false);
+            setPreselectedHotelId("");
+          }}
           onSuccess={(chatId) => {
             setShowNewChat(false);
+            setPreselectedHotelId("");
             void router.push(`/chats/${chatId}`);
           }}
         />
@@ -719,7 +766,9 @@ const ChatsPage: NextPageWithAuth = () => {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               Inbox
             </p>
-            <h1 className="mt-1 text-2xl font-semibold text-slate-900">Messages</h1>
+            <h1 className="mt-1 text-2xl font-semibold text-slate-900">
+              Messages
+            </h1>
           </div>
           {isUser && (
             <button
@@ -768,7 +817,10 @@ const ChatsPage: NextPageWithAuth = () => {
                     key={s}
                     type="button"
                     onClick={() =>
-                      pushChatsQuery({ status: s as ChatStatus | "ALL", page: 1 })
+                      pushChatsQuery({
+                        status: s as ChatStatus | "ALL",
+                        page: 1,
+                      })
                     }
                     className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                       isSelected
@@ -867,7 +919,11 @@ const ChatsPage: NextPageWithAuth = () => {
                     animationDelay: `${i * 35}ms`,
                   }}
                 >
-                  <HotelAvatar name={hotelName} id={chat._id} status={chat.chatStatus} />
+                  <HotelAvatar
+                    name={hotelName}
+                    id={chat._id}
+                    status={chat.chatStatus}
+                  />
 
                   <div className="min-w-0 flex-1">
                     {/* Row 1: name + time */}
@@ -883,7 +939,9 @@ const ChatsPage: NextPageWithAuth = () => {
                       </p>
                       <span
                         className={`flex-shrink-0 text-[11px] ${
-                          unread > 0 ? "font-semibold text-sky-500" : "text-slate-400"
+                          unread > 0
+                            ? "font-semibold text-sky-500"
+                            : "text-slate-400"
                         }`}
                       >
                         {time}
@@ -894,7 +952,10 @@ const ChatsPage: NextPageWithAuth = () => {
                     <div className="mt-0.5 flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-1">
                         {isLastMsgFromMe && !isUser && (
-                          <Check size={12} className="flex-shrink-0 text-slate-400" />
+                          <Check
+                            size={12}
+                            className="flex-shrink-0 text-slate-400"
+                          />
                         )}
                         <p
                           className={`truncate text-sm ${
@@ -937,7 +998,8 @@ const ChatsPage: NextPageWithAuth = () => {
         {total > PAGE_LIMIT && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-slate-500">
-              Page <span className="font-semibold text-slate-800">{page}</span> of{" "}
+              Page <span className="font-semibold text-slate-800">{page}</span>{" "}
+              of{" "}
               <span className="font-semibold text-slate-800">{totalPages}</span>
             </p>
             <div className="flex gap-1.5">

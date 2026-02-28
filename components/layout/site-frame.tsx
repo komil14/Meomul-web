@@ -1,4 +1,4 @@
-import { useQuery } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -7,7 +7,12 @@ import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { PriceLockFab } from "@/components/layout/price-lock-fab";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
-import { GET_UNREAD_COUNT_QUERY } from "@/graphql/notification.gql";
+import {
+  GET_MY_NOTIFICATIONS_QUERY,
+  GET_UNREAD_COUNT_QUERY,
+  MARK_ALL_AS_READ_MUTATION,
+  MARK_AS_READ_MUTATION,
+} from "@/graphql/notification.gql";
 import {
   clearAuthSession,
   getAccessToken,
@@ -17,7 +22,13 @@ import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { createNotificationSocket } from "@/lib/socket/notification";
 import type { SessionMember } from "@/types/auth";
 import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
-import { Bell, LogOut, MessageSquare, Settings } from "lucide-react";
+import {
+  Bell,
+  CheckCheck,
+  LogOut,
+  MessageSquare,
+  Settings,
+} from "lucide-react";
 
 const UNREAD_POLL_INTERVAL_MS = 120000;
 const NOTIFICATION_POLL_INTERVAL_MS = 60000;
@@ -141,6 +152,241 @@ function UserAvatarMenu({
               Sign out
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Notification type icons ──────────────────────────────────────────────────
+
+const NOTIF_TYPE_COLOR: Record<string, string> = {
+  BOOKING: "bg-sky-50 text-sky-500",
+  REVIEW: "bg-amber-50 text-amber-500",
+  CHAT: "bg-violet-50 text-violet-500",
+  SYSTEM: "bg-slate-50 text-slate-500",
+  PRICE_DROP: "bg-emerald-50 text-emerald-500",
+  RECOMMENDATION: "bg-rose-50 text-rose-500",
+};
+
+function notifDot(type: string) {
+  const cls = NOTIF_TYPE_COLOR[type] ?? "bg-slate-50 text-slate-400";
+  return (
+    <span
+      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${cls}`}
+    >
+      {type.charAt(0)}
+    </span>
+  );
+}
+
+function timeAgoShort(dateStr: string): string {
+  const ms = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(ms / 3600000);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(ms / 86400000);
+  if (d < 7) return `${d}d`;
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+interface NotifItem {
+  _id: string;
+  type: string;
+  title: string;
+  message: string;
+  link?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+// ─── Notification bell + drawer ───────────────────────────────────────────────
+
+function NotificationBellDrawer({
+  unreadCount,
+  onCountChange,
+}: {
+  unreadCount: number;
+  onCountChange: () => void;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const { data, loading, refetch } = useQuery<{
+    getMyNotifications: NotifItem[];
+  }>(GET_MY_NOTIFICATIONS_QUERY, {
+    skip: !open,
+    fetchPolicy: "network-only",
+  });
+
+  const [markAsRead] = useMutation(MARK_AS_READ_MUTATION);
+  const [markAllAsRead] = useMutation(MARK_ALL_AS_READ_MUTATION);
+
+  const notifications = data?.getMyNotifications ?? [];
+  // Show only latest 6 in the quick drawer
+  const visible = notifications.slice(0, 6);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Close on route change
+  useEffect(() => {
+    setOpen(false);
+  }, [router.asPath]);
+
+  const handleToggle = () => {
+    setOpen((o) => !o);
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllAsRead();
+      onCountChange();
+      void refetch();
+    } catch {
+      // silent
+    }
+  };
+
+  const handleClickNotif = async (item: NotifItem) => {
+    if (!item.read) {
+      try {
+        await markAsRead({ variables: { notificationId: item._id } });
+        onCountChange();
+        void refetch();
+      } catch {
+        // silent
+      }
+    }
+    setOpen(false);
+    if (item.link) {
+      void router.push(item.link);
+    }
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
+        aria-label="Notifications"
+        aria-expanded={open}
+      >
+        <Bell size={17} />
+        {unreadCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold text-white">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl sm:w-96">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <h3 className="text-sm font-semibold text-slate-900">
+              Notifications
+            </h3>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  void handleMarkAllRead();
+                }}
+                className="flex items-center gap-1 text-xs font-medium text-sky-500 transition hover:text-sky-600"
+              >
+                <CheckCheck size={13} />
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          {/* List */}
+          <div className="max-h-[340px] overflow-y-auto">
+            {loading && visible.length === 0 ? (
+              <div className="space-y-3 p-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="h-8 w-8 animate-pulse rounded-full bg-slate-100" />
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 w-3/4 animate-pulse rounded bg-slate-100" />
+                      <div className="h-2.5 w-1/2 animate-pulse rounded bg-slate-100" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : visible.length === 0 ? (
+              <div className="px-4 py-10 text-center">
+                <Bell size={28} className="mx-auto mb-2 text-slate-200" />
+                <p className="text-sm text-slate-400">No notifications yet</p>
+              </div>
+            ) : (
+              visible.map((item) => (
+                <button
+                  key={item._id}
+                  type="button"
+                  onClick={() => {
+                    void handleClickNotif(item);
+                  }}
+                  className={`group flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50 ${
+                    !item.read ? "bg-sky-50/40" : ""
+                  }`}
+                >
+                  {notifDot(item.type)}
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`truncate text-sm ${
+                        item.read
+                          ? "font-medium text-slate-600"
+                          : "font-semibold text-slate-900"
+                      }`}
+                    >
+                      {item.title}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">
+                      {item.message}
+                    </p>
+                  </div>
+                  <div className="flex flex-shrink-0 flex-col items-end gap-1">
+                    <span className="text-[10px] text-slate-300">
+                      {timeAgoShort(item.createdAt)}
+                    </span>
+                    {!item.read && (
+                      <span className="h-2 w-2 rounded-full bg-sky-500" />
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* Footer */}
+          {visible.length > 0 && (
+            <div className="border-t border-slate-100 px-4 py-2.5 text-center">
+              <Link
+                href="/notifications"
+                className="text-xs font-medium text-sky-500 transition hover:text-sky-600"
+                onClick={() => setOpen(false)}
+              >
+                View all notifications
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -287,20 +533,14 @@ export function SiteFrame({ children }: PropsWithChildren) {
       </button>
     ) : null;
 
-  // Notification bell button
+  // Notification bell button with drawer
   const notifBellButton = member ? (
-    <Link
-      href="/notifications"
-      className="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
-      aria-label="Notifications"
-    >
-      <Bell size={17} />
-      {notifUnreadCount > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-0.5 text-[9px] font-bold text-white">
-          {notifUnreadCount > 99 ? "99+" : notifUnreadCount}
-        </span>
-      )}
-    </Link>
+    <NotificationBellDrawer
+      unreadCount={notifUnreadCount}
+      onCountChange={() => {
+        void refetchNotifUnread();
+      }}
+    />
   ) : null;
 
   const sharedHeader = (

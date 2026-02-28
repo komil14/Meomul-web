@@ -1,7 +1,11 @@
 import { useQuery } from "@apollo/client/react";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GET_HOTEL_QUERY, GET_HOTEL_REVIEWS_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
+import {
+  GET_HOTEL_QUERY,
+  GET_HOTEL_REVIEWS_QUERY,
+  GET_ROOMS_BY_HOTEL_QUERY,
+} from "@/graphql/hotel.gql";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import {
   amenityLabels,
@@ -37,16 +41,21 @@ interface UseHotelDetailPageDataInput {
   initialRooms: RoomListItem[];
 }
 
-export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelDetailPageDataInput) => {
+export const useHotelDetailPageData = ({
+  initialHotel,
+  initialRooms,
+}: UseHotelDetailPageDataInput) => {
   const router = useRouter();
   const isPageVisible = usePageVisible();
 
   const [isHydrated, setIsHydrated] = useState(false);
-  const [member, setMember] = useState<ReturnType<typeof getSessionMember>>(null);
+  const [member, setMember] =
+    useState<ReturnType<typeof getSessionMember>>(null);
   const [hasAccessToken, setHasAccessToken] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
-  const [enableInitialNetworkFetch, setEnableInitialNetworkFetch] = useState(false);
+  const [enableInitialNetworkFetch, setEnableInitialNetworkFetch] =
+    useState(false);
   const reviewsSectionRef = useRef<HTMLDivElement | null>(null);
   const hasVisibilityMountedRef = useRef(false);
   const wasVisibleRef = useRef(false);
@@ -61,7 +70,8 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
 
   const memberType = member?.memberType;
   const canUseRecommendedQuery = canUsePersonalizedRecommendations(memberType);
-  const canUseLikeActions = canUseMemberActions(memberType) || (!member && hasAccessToken);
+  const canUseLikeActions =
+    canUseMemberActions(memberType) || (!member && hasAccessToken);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -96,11 +106,16 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     };
 
     const windowWithIdle = window as Window & {
-      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      requestIdleCallback?: (
+        callback: () => void,
+        options?: { timeout: number },
+      ) => number;
       cancelIdleCallback?: (id: number) => void;
     };
     if (typeof windowWithIdle.requestIdleCallback === "function") {
-      const idleId = windowWithIdle.requestIdleCallback(activateFetch, { timeout: 1800 });
+      const idleId = windowWithIdle.requestIdleCallback(activateFetch, {
+        timeout: 1800,
+      });
       return () => {
         if (typeof windowWithIdle.cancelIdleCallback === "function") {
           windowWithIdle.cancelIdleCallback(idleId);
@@ -148,7 +163,10 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     return () => observer.disconnect();
   }, [shouldLoadReviews]);
 
-  const hotelQueryVariables = useMemo<GetHotelQueryVars>(() => ({ hotelId }), [hotelId]);
+  const hotelQueryVariables = useMemo<GetHotelQueryVars>(
+    () => ({ hotelId }),
+    [hotelId],
+  );
 
   const roomsQueryVariables = useMemo<GetRoomsByHotelQueryVars>(
     () => ({
@@ -189,7 +207,7 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   });
 
   const queriedHotel = hotelData?.getHotel ?? null;
-  const hotel = isHydrated ? queriedHotel ?? initialHotel : initialHotel;
+  const hotel = isHydrated ? (queriedHotel ?? initialHotel) : initialHotel;
   const trendingLocation = hotel?.hotelLocation;
 
   const {
@@ -197,24 +215,30 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     loading: roomsLoading,
     error: roomsError,
     refetch: refetchRooms,
-  } = useQuery<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>(GET_ROOMS_BY_HOTEL_QUERY, {
-    skip: !hotelId || !enableInitialNetworkFetch,
-    variables: roomsQueryVariables,
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  } = useQuery<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>(
+    GET_ROOMS_BY_HOTEL_QUERY,
+    {
+      skip: !hotelId || !enableInitialNetworkFetch,
+      variables: roomsQueryVariables,
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
   const {
     data: reviewsData,
     loading: reviewsQueryLoading,
     error: reviewsError,
     refetch: refetchReviews,
-  } = useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(GET_HOTEL_REVIEWS_QUERY, {
-    skip: !hotelId || !shouldLoadReviews,
-    variables: reviewsQueryVariables,
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  } = useQuery<GetHotelReviewsQueryData, GetHotelReviewsQueryVars>(
+    GET_HOTEL_REVIEWS_QUERY,
+    {
+      skip: !hotelId || !shouldLoadReviews,
+      variables: reviewsQueryVariables,
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
   useEffect(() => {
     if (!isPageVisible) {
@@ -232,13 +256,23 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
       return;
     }
 
-    const refreshTasks: Array<Promise<unknown>> = [refetchHotel(), refetchRooms()];
+    const refreshTasks: Array<Promise<unknown>> = [
+      refetchHotel(),
+      refetchRooms(),
+    ];
     if (shouldLoadReviews) {
       refreshTasks.push(refetchReviews());
     }
 
     void Promise.allSettled(refreshTasks);
-  }, [hotelId, isPageVisible, refetchHotel, refetchReviews, refetchRooms, shouldLoadReviews]);
+  }, [
+    hotelId,
+    isPageVisible,
+    refetchHotel,
+    refetchReviews,
+    refetchRooms,
+    shouldLoadReviews,
+  ]);
 
   const {
     hotelLikeState,
@@ -279,14 +313,21 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   });
 
   const queriedRooms = roomsData?.getRoomsByHotel?.list;
-  const rooms = useMemo(() => (isHydrated ? queriedRooms ?? initialRooms : initialRooms), [initialRooms, isHydrated, queriedRooms]);
+  const rooms = useMemo(
+    () => (isHydrated ? (queriedRooms ?? initialRooms) : initialRooms),
+    [initialRooms, isHydrated, queriedRooms],
+  );
 
   const reviews = useMemo(
-    () => (shouldLoadReviews ? reviewsData?.getHotelReviews.list ?? [] : []),
+    () => (shouldLoadReviews ? (reviewsData?.getHotelReviews.list ?? []) : []),
     [reviewsData?.getHotelReviews.list, shouldLoadReviews],
   );
-  const reviewTotal = shouldLoadReviews ? reviewsData?.getHotelReviews.metaCounter.total ?? 0 : 0;
-  const serverRatingsSummary = shouldLoadReviews ? reviewsData?.getHotelReviews.ratingsSummary ?? null : null;
+  const reviewTotal = shouldLoadReviews
+    ? (reviewsData?.getHotelReviews.metaCounter.total ?? 0)
+    : 0;
+  const serverRatingsSummary = shouldLoadReviews
+    ? (reviewsData?.getHotelReviews.ratingsSummary ?? null)
+    : null;
   const ratingsSummary = useMemo<ReviewRatingsSummaryDto | null>(() => {
     if (serverRatingsSummary) {
       return serverRatingsSummary;
@@ -297,7 +338,8 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     }
 
     const count = reviews.length;
-    const avg = (values: number[]): number => values.reduce((sum, value) => sum + value, 0) / count;
+    const avg = (values: number[]): number =>
+      values.reduce((sum, value) => sum + value, 0) / count;
 
     return {
       totalReviews: reviewTotal || count,
@@ -309,7 +351,10 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
       valueRating: avg(reviews.map((review) => review.valueRating)),
     };
   }, [reviewTotal, reviews, serverRatingsSummary]);
-  const reviewTotalPages = Math.max(1, Math.ceil(reviewTotal / REVIEW_PAGE_SIZE));
+  const reviewTotalPages = Math.max(
+    1,
+    Math.ceil(reviewTotal / REVIEW_PAGE_SIZE),
+  );
   const reviewsLoading = !shouldLoadReviews || reviewsQueryLoading;
   const canGoPrev = reviewPage > 1;
   const canGoNext = reviewPage < reviewTotalPages;
@@ -323,12 +368,20 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   }, [reviewTotalPages]);
 
   const fromPrice = useMemo(() => {
-    const prices = rooms.map((room) => room.basePrice).filter((price): price is number => typeof price === "number");
+    const prices = rooms
+      .map((room) => room.basePrice)
+      .filter((price): price is number => typeof price === "number");
     return prices.length > 0 ? Math.min(...prices) : 0;
   }, [rooms]);
 
-  const heroImage = useMemo(() => hotel?.hotelImages[0] ?? rooms[0]?.roomImages[0] ?? "", [hotel?.hotelImages, rooms]);
-  const secondaryImage = useMemo(() => hotel?.hotelImages[1] ?? heroImage, [heroImage, hotel?.hotelImages]);
+  const heroImage = useMemo(
+    () => hotel?.hotelImages[0] ?? rooms[0]?.roomImages[0] ?? "",
+    [hotel?.hotelImages, rooms],
+  );
+  const secondaryImage = useMemo(
+    () => hotel?.hotelImages[1] ?? heroImage,
+    [heroImage, hotel?.hotelImages],
+  );
 
   const galleryImages = useMemo(() => {
     if (!hotel) {
@@ -343,26 +396,43 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
   }, [hotel]);
 
   const activeAmenities = useMemo(() => {
-    if (!hotel) {
+    if (!hotel || !hotel.amenities) {
       return [];
     }
 
     return Object.entries(hotel.amenities)
       .filter(([, enabled]) => enabled === true)
-      .map(([key]) => amenityLabels[key as keyof HotelDetailItem["amenities"]] ?? key);
+      .map(
+        ([key]) =>
+          amenityLabels[key as keyof HotelDetailItem["amenities"]] ?? key,
+      );
   }, [hotel]);
 
   const shortDescription = useMemo(
-    () => (hotel ? shortenText(hotel.hotelDesc || "No hotel description provided yet.", 190) : ""),
+    () =>
+      hotel
+        ? shortenText(
+            hotel.hotelDesc || "No hotel description provided yet.",
+            190,
+          )
+        : "",
     [hotel],
   );
 
   const reviewCountText = useMemo(
-    () => (reviewTotal > 0 ? formatNumber(reviewTotal) : reviewsLoading ? "..." : "0"),
+    () =>
+      reviewTotal > 0
+        ? formatNumber(reviewTotal)
+        : reviewsLoading
+          ? "..."
+          : "0",
     [reviewTotal, reviewsLoading],
   );
 
-  const satisfactionText = useMemo(() => (hotel ? asPercent(hotel.hotelRating) : "0%"), [hotel]);
+  const satisfactionText = useMemo(
+    () => (hotel ? asPercent(hotel.hotelRating) : "0%"),
+    [hotel],
+  );
 
   const hotelLikeCount = hotelLikeState?.count ?? hotel?.hotelLikes ?? 0;
   const hotelLiked = hotelLikeState?.liked ?? hotelLikedFromServer;
@@ -423,7 +493,9 @@ export const useHotelDetailPageData = ({ initialHotel, initialRooms }: UseHotelD
     recommendedMeta,
     recommendedLoading,
     recommendedErrorMessage,
-    cancellationPolicyText: hotel ? getPolicyText(hotel.cancellationPolicy) : "Moderate cancellation",
+    cancellationPolicyText: hotel
+      ? getPolicyText(hotel.cancellationPolicy)
+      : "Moderate cancellation",
     reviewsSectionRef,
   };
 };
