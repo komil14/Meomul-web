@@ -102,8 +102,6 @@ export default function HotelsPage() {
           <header>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Discover</p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-900">Public Hotels</h1>
-              <p className="mt-2 text-sm text-slate-600">Search quickly, compare confidently, and book without friction.</p>
             </div>
           </header>
         </ScrollReveal>

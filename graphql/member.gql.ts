@@ -69,3 +69,33 @@ export const CANCEL_SUBSCRIPTION_MUTATION = gql`
     }
   }
 `;
+
+// ─── Admin mutations ───────────────────────────────────────────────────────────
+
+export const APPROVE_SUBSCRIPTION_MUTATION = gql`
+  mutation ApproveSubscription(
+    $memberId: String!
+    $tier: SubscriptionTier!
+    $durationDays: Int!
+  ) {
+    approveSubscription(
+      memberId: $memberId
+      tier: $tier
+      durationDays: $durationDays
+    ) {
+      _id
+      memberNick
+      subscriptionTier
+      subscriptionExpiry
+    }
+  }
+`;
+
+export const DENY_SUBSCRIPTION_MUTATION = gql`
+  mutation DenySubscription($memberId: String!, $reason: String) {
+    denySubscription(memberId: $memberId, reason: $reason) {
+      message
+      success
+    }
+  }
+`;

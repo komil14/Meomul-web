@@ -1,5 +1,4 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
@@ -12,7 +11,6 @@ import { getSessionMember } from "@/lib/auth/session";
 import { confirmDanger } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { Check, Crown } from "lucide-react";
-import type { NextPageWithAuth } from "@/types/page";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -98,10 +96,36 @@ const TIERS = [
   },
 ] as const;
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Hero style maps ──────────────────────────────────────────────────────────
 
-const SubscriptionPage: NextPageWithAuth = () => {
-  const router = useRouter();
+const TIER_LABEL: Record<string, string> = {
+  FREE: "Free", BASIC: "Basic", PREMIUM: "Premium", ELITE: "Elite",
+};
+
+const TIER_ICON_RING: Record<string, string> = {
+  FREE: "border-slate-400/30 bg-slate-400/15",
+  BASIC: "border-sky-400/30 bg-sky-400/15",
+  PREMIUM: "border-violet-400/30 bg-violet-400/15",
+  ELITE: "border-amber-400/30 bg-amber-400/15",
+};
+
+const TIER_CROWN_COLOR: Record<string, string> = {
+  FREE: "text-slate-300",
+  BASIC: "text-sky-400",
+  PREMIUM: "text-violet-400",
+  ELITE: "text-amber-400",
+};
+
+const TIER_RADIAL_COLOR: Record<string, string> = {
+  FREE: "rgba(99,102,241,0.14)",
+  BASIC: "rgba(14,165,233,0.18)",
+  PREMIUM: "rgba(139,92,246,0.18)",
+  ELITE: "rgba(245,158,11,0.20)",
+};
+
+// ─── SubscriptionTab ──────────────────────────────────────────────────────────
+
+export function SubscriptionTab() {
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
 
@@ -120,6 +144,7 @@ const SubscriptionPage: NextPageWithAuth = () => {
   const status = data?.getSubscriptionStatus;
   const currentTier = status?.tier ?? "FREE";
   const isActive = status?.active ?? false;
+  const radialColor = TIER_RADIAL_COLOR[currentTier] ?? TIER_RADIAL_COLOR.FREE;
 
   const handleRequest = async (tierId: string) => {
     if (tierId === currentTier) return;
@@ -148,49 +173,52 @@ const SubscriptionPage: NextPageWithAuth = () => {
     }
   };
 
-  if (!member) {
-    void router.replace("/auth/login");
-    return null;
-  }
-
   return (
-    <main className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Subscription</h1>
-        <p className="mt-0.5 text-sm text-slate-500">Upgrade your plan to unlock more features.</p>
-      </div>
+    <div className="space-y-5">
+      {/* ── Subscription hero ─────────────────────────────────────────────── */}
+      {!loading && (
+        <section className="relative overflow-hidden rounded-[2rem] bg-slate-950 shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950/80" />
+          <div
+            className="absolute inset-0"
+            style={{ background: `radial-gradient(ellipse 80% 60% at top right, ${radialColor}, transparent)` }}
+          />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_bottom_left,rgba(14,165,233,0.08),transparent)]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border ${TIER_ICON_RING[currentTier] ?? TIER_ICON_RING.FREE}`}>
+                  <Crown size={24} className={TIER_CROWN_COLOR[currentTier] ?? TIER_CROWN_COLOR.FREE} />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white">
+                    {TIER_LABEL[currentTier] ?? currentTier} plan
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    {isActive && status?.daysRemaining != null
+                      ? `${status.daysRemaining} days remaining`
+                      : "No expiry · Free tier"}
+                  </p>
+                </div>
+              </div>
+              {isActive && currentTier !== "FREE" && (
+                <button
+                  type="button"
+                  onClick={() => { void handleCancel(); }}
+                  disabled={cancelling}
+                  className="flex-shrink-0 rounded-xl border border-rose-400/40 bg-rose-400/15 px-3 py-1.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-400/25 disabled:opacity-60"
+                >
+                  {cancelling ? "Cancelling..." : "Cancel plan"}
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {error && <ErrorNotice message={getErrorMessage(error)} />}
-
-      {/* Current plan badge */}
-      {!loading && status && (
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50">
-            <Crown size={18} className="text-amber-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-900">
-              Current plan: <span className="text-amber-600">{currentTier}</span>
-            </p>
-            {isActive && status.daysRemaining != null ? (
-              <p className="text-xs text-slate-500">{status.daysRemaining} days remaining</p>
-            ) : (
-              <p className="text-xs text-slate-500">Free tier — no expiry</p>
-            )}
-          </div>
-          {isActive && currentTier !== "FREE" && (
-            <button
-              type="button"
-              onClick={() => { void handleCancel(); }}
-              disabled={cancelling}
-              className="flex-shrink-0 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-60"
-            >
-              {cancelling ? "Cancelling..." : "Cancel plan"}
-            </button>
-          )}
-        </div>
-      )}
 
       {/* Tier cards */}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -209,7 +237,6 @@ const SubscriptionPage: NextPageWithAuth = () => {
                 </span>
               )}
 
-              {/* Header */}
               <div className={`-mx-5 -mt-5 mb-4 rounded-t-xl px-5 py-4 ${tier.headerBg}`}>
                 <p className={`text-lg font-bold ${tier.accentText}`}>{tier.label}</p>
                 <p className="text-slate-700">
@@ -218,7 +245,6 @@ const SubscriptionPage: NextPageWithAuth = () => {
                 </p>
               </div>
 
-              {/* Features */}
               <ul className="mb-5 flex-1 space-y-2">
                 {tier.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
@@ -228,7 +254,6 @@ const SubscriptionPage: NextPageWithAuth = () => {
                 ))}
               </ul>
 
-              {/* CTA */}
               {isCurrent ? (
                 <div className={`rounded-lg py-2 text-center text-sm font-semibold ${tier.accentText} bg-white border ${tier.color}`}>
                   Current plan
@@ -251,12 +276,6 @@ const SubscriptionPage: NextPageWithAuth = () => {
       <p className="text-center text-xs text-slate-400">
         Subscription requests are manually reviewed by our team. You will receive a notification once approved.
       </p>
-    </main>
+    </div>
   );
-};
-
-SubscriptionPage.auth = {
-  roles: ["USER"],
-};
-
-export default SubscriptionPage;
+}

@@ -1,0 +1,432 @@
+import { useMutation, useQuery } from "@apollo/client/react";
+import { useRouter } from "next/router";
+import { useMemo, useState } from "react";
+import { ErrorNotice } from "@/components/ui/error-notice";
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  APPROVE_SUBSCRIPTION_MUTATION,
+  DENY_SUBSCRIPTION_MUTATION,
+} from "@/graphql/member.gql";
+import { GET_SUBSCRIPTION_REQUESTS_QUERY } from "@/graphql/notification.gql";
+import { getSessionMember } from "@/lib/auth/session";
+import { getErrorMessage } from "@/lib/utils/error";
+import { Check, Crown, RefreshCw, X } from "lucide-react";
+import type { NextPageWithAuth } from "@/types/page";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface SubscriptionRequestNotif {
+  _id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  link?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+interface GetSubscriptionRequestsData {
+  getSubscriptionRequests: SubscriptionRequestNotif[];
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const TIER_DURATION_DEFAULT: Record<string, number> = {
+  BASIC: 30,
+  PREMIUM: 30,
+  ELITE: 30,
+};
+
+const TIER_COLOR: Record<string, string> = {
+  BASIC: "bg-sky-100 text-sky-700",
+  PREMIUM: "bg-violet-100 text-violet-700",
+  ELITE: "bg-amber-100 text-amber-700",
+  FREE: "bg-slate-100 text-slate-600",
+};
+
+/** Extract tier from message e.g. "Nick requested PREMIUM subscription" */
+function parseTierFromMessage(message: string): string {
+  const match = message.match(/requested (\w+) subscription/i);
+  return match?.[1]?.toUpperCase() ?? "BASIC";
+}
+
+/** Extract memberId from link e.g. "/admin/members/abc123" */
+function parseMemberIdFromLink(link?: string | null): string {
+  if (!link) return "";
+  return link.split("/").pop() ?? "";
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  if (m < 1) return "Just now";
+  if (m < 60) return `${m}m ago`;
+  if (h < 24) return `${h}h ago`;
+  if (d === 1) return "Yesterday";
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// ─── Approve modal ─────────────────────────────────────────────────────────────
+
+function ApproveModal({
+  request,
+  onClose,
+  onApproved,
+}: {
+  request: SubscriptionRequestNotif;
+  onClose: () => void;
+  onApproved: () => void;
+}) {
+  const toast = useToast();
+  const tier = parseTierFromMessage(request.message);
+  const memberId = parseMemberIdFromLink(request.link);
+  const [selectedTier, setSelectedTier] = useState(
+    ["BASIC", "PREMIUM", "ELITE"].includes(tier) ? tier : "BASIC",
+  );
+  const [durationDays, setDurationDays] = useState(
+    TIER_DURATION_DEFAULT[tier] ?? 30,
+  );
+
+  const [approveSubscription, { loading }] = useMutation(APPROVE_SUBSCRIPTION_MUTATION, {
+    refetchQueries: [{ query: GET_SUBSCRIPTION_REQUESTS_QUERY }],
+  });
+
+  const handleApprove = async () => {
+    if (!memberId) {
+      toast.error("Could not resolve member ID from request.");
+      return;
+    }
+    try {
+      await approveSubscription({
+        variables: { memberId, tier: selectedTier, durationDays },
+      });
+      toast.success(`Subscription approved — ${selectedTier} for ${durationDays} days.`);
+      onApproved();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+      />
+      <div className="relative w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
+        <h3 className="text-base font-bold text-slate-900">Approve subscription</h3>
+        <p className="mt-1 text-sm text-slate-500">{request.message}</p>
+
+        <div className="mt-5 space-y-4">
+          {/* Tier select */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              Tier
+            </label>
+            <div className="flex gap-2">
+              {["BASIC", "PREMIUM", "ELITE"].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setSelectedTier(t);
+                    setDurationDays(TIER_DURATION_DEFAULT[t] ?? 30);
+                  }}
+                  className={`flex-1 rounded-xl py-2 text-sm font-semibold transition ${
+                    selectedTier === t
+                      ? TIER_COLOR[t]
+                      : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  {t.charAt(0) + t.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              Duration (days)
+            </label>
+            <div className="flex gap-2">
+              {[30, 90, 180, 365].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDurationDays(d)}
+                  className={`flex-1 rounded-xl py-2 text-sm font-semibold transition ${
+                    durationDays === d
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {d === 365 ? "1y" : d === 180 ? "6m" : d === 90 ? "3m" : "1m"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => { void handleApprove(); }}
+            disabled={loading || !memberId}
+            className="flex-1 rounded-xl bg-emerald-500 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-60"
+          >
+            {loading ? "Approving..." : "Approve"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Deny modal ────────────────────────────────────────────────────────────────
+
+function DenyModal({
+  request,
+  onClose,
+  onDenied,
+}: {
+  request: SubscriptionRequestNotif;
+  onClose: () => void;
+  onDenied: () => void;
+}) {
+  const toast = useToast();
+  const memberId = parseMemberIdFromLink(request.link);
+  const [reason, setReason] = useState("");
+
+  const [denySubscription, { loading }] = useMutation(DENY_SUBSCRIPTION_MUTATION, {
+    refetchQueries: [{ query: GET_SUBSCRIPTION_REQUESTS_QUERY }],
+  });
+
+  const handleDeny = async () => {
+    if (!memberId) {
+      toast.error("Could not resolve member ID from request.");
+      return;
+    }
+    try {
+      await denySubscription({
+        variables: { memberId, reason: reason.trim() || undefined },
+      });
+      toast.success("Subscription request denied.");
+      onDenied();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+      />
+      <div className="relative w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
+        <h3 className="text-base font-bold text-slate-900">Deny request</h3>
+        <p className="mt-1 text-sm text-slate-500">{request.message}</p>
+
+        <div className="mt-4">
+          <label className="mb-1.5 block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            Reason <span className="font-normal normal-case text-slate-400">(optional)</span>
+          </label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            maxLength={300}
+            placeholder="Explain why the request is denied..."
+            className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300"
+          />
+        </div>
+
+        <div className="mt-5 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => { void handleDeny(); }}
+            disabled={loading || !memberId}
+            className="flex-1 rounded-xl bg-rose-500 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:opacity-60"
+          >
+            {loading ? "Denying..." : "Deny"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+const AdminSubscriptionsPage: NextPageWithAuth = () => {
+  const router = useRouter();
+  const member = useMemo(() => getSessionMember(), []);
+  const [approving, setApproving] = useState<SubscriptionRequestNotif | null>(null);
+  const [denying, setDenying] = useState<SubscriptionRequestNotif | null>(null);
+
+  const { data, loading, error, refetch } = useQuery<GetSubscriptionRequestsData>(
+    GET_SUBSCRIPTION_REQUESTS_QUERY,
+    {
+      skip: !member,
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
+
+  const requests = data?.getSubscriptionRequests ?? [];
+
+  if (!member) {
+    void router.replace("/auth/login");
+    return null;
+  }
+
+  return (
+    <>
+      {approving && (
+        <ApproveModal
+          request={approving}
+          onClose={() => setApproving(null)}
+          onApproved={() => setApproving(null)}
+        />
+      )}
+      {denying && (
+        <DenyModal
+          request={denying}
+          onClose={() => setDenying(null)}
+          onDenied={() => setDenying(null)}
+        />
+      )}
+
+      <main className="mx-auto max-w-2xl space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">Subscription Requests</h1>
+            <p className="mt-0.5 text-sm text-slate-500">
+              {requests.length > 0
+                ? `${requests.length} pending request${requests.length !== 1 ? "s" : ""}`
+                : "No pending requests"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { void refetch(); }}
+            disabled={loading}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 disabled:opacity-60"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+        </div>
+
+        {error && <ErrorNotice message={getErrorMessage(error)} />}
+
+        {/* Loading skeleton */}
+        {loading && requests.length === 0 && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4">
+                <div className="h-10 w-10 animate-pulse rounded-full bg-slate-100" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3.5 w-2/3 animate-pulse rounded-full bg-slate-100" />
+                  <div className="h-3 w-1/3 animate-pulse rounded-full bg-slate-50" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && requests.length === 0 && !error && (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white py-16">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+              <Crown size={24} className="text-slate-300" />
+            </div>
+            <p className="mt-4 text-base font-semibold text-slate-700">All caught up</p>
+            <p className="mt-1 text-sm text-slate-400">No pending subscription requests.</p>
+          </div>
+        )}
+
+        {/* Request list */}
+        {requests.length > 0 && (
+          <div className="space-y-2">
+            {requests.map((req) => {
+              const tier = parseTierFromMessage(req.message);
+              const tierCls = TIER_COLOR[tier] ?? TIER_COLOR.BASIC;
+              return (
+                <div
+                  key={req._id}
+                  className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4"
+                >
+                  {/* Icon */}
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-violet-50">
+                    <Crown size={18} className="text-violet-500" />
+                  </div>
+
+                  {/* Info */}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900">{req.message}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${tierCls}`}>
+                        {tier}
+                      </span>
+                      <span className="text-xs text-slate-400">{timeAgo(req.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDenying(req)}
+                      className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                    >
+                      <X size={13} />
+                      Deny
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setApproving(req)}
+                      className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
+                    >
+                      <Check size={13} />
+                      Approve
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </>
+  );
+};
+
+AdminSubscriptionsPage.auth = {
+  roles: ["ADMIN", "ADMIN_OPERATOR"],
+};
+
+export default AdminSubscriptionsPage;

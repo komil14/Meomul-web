@@ -651,3 +651,18 @@ export const CANCEL_PRICE_LOCK_MUTATION = gql`
     cancelPriceLock(priceLockId: $priceLockId)
   }
 `;
+
+/** Minimal hotel fields needed to render a hotel card (used on profile likes page) */
+export const GET_HOTEL_CARD_QUERY = gql`
+  query GetHotelCard($hotelId: String!) {
+    getHotel(hotelId: $hotelId) {
+      _id
+      hotelTitle
+      hotelLocation
+      hotelType
+      hotelRating
+      hotelLikes
+      hotelImages
+    }
+  }
+`;

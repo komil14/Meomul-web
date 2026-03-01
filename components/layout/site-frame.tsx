@@ -25,9 +25,13 @@ import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
 import {
   Bell,
   CheckCheck,
+  Crown,
+  Heart,
   LogOut,
   MessageSquare,
   Settings,
+  Star,
+  User,
 } from "lucide-react";
 
 const UNREAD_POLL_INTERVAL_MS = 120000;
@@ -47,11 +51,18 @@ const NAV_LINKS = {
     { href: "/bookings/manage", label: "Manage" },
     { href: "/dashboard", label: "Dashboard" },
   ],
+  admin: [
+    { href: "/hotels", label: "Hotels" },
+    { href: "/bookings/manage", label: "Manage" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/admin/subscriptions", label: "Subscriptions" },
+  ],
 } as const;
 
 function getNavLinks(member: SessionMember | null) {
   if (!member) return NAV_LINKS.guest;
   if (member.memberType === "USER") return NAV_LINKS.user;
+  if (member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR") return NAV_LINKS.admin;
   return NAV_LINKS.staff;
 }
 
@@ -132,6 +143,42 @@ function UserAvatarMenu({
             <p className="text-[11px] capitalize text-slate-400">{roleLabel}</p>
           </div>
           <div className="py-1">
+            <Link
+              href="/profile"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+            >
+              <User size={14} className="text-slate-400" />
+              Profile
+            </Link>
+            {member.memberType === "USER" && (
+              <>
+                <Link
+                  href="/profile?tab=subscription"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  <Crown size={14} className="text-slate-400" />
+                  Subscription
+                </Link>
+                <Link
+                  href="/profile?tab=reviews"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  <Star size={14} className="text-slate-400" />
+                  My Reviews
+                </Link>
+                <Link
+                  href="/profile?tab=likes"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                >
+                  <Heart size={14} className="text-slate-400" />
+                  Saved Hotels
+                </Link>
+              </>
+            )}
             <Link
               href="/settings/preferences"
               onClick={() => setOpen(false)}
@@ -688,6 +735,38 @@ export function SiteFrame({ children }: PropsWithChildren) {
             <div className="mt-3 border-t border-slate-100 pt-3">
               {member ? (
                 <div className="flex flex-col gap-0.5">
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
+                  >
+                    <User size={15} className="text-slate-400" />
+                    Profile
+                  </Link>
+                  {member.memberType === "USER" && (
+                    <>
+                      <Link
+                        href="/profile?tab=subscription"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
+                      >
+                        <Crown size={15} className="text-slate-400" />
+                        Subscription
+                      </Link>
+                      <Link
+                        href="/profile?tab=reviews"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
+                      >
+                        <Star size={15} className="text-slate-400" />
+                        My Reviews
+                      </Link>
+                      <Link
+                        href="/profile?tab=likes"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
+                      >
+                        <Heart size={15} className="text-slate-400" />
+                        Saved Hotels
+                      </Link>
+                    </>
+                  )}
                   <Link
                     href="/settings/preferences"
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
