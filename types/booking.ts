@@ -104,7 +104,7 @@ export interface BookingListItem {
 
 export interface BookingsDto {
   list: BookingListItem[];
-  metaCounter: MetaCounterDto;
+  metaCounter: MetaCounterDto[];
 }
 
 export interface GetMyBookingsQueryData {

@@ -1,12 +1,12 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useMemo } from "react";
+import Image from "next/image";
+import { useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { StatusPills } from "@/components/ui/status-pills";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
-import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
+import { GET_HOTEL_CARD_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
-import { formatDateKst, formatNumber } from "@/lib/utils/format";
+import { CalendarDays, ChevronRight } from "lucide-react";
 import type {
   BookingListItem,
   BookingStatus,
@@ -16,162 +16,258 @@ import type {
 } from "@/types/booking";
 import type { NextPageWithAuth } from "@/types/page";
 
+// ─── Constants & maps ─────────────────────────────────────────────────────────
+
 const PAGE_LIMIT = 10;
 const BOOKING_STATUSES: BookingStatus[] = ["PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED", "NO_SHOW"];
 
-const statusToneClass: Record<BookingStatus, string> = {
-  PENDING: "border-amber-200 bg-amber-50 text-amber-800",
-  CONFIRMED: "border-sky-200 bg-sky-50 text-sky-800",
-  CHECKED_IN: "border-indigo-200 bg-indigo-50 text-indigo-800",
-  CHECKED_OUT: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  CANCELLED: "border-rose-200 bg-rose-50 text-rose-800",
-  NO_SHOW: "border-zinc-200 bg-zinc-100 text-zinc-700",
+const STATUS_BADGE: Record<BookingStatus, string> = {
+  PENDING:     "bg-amber-50 text-amber-700",
+  CONFIRMED:   "bg-sky-50 text-sky-700",
+  CHECKED_IN:  "bg-emerald-50 text-emerald-700",
+  CHECKED_OUT: "bg-slate-100 text-slate-600",
+  CANCELLED:   "bg-rose-50 text-rose-600",
+  NO_SHOW:     "bg-zinc-100 text-zinc-600",
 };
 
-const paymentToneClass: Record<BookingListItem["paymentStatus"], string> = {
-  PENDING: "border-amber-200 bg-amber-50 text-amber-800",
-  PARTIAL: "border-violet-200 bg-violet-50 text-violet-800",
-  PAID: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  FAILED: "border-rose-200 bg-rose-50 text-rose-800",
-  REFUNDED: "border-slate-200 bg-slate-100 text-slate-700",
+const STATUS_LABEL: Record<BookingStatus, string> = {
+  PENDING:     "Pending",
+  CONFIRMED:   "Confirmed",
+  CHECKED_IN:  "Checked in",
+  CHECKED_OUT: "Checked out",
+  CANCELLED:   "Cancelled",
+  NO_SHOW:     "No show",
 };
 
-const MyBookingsPage: NextPageWithAuth = () => {
-  const { page, statusFilter, pushQuery } = usePaginationQueryState<BookingStatus>({
-    pathname: "/bookings",
-    statusValues: BOOKING_STATUSES,
+const PAYMENT_BADGE: Record<string, string> = {
+  PENDING:  "bg-amber-50 text-amber-700",
+  PARTIAL:  "bg-violet-50 text-violet-700",
+  PAID:     "bg-emerald-50 text-emerald-700",
+  FAILED:   "bg-rose-50 text-rose-600",
+  REFUNDED: "bg-slate-100 text-slate-600",
+};
+
+const PAYMENT_LABEL: Record<string, string> = {
+  PENDING:  "Unpaid",
+  PARTIAL:  "Partial",
+  PAID:     "Paid",
+  FAILED:   "Failed",
+  REFUNDED: "Refunded",
+};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface GetHotelCardData {
+  getHotel: { _id: string; hotelTitle: string; hotelImages: string[] };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+}
+
+// ─── BookingCard ──────────────────────────────────────────────────────────────
+
+function BookingCard({ booking }: { booking: BookingListItem }) {
+  const { data } = useQuery<GetHotelCardData>(GET_HOTEL_CARD_QUERY, {
+    variables: { hotelId: booking.hotelId },
+    fetchPolicy: "cache-first",
   });
 
+  const hotel = data?.getHotel;
+  const cover = hotel?.hotelImages[0];
+  const statusClass = STATUS_BADGE[booking.bookingStatus] ?? "bg-slate-100 text-slate-600";
+  const statusLabel = STATUS_LABEL[booking.bookingStatus] ?? booking.bookingStatus;
+  const paymentClass = PAYMENT_BADGE[booking.paymentStatus] ?? "bg-slate-100 text-slate-600";
+  const paymentLabel = PAYMENT_LABEL[booking.paymentStatus] ?? booking.paymentStatus;
+
+  return (
+    <Link
+      href={`/bookings/${booking._id}`}
+      className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white px-4 py-3.5 transition hover:border-slate-200 hover:bg-slate-50"
+    >
+      {/* Hotel thumbnail */}
+      <div className="relative h-14 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
+        {cover && (
+          <Image src={cover} alt={hotel?.hotelTitle ?? ""} fill sizes="80px" className="object-cover" />
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-slate-800">
+            {hotel?.hotelTitle ?? `Hotel #${booking.hotelId.slice(-6)}`}
+          </p>
+          <div className="flex flex-shrink-0 gap-1.5">
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusClass}`}>
+              {statusLabel}
+            </span>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${paymentClass}`}>
+              {paymentLabel}
+            </span>
+          </div>
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+          <CalendarDays size={11} />
+          <span>{formatDate(booking.checkInDate)} → {formatDate(booking.checkOutDate)}</span>
+        </div>
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-400">
+          <span className="font-mono">#{booking.bookingCode}</span>
+          <span>·</span>
+          <span className="font-medium text-slate-600">₩{booking.totalPrice.toLocaleString()}</span>
+        </div>
+      </div>
+
+      <ChevronRight size={14} className="flex-shrink-0 text-slate-300" />
+    </Link>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+const MyBookingsPage: NextPageWithAuth = () => {
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
+
   const paginationInput = useMemo<PaginationInput>(
-    () => ({
-      page,
-      limit: PAGE_LIMIT,
-      sort: "createdAt",
-      direction: -1,
-    }),
+    () => ({ page, limit: PAGE_LIMIT, sort: "createdAt", direction: -1 }),
     [page],
   );
 
-  const { data, loading, error } = useQuery<GetMyBookingsQueryData, GetMyBookingsQueryVars>(GET_MY_BOOKINGS_QUERY, {
-    variables: {
-      input: paginationInput,
+  const { data, loading, error } = useQuery<GetMyBookingsQueryData, GetMyBookingsQueryVars>(
+    GET_MY_BOOKINGS_QUERY,
+    {
+      variables: { input: paginationInput },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
     },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  );
 
   const allBookings = data?.getMyBookings.list ?? [];
   const bookings =
-    statusFilter === "ALL" ? allBookings : allBookings.filter((booking) => booking.bookingStatus === statusFilter);
-  const total = data?.getMyBookings.metaCounter.total ?? 0;
+    statusFilter === "ALL"
+      ? allBookings
+      : allBookings.filter((b) => b.bookingStatus === statusFilter);
+  const total = data?.getMyBookings.metaCounter[0]?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
+  const handleStatusChange = (status: BookingStatus | "ALL") => {
+    setStatusFilter(status);
+    setPage(1);
+  };
+
   return (
-    <main className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Bookings</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">My Bookings</h1>
-          <p className="mt-2 text-sm text-slate-600">Track your reservation statuses and payment progress.</p>
-        </div>
+    <main className="mx-auto max-w-2xl space-y-5">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">My Bookings</h1>
         <Link
           href="/bookings/new"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
         >
           New booking
         </Link>
-      </header>
+      </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4">
-        <StatusPills
-          label="Status"
-          options={BOOKING_STATUSES}
-          selected={statusFilter}
-          onSelect={(nextStatus) => pushQuery({ page: 1, status: nextStatus as BookingStatus | "ALL" })}
-        />
-      </section>
+      {error && <ErrorNotice message={getErrorMessage(error)} />}
 
-      {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
+      {/* Status filter pills */}
+      <div className="flex flex-wrap gap-2">
+        {(["ALL", ...BOOKING_STATUSES] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => handleStatusChange(s)}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              statusFilter === s
+                ? "bg-slate-900 text-white"
+                : "border border-slate-200 text-slate-600 hover:border-slate-300"
+            }`}
+          >
+            {s === "ALL" ? "All" : (STATUS_LABEL[s] ?? s)}
+          </button>
+        ))}
+      </div>
 
-      {loading && allBookings.length === 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Loading bookings...</section>
-      ) : null}
-
-      {!loading && !error && bookings.length === 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-          No bookings found for this filter.
-        </section>
-      ) : null}
-
-      {bookings.length > 0 ? (
-        <section className="grid gap-3">
-          {bookings.map((booking) => (
-            <article key={booking._id} className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Booking Code</p>
-                  <h2 className="mt-1 text-lg font-semibold text-slate-900">{booking.bookingCode}</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {formatDateKst(booking.checkInDate)} - {formatDateKst(booking.checkOutDate)}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusToneClass[booking.bookingStatus]}`}>
-                    {booking.bookingStatus}
-                  </span>
-                  <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${paymentToneClass[booking.paymentStatus]}`}>
-                    {booking.paymentStatus}
-                  </span>
-                </div>
+      {/* Loading skeleton */}
+      {loading && bookings.length === 0 && (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white px-4 py-3.5">
+              <div className="h-14 w-20 flex-shrink-0 animate-pulse rounded-lg bg-slate-100" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-2/3 animate-pulse rounded-full bg-slate-100" />
+                <div className="h-3 w-1/2 animate-pulse rounded-full bg-slate-50" />
               </div>
-
-              <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4">
-                <p>
-                  Total: <span className="font-semibold">₩ {formatNumber(booking.totalPrice)}</span>
-                </p>
-                <p>
-                  Paid: <span className="font-semibold">₩ {formatNumber(booking.paidAmount)}</span>
-                </p>
-                <p>
-                  Guest ID: <span className="font-mono text-xs">{booking.guestId}</span>
-                </p>
-                <p>
-                  Created: <span className="font-semibold">{formatDateKst(booking.createdAt)}</span>
-                </p>
-              </div>
-              <div className="mt-3">
-                <Link href={`/bookings/${booking._id}`} className="text-sm font-semibold text-slate-700 underline underline-offset-4">
-                  View details
-                </Link>
-              </div>
-            </article>
+            </div>
           ))}
-        </section>
-      ) : null}
-
-      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
-        <p className="text-slate-600">
-          Page {page} / {totalPages} · Total records: {formatNumber(total)}
-        </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => pushQuery({ page: page - 1 })}
-            disabled={page <= 1}
-            className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <button
-            type="button"
-            onClick={() => pushQuery({ page: page + 1 })}
-            disabled={page >= totalPages}
-            className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Next
-          </button>
         </div>
-      </footer>
+      )}
+
+      {/* Empty state */}
+      {!loading && bookings.length === 0 && !error && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <CalendarDays size={32} className="text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-700">
+            {statusFilter === "ALL" ? "No bookings yet" : `No ${STATUS_LABEL[statusFilter as BookingStatus]} bookings`}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {statusFilter === "ALL"
+              ? "Your reservations will appear here once you book a hotel."
+              : "Try a different filter or check back later."}
+          </p>
+          {statusFilter === "ALL" && (
+            <Link
+              href="/hotels"
+              className="mt-4 rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-900 hover:text-slate-900"
+            >
+              Browse hotels
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Booking list */}
+      {bookings.length > 0 && (
+        <>
+          <p className="text-xs text-slate-400">{total} booking{total !== 1 ? "s" : ""} total</p>
+          <div className="space-y-2">
+            {bookings.map((b) => (
+              <BookingCard key={b._id} booking={b} />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+              <p className="text-xs text-slate-400">Page {page} of {totalPages}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => p - 1)}
+                  disabled={page <= 1 || loading}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page >= totalPages || loading}
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </main>
   );
 };
