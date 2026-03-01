@@ -6,6 +6,7 @@ const TABS = [
   { id: "profile", label: "Profile", userOnly: false },
   { id: "reviews", label: "My Reviews", userOnly: true },
   { id: "likes", label: "Saved Hotels", userOnly: true },
+  { id: "bookings", label: "My Bookings", userOnly: true },
   { id: "subscription", label: "Subscription", userOnly: true },
 ];
 
@@ -26,7 +27,7 @@ export function ProfileNav() {
   return (
     <nav
       aria-label="Profile sections"
-      className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-100 bg-white p-1.5 shadow-sm"
+      className="flex border-b border-slate-200"
     >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
@@ -35,10 +36,10 @@ export function ProfileNav() {
             key={tab.id}
             type="button"
             onClick={() => goTo(tab.id)}
-            className={`flex-shrink-0 rounded-xl px-4 py-2 text-sm font-medium transition ${
+            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition ${
               isActive
-                ? "bg-slate-900 text-white shadow-sm"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                ? "border-slate-900 text-slate-900"
+                : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
             {tab.label}
