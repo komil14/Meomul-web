@@ -2,9 +2,9 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChatThreadPopup } from "@/components/chat/chat-thread-popup";
+import { StaffChatsView } from "@/components/chat/staff-chats-view";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
-  GET_HOTEL_CHATS_QUERY,
   GET_MY_CHATS_QUERY,
   START_CHAT_MUTATION,
   START_SUPPORT_CHAT_MUTATION,
@@ -24,8 +24,6 @@ import { getErrorMessage } from "@/lib/utils/error";
 import type {
   ChatDto,
   ChatStatus,
-  GetHotelChatsQueryData,
-  GetHotelChatsQueryVars,
   GetMyChatsQueryData,
   GetMyChatsQueryVars,
   PaginationInput,
@@ -689,7 +687,6 @@ const ChatsPage: NextPageWithAuth = () => {
   const [chatTypeFilter, setChatTypeFilter] = useState<ChatTypeFilter>("ALL");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showNewChat, setShowNewChat] = useState(false);
-  const [manualStaffHotelId, setManualStaffHotelId] = useState("");
   const [preselectedHotelId, setPreselectedHotelId] = useState("");
   const [preselectedIntent, setPreselectedIntent] = useState<
     "hotel" | "support"
@@ -706,12 +703,11 @@ const ChatsPage: NextPageWithAuth = () => {
   const sourcePathFromQuery =
     typeof router.query.sourcePath === "string" ? router.query.sourcePath : "";
 
-  const { page, statusFilter, getParam, pushQuery, replaceQuery } =
+  const { page, pushQuery } =
     usePaginationQueryState<ChatStatus>({
       pathname: "/chats",
       statusValues: CHAT_STATUSES,
     });
-  const hotelIdFromQuery = getParam("hotelId");
 
   const listInput = useMemo<PaginationInput>(
     () => ({ page, limit: PAGE_LIMIT, sort: "lastMessageAt", direction: -1 }),
@@ -743,7 +739,7 @@ const ChatsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const { data: publicHotelsData } = useQuery<
+  const { data: publicHotelsData, loading: publicHotelsLoading } = useQuery<
     GetHotelsQueryData,
     GetHotelsQueryVars
   >(GET_HOTELS_QUERY, {
@@ -780,13 +776,6 @@ const ChatsPage: NextPageWithAuth = () => {
     [bookingsData],
   );
 
-  const selectedHotelId = isStaff
-    ? hotelIdFromQuery ||
-      manualStaffHotelId.trim() ||
-      availableHotels[0]?._id ||
-      ""
-    : "";
-
   const {
     data: myChatsData,
     loading: myChatsLoading,
@@ -798,35 +787,7 @@ const ChatsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const {
-    data: hotelChatsData,
-    loading: hotelChatsLoading,
-    error: hotelChatsError,
-  } = useQuery<GetHotelChatsQueryData, GetHotelChatsQueryVars>(
-    GET_HOTEL_CHATS_QUERY,
-    {
-      skip: !isStaff || !selectedHotelId,
-      variables: {
-        hotelId: selectedHotelId,
-        input: listInput,
-        statusFilter: statusFilter === "ALL" ? undefined : statusFilter,
-      },
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-    },
-  );
-
   /** EFFECTS **/
-
-  useEffect(() => {
-    if (!isStaff || !hotelIdFromQuery) return;
-    setManualStaffHotelId(hotelIdFromQuery);
-  }, [hotelIdFromQuery, isStaff]);
-
-  useEffect(() => {
-    if (!isStaff || hotelIdFromQuery || availableHotels.length === 0) return;
-    replaceQuery({ extra: { hotelId: availableHotels[0]._id } });
-  }, [availableHotels, hotelIdFromQuery, isStaff, replaceQuery]);
 
   // Auto-open overlay from query param (e.g. from hotel detail page)
   useEffect(() => {
@@ -857,38 +818,21 @@ const ChatsPage: NextPageWithAuth = () => {
 
   /** COMPUTED **/
 
-  const chats = isStaff
-    ? (hotelChatsData?.getHotelChats.list ?? [])
-    : (myChatsData?.getMyChats.list ?? []);
-  const total = isStaff
-    ? (hotelChatsData?.getHotelChats.metaCounter.total ?? 0)
-    : (myChatsData?.getMyChats.metaCounter.total ?? 0);
+  const chats = myChatsData?.getMyChats.list ?? [];
+  const total = myChatsData?.getMyChats.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
   const filteredChats = useMemo(() => {
-    if (!isUser || chatTypeFilter === "ALL") return chats;
+    if (chatTypeFilter === "ALL") return chats;
     return chats.filter((c) =>
       chatTypeFilter === "SUPPORT" ? c.chatScope === "SUPPORT" : c.chatScope === "HOTEL",
     );
-  }, [chats, chatTypeFilter, isUser]);
-  const loading = isStaff ? hotelChatsLoading : myChatsLoading;
-  const error = isStaff ? hotelChatsError : myChatsError;
-  const hotelsLoading = agentHotelsLoading;
+  }, [chats, chatTypeFilter]);
+  const loading = myChatsLoading;
+  const error = myChatsError;
+  const hotelsLoading = isAgent ? agentHotelsLoading : publicHotelsLoading;
 
-  const unreadForMe = (chat: ChatDto) =>
-    isUser ? chat.unreadGuestMessages : chat.unreadAgentMessages;
-
-  const pushChatsQuery = (next: {
-    hotelId?: string;
-    status?: ChatStatus | "ALL";
-    page?: number;
-  }) => {
-    pushQuery({
-      page: next.page,
-      status: next.status,
-      extra: isStaff ? { hotelId: next.hotelId ?? selectedHotelId } : undefined,
-    });
-  };
+  const unreadForMe = (chat: ChatDto) => chat.unreadGuestMessages;
 
   return (
     <>
@@ -934,18 +878,35 @@ const ChatsPage: NextPageWithAuth = () => {
         />
       )}
 
-      <main className="mx-auto max-w-2xl space-y-4">
-        {/* ── Page header ── */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Inbox
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-              Messages
-            </h1>
-          </div>
-          {canStartNewConversation && (
+      {/* ── Staff dashboard ── */}
+      {isStaff && (
+        <main
+          className="-mx-3 -my-8 flex flex-col overflow-hidden sm:-mx-6 sm:-my-10"
+          style={{ height: "calc(100svh - 57px)" }}
+        >
+          <StaffChatsView
+            availableHotels={availableHotels}
+            hotelsLoading={hotelsLoading}
+            memberType={memberType as "AGENT" | "ADMIN" | "ADMIN_OPERATOR"}
+            onSelectChat={setSelectedChatId}
+            onNewChat={() => setShowNewChat(true)}
+          />
+        </main>
+      )}
+
+      {/* ── User chat list ── */}
+      {isUser && (
+        <main className="mx-auto max-w-2xl space-y-4">
+          {/* Page header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Inbox
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold text-slate-900">
+                Messages
+              </h1>
+            </div>
             <button
               type="button"
               onClick={() => setShowNewChat(true)}
@@ -955,106 +916,42 @@ const ChatsPage: NextPageWithAuth = () => {
               <SquarePen size={15} className="text-slate-500" />
               New message
             </button>
-          )}
-        </div>
-
-        {/* ── Staff: property + status filters ── */}
-        {isStaff && (
-          <div className="space-y-3">
-            {hotelsLoading ? (
-              <div className="h-11 animate-pulse rounded-xl bg-slate-100" />
-            ) : (
-              <select
-                value={selectedHotelId}
-                onChange={(e) => {
-                  setManualStaffHotelId(e.target.value);
-                  pushChatsQuery({ hotelId: e.target.value, page: 1 });
-                }}
-                disabled={availableHotels.length === 0}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 shadow-sm outline-none ring-sky-400 transition focus:ring-2"
-              >
-                {availableHotels.length === 0 && (
-                  <option value="">No hotels available</option>
-                )}
-                {availableHotels.map((h) => (
-                  <option key={h._id} value={h._id}>
-                    {h.hotelTitle} — {h.hotelLocation}
-                  </option>
-                ))}
-              </select>
-            )}
-            <div className="flex flex-wrap gap-1.5">
-              {(["ALL", ...CHAT_STATUSES] as const).map((s) => {
-                const isSelected = statusFilter === s;
-                const cfg = s !== "ALL" ? STATUS_CONFIG[s as ChatStatus] : null;
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() =>
-                      pushChatsQuery({
-                        status: s as ChatStatus | "ALL",
-                        page: 1,
-                      })
-                    }
-                    className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-                      isSelected
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    }`}
-                  >
-                    {cfg && (
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          isSelected ? "bg-white/70" : cfg.dot
-                        }`}
-                      />
-                    )}
-                    {s === "ALL" ? "All" : cfg?.label}
-                  </button>
-                );
-              })}
-            </div>
           </div>
-        )}
 
-        {/* ── Error ── */}
-        {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
+          {/* Error */}
+          {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
 
-        {/* ── Loading skeletons ── */}
-        {loading && chats.length === 0 && (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3.5 border-b border-slate-50 px-5 py-4 last:border-b-0"
-              >
-                <div className="h-11 w-11 flex-shrink-0 animate-pulse rounded-full bg-slate-100" />
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="h-3.5 w-1/3 animate-pulse rounded-full bg-slate-100" />
-                    <div className="h-3 w-8 animate-pulse rounded-full bg-slate-100" />
+          {/* Loading skeletons */}
+          {loading && chats.length === 0 && (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3.5 border-b border-slate-50 px-5 py-4 last:border-b-0"
+                >
+                  <div className="h-11 w-11 flex-shrink-0 animate-pulse rounded-full bg-slate-100" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="h-3.5 w-1/3 animate-pulse rounded-full bg-slate-100" />
+                      <div className="h-3 w-8 animate-pulse rounded-full bg-slate-100" />
+                    </div>
+                    <div className="h-3 w-2/3 animate-pulse rounded-full bg-slate-100" />
                   </div>
-                  <div className="h-3 w-2/3 animate-pulse rounded-full bg-slate-100" />
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Empty state ── */}
-        {!loading && !error && chats.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-20 text-center shadow-sm">
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50">
-              <MessageSquare size={22} className="text-slate-400" />
+              ))}
             </div>
-            <p className="font-semibold text-slate-800">No conversations yet</p>
-            <p className="mt-1.5 max-w-[220px] text-sm text-slate-400">
-              {canStartNewConversation
-                ? "Start a support conversation or message any hotel"
-                : "No chats match the current filter"}
-            </p>
-            {canStartNewConversation && (
+          )}
+
+          {/* Empty state */}
+          {!loading && !error && chats.length === 0 && (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-20 text-center shadow-sm">
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50">
+                <MessageSquare size={22} className="text-slate-400" />
+              </div>
+              <p className="font-semibold text-slate-800">No conversations yet</p>
+              <p className="mt-1.5 max-w-[220px] text-sm text-slate-400">
+                Start a support conversation or message any hotel
+              </p>
               <button
                 type="button"
                 onClick={() => setShowNewChat(true)}
@@ -1063,165 +960,163 @@ const ChatsPage: NextPageWithAuth = () => {
                 <SquarePen size={14} />
                 New conversation
               </button>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* ── Chat type filter tabs (users only) ── */}
-        {isUser && chats.length > 0 && (
-          <div className="flex gap-2">
-            {(["ALL", "HOTELS", "SUPPORT"] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => { setChatTypeFilter(tab); }}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-                  chatTypeFilter === tab
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {tab === "ALL" ? "All" : tab === "HOTELS" ? "Hotels" : "Support"}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* ── Chat list ── */}
-        {filteredChats.length > 0 && (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            {filteredChats.map((chat, i) => {
-              const isSupportChat = chat.chatScope === "SUPPORT";
-              const hotelName = getChatTitle(chat, hotelsMap);
-              const unread = unreadForMe(chat);
-              const preview = getLastPreview(chat);
-              const time = timeAgo(chat.lastMessageAt);
-              const lastMsg = chat.messages.at(-1);
-              const isLastMsgFromMe =
-                (lastMsg?.senderType === "GUEST" && isUser) ||
-                (lastMsg?.senderType === "AGENT" && !isUser);
-              const statusCfg = STATUS_CONFIG[chat.chatStatus];
-
-              return (
+          {/* Chat type filter tabs */}
+          {chats.length > 0 && (
+            <div className="flex gap-2">
+              {(["ALL", "HOTELS", "SUPPORT"] as const).map((tab) => (
                 <button
-                  key={chat._id}
+                  key={tab}
                   type="button"
-                  onClick={() => { setSelectedChatId(chat._id); }}
-                  className={`group flex w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-slate-50 ${
-                    i < filteredChats.length - 1 ? "border-b border-slate-50" : ""
+                  onClick={() => { setChatTypeFilter(tab); }}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                    chatTypeFilter === tab
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
-                  style={{
-                    animation: "chatFadeIn 0.25s ease-out both",
-                    animationDelay: `${i * 35}ms`,
-                  }}
                 >
-                  <HotelAvatar
-                    name={hotelName}
-                    id={getChatAvatarSeed(chat)}
-                    status={chat.chatStatus}
-                  />
+                  {tab === "ALL" ? "All" : tab === "HOTELS" ? "Hotels" : "Support"}
+                </button>
+              ))}
+            </div>
+          )}
 
-                  <div className="min-w-0 flex-1">
-                    {/* Row 1: name + time */}
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p
-                        className={`truncate text-sm ${
-                          unread > 0
-                            ? "font-bold text-slate-900"
-                            : "font-semibold text-slate-800"
-                        }`}
-                      >
-                        {hotelName}
-                      </p>
-                      <span
-                        className={`flex-shrink-0 text-[11px] ${
-                          unread > 0
-                            ? "font-semibold text-sky-500"
-                            : "text-slate-400"
-                        }`}
-                      >
-                        {time}
-                      </span>
-                    </div>
+          {/* Chat list */}
+          {filteredChats.length > 0 && (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              {filteredChats.map((chat, i) => {
+                const isSupportChat = chat.chatScope === "SUPPORT";
+                const hotelName = getChatTitle(chat, hotelsMap);
+                const unread = unreadForMe(chat);
+                const preview = getLastPreview(chat);
+                const time = timeAgo(chat.lastMessageAt);
+                const lastMsg = chat.messages.at(-1);
+                const isLastMsgFromMe = lastMsg?.senderType === "GUEST";
+                const statusCfg = STATUS_CONFIG[chat.chatStatus];
 
-                    {/* Row 2: preview + unread */}
-                    <div className="mt-0.5 flex items-center justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-1">
-                        {isLastMsgFromMe && !isUser && (
-                          <Check
-                            size={12}
-                            className="flex-shrink-0 text-slate-400"
-                          />
-                        )}
+                return (
+                  <button
+                    key={chat._id}
+                    type="button"
+                    onClick={() => { setSelectedChatId(chat._id); }}
+                    className={`group flex w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-slate-50 ${
+                      i < filteredChats.length - 1 ? "border-b border-slate-50" : ""
+                    }`}
+                    style={{
+                      animation: "chatFadeIn 0.25s ease-out both",
+                      animationDelay: `${i * 35}ms`,
+                    }}
+                  >
+                    <HotelAvatar
+                      name={hotelName}
+                      id={getChatAvatarSeed(chat)}
+                      status={chat.chatStatus}
+                    />
+
+                    <div className="min-w-0 flex-1">
+                      {/* Row 1: name + time */}
+                      <div className="flex items-baseline justify-between gap-2">
                         <p
                           className={`truncate text-sm ${
                             unread > 0
-                              ? "font-medium text-slate-700"
+                              ? "font-bold text-slate-900"
+                              : "font-semibold text-slate-800"
+                          }`}
+                        >
+                          {hotelName}
+                        </p>
+                        <span
+                          className={`flex-shrink-0 text-[11px] ${
+                            unread > 0
+                              ? "font-semibold text-sky-500"
                               : "text-slate-400"
                           }`}
                         >
-                          {preview}
-                        </p>
-                      </div>
-                      {unread > 0 && (
-                        <span className="flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-full bg-sky-500 px-1.5 text-[10px] font-bold text-white">
-                          {unread > 99 ? "99+" : unread}
+                          {time}
                         </span>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* Row 3: status */}
-                    <div className="mt-1 flex items-center gap-1">
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          chat.chatStatus === "ACTIVE"
-                            ? "animate-pulse bg-emerald-400"
-                            : statusCfg.dot
-                        }`}
-                      />
-                      <span className={`text-[10px] ${statusCfg.text}`}>
-                        {statusCfg.label}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        · {isSupportChat ? "Support" : "Hotel"}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+                      {/* Row 2: preview + unread */}
+                      <div className="mt-0.5 flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-1">
+                          {isLastMsgFromMe && (
+                            <Check
+                              size={12}
+                              className="flex-shrink-0 text-slate-400"
+                            />
+                          )}
+                          <p
+                            className={`truncate text-sm ${
+                              unread > 0
+                                ? "font-medium text-slate-700"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            {preview}
+                          </p>
+                        </div>
+                        {unread > 0 && (
+                          <span className="flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-full bg-sky-500 px-1.5 text-[10px] font-bold text-white">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                      </div>
 
-        {/* ── Pagination ── */}
-        {total > PAGE_LIMIT && (!isUser || chatTypeFilter === "ALL") && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-500">
-              Page <span className="font-semibold text-slate-800">{page}</span>{" "}
-              of{" "}
-              <span className="font-semibold text-slate-800">{totalPages}</span>
-            </p>
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => pushChatsQuery({ page: page - 1 })}
-                disabled={page <= 1}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => pushChatsQuery({ page: page + 1 })}
-                disabled={page >= totalPages}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ChevronRight size={16} />
-              </button>
+                      {/* Row 3: status */}
+                      <div className="mt-1 flex items-center gap-1">
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            chat.chatStatus === "ACTIVE"
+                              ? "animate-pulse bg-emerald-400"
+                              : statusCfg.dot
+                          }`}
+                        />
+                        <span className={`text-[10px] ${statusCfg.text}`}>
+                          {statusCfg.label}
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          · {isSupportChat ? "Support" : "Hotel"}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          </div>
-        )}
-      </main>
+          )}
+
+          {/* Pagination */}
+          {total > PAGE_LIMIT && chatTypeFilter === "ALL" && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-500">
+                Page <span className="font-semibold text-slate-800">{page}</span>{" "}
+                of{" "}
+                <span className="font-semibold text-slate-800">{totalPages}</span>
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => pushQuery({ page: page - 1 })}
+                  disabled={page <= 1}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => pushQuery({ page: page + 1 })}
+                  disabled={page >= totalPages}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+      )}
     </>
   );
 };
