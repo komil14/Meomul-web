@@ -29,6 +29,7 @@ import {
   Bell,
   CheckCheck,
   Crown,
+  Headset,
   Heart,
   LogOut,
   MessageSquare,
@@ -443,6 +444,75 @@ function NotificationBellDrawer({
   );
 }
 
+function SupportFab({
+  hasPriceLockWidget,
+  onStartSupport,
+  onOpenInbox,
+}: {
+  hasPriceLockWidget: boolean;
+  onStartSupport: () => void;
+  onOpenInbox: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (event: MouseEvent) => {
+      if (!panelRef.current || panelRef.current.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const containerBottom = hasPriceLockWidget
+    ? "bottom-[calc(env(safe-area-inset-bottom)+9rem)] sm:bottom-40"
+    : "bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:bottom-6";
+
+  return (
+    <div className={`fixed right-3 z-50 sm:right-5 ${containerBottom}`} ref={panelRef}>
+      <div
+        className={`absolute bottom-[4.35rem] right-0 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl transition ${
+          open ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            onStartSupport();
+          }}
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          <Headset size={14} className="text-sky-500" />
+          Contact support
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            onOpenInbox();
+          }}
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+        >
+          <MessageSquare size={14} className="text-slate-500" />
+          Open inbox
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setOpen((previous) => !previous)}
+        className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-sky-600 text-white shadow-2xl transition hover:scale-[1.02] hover:bg-sky-500"
+        aria-label="Support options"
+        aria-expanded={open}
+      >
+        <Headset size={20} />
+      </button>
+    </div>
+  );
+}
+
 // ─── SiteFrame ────────────────────────────────────────────────────────────────
 
 export function SiteFrame({ children }: PropsWithChildren) {
@@ -474,6 +544,8 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const canTrackUnread = Boolean(member);
   const isChatRoute =
     router.pathname === "/chats" || router.pathname === "/chats/[chatId]";
+  const canOpenSupportChat =
+    member?.memberType === "USER" || member?.memberType === "AGENT";
   const canPollUnread = canTrackUnread && isPageVisible && !isChatRoute;
   const previousUnreadRef = useRef<number | null>(null);
   const hasPolledOnVisibleRef = useRef(false);
@@ -604,6 +676,21 @@ export function SiteFrame({ children }: PropsWithChildren) {
       }}
     />
   ) : null;
+
+  const openSupportChat = () => {
+    void router.push({
+      pathname: "/chats",
+      query: {
+        openNew: "1",
+        openSupport: "1",
+        sourcePath: router.asPath,
+      },
+    });
+  };
+
+  const openInbox = () => {
+    void router.push("/chats");
+  };
 
   const sharedHeader = (
     <header className="sticky top-0 z-90 w-screen border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
@@ -832,6 +919,13 @@ export function SiteFrame({ children }: PropsWithChildren) {
         </div>
       )}
       {!isHomeRoute && <PriceLockFab />}
+      {canOpenSupportChat && !isChatRoute && (
+        <SupportFab
+          hasPriceLockWidget={!isHomeRoute}
+          onStartSupport={openSupportChat}
+          onOpenInbox={openInbox}
+        />
+      )}
       <ChatDrawer
         isOpen={isChatPanelOpen}
         onClose={() => setIsChatPanelOpen(false)}

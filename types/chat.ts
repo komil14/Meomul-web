@@ -1,4 +1,5 @@
 export type ChatStatus = "WAITING" | "ACTIVE" | "CLOSED";
+export type ChatScope = "HOTEL" | "SUPPORT";
 export type SenderType = "GUEST" | "AGENT";
 export type MessageType = "TEXT" | "IMAGE" | "FILE";
 
@@ -27,8 +28,11 @@ export interface MessageDto {
 export interface ChatDto {
   _id: string;
   guestId: string;
-  hotelId: string;
+  hotelId?: string | null;
   bookingId?: string | null;
+  chatScope: ChatScope;
+  supportTopic?: string | null;
+  sourcePath?: string | null;
   assignedAgentId?: string | null;
   chatStatus: ChatStatus;
   unreadGuestMessages: number;
@@ -86,6 +90,21 @@ export interface StartChatMutationData {
 
 export interface StartChatMutationVars {
   input: StartChatInput;
+}
+
+export interface StartSupportChatInput {
+  initialMessage: string;
+  bookingId?: string;
+  topic?: string;
+  sourcePath?: string;
+}
+
+export interface StartSupportChatMutationData {
+  startSupportChat: ChatDto;
+}
+
+export interface StartSupportChatMutationVars {
+  input: StartSupportChatInput;
 }
 
 export interface SendMessageInput {

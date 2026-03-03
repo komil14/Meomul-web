@@ -34,7 +34,7 @@ interface BookingListItem {
 interface GetMyBookingsData {
   getMyBookings: {
     list: BookingListItem[];
-    metaCounter: { total: number }[];
+    metaCounter: { total: number };
   };
 }
 
@@ -164,7 +164,7 @@ export function BookingsTab() {
 
   const firstPageBookings = data?.getMyBookings.list ?? [];
   const bookings = [...firstPageBookings, ...extraBookings];
-  const total = data?.getMyBookings.metaCounter[0]?.total ?? 0;
+  const total = data?.getMyBookings.metaCounter.total ?? 0;
   const hasMore = bookings.length < total;
 
   const handleLoadMore = async () => {

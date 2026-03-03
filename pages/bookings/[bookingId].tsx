@@ -95,6 +95,24 @@ interface GetMyReviewsData {
   getMyReviews: { list: ReviewDto[] };
 }
 
+interface CreateReviewMutationData {
+  createReview: ReviewDto;
+}
+
+interface CreateReviewMutationVars {
+  input: {
+    bookingId: string;
+    overallRating: number;
+    cleanlinessRating: number;
+    locationRating: number;
+    valueRating: number;
+    serviceRating: number;
+    amenitiesRating: number;
+    reviewTitle?: string;
+    reviewText: string;
+  };
+}
+
 // ─── Star picker ─────────────────────────────────────────────────────────────
 
 function StarPicker({
@@ -228,7 +246,10 @@ const BookingDetailPage: NextPageWithAuth = () => {
     CancelBookingByOperatorMutationData, CancelBookingByOperatorMutationVars
   >(CANCEL_BOOKING_BY_OPERATOR_MUTATION);
 
-  const [createReview, { loading: submittingReview }] = useMutation(CREATE_REVIEW_MUTATION);
+  const [createReview, { loading: submittingReview }] = useMutation<
+    CreateReviewMutationData,
+    CreateReviewMutationVars
+  >(CREATE_REVIEW_MUTATION);
 
   const hotel = hotelData?.getHotel;
   const isStaff = memberType === "AGENT" || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
@@ -268,7 +289,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
           },
         },
       });
-      setPostedReview(result.data?.createReview as ReviewDto ?? null);
+      setPostedReview(result.data?.createReview ?? null);
       setShowReviewForm(false);
       await successAlert("Review submitted!", "Thank you for sharing your experience.");
     } catch (err) {

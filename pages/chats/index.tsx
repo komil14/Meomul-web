@@ -7,6 +7,7 @@ import {
   GET_HOTEL_CHATS_QUERY,
   GET_MY_CHATS_QUERY,
   START_CHAT_MUTATION,
+  START_SUPPORT_CHAT_MUTATION,
 } from "@/graphql/chat.gql";
 import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
@@ -24,6 +25,8 @@ import type {
   PaginationInput,
   StartChatMutationData,
   StartChatMutationVars,
+  StartSupportChatMutationData,
+  StartSupportChatMutationVars,
 } from "@/types/chat";
 import type {
   GetAgentHotelsQueryData,
@@ -57,6 +60,7 @@ import {
 const PAGE_LIMIT = 20;
 const HOTEL_LIST_LIMIT = 100;
 const CHAT_STATUSES: ChatStatus[] = ["WAITING", "ACTIVE", "CLOSED"];
+const SUPPORT_CHAT_TITLE = "Meomul Support";
 
 const STATUS_CONFIG: Record<
   ChatStatus,
@@ -110,6 +114,16 @@ function getLastMessagePreview(chat: ChatDto): string {
   return msg.content?.trim() || "Message";
 }
 
+function getChatTitle(chat: ChatDto, hotelsMap: Map<string, HotelListItem>): string {
+  if (chat.chatScope === "SUPPORT") return SUPPORT_CHAT_TITLE;
+  if (!chat.hotelId) return "Hotel Support";
+  return hotelsMap.get(chat.hotelId)?.hotelTitle ?? "Hotel Support";
+}
+
+function getChatAvatarSeed(chat: ChatDto): string {
+  return chat.hotelId ?? chat._id;
+}
+
 function fmtDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",
@@ -160,18 +174,29 @@ function NewChatOverlay({
   availableHotels,
   myBookings,
   hotelsMap,
+  allowHotelChats,
+  allowSupportChats,
+  initialIntent = "hotel",
   preselectedHotelId = "",
+  supportSourcePath = "",
   onClose,
   onSuccess,
 }: {
   availableHotels: HotelListItem[];
   myBookings: BookingListItem[];
   hotelsMap: Map<string, HotelListItem>;
+  allowHotelChats: boolean;
+  allowSupportChats: boolean;
+  initialIntent?: "hotel" | "support";
   preselectedHotelId?: string;
+  supportSourcePath?: string;
   onClose: () => void;
   onSuccess: (chatId: string) => void;
 }) {
   const [step, setStep] = useState<"select" | "compose">("select");
+  const [intent, setIntent] = useState<"hotel" | "support">(
+    initialIntent,
+  );
   const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(
     null,
   );
@@ -186,9 +211,24 @@ function NewChatOverlay({
     StartChatMutationData,
     StartChatMutationVars
   >(START_CHAT_MUTATION);
+  const [startSupportChat, { loading: supportLoading }] = useMutation<
+    StartSupportChatMutationData,
+    StartSupportChatMutationVars
+  >(START_SUPPORT_CHAT_MUTATION);
+
+  useEffect(() => {
+    setIntent(initialIntent);
+  }, [initialIntent]);
+
+  useEffect(() => {
+    if (!allowHotelChats && intent === "hotel") {
+      setIntent("support");
+    }
+  }, [allowHotelChats, intent]);
 
   // Auto-select hotel from query param once hotels are loaded
   useEffect(() => {
+    if (!allowHotelChats || intent !== "hotel") return;
     if (!preselectedHotelId || selectedHotel || availableHotels.length === 0)
       return;
     const hotel = availableHotels.find((h) => h._id === preselectedHotelId);
@@ -196,15 +236,18 @@ function NewChatOverlay({
       setSelectedHotel(hotel);
       setStep("compose");
     }
-  }, [availableHotels, preselectedHotelId, selectedHotel]);
+  }, [allowHotelChats, availableHotels, intent, preselectedHotelId, selectedHotel]);
 
   useEffect(() => {
-    if (step === "select") setTimeout(() => searchRef.current?.focus(), 80);
+    if (step === "select" && intent === "hotel") {
+      setTimeout(() => searchRef.current?.focus(), 80);
+    }
     if (step === "compose") setTimeout(() => textareaRef.current?.focus(), 80);
-  }, [step]);
+  }, [intent, step]);
 
   // Unique booked hotels (most-recent booking per hotel)
   const bookedHotels = useMemo(() => {
+    if (!allowHotelChats) return [];
     const seen = new Set<string>();
     const result: Array<{ booking: BookingListItem; hotel: HotelListItem }> =
       [];
@@ -216,9 +259,10 @@ function NewChatOverlay({
       }
     }
     return result;
-  }, [myBookings, hotelsMap]);
+  }, [allowHotelChats, myBookings, hotelsMap]);
 
   const filteredHotels = useMemo(() => {
+    if (!allowHotelChats) return [];
     const q = searchQuery.trim().toLowerCase();
     if (!q) return availableHotels.slice(0, 40);
     return availableHotels.filter(
@@ -226,7 +270,7 @@ function NewChatOverlay({
         h.hotelTitle.toLowerCase().includes(q) ||
         h.hotelLocation.toLowerCase().includes(q),
     );
-  }, [availableHotels, searchQuery]);
+  }, [allowHotelChats, availableHotels, searchQuery]);
 
   const handleSelectHotel = (
     hotel: HotelListItem,
@@ -238,24 +282,38 @@ function NewChatOverlay({
   };
 
   const handleSend = async () => {
-    if (!selectedHotel) return;
     const content = message.trim();
     if (!content) return;
     try {
-      const input: StartChatMutationVars["input"] = {
-        hotelId: selectedHotel._id,
-        initialMessage: content,
-      };
-      if (selectedBooking?._id) input.bookingId = selectedBooking._id;
-      const res = await startChat({ variables: { input } });
-      const chatId = res.data?.startChat._id;
+      let chatId: string | undefined;
+      if (intent === "support") {
+        const res = await startSupportChat({
+          variables: {
+            input: {
+              initialMessage: content,
+              sourcePath: supportSourcePath || undefined,
+            },
+          },
+        });
+        chatId = res.data?.startSupportChat._id;
+      } else {
+        if (!selectedHotel) return;
+        const input: StartChatMutationVars["input"] = {
+          hotelId: selectedHotel._id,
+          initialMessage: content,
+        };
+        if (selectedBooking?._id) input.bookingId = selectedBooking._id;
+        const res = await startChat({ variables: { input } });
+        chatId = res.data?.startChat._id;
+      }
+
       if (!chatId) {
         await errorAlert("Error", "Chat was created but ID is missing.");
         return;
       }
       onSuccess(chatId);
     } catch (err) {
-      await errorAlert("Could not start chat", getErrorMessage(err));
+      await errorAlert("Could not start conversation", getErrorMessage(err));
     }
   };
 
@@ -307,6 +365,15 @@ function NewChatOverlay({
           <div className="flex-1 min-w-0">
             {step === "select" ? (
               <p className="font-semibold text-slate-900">New conversation</p>
+            ) : intent === "support" ? (
+              <>
+                <p className="truncate font-semibold text-slate-900">
+                  {SUPPORT_CHAT_TITLE}
+                </p>
+                <p className="text-xs text-slate-400">
+                  Platform support team
+                </p>
+              </>
             ) : (
               <>
                 <p className="truncate font-semibold text-slate-900">
@@ -336,164 +403,257 @@ function NewChatOverlay({
             className="flex flex-1 flex-col overflow-hidden"
             style={{ animation: "stepSlideLeft 0.2s ease-out both" }}
           >
-            <div className="px-5 pt-4 pb-3">
-              <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 transition focus-within:border-slate-300 focus-within:bg-white">
-                <Search size={14} className="flex-shrink-0 text-slate-400" />
-                <input
-                  ref={searchRef}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search hotels by name or city…"
-                  className="flex-1 bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none"
-                />
-                {searchQuery && (
+            {allowSupportChats && allowHotelChats && (
+              <div className="px-5 pb-3 pt-4">
+                <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
                   <button
                     type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="flex-shrink-0 text-slate-400 transition hover:text-slate-600"
+                    onClick={() => {
+                      setIntent("hotel");
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      intent === "hotel"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
                   >
-                    <X size={13} />
+                    Hotel chat
                   </button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pb-4">
-              {/* From bookings */}
-              {!searchQuery && bookedHotels.length > 0 && (
-                <div className="mb-2">
-                  <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                    From your bookings
-                  </p>
-                  {bookedHotels.map(({ booking, hotel }) => (
-                    <button
-                      key={booking._id}
-                      type="button"
-                      onClick={() => handleSelectHotel(hotel, booking)}
-                      className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition hover:bg-slate-50"
-                    >
-                      <HotelAvatar
-                        name={hotel.hotelTitle}
-                        id={hotel._id}
-                        size="sm"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">
-                          {hotel.hotelTitle}
-                        </p>
-                        <div className="mt-0.5 flex items-center gap-1">
-                          <CalendarCheck
-                            size={10}
-                            className="flex-shrink-0 text-slate-400"
-                          />
-                          <p className="truncate text-xs text-slate-400">
-                            #{booking.bookingCode} ·{" "}
-                            {fmtDate(booking.checkInDate)} –{" "}
-                            {fmtDate(booking.checkOutDate)}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          booking.bookingStatus === "CONFIRMED" ||
-                          booking.bookingStatus === "CHECKED_IN"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : booking.bookingStatus === "CANCELLED"
-                              ? "bg-rose-50 text-rose-600"
-                              : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {booking.bookingStatus}
-                      </span>
-                    </button>
-                  ))}
-                  <div className="mx-5 my-2 h-px bg-slate-100" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIntent("support");
+                      setSelectedHotel(null);
+                      setSelectedBooking(null);
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      intent === "support"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    Support
+                  </button>
                 </div>
-              )}
-
-              {/* All hotels */}
-              <div>
-                <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                  {searchQuery
-                    ? `Results (${filteredHotels.length})`
-                    : "All hotels"}
-                </p>
-                {filteredHotels.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <Building2 size={24} className="mb-2 text-slate-200" />
-                    <p className="text-sm text-slate-400">No hotels found</p>
-                  </div>
-                ) : (
-                  filteredHotels.map((hotel) => (
-                    <button
-                      key={hotel._id}
-                      type="button"
-                      onClick={() => handleSelectHotel(hotel)}
-                      className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition hover:bg-slate-50"
-                    >
-                      <HotelAvatar
-                        name={hotel.hotelTitle}
-                        id={hotel._id}
-                        size="sm"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-900">
-                          {hotel.hotelTitle}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-slate-400">
-                          {hotel.hotelLocation} · {hotel.hotelType}
-                        </p>
-                      </div>
-                    </button>
-                  ))
-                )}
               </div>
-            </div>
+            )}
+
+            {intent === "support" ? (
+              <div className="flex flex-1 flex-col justify-center px-5 pb-6">
+                <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-600 text-white">
+                      <MessageSquare size={18} />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        Contact Meomul Support
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Account, payment, booking, and technical issues
+                      </p>
+                    </div>
+                  </div>
+                  {supportSourcePath && (
+                    <p className="mt-3 rounded-lg bg-white px-3 py-2 text-[11px] text-slate-500">
+                      Context from page: <span className="font-medium text-slate-700">{supportSourcePath}</span>
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setStep("compose")}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  >
+                    Continue to message
+                    <ArrowLeft size={14} className="rotate-180" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="px-5 pb-3 pt-4">
+                  <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 transition focus-within:border-slate-300 focus-within:bg-white">
+                    <Search size={14} className="flex-shrink-0 text-slate-400" />
+                    <input
+                      ref={searchRef}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search hotels by name or city…"
+                      className="flex-1 bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="flex-shrink-0 text-slate-400 transition hover:text-slate-600"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pb-4">
+                  {/* From bookings */}
+                  {!searchQuery && bookedHotels.length > 0 && (
+                    <div className="mb-2">
+                      <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                        From your bookings
+                      </p>
+                      {bookedHotels.map(({ booking, hotel }) => (
+                        <button
+                          key={booking._id}
+                          type="button"
+                          onClick={() => handleSelectHotel(hotel, booking)}
+                          className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition hover:bg-slate-50"
+                        >
+                          <HotelAvatar
+                            name={hotel.hotelTitle}
+                            id={hotel._id}
+                            size="sm"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-900">
+                              {hotel.hotelTitle}
+                            </p>
+                            <div className="mt-0.5 flex items-center gap-1">
+                              <CalendarCheck
+                                size={10}
+                                className="flex-shrink-0 text-slate-400"
+                              />
+                              <p className="truncate text-xs text-slate-400">
+                                #{booking.bookingCode} ·{" "}
+                                {fmtDate(booking.checkInDate)} –{" "}
+                                {fmtDate(booking.checkOutDate)}
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              booking.bookingStatus === "CONFIRMED" ||
+                              booking.bookingStatus === "CHECKED_IN"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : booking.bookingStatus === "CANCELLED"
+                                  ? "bg-rose-50 text-rose-600"
+                                  : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            {booking.bookingStatus}
+                          </span>
+                        </button>
+                      ))}
+                      <div className="mx-5 my-2 h-px bg-slate-100" />
+                    </div>
+                  )}
+
+                  {/* All hotels */}
+                  <div>
+                    <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                      {searchQuery
+                        ? `Results (${filteredHotels.length})`
+                        : "All hotels"}
+                    </p>
+                    {filteredHotels.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <Building2 size={24} className="mb-2 text-slate-200" />
+                        <p className="text-sm text-slate-400">No hotels found</p>
+                      </div>
+                    ) : (
+                      filteredHotels.map((hotel) => (
+                        <button
+                          key={hotel._id}
+                          type="button"
+                          onClick={() => handleSelectHotel(hotel)}
+                          className="flex w-full items-center gap-3.5 px-5 py-3 text-left transition hover:bg-slate-50"
+                        >
+                          <HotelAvatar
+                            name={hotel.hotelTitle}
+                            id={hotel._id}
+                            size="sm"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-900">
+                              {hotel.hotelTitle}
+                            </p>
+                            <p className="mt-0.5 truncate text-xs text-slate-400">
+                              {hotel.hotelLocation} · {hotel.hotelType}
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* ── Step 2: Compose ── */}
-        {step === "compose" && selectedHotel && (
+        {step === "compose" && (intent === "support" || selectedHotel) && (
           <div
             className="flex flex-1 flex-col overflow-hidden"
             style={{ animation: "stepSlideLeft 0.2s ease-out both" }}
           >
             {/* Hotel info */}
             <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
-              <HotelAvatar
-                name={selectedHotel.hotelTitle}
-                id={selectedHotel._id}
-                size="lg"
-              />
-              <p className="mt-4 text-base font-bold text-slate-900">
-                {selectedHotel.hotelTitle}
-              </p>
-              <p className="mt-0.5 text-sm text-slate-500">
-                {selectedHotel.hotelLocation}
-              </p>
-              {selectedBooking && (
-                <div className="mt-4 flex items-center gap-1.5 rounded-xl bg-sky-50 px-3.5 py-2 text-xs text-sky-700">
-                  <CalendarCheck size={12} />
-                  <span>
-                    Booking{" "}
-                    <span className="font-semibold">
-                      #{selectedBooking.bookingCode}
-                    </span>
-                    {" · "}
-                    {fmtDate(selectedBooking.checkInDate)} –{" "}
-                    {fmtDate(selectedBooking.checkOutDate)}
+              {intent === "support" ? (
+                <>
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-600 text-white">
+                    <MessageSquare size={24} />
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBooking(null)}
-                    className="ml-0.5 text-sky-400 transition hover:text-sky-600"
-                  >
-                    <X size={11} />
-                  </button>
-                </div>
+                  <p className="mt-4 text-base font-bold text-slate-900">
+                    {SUPPORT_CHAT_TITLE}
+                  </p>
+                  <p className="mt-0.5 text-sm text-slate-500">
+                    Our team usually replies quickly during active hours
+                  </p>
+                  {supportSourcePath && (
+                    <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
+                      Sent from page: <span className="font-medium text-slate-700">{supportSourcePath}</span>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <HotelAvatar
+                    name={selectedHotel?.hotelTitle ?? "Hotel"}
+                    id={selectedHotel?._id ?? "hotel"}
+                    size="lg"
+                  />
+                  <p className="mt-4 text-base font-bold text-slate-900">
+                    {selectedHotel?.hotelTitle}
+                  </p>
+                  <p className="mt-0.5 text-sm text-slate-500">
+                    {selectedHotel?.hotelLocation}
+                  </p>
+                  {selectedBooking && (
+                    <div className="mt-4 flex items-center gap-1.5 rounded-xl bg-sky-50 px-3.5 py-2 text-xs text-sky-700">
+                      <CalendarCheck size={12} />
+                      <span>
+                        Booking{" "}
+                        <span className="font-semibold">
+                          #{selectedBooking.bookingCode}
+                        </span>
+                        {" · "}
+                        {fmtDate(selectedBooking.checkInDate)} –{" "}
+                        {fmtDate(selectedBooking.checkOutDate)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBooking(null)}
+                        className="ml-0.5 text-sky-400 transition hover:text-sky-600"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
               <p className="mt-5 max-w-[260px] text-xs text-slate-400">
-                Messages are private between you and the hotel team.
+                {intent === "support"
+                  ? "Messages are private between you and Meomul support."
+                  : "Messages are private between you and the hotel team."}
               </p>
             </div>
 
@@ -525,7 +685,7 @@ function NewChatOverlay({
                   onClick={() => {
                     void handleSend();
                   }}
-                  disabled={!message.trim() || loading}
+                  disabled={!message.trim() || loading || supportLoading}
                   className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
                     message.trim()
                       ? "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
@@ -558,17 +718,25 @@ const ChatsPage: NextPageWithAuth = () => {
   const isAgent = memberType === "AGENT";
   const isStaff =
     isAgent || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
+  const canStartNewConversation = isUser || isAgent;
 
   const [showNewChat, setShowNewChat] = useState(false);
   const [manualStaffHotelId, setManualStaffHotelId] = useState("");
   const [preselectedHotelId, setPreselectedHotelId] = useState("");
+  const [preselectedIntent, setPreselectedIntent] = useState<
+    "hotel" | "support"
+  >("hotel");
+  const [supportSourcePath, setSupportSourcePath] = useState("");
 
-  // Query param support: ?openNew=1&openHotelId=XXX
+  // Query param support: ?openNew=1&openHotelId=XXX&openSupport=1&sourcePath=/hotels/123
   const openNewFromQuery = router.query.openNew === "1";
+  const openSupportFromQuery = router.query.openSupport === "1";
   const openHotelIdFromQuery =
     typeof router.query.openHotelId === "string"
       ? router.query.openHotelId
       : "";
+  const sourcePathFromQuery =
+    typeof router.query.sourcePath === "string" ? router.query.sourcePath : "";
 
   const { page, statusFilter, getParam, pushQuery, replaceQuery } =
     usePaginationQueryState<ChatStatus>({
@@ -694,14 +862,30 @@ const ChatsPage: NextPageWithAuth = () => {
 
   // Auto-open overlay from query param (e.g. from hotel detail page)
   useEffect(() => {
-    if (!openNewFromQuery || !isUser) return;
-    if (openHotelIdFromQuery) {
+    if (!openNewFromQuery || !canStartNewConversation) return;
+
+    if (openSupportFromQuery || !isUser) {
+      setPreselectedIntent("support");
+      setSupportSourcePath(sourcePathFromQuery);
+    } else {
+      setPreselectedIntent("hotel");
+      setSupportSourcePath("");
+    }
+
+    if (isUser && openHotelIdFromQuery) {
       setPreselectedHotelId(openHotelIdFromQuery);
     }
     setShowNewChat(true);
     void router.replace("/chats", undefined, { shallow: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openNewFromQuery, isUser]);
+  }, [
+    canStartNewConversation,
+    isUser,
+    openHotelIdFromQuery,
+    openNewFromQuery,
+    openSupportFromQuery,
+    sourcePathFromQuery,
+  ]);
 
   /** COMPUTED **/
 
@@ -741,19 +925,27 @@ const ChatsPage: NextPageWithAuth = () => {
       `}</style>
 
       {/* New chat overlay */}
-      {showNewChat && isUser && (
+      {showNewChat && canStartNewConversation && (
         <NewChatOverlay
           availableHotels={publicHotelsData?.getHotels.list ?? []}
           myBookings={myBookings}
           hotelsMap={hotelsMap}
+          allowHotelChats={isUser}
+          allowSupportChats={canStartNewConversation}
+          initialIntent={preselectedIntent}
           preselectedHotelId={preselectedHotelId}
+          supportSourcePath={supportSourcePath}
           onClose={() => {
             setShowNewChat(false);
             setPreselectedHotelId("");
+            setPreselectedIntent(isUser ? "hotel" : "support");
+            setSupportSourcePath("");
           }}
           onSuccess={(chatId) => {
             setShowNewChat(false);
             setPreselectedHotelId("");
+            setPreselectedIntent(isUser ? "hotel" : "support");
+            setSupportSourcePath("");
             void router.push(`/chats/${chatId}`);
           }}
         />
@@ -770,7 +962,7 @@ const ChatsPage: NextPageWithAuth = () => {
               Messages
             </h1>
           </div>
-          {isUser && (
+          {canStartNewConversation && (
             <button
               type="button"
               onClick={() => setShowNewChat(true)}
@@ -875,11 +1067,11 @@ const ChatsPage: NextPageWithAuth = () => {
             </div>
             <p className="font-semibold text-slate-800">No conversations yet</p>
             <p className="mt-1.5 max-w-[220px] text-sm text-slate-400">
-              {isUser
-                ? "Start a conversation with any hotel"
+              {canStartNewConversation
+                ? "Start a support conversation or message any hotel"
                 : "No chats match the current filter"}
             </p>
-            {isUser && (
+            {canStartNewConversation && (
               <button
                 type="button"
                 onClick={() => setShowNewChat(true)}
@@ -896,8 +1088,8 @@ const ChatsPage: NextPageWithAuth = () => {
         {chats.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {chats.map((chat, i) => {
-              const hotel = hotelsMap.get(chat.hotelId);
-              const hotelName = hotel?.hotelTitle ?? "Hotel Support";
+              const isSupportChat = chat.chatScope === "SUPPORT";
+              const hotelName = getChatTitle(chat, hotelsMap);
               const unread = unreadForMe(chat);
               const preview = getLastMessagePreview(chat);
               const time = timeAgo(chat.lastMessageAt);
@@ -921,7 +1113,7 @@ const ChatsPage: NextPageWithAuth = () => {
                 >
                   <HotelAvatar
                     name={hotelName}
-                    id={chat._id}
+                    id={getChatAvatarSeed(chat)}
                     status={chat.chatStatus}
                   />
 
@@ -985,6 +1177,9 @@ const ChatsPage: NextPageWithAuth = () => {
                       />
                       <span className={`text-[10px] ${statusCfg.text}`}>
                         {statusCfg.label}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        · {isSupportChat ? "Support" : "Hotel"}
                       </span>
                     </div>
                   </div>

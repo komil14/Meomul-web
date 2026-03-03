@@ -19,6 +19,9 @@ const CHAT_FIELDS = gql`
     guestId
     hotelId
     bookingId
+    chatScope
+    supportTopic
+    sourcePath
     assignedAgentId
     chatStatus
     unreadGuestMessages
@@ -79,6 +82,15 @@ export const GET_MY_UNREAD_CHAT_COUNT_QUERY = gql`
 export const START_CHAT_MUTATION = gql`
   mutation StartChat($input: StartChatInput!) {
     startChat(input: $input) {
+      ...ChatFields
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+export const START_SUPPORT_CHAT_MUTATION = gql`
+  mutation StartSupportChat($input: StartSupportChatInput!) {
+    startSupportChat(input: $input) {
       ...ChatFields
     }
   }

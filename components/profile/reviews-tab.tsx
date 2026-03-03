@@ -44,7 +44,7 @@ interface ReviewDto {
 interface GetMyReviewsData {
   getMyReviews: {
     list: ReviewDto[];
-    metaCounter: { total: number }[];
+    metaCounter: { total: number };
   };
 }
 
@@ -342,7 +342,7 @@ export function ReviewsTab() {
 
   const firstPageReviews = data?.getMyReviews.list ?? [];
   const reviews = [...firstPageReviews, ...extraReviews];
-  const total = data?.getMyReviews.metaCounter[0]?.total ?? 0;
+  const total = data?.getMyReviews.metaCounter.total ?? 0;
   const hasMore = reviews.length < total;
 
   const resetPagination = () => {

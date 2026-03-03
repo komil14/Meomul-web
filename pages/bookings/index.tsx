@@ -152,7 +152,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
     statusFilter === "ALL"
       ? allBookings
       : allBookings.filter((b) => b.bookingStatus === statusFilter);
-  const total = data?.getMyBookings.metaCounter[0]?.total ?? 0;
+  const total = data?.getMyBookings.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
   const handleStatusChange = (status: BookingStatus | "ALL") => {

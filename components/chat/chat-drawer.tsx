@@ -51,10 +51,12 @@ const AVATAR_COLORS = [
   "bg-indigo-500",
   "bg-teal-500",
 ];
+const SUPPORT_CHAT_TITLE = "Meomul Support";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function avatarBg(id: string): string {
+  if (!id) return AVATAR_COLORS[0];
   return AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length];
 }
 
@@ -186,6 +188,7 @@ export function ChatDrawer({
 }: ChatDrawerProps) {
   const member = useMemo(() => getSessionMember(), []);
   const isUser = member?.memberType === "USER";
+  void _unreadCount;
 
   const [view, setView] = useState<"list" | "thread">("list");
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -378,7 +381,7 @@ function ListView({
             <MessageSquare size={32} className="mb-3 text-slate-200" />
             <p className="font-semibold text-slate-700">No conversations yet</p>
             <p className="mt-1.5 text-sm text-slate-400">
-              Start a chat from any hotel page
+              Start from any hotel page or use the support button
             </p>
             <Link
               href="/chats"
@@ -395,12 +398,13 @@ function ListView({
         {isUser && chats.length > 0 && (
           <div className="divide-y divide-slate-50">
             {chats.map((chat) => {
-              const hotel = hotelsMap.get(chat.hotelId);
-              const hotelName = hotel?.hotelTitle ?? "Hotel Support";
+              const isSupportChat = chat.chatScope === "SUPPORT";
+              const hotel = !isSupportChat && chat.hotelId ? hotelsMap.get(chat.hotelId) : undefined;
+              const hotelName = isSupportChat ? SUPPORT_CHAT_TITLE : hotel?.hotelTitle ?? "Hotel Support";
               const unread = chat.unreadGuestMessages;
               const preview = getLastPreview(chat);
               const time = timeAgo(chat.lastMessageAt);
-              const color = avatarBg(chat.hotelId);
+              const color = avatarBg(chat.hotelId ?? chat._id);
 
               return (
                 <button
@@ -446,15 +450,20 @@ function ListView({
                       </span>
                     </div>
                     <div className="mt-0.5 flex items-center justify-between gap-1">
-                      <p
-                        className={`truncate text-xs ${
-                          unread > 0
-                            ? "font-medium text-slate-700"
-                            : "text-slate-400"
-                        }`}
-                      >
-                        {preview}
-                      </p>
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p
+                          className={`truncate text-xs ${
+                            unread > 0
+                              ? "font-medium text-slate-700"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {preview}
+                        </p>
+                        <span className="flex-shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-500">
+                          {isSupportChat ? "Support" : "Hotel"}
+                        </span>
+                      </div>
                       {unread > 0 && (
                         <span className="flex min-w-[18px] flex-shrink-0 items-center justify-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
                           {unread > 99 ? "99+" : unread}

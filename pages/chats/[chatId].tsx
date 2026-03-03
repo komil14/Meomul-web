@@ -85,8 +85,10 @@ const AVATAR_COLORS = [
   "bg-indigo-500",
   "bg-teal-500",
 ];
+const SUPPORT_CHAT_TITLE = "Meomul Support";
 
 function avatarBg(id: string): string {
+  if (!id) return AVATAR_COLORS[0];
   return AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length];
 }
 
@@ -570,9 +572,16 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const canSend = Boolean(chat && chat.chatStatus !== "CLOSED");
   const canClose = Boolean(chat && chat.chatStatus !== "CLOSED" && isOperatorSide);
 
-  const hotelTitle = hotelData?.getHotel.hotelTitle ?? "Hotel Support";
-  const hotelLocation = hotelData?.getHotel.hotelLocation ?? "";
-  const hotelAvatarColor = avatarBg(chat?.hotelId ?? hotelTitle);
+  const isSupportChat = chat?.chatScope === "SUPPORT";
+  const hotelTitle = isSupportChat
+    ? SUPPORT_CHAT_TITLE
+    : hotelData?.getHotel.hotelTitle ?? "Hotel Support";
+  const hotelLocation = isSupportChat ? "" : hotelData?.getHotel.hotelLocation ?? "";
+  const supportMeta =
+    chat?.supportTopic?.trim() ||
+    (chat?.sourcePath ? `From ${chat.sourcePath}` : "Platform support");
+  const incomingSenderLabel = isSupportChat ? "Support Team" : "Hotel Staff";
+  const hotelAvatarColor = avatarBg(chat?.hotelId ?? chat?._id ?? hotelTitle);
 
   const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
     WAITING: { label: "Waiting for agent", color: "text-amber-600", dot: "bg-amber-400" },
@@ -649,7 +658,11 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 <div className="flex items-center gap-1.5">
                   <p className={`text-xs ${statusCfg?.color ?? "text-slate-400"}`}>
                     {statusCfg?.label ?? chat.chatStatus}
-                    {hotelLocation ? ` · ${hotelLocation}` : ""}
+                    {isSupportChat
+                      ? ` · ${supportMeta}`
+                      : hotelLocation
+                        ? ` · ${hotelLocation}`
+                        : ""}
                   </p>
                   <span title={socketConnected ? "Live connection" : "Polling fallback"}>
                     {socketConnected ? (
@@ -729,7 +742,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
               </div>
               <p className="text-sm font-semibold text-slate-700">Start the conversation</p>
               <p className="mt-1 text-xs text-slate-400">
-                Your message goes directly to the hotel team
+                {isSupportChat
+                  ? "Your message goes directly to Meomul support"
+                  : "Your message goes directly to the hotel team"}
               </p>
             </div>
           )}
@@ -814,7 +829,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                       <div className="flex max-w-[72%] flex-col gap-0.5 sm:max-w-[62%]">
                         {!isOwn && isFirstInGroup && (
                           <p className="ml-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                            Hotel Staff
+                            {incomingSenderLabel}
                           </p>
                         )}
                         <MessageBubble
