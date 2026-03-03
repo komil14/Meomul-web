@@ -4,6 +4,7 @@ import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SubscriptionPlansSection } from "@/components/homepage/subscription-plans-section";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   GET_HOME_FEED_QUERY,
@@ -192,7 +193,7 @@ const formatReviewCountLabel = (count: number): string => {
     return `${(count / 1000).toFixed(1)}k verified reviews`;
   }
 
-  return `${count.toLocaleString()} verified reviews`;
+  return `${count.toLocaleString()}k verified reviews`;
 };
 
 const toReviewerInitial = (review: ReviewDto, index: number): string => {
@@ -1292,6 +1293,8 @@ export default function HomePage({
               </div>
             </section>
           ) : null}
+
+          <SubscriptionPlansSection />
 
            {editorialGuideCards.length > 0 ? (
             <section className={styles.guidesSection}>

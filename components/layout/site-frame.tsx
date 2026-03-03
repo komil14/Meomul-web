@@ -7,6 +7,7 @@ import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { PriceLockFab } from "@/components/layout/price-lock-fab";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
+import { GET_MEMBER_QUERY } from "@/graphql/member.gql";
 import {
   GET_MY_NOTIFICATIONS_QUERY,
   GET_UNREAD_COUNT_QUERY,
@@ -18,6 +19,7 @@ import {
   getAccessToken,
   getSessionMember,
 } from "@/lib/auth/session";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { createNotificationSocket } from "@/lib/socket/notification";
 import type { SessionMember } from "@/types/auth";
@@ -88,7 +90,7 @@ function memberAvatar(member: SessionMember) {
       <div className={`h-full w-full overflow-hidden rounded-full ${bg}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={member.memberImage}
+          src={resolveMediaUrl(member.memberImage)}
           alt={initials}
           className="h-full w-full object-cover"
         />
@@ -455,6 +457,18 @@ export function SiteFrame({ children }: PropsWithChildren) {
     setMember(getSessionMember());
   }, [router.asPath]);
 
+  // Subscribe to Apollo cache for live memberImage updates when profile is saved.
+  // fetchPolicy:"cache-only" means no extra network request — it just reads
+  // whatever the profile page already fetched and updates when the mutation fires.
+  const { data: memberCacheData } = useQuery<{ getMember: { memberImage?: string | null } }>(
+    GET_MEMBER_QUERY,
+    { skip: !member, fetchPolicy: "cache-only" },
+  );
+  // Merge live image into member so both desktop and mobile avatars auto-update
+  const memberWithLiveImage = member
+    ? { ...member, memberImage: memberCacheData?.getMember.memberImage ?? member.memberImage }
+    : null;
+
   const isPageVisible = usePageVisible();
   const canTrackUnread = Boolean(member);
   const isChatRoute =
@@ -628,7 +642,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
               <>
                 {notifBellButton}
                 {chatIconButton}
-                <UserAvatarMenu member={member} onLogout={handleLogout} />
+                <UserAvatarMenu member={memberWithLiveImage ?? member} onLogout={handleLogout} />
               </>
             ) : (
               <>
@@ -698,7 +712,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
                 <div
                   className={`flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full ${ROLE_COLOR[member.memberType] ?? "bg-slate-500"} text-[11px] font-bold text-white`}
                 >
-                  {memberAvatar(member)}
+                  {memberAvatar(memberWithLiveImage ?? member)}
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-900">

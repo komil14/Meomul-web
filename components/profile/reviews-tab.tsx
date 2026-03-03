@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ErrorNotice } from "@/components/ui/error-notice";
@@ -113,10 +113,15 @@ function HotelMiniHeader({ hotelId }: { hotelId: string }) {
           {hotel.hotelTitle}
         </p>
         <p className="text-xs text-slate-400">
-          {hotel.hotelLocation.charAt(0) + hotel.hotelLocation.slice(1).toLowerCase()} · {hotel.hotelType}
+          {hotel.hotelLocation.charAt(0) +
+            hotel.hotelLocation.slice(1).toLowerCase()}{" "}
+          · {hotel.hotelType}
         </p>
       </div>
-      <ExternalLink size={13} className="flex-shrink-0 text-slate-300 transition group-hover:text-slate-400" />
+      <ExternalLink
+        size={13}
+        className="flex-shrink-0 text-slate-300 transition group-hover:text-slate-400"
+      />
     </Link>
   );
 }
@@ -130,7 +135,11 @@ function StarDisplay({ rating }: { rating: number }) {
         <Star
           key={n}
           size={14}
-          className={n <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-slate-100 text-slate-200"}
+          className={
+            n <= Math.round(rating)
+              ? "fill-amber-400 text-amber-400"
+              : "fill-slate-100 text-slate-200"
+          }
         />
       ))}
     </div>
@@ -139,7 +148,13 @@ function StarDisplay({ rating }: { rating: number }) {
 
 // ─── StarPicker ───────────────────────────────────────────────────────────────
 
-function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function StarPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
   const [hovered, setHovered] = useState(0);
   return (
     <div className="flex items-center gap-1">
@@ -183,6 +198,14 @@ function EditReviewModal({
   const [text, setText] = useState(review.reviewText);
 
   const [updateReview, { loading }] = useMutation(UPDATE_REVIEW_MUTATION);
+
+  // Lock body scroll while the modal is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   const handleSave = async () => {
     if (!text.trim() || text.trim().length < 10) {
@@ -228,7 +251,10 @@ function EditReviewModal({
 
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Title <span className="font-normal normal-case text-slate-400">(optional)</span>
+              Title{" "}
+              <span className="font-normal normal-case text-slate-400">
+                (optional)
+              </span>
             </label>
             <input
               type="text"
@@ -251,7 +277,9 @@ function EditReviewModal({
               maxLength={2000}
               className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300"
             />
-            <span className="mt-0.5 block text-right text-xs text-slate-400">{text.length}/2000</span>
+            <span className="mt-0.5 block text-right text-xs text-slate-400">
+              {text.length}/2000
+            </span>
           </div>
         </div>
 
@@ -265,7 +293,9 @@ function EditReviewModal({
           </button>
           <button
             type="button"
-            onClick={() => { void handleSave(); }}
+            onClick={() => {
+              void handleSave();
+            }}
             disabled={loading || !text.trim()}
             className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-60"
           >
@@ -292,29 +322,57 @@ const DIMS = [
 export function ReviewsTab() {
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
-  const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<ReviewDto | null>(null);
+  const [extraReviews, setExtraReviews] = useState<ReviewDto[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const paginationInput = { page, limit: LIMIT, direction: -1 };
+  const { data, loading, error, refetch, fetchMore } =
+    useQuery<GetMyReviewsData>(GET_MY_REVIEWS_QUERY, {
+      skip: !member,
+      variables: {
+        input: { page: 1, limit: LIMIT, sort: "createdAt", direction: -1 },
+      },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    });
 
-  const { data, loading, error, refetch } = useQuery<GetMyReviewsData>(GET_MY_REVIEWS_QUERY, {
-    skip: !member,
-    variables: { input: paginationInput },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  const [deleteReviewMutation] = useMutation(DELETE_REVIEW_MUTATION);
 
-  const [deleteReview] = useMutation(DELETE_REVIEW_MUTATION, {
-    onCompleted: () => {
-      toast.success("Review deleted.");
-      void refetch();
-    },
-    onError: (err) => toast.error(getErrorMessage(err)),
-  });
-
-  const reviews = data?.getMyReviews.list ?? [];
+  const firstPageReviews = data?.getMyReviews.list ?? [];
+  const reviews = [...firstPageReviews, ...extraReviews];
   const total = data?.getMyReviews.metaCounter[0]?.total ?? 0;
-  const hasMore = page * LIMIT < total;
+  const hasMore = reviews.length < total;
+
+  const resetPagination = () => {
+    setExtraReviews([]);
+    setCurrentPage(1);
+  };
+
+  const handleLoadMore = async () => {
+    const nextPage = currentPage + 1;
+    setLoadingMore(true);
+    try {
+      const { data: moreData } = await fetchMore({
+        variables: {
+          input: {
+            page: nextPage,
+            limit: LIMIT,
+            sort: "createdAt",
+            direction: -1,
+          },
+        },
+      });
+      const newItems = moreData?.getMyReviews.list ?? [];
+      setExtraReviews((prev) => [...prev, ...newItems]);
+      setCurrentPage(nextPage);
+    } catch {
+      // Network errors are surfaced by the query's error state
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleDelete = async (reviewId: string) => {
     const confirmed = await confirmDanger({
@@ -323,7 +381,17 @@ export function ReviewsTab() {
       confirmText: "Yes, delete",
     });
     if (!confirmed) return;
-    await deleteReview({ variables: { reviewId } });
+    setDeletingId(reviewId);
+    try {
+      await deleteReviewMutation({ variables: { reviewId } });
+      toast.success("Review deleted.");
+      resetPagination();
+      void refetch();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -334,6 +402,7 @@ export function ReviewsTab() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
+            resetPagination();
             void refetch();
           }}
         />
@@ -346,7 +415,10 @@ export function ReviewsTab() {
         {loading && reviews.length === 0 && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl border border-slate-100 bg-white p-5">
+              <div
+                key={i}
+                className="rounded-2xl border border-slate-100 bg-white p-5"
+              >
                 <div className="space-y-3">
                   <div className="h-4 w-1/3 animate-pulse rounded-full bg-slate-100" />
                   <div className="h-3 w-full animate-pulse rounded-full bg-slate-50" />
@@ -363,7 +435,9 @@ export function ReviewsTab() {
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
               <Star size={24} className="fill-amber-200 text-amber-300" />
             </div>
-            <p className="mt-4 text-base font-semibold text-slate-700">No reviews yet</p>
+            <p className="mt-4 text-base font-semibold text-slate-700">
+              No reviews yet
+            </p>
             <p className="mt-1 text-sm text-slate-400">
               Reviews you write after a stay will appear here.
             </p>
@@ -389,7 +463,9 @@ export function ReviewsTab() {
                         {review.overallRating.toFixed(1)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400">{formatDate(review.createdAt)}</p>
+                    <p className="text-xs text-slate-400">
+                      {formatDate(review.createdAt)}
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-1.5">
@@ -403,25 +479,35 @@ export function ReviewsTab() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => { void handleDelete(review._id); }}
-                      className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-500 transition hover:bg-rose-50"
+                      onClick={() => {
+                        void handleDelete(review._id);
+                      }}
+                      disabled={deletingId === review._id}
+                      className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-500 transition hover:bg-rose-50 disabled:opacity-50"
                     >
                       <Trash2 size={12} />
-                      Delete
+                      {deletingId === review._id ? "Deleting\u2026" : "Delete"}
                     </button>
                   </div>
                 </div>
 
                 {review.reviewTitle && (
-                  <p className="font-semibold text-slate-900">{review.reviewTitle}</p>
+                  <p className="font-semibold text-slate-900">
+                    {review.reviewTitle}
+                  </p>
                 )}
-                <p className="text-sm text-slate-700 leading-relaxed">{review.reviewText}</p>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  {review.reviewText}
+                </p>
 
                 <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 sm:grid-cols-3">
                   {DIMS.map(({ key, label }) => {
                     const val = review[key];
                     return (
-                      <div key={key} className="flex items-center justify-between">
+                      <div
+                        key={key}
+                        className="flex items-center justify-between"
+                      >
                         <span className="text-xs text-slate-400">{label}</span>
                         <div className="flex items-center gap-1">
                           <div className="h-1 w-16 rounded-full bg-slate-100">
@@ -430,7 +516,9 @@ export function ReviewsTab() {
                               style={{ width: `${(val / 5) * 100}%` }}
                             />
                           </div>
-                          <span className="text-xs font-medium text-slate-500">{val.toFixed(1)}</span>
+                          <span className="text-xs font-medium text-slate-500">
+                            {val.toFixed(1)}
+                          </span>
                         </div>
                       </div>
                     );
@@ -439,8 +527,12 @@ export function ReviewsTab() {
 
                 {review.hotelResponse && (
                   <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <p className="mb-1 text-xs font-semibold text-slate-500">Hotel response</p>
-                    <p className="text-sm text-slate-700">{review.hotelResponse.responseText}</p>
+                    <p className="mb-1 text-xs font-semibold text-slate-500">
+                      Hotel response
+                    </p>
+                    <p className="text-sm text-slate-700">
+                      {review.hotelResponse.responseText}
+                    </p>
                   </div>
                 )}
 
@@ -452,7 +544,8 @@ export function ReviewsTab() {
                         : "bg-rose-50 text-rose-600"
                     }`}
                   >
-                    {review.reviewStatus.charAt(0) + review.reviewStatus.slice(1).toLowerCase()}
+                    {review.reviewStatus.charAt(0) +
+                      review.reviewStatus.slice(1).toLowerCase()}
                   </span>
                 )}
               </div>
@@ -461,11 +554,13 @@ export function ReviewsTab() {
             {hasMore && (
               <button
                 type="button"
-                onClick={() => setPage((p) => p + 1)}
-                disabled={loading}
+                onClick={() => {
+                  void handleLoadMore();
+                }}
+                disabled={loadingMore}
                 className="w-full rounded-xl border border-slate-200 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
               >
-                {loading ? "Loading..." : "Load more"}
+                {loadingMore ? "Loading..." : "Load more"}
               </button>
             )}
           </div>

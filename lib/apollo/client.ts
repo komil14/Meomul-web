@@ -40,6 +40,7 @@ export const createApolloClient = () => {
       ChatDto: { keyFields: ["_id"] },
       Hotel: { keyFields: ["_id"] },
       HotelDto: { keyFields: ["_id"] },
+      MemberDto: { keyFields: ["_id"] },
       Room: { keyFields: ["_id"] },
       RoomDto: { keyFields: ["_id"] },
       User: { keyFields: ["_id"] },

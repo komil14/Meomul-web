@@ -1,11 +1,14 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_LIKES_QUERY } from "@/graphql/like.gql";
-import { GET_HOTEL_CARD_QUERY, TOGGLE_LIKE_MUTATION } from "@/graphql/hotel.gql";
+import {
+  GET_HOTEL_CARD_QUERY,
+  TOGGLE_LIKE_MUTATION,
+} from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import { Heart } from "lucide-react";
@@ -39,7 +42,10 @@ function timeAgo(dateStr: string): string {
   if (d === 0) return "today";
   if (d === 1) return "yesterday";
   if (d < 7) return `${d} days ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 // ─── LikedHotelItem ───────────────────────────────────────────────────────────
@@ -49,7 +55,6 @@ function LikedHotelItem({
   likedAt,
   onUnliked,
 }: {
-  likeId: string;
   hotelId: string;
   likedAt: string;
   onUnliked: (hotelId: string) => void;
@@ -67,7 +72,9 @@ function LikedHotelItem({
 
   const handleUnlike = async () => {
     try {
-      await toggleLike({ variables: { input: { likeGroup: "HOTEL", likeRefId: hotelId } } });
+      await toggleLike({
+        variables: { input: { likeGroup: "HOTEL", likeRefId: hotelId } },
+      });
       onUnliked(hotelId);
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -118,14 +125,23 @@ function LikedHotelItem({
 
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5 text-amber-400" aria-hidden>
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-3.5 w-3.5 text-amber-400"
+              aria-hidden
+            >
               <path d="M12 2l2.95 6.08 6.72.98-4.86 4.67 1.15 6.6L12 17.2l-5.96 3.13 1.15-6.6L2.33 9.06l6.72-.98L12 2z" />
             </svg>
-            <span className="font-medium text-slate-600">{hotel.hotelRating.toFixed(1)}</span>
+            <span className="font-medium text-slate-600">
+              {hotel.hotelRating.toFixed(1)}
+            </span>
             <span>·</span>
             <span>{hotel.hotelLikes.toLocaleString()} likes</span>
           </div>
-          <span className="text-[11px] text-slate-400">Saved {timeAgo(likedAt)}</span>
+          <span className="text-[11px] text-slate-400">
+            Saved {timeAgo(likedAt)}
+          </span>
         </div>
       </Link>
 
@@ -148,21 +164,27 @@ function LikedHotelItem({
 // ─── LikesTab ─────────────────────────────────────────────────────────────────
 
 export function LikesTab() {
-  const member = getSessionMember();
+  const member = useMemo(() => getSessionMember(), []);
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
-  const { data, loading, error } = useQuery<GetMyLikesData>(GET_MY_LIKES_QUERY, {
-    skip: !member,
-    variables: { likeGroup: "HOTEL" },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  const { data, loading, error, refetch } = useQuery<GetMyLikesData>(
+    GET_MY_LIKES_QUERY,
+    {
+      skip: !member,
+      variables: { likeGroup: "HOTEL" },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
   const allLikes = data?.getMyLikes ?? [];
   const likes = allLikes.filter((l) => !removed.has(l.likeRefId));
 
   const handleUnliked = (hotelId: string) => {
     setRemoved((prev) => new Set(prev).add(hotelId));
+    // Also refetch the likes list to keep the Apollo cache in sync.
+    // The optimistic `removed` set ensures instant UI feedback.
+    void refetch();
   };
 
   return (
@@ -173,7 +195,10 @@ export function LikesTab() {
       {loading && likes.length === 0 && (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white">
+            <div
+              key={i}
+              className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white"
+            >
               <div className="h-56 animate-pulse bg-slate-100 sm:h-64" />
               <div className="space-y-2 p-4">
                 <div className="h-4 w-3/4 animate-pulse rounded-full bg-slate-100" />
@@ -190,7 +215,9 @@ export function LikesTab() {
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-50">
             <Heart size={24} className="text-rose-300" />
           </div>
-          <p className="mt-4 text-base font-semibold text-slate-700">No saved hotels</p>
+          <p className="mt-4 text-base font-semibold text-slate-700">
+            No saved hotels
+          </p>
           <p className="mt-1 text-sm text-slate-400">
             Tap the heart icon on any hotel to save it here.
           </p>
@@ -209,7 +236,6 @@ export function LikesTab() {
           {likes.map((like) => (
             <LikedHotelItem
               key={like._id}
-              likeId={like._id}
               hotelId={like.likeRefId}
               likedAt={like.createdAt}
               onUnliked={handleUnliked}

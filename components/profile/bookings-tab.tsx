@@ -49,26 +49,28 @@ interface GetHotelCardData {
 // ─── Style maps ───────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, string> = {
-  PENDING:     "bg-amber-50 text-amber-700",
-  CONFIRMED:   "bg-sky-50 text-sky-700",
-  CHECKED_IN:  "bg-emerald-50 text-emerald-700",
+  PENDING: "bg-amber-50 text-amber-700",
+  CONFIRMED: "bg-sky-50 text-sky-700",
+  CHECKED_IN: "bg-emerald-50 text-emerald-700",
   CHECKED_OUT: "bg-slate-100 text-slate-600",
-  CANCELLED:   "bg-rose-50 text-rose-600",
+  CANCELLED: "bg-rose-50 text-rose-600",
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING:     "Pending",
-  CONFIRMED:   "Confirmed",
-  CHECKED_IN:  "Checked in",
+  PENDING: "Pending",
+  CONFIRMED: "Confirmed",
+  CHECKED_IN: "Checked in",
   CHECKED_OUT: "Checked out",
-  CANCELLED:   "Cancelled",
+  CANCELLED: "Cancelled",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -82,8 +84,10 @@ function BookingRow({ booking }: { booking: BookingListItem }) {
 
   const hotel = data?.getHotel;
   const cover = hotel?.hotelImages[0];
-  const statusClass = STATUS_BADGE[booking.bookingStatus] ?? "bg-slate-100 text-slate-600";
-  const statusLabel = STATUS_LABEL[booking.bookingStatus] ?? booking.bookingStatus;
+  const statusClass =
+    STATUS_BADGE[booking.bookingStatus] ?? "bg-slate-100 text-slate-600";
+  const statusLabel =
+    STATUS_LABEL[booking.bookingStatus] ?? booking.bookingStatus;
 
   return (
     <Link
@@ -93,7 +97,13 @@ function BookingRow({ booking }: { booking: BookingListItem }) {
       {/* Hotel thumbnail */}
       <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
         {cover && (
-          <Image src={cover} alt={hotel?.hotelTitle ?? ""} fill sizes="64px" className="object-cover" />
+          <Image
+            src={cover}
+            alt={hotel?.hotelTitle ?? ""}
+            fill
+            sizes="64px"
+            className="object-cover"
+          />
         )}
       </div>
 
@@ -103,18 +113,27 @@ function BookingRow({ booking }: { booking: BookingListItem }) {
           <p className="truncate text-sm font-medium text-slate-800">
             {hotel?.hotelTitle ?? `Hotel #${booking.hotelId.slice(-6)}`}
           </p>
-          <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusClass}`}>
+          <span
+            className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusClass}`}
+          >
             {statusLabel}
           </span>
         </div>
         <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
           <CalendarDays size={11} />
-          <span>{formatDate(booking.checkInDate)} → {formatDate(booking.checkOutDate)}</span>
+          <span>
+            {formatDate(booking.checkInDate)} →{" "}
+            {formatDate(booking.checkOutDate)}
+          </span>
         </div>
         <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-400">
-          <span className="font-mono text-slate-400">#{booking.bookingCode}</span>
+          <span className="font-mono text-slate-400">
+            #{booking.bookingCode}
+          </span>
           <span>·</span>
-          <span className="font-medium text-slate-600">₩{booking.totalPrice.toLocaleString()}</span>
+          <span className="font-medium text-slate-600">
+            ₩{booking.totalPrice.toLocaleString()}
+          </span>
         </div>
       </div>
 
@@ -129,18 +148,41 @@ const LIMIT = 10;
 
 export function BookingsTab() {
   const member = useMemo(() => getSessionMember(), []);
-  const [page, setPage] = useState(1);
+  const [extraBookings, setExtraBookings] = useState<BookingListItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const { data, loading, error } = useQuery<GetMyBookingsData>(GET_MY_BOOKINGS_QUERY, {
-    skip: !member,
-    variables: { input: { page, limit: LIMIT, direction: -1 } },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  const { data, loading, error, fetchMore } = useQuery<GetMyBookingsData>(
+    GET_MY_BOOKINGS_QUERY,
+    {
+      skip: !member,
+      variables: { input: { page: 1, limit: LIMIT, direction: -1 } },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
-  const bookings = data?.getMyBookings.list ?? [];
+  const firstPageBookings = data?.getMyBookings.list ?? [];
+  const bookings = [...firstPageBookings, ...extraBookings];
   const total = data?.getMyBookings.metaCounter[0]?.total ?? 0;
-  const hasMore = page * LIMIT < total;
+  const hasMore = bookings.length < total;
+
+  const handleLoadMore = async () => {
+    const nextPage = currentPage + 1;
+    setLoadingMore(true);
+    try {
+      const { data: moreData } = await fetchMore({
+        variables: { input: { page: nextPage, limit: LIMIT, direction: -1 } },
+      });
+      const newItems = moreData?.getMyBookings.list ?? [];
+      setExtraBookings((prev) => [...prev, ...newItems]);
+      setCurrentPage(nextPage);
+    } catch {
+      // Network errors are surfaced by the query's error state
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -150,7 +192,10 @@ export function BookingsTab() {
       {loading && bookings.length === 0 && (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3">
+            <div
+              key={i}
+              className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3"
+            >
               <div className="h-12 w-16 flex-shrink-0 animate-pulse rounded-lg bg-slate-100" />
               <div className="flex-1 space-y-2">
                 <div className="h-3.5 w-2/3 animate-pulse rounded-full bg-slate-100" />
@@ -165,8 +210,12 @@ export function BookingsTab() {
       {!loading && bookings.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <CalendarDays size={32} className="text-slate-300" />
-          <p className="mt-3 text-sm font-medium text-slate-700">No bookings yet</p>
-          <p className="mt-1 text-xs text-slate-400">Your stays will appear here once you book a hotel.</p>
+          <p className="mt-3 text-sm font-medium text-slate-700">
+            No bookings yet
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Your stays will appear here once you book a hotel.
+          </p>
           <Link
             href="/hotels"
             className="mt-4 rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-900 hover:text-slate-900"
@@ -179,18 +228,22 @@ export function BookingsTab() {
       {/* Booking list */}
       {bookings.length > 0 && (
         <>
-          <p className="text-xs text-slate-400">{total} booking{total !== 1 ? "s" : ""} total</p>
+          <p className="text-xs text-slate-400">
+            {total} booking{total !== 1 ? "s" : ""} total
+          </p>
           {bookings.map((b) => (
             <BookingRow key={b._id} booking={b} />
           ))}
           {hasMore && (
             <button
               type="button"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={loading}
+              onClick={() => {
+                void handleLoadMore();
+              }}
+              disabled={loadingMore}
               className="w-full rounded-lg border border-slate-200 py-2.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 disabled:opacity-50"
             >
-              {loading ? "Loading..." : "Load more"}
+              {loadingMore ? "Loading..." : "Load more"}
             </button>
           )}
         </>

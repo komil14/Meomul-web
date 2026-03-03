@@ -7,6 +7,18 @@ const MEMBER_KEY = "meomul.member";
 
 const isBrowser = (): boolean => typeof window !== "undefined";
 
+// Module-level subscriber — site-frame registers here to get instant updates
+// when the profile page saves changes without a route change.
+let _onSessionChange: (() => void) | null = null;
+
+export const registerSessionChangeListener = (cb: () => void): void => {
+  _onSessionChange = cb;
+};
+
+export const unregisterSessionChangeListener = (): void => {
+  _onSessionChange = null;
+};
+
 export const getAccessToken = (): string | null => {
   if (!isBrowser()) {
     return null;
@@ -54,6 +66,14 @@ export const clearAuthSession = (): void => {
   clearOnboardingCompletionCache();
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(MEMBER_KEY);
+};
+
+export const updateSessionMember = (patch: Partial<Omit<SessionMember, "_id" | "memberType" | "memberStatus" | "memberAuthType" | "memberPhone">>): void => {
+  if (!isBrowser()) return;
+  const current = getSessionMember();
+  if (!current) return;
+  window.localStorage.setItem(MEMBER_KEY, JSON.stringify({ ...current, ...patch }));
+  _onSessionChange?.();
 };
 
 export const isAuthenticated = (): boolean => Boolean(getAccessToken());
