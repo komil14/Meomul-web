@@ -352,15 +352,12 @@ export default function HomePage({
     () => toHeroSlides(topHotels),
     [topHotels],
   );
-  const featuredReviewsLoading = false;
-
-  const { data: recommendedHotelsData } = useQuery<
+  const { data: recommendedHotelsData, loading: recommendedLoading } = useQuery<
     GetRecommendedHotelsV2QueryData,
     GetRecommendedHotelsV2QueryVars
   >(GET_RECOMMENDED_HOTELS_V2_QUERY, {
     variables: { limit: RECOMMENDED_GRID_LIMIT },
     skip: !hasAccessToken,
-    errorPolicy: "ignore",
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
   });
@@ -827,12 +824,10 @@ export default function HomePage({
                     </div>
                     <div className={styles.reviewMeta}>
                       <div className={styles.stars}>
-                        {featuredReviewsLoading ? "★★★★★" : reviewStars}
+                        {reviewStars}
                       </div>
                       <div>
-                        {featuredReviewsLoading
-                          ? "Loading reviews..."
-                          : formatReviewCountLabel(reviewCount)}
+                        {formatReviewCountLabel(reviewCount)}
                       </div>
                     </div>
                   </div>
@@ -996,7 +991,9 @@ export default function HomePage({
           {recommendedCards.length > 0 ? (
             <section className={styles.signatureSection}>
               <div className={styles.signatureHeader}>
-                <p className={styles.signatureEyebrow}>Recommended Stays</p>
+                <p className={styles.signatureEyebrow}>
+                  {hasAccessToken && recommendedLoading ? "Personalizing…" : "Recommended Stays"}
+                </p>
                 <h2 className={styles.signatureTitle}>Recommendations</h2>
                 <p className={styles.signatureDescription}>
                   Curated from your travel profile, live guest behavior, and
@@ -1395,6 +1392,7 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async (
     const initialLastMinuteDeals =
       homeFeed?.lastMinuteDeals.map((deal) => ({
         ...deal,
+        imageUrl: resolveMediaUrl(deal.imageUrl),
         validUntil: String(deal.validUntil),
       })) ?? [];
     const initialTestimonials =

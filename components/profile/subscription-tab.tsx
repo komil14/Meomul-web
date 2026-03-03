@@ -33,33 +33,58 @@ const TIERS = [
     label: "Free",
     price: "₩0",
     period: "forever",
-    features: ["Browse all hotels", "Make bookings", "Basic search filters", "Chat with hotels"],
+    features: [
+      "Browse all hotels",
+      "Make bookings",
+      "Basic search filters",
+      "Chat with hotels",
+    ],
   },
   {
     id: "BASIC",
     label: "Basic",
     price: "₩9,900",
     period: "/month",
-    features: ["Everything in Free", "Price drop alerts", "Extended search history", "Priority chat support"],
+    features: [
+      "Everything in Free",
+      "Price drop alerts",
+      "Extended search history",
+      "Priority chat support",
+    ],
   },
   {
     id: "PREMIUM",
     label: "Premium",
     price: "₩19,900",
     period: "/month",
-    features: ["Everything in Basic", "Personalized recommendations", "Early access to deals", "Price lock (30 min holds)", "Advanced room filters"],
+    features: [
+      "Everything in Basic",
+      "Personalized recommendations",
+      "Early access to deals",
+      "Price lock (30 min holds)",
+      "Advanced room filters",
+    ],
   },
   {
     id: "ELITE",
     label: "Elite",
     price: "₩39,900",
     period: "/month",
-    features: ["Everything in Premium", "Concierge support 24/7", "Exclusive member-only rates", "Highest recommendation priority", "Special cancellation flexibility"],
+    features: [
+      "Everything in Premium",
+      "Concierge support 24/7",
+      "Exclusive member-only rates",
+      "Highest recommendation priority",
+      "Special cancellation flexibility",
+    ],
   },
 ] as const;
 
 const TIER_LABEL: Record<string, string> = {
-  FREE: "Free", BASIC: "Basic", PREMIUM: "Premium", ELITE: "Elite",
+  FREE: "Free",
+  BASIC: "Basic",
+  PREMIUM: "Premium",
+  ELITE: "Elite",
 };
 
 // ─── SubscriptionTab ──────────────────────────────────────────────────────────
@@ -77,8 +102,12 @@ export function SubscriptionTab() {
     },
   );
 
-  const [requestSubscription, { loading: requesting }] = useMutation(REQUEST_SUBSCRIPTION_MUTATION);
-  const [cancelSubscription, { loading: cancelling }] = useMutation(CANCEL_SUBSCRIPTION_MUTATION);
+  const [requestSubscription, { loading: requesting }] = useMutation(
+    REQUEST_SUBSCRIPTION_MUTATION,
+  );
+  const [cancelSubscription, { loading: cancelling }] = useMutation(
+    CANCEL_SUBSCRIPTION_MUTATION,
+  );
 
   const status = data?.getSubscriptionStatus;
   const currentTier = status?.tier ?? "FREE";
@@ -88,7 +117,9 @@ export function SubscriptionTab() {
     if (tierId === currentTier) return;
     try {
       await requestSubscription({ variables: { requestedTier: tierId } });
-      toast.success("Subscription request submitted. An admin will review it shortly.");
+      toast.success(
+        "Subscription request submitted. An admin will review it shortly.",
+      );
       void refetch();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -120,7 +151,10 @@ export function SubscriptionTab() {
         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
           <div>
             <p className="text-sm font-medium text-slate-900">
-              Current plan: <span className="font-semibold">{TIER_LABEL[currentTier] ?? currentTier}</span>
+              Current plan:{" "}
+              <span className="font-semibold">
+                {TIER_LABEL[currentTier] ?? currentTier}
+              </span>
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
               {isActive && status.daysRemaining != null
@@ -131,7 +165,9 @@ export function SubscriptionTab() {
           {isActive && currentTier !== "FREE" && (
             <button
               type="button"
-              onClick={() => { void handleCancel(); }}
+              onClick={() => {
+                void handleCancel();
+              }}
               disabled={cancelling}
               className="text-xs font-medium text-rose-600 transition hover:text-rose-700 disabled:opacity-50"
             >
@@ -148,16 +184,22 @@ export function SubscriptionTab() {
           return (
             <div
               key={tier.id}
-              className={`flex flex-col rounded-xl border p-4 transition ${
-                isCurrent ? "border-slate-900 bg-white" : "border-slate-200 bg-white hover:border-slate-300"
+              className={`hover-lift flex flex-col rounded-2xl border p-5 shadow-sm transition ${
+                isCurrent
+                  ? "border-slate-900 bg-white shadow-md"
+                  : "border-slate-100/80 bg-white hover:border-slate-300"
               }`}
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{tier.label}</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {tier.label}
+                  </p>
                   <p className="text-xs text-slate-500">
-                    <span className="text-base font-bold text-slate-900">{tier.price}</span>
-                    {" "}{tier.period}
+                    <span className="text-base font-bold text-slate-900">
+                      {tier.price}
+                    </span>{" "}
+                    {tier.period}
                   </p>
                 </div>
                 {isCurrent && (
@@ -169,8 +211,14 @@ export function SubscriptionTab() {
 
               <ul className="mt-3 flex-1 space-y-1.5">
                 {tier.features.map((f) => (
-                  <li key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
-                    <Check size={11} className="mt-0.5 flex-shrink-0 text-emerald-500" />
+                  <li
+                    key={f}
+                    className="flex items-start gap-1.5 text-xs text-slate-600"
+                  >
+                    <Check
+                      size={11}
+                      className="mt-0.5 flex-shrink-0 text-emerald-500"
+                    />
                     {f}
                   </li>
                 ))}
@@ -179,11 +227,15 @@ export function SubscriptionTab() {
               {!isCurrent && (
                 <button
                   type="button"
-                  onClick={() => { void handleRequest(tier.id); }}
+                  onClick={() => {
+                    void handleRequest(tier.id);
+                  }}
                   disabled={requesting}
                   className="mt-4 w-full rounded-lg border border-slate-200 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-900 hover:text-slate-900 disabled:opacity-50"
                 >
-                  {tier.id === "FREE" ? "Downgrade to Free" : `Request ${tier.label}`}
+                  {tier.id === "FREE"
+                    ? "Downgrade to Free"
+                    : `Request ${tier.label}`}
                 </button>
               )}
             </div>
@@ -192,7 +244,8 @@ export function SubscriptionTab() {
       </div>
 
       <p className="text-center text-xs text-slate-400">
-        Subscription requests are manually reviewed. You'll be notified once approved.
+        Subscription requests are manually reviewed. You'll be notified once
+        approved.
       </p>
     </div>
   );

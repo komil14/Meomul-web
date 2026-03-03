@@ -92,7 +92,7 @@ function BookingRow({ booking }: { booking: BookingListItem }) {
   return (
     <Link
       href={`/bookings/${booking._id}`}
-      className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 transition hover:border-slate-200 hover:bg-slate-50"
+      className="hover-lift flex items-center gap-3 rounded-2xl border border-slate-100/80 bg-white px-4 py-3.5 shadow-sm transition hover:border-slate-200 hover:shadow-md"
     >
       {/* Hotel thumbnail */}
       <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
@@ -228,7 +228,7 @@ export function BookingsTab() {
       {/* Booking list */}
       {bookings.length > 0 && (
         <>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs font-medium text-slate-500">
             {total} booking{total !== 1 ? "s" : ""} total
           </p>
           {bookings.map((b) => (
@@ -241,7 +241,7 @@ export function BookingsTab() {
                 void handleLoadMore();
               }}
               disabled={loadingMore}
-              className="w-full rounded-lg border border-slate-200 py-2.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 disabled:opacity-50"
+              className="w-full rounded-xl border border-slate-200 py-2.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-50"
             >
               {loadingMore ? "Loading..." : "Load more"}
             </button>

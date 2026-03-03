@@ -96,7 +96,7 @@ function LikedHotelItem({
   if (!hotel) return null;
 
   return (
-    <div className="group relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_22px_46px_-34px_rgba(15,23,42,0.55)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_30px_66px_-30px_rgba(15,23,42,0.58)]">
+    <div className="hover-lift group relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.12)] transition duration-300 hover:border-slate-300 hover:shadow-[0_22px_46px_-34px_rgba(15,23,42,0.25)]">
       <Link href={`/hotels/${hotel._id}`} className="block focus:outline-none">
         <div className="relative h-56 w-full overflow-hidden bg-slate-200 sm:h-64">
           {coverImage ? (
@@ -193,7 +193,7 @@ export function LikesTab() {
 
       {/* Loading skeleton */}
       {loading && likes.length === 0 && (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
@@ -232,14 +232,19 @@ export function LikesTab() {
 
       {/* Grid of liked hotels */}
       {likes.length > 0 && (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {likes.map((like) => (
-            <LikedHotelItem
+        <div className="grid gap-5 sm:grid-cols-2">
+          {likes.map((like, i) => (
+            <div
               key={like._id}
-              hotelId={like.likeRefId}
-              likedAt={like.createdAt}
-              onUnliked={handleUnliked}
-            />
+              className="motion-fade-up"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <LikedHotelItem
+                hotelId={like.likeRefId}
+                likedAt={like.createdAt}
+                onUnliked={handleUnliked}
+              />
+            </div>
           ))}
         </div>
       )}
