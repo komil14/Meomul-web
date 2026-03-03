@@ -1,7 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { ProfileSidebar } from "@/components/profile/profile-sidebar";
+import { ProfileHeader } from "@/components/profile/profile-sidebar";
 import { EditProfileModal } from "@/components/profile/edit-profile-modal";
 import { ProfileNav } from "@/components/profile/profile-nav";
 import { ReviewsTab } from "@/components/profile/reviews-tab";
@@ -12,7 +12,7 @@ import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_MEMBER_QUERY } from "@/graphql/member.gql";
 import { getSessionMember, updateSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
-import { Calendar, FileText, MapPin, Phone } from "lucide-react";
+import { Calendar, MapPin, Phone } from "lucide-react";
 import type { NextPageWithAuth } from "@/types/page";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,73 +39,77 @@ interface GetMemberData {
   getMember: MemberDto;
 }
 
-// ─── Profile overview (read-only) ─────────────────────────────────────────────
+// ─── Profile overview ─────────────────────────────────────────────────────────
 
 function ProfileOverview({ member }: { member: MemberDto }) {
   return (
-    <div className="space-y-4 motion-fade-up motion-delay-1">
-      {/* About card */}
-      <div className="rounded-2xl border border-slate-100/80 bg-white p-5 shadow-sm">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <FileText size={15} className="text-slate-400" />
+    <div className="grid gap-4 sm:grid-cols-2">
+      {/* About */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:col-span-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
           About
-        </h3>
-        <p className="mt-3 text-sm leading-relaxed text-slate-600">
+        </p>
+        <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
           {member.memberDesc ||
-            "No bio yet — edit your profile to tell others about yourself."}
+            "No bio yet \u2014 edit your profile to share a bit about yourself."}
         </p>
       </div>
 
-      {/* Details card */}
-      <div className="rounded-2xl border border-slate-100/80 bg-white p-5 shadow-sm">
-        <h3 className="mb-4 text-sm font-semibold text-slate-900">Details</h3>
-        <dl className="space-y-3.5">
-          {member.memberAddress && (
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-50">
-                <MapPin size={14} className="text-slate-400" />
-              </div>
-              <div>
-                <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                  Location
-                </dt>
-                <dd className="text-sm text-slate-700">
-                  {member.memberAddress}
-                </dd>
-              </div>
-            </div>
-          )}
-          {member.memberPhone && (
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-50">
-                <Phone size={14} className="text-slate-400" />
-              </div>
-              <div>
-                <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                  Phone
-                </dt>
-                <dd className="text-sm text-slate-700">{member.memberPhone}</dd>
-              </div>
-            </div>
-          )}
+      {/* Detail cards */}
+      {member.memberAddress && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-50">
-              <Calendar size={14} className="text-slate-400" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50">
+              <MapPin size={16} className="text-slate-400" />
             </div>
             <div>
-              <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                Member since
-              </dt>
-              <dd className="text-sm text-slate-700">
-                {new Date(member.createdAt).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </dd>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Location
+              </p>
+              <p className="text-sm font-medium text-slate-700">
+                {member.memberAddress}
+              </p>
             </div>
           </div>
-        </dl>
+        </div>
+      )}
+
+      {member.memberPhone && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50">
+              <Phone size={16} className="text-slate-400" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                Phone
+              </p>
+              <p className="text-sm font-medium text-slate-700">
+                {member.memberPhone}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50">
+            <Calendar size={16} className="text-slate-400" />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Joined
+            </p>
+            <p className="text-sm font-medium text-slate-700">
+              {new Date(member.createdAt).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -113,16 +117,25 @@ function ProfileOverview({ member }: { member: MemberDto }) {
 
 function ProfileOverviewSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:col-span-2">
+        <div className="h-3 w-16 animate-pulse rounded-full bg-slate-100" />
+        <div className="mt-3 space-y-2">
+          <div className="h-3.5 w-3/4 animate-pulse rounded-full bg-slate-100" />
+          <div className="h-3.5 w-1/2 animate-pulse rounded-full bg-slate-50" />
+        </div>
+      </div>
       {[1, 2].map((i) => (
         <div
           key={i}
-          className="rounded-2xl border border-slate-100/80 bg-white p-5"
+          className="rounded-2xl border border-slate-200 bg-white p-5"
         >
-          <div className="h-4 w-20 animate-pulse rounded-full bg-slate-100" />
-          <div className="mt-4 space-y-2.5">
-            <div className="h-3.5 w-3/4 animate-pulse rounded-full bg-slate-100" />
-            <div className="h-3.5 w-1/2 animate-pulse rounded-full bg-slate-50" />
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 animate-pulse rounded-lg bg-slate-50" />
+            <div className="space-y-1.5">
+              <div className="h-2.5 w-12 animate-pulse rounded-full bg-slate-100" />
+              <div className="h-3.5 w-24 animate-pulse rounded-full bg-slate-50" />
+            </div>
           </div>
         </div>
       ))}
@@ -139,8 +152,6 @@ const ProfilePage: NextPageWithAuth = () => {
 
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // Track which tabs have been visited so we mount them once and keep them
-  // alive (hidden via CSS) to avoid refetching when switching back.
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
     () => new Set([activeTab]),
   );
@@ -181,91 +192,77 @@ const ProfilePage: NextPageWithAuth = () => {
   const memberType = member?.memberType ?? sessionMember.memberType;
 
   return (
-    <main className="mx-auto max-w-5xl">
-      {/* ── Gradient banner ─────────────────────────────────────────────── */}
-      <div className="motion-fade-up -mx-3 h-36 bg-gradient-to-br from-teal-700 via-teal-600/80 to-cyan-500/60 sm:-mx-6 sm:h-44 sm:rounded-b-[2rem]" />
+    <main className="space-y-6">
+      {/* Eyebrow */}
+      <div className="motion-fade-up">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Profile
+        </p>
+      </div>
 
-      {/* ── Two-column layout ───────────────────────────────────────────── */}
-      <div className="-mt-16 grid grid-cols-1 gap-6 px-1 sm:gap-8 sm:px-0 md:grid-cols-[280px_1fr]">
-        {/* Sidebar */}
-        <ProfileSidebar
+      {/* Profile header card */}
+      <div className="motion-fade-up motion-delay-1">
+        <ProfileHeader
           member={member}
           loading={loading}
           onEdit={() => setShowEditModal(true)}
         />
-
-        {/* Content area — push below the banner on desktop */}
-        <div className="min-w-0 space-y-5 md:pt-20">
-          {/* Mobile horizontal nav (hidden on md+) */}
-          <ProfileNav />
-
-          {/* Profile overview tab */}
-          <div className={activeTab === "profile" ? undefined : "hidden"}>
-            {error && <ErrorNotice message={getErrorMessage(error)} />}
-            {loading && !member ? (
-              <ProfileOverviewSkeleton />
-            ) : member ? (
-              <ProfileOverview member={member} />
-            ) : null}
-          </div>
-
-          {/* Tab section headers — shows which tab is active */}
-          {activeTab !== "profile" && (
-            <div className="motion-fade-up">
-              <h2 className="font-display text-lg font-bold text-slate-900">
-                {activeTab === "reviews" && "My Reviews"}
-                {activeTab === "likes" && "Saved Hotels"}
-                {activeTab === "bookings" && "My Bookings"}
-                {activeTab === "subscription" && "Subscription"}
-              </h2>
-            </div>
-          )}
-
-          {/* User-specific tabs */}
-          {memberType === "USER" && (
-            <>
-              {visitedTabs.has("reviews") && (
-                <div
-                  className={
-                    activeTab === "reviews" ? "motion-fade-up" : "hidden"
-                  }
-                >
-                  <ReviewsTab />
-                </div>
-              )}
-              {visitedTabs.has("likes") && (
-                <div
-                  className={
-                    activeTab === "likes" ? "motion-fade-up" : "hidden"
-                  }
-                >
-                  <LikesTab />
-                </div>
-              )}
-              {visitedTabs.has("bookings") && (
-                <div
-                  className={
-                    activeTab === "bookings" ? "motion-fade-up" : "hidden"
-                  }
-                >
-                  <BookingsTab />
-                </div>
-              )}
-              {visitedTabs.has("subscription") && (
-                <div
-                  className={
-                    activeTab === "subscription" ? "motion-fade-up" : "hidden"
-                  }
-                >
-                  <SubscriptionTab />
-                </div>
-              )}
-            </>
-          )}
-        </div>
       </div>
 
-      {/* ── Edit profile modal ────────────────────────────────────────── */}
+      {/* Tab navigation */}
+      <div className="motion-fade-up motion-delay-2">
+        <ProfileNav />
+      </div>
+
+      {/* Tab content */}
+      <div
+        className={
+          activeTab === "profile" ? "motion-fade-up motion-delay-3" : "hidden"
+        }
+      >
+        {error && <ErrorNotice message={getErrorMessage(error)} />}
+        {loading && !member ? (
+          <ProfileOverviewSkeleton />
+        ) : member ? (
+          <ProfileOverview member={member} />
+        ) : null}
+      </div>
+
+      {memberType === "USER" && (
+        <>
+          {visitedTabs.has("reviews") && (
+            <div
+              className={activeTab === "reviews" ? "motion-fade-up" : "hidden"}
+            >
+              <ReviewsTab />
+            </div>
+          )}
+          {visitedTabs.has("likes") && (
+            <div
+              className={activeTab === "likes" ? "motion-fade-up" : "hidden"}
+            >
+              <LikesTab />
+            </div>
+          )}
+          {visitedTabs.has("bookings") && (
+            <div
+              className={activeTab === "bookings" ? "motion-fade-up" : "hidden"}
+            >
+              <BookingsTab />
+            </div>
+          )}
+          {visitedTabs.has("subscription") && (
+            <div
+              className={
+                activeTab === "subscription" ? "motion-fade-up" : "hidden"
+              }
+            >
+              <SubscriptionTab />
+            </div>
+          )}
+        </>
+      )}
+
       {member && (
         <EditProfileModal
           isOpen={showEditModal}

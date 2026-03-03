@@ -5,15 +5,11 @@ import { getSessionMember } from "@/lib/auth/session";
 const TABS = [
   { id: "profile", label: "Overview" },
   { id: "reviews", label: "Reviews", userOnly: true },
-  { id: "likes", label: "Saved", userOnly: true },
+  { id: "likes", label: "Saved Hotels", userOnly: true },
   { id: "bookings", label: "Bookings", userOnly: true },
-  { id: "subscription", label: "Plan", userOnly: true },
+  { id: "subscription", label: "Subscription", userOnly: true },
 ] as const;
 
-/**
- * Horizontal pill-style tab bar shown only on mobile (md:hidden).
- * On desktop the sidebar's vertical nav takes over.
- */
 export function ProfileNav() {
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
@@ -33,7 +29,7 @@ export function ProfileNav() {
   return (
     <nav
       aria-label="Profile sections"
-      className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100/80 p-1 md:hidden"
+      className="flex gap-0.5 overflow-x-auto border-b border-slate-200"
     >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
@@ -42,10 +38,10 @@ export function ProfileNav() {
             key={tab.id}
             type="button"
             onClick={() => goTo(tab.id)}
-            className={`flex-shrink-0 rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+            className={`-mb-px flex-shrink-0 border-b-2 px-4 py-3 text-sm font-semibold transition ${
               isActive
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
+                ? "border-slate-900 text-slate-900"
+                : "border-transparent text-slate-400 hover:text-slate-600"
             }`}
           >
             {tab.label}

@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PropsWithChildren } from "react";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
+import { Footer } from "@/components/layout/footer";
 import { PriceLockFab } from "@/components/layout/price-lock-fab";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
@@ -836,6 +837,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
         onClose={() => setIsChatPanelOpen(false)}
         unreadCount={unreadCount}
       />
+      <Footer />
     </div>
   );
 }
