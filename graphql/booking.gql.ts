@@ -100,6 +100,20 @@ export const GET_AGENT_BOOKINGS_QUERY = gql`
   ${BOOKING_LIST_FIELDS}
 `;
 
+export const GET_ALL_BOOKINGS_ADMIN_QUERY = gql`
+  query GetAllBookingsAdmin($input: PaginationInput!, $statusFilter: BookingStatus) {
+    getAllBookingsAdmin(input: $input, statusFilter: $statusFilter) {
+      list {
+        ...BookingListFields
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+  ${BOOKING_LIST_FIELDS}
+`;
+
 export const GET_BOOKING_QUERY = gql`
   query GetBooking($bookingId: String!) {
     getBooking(bookingId: $bookingId) {

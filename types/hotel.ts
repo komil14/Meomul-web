@@ -391,6 +391,15 @@ export interface GetHotelReviewsQueryVars {
   input: PaginationInput;
 }
 
+export interface GetAllReviewsAdminQueryData {
+  getAllReviewsAdmin: ReviewsDto;
+}
+
+export interface GetAllReviewsAdminQueryVars {
+  input: PaginationInput;
+  statusFilter?: ReviewStatus;
+}
+
 export interface GetSimilarHotelsQueryData {
   getSimilarHotels: HotelListItem[];
 }

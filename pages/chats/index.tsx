@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ChatThreadPopup } from "@/components/chat/chat-thread-popup";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   GET_HOTEL_CHATS_QUERY,
@@ -687,6 +687,7 @@ const ChatsPage: NextPageWithAuth = () => {
 
   type ChatTypeFilter = "ALL" | "HOTELS" | "SUPPORT";
   const [chatTypeFilter, setChatTypeFilter] = useState<ChatTypeFilter>("ALL");
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showNewChat, setShowNewChat] = useState(false);
   const [manualStaffHotelId, setManualStaffHotelId] = useState("");
   const [preselectedHotelId, setPreselectedHotelId] = useState("");
@@ -920,8 +921,16 @@ const ChatsPage: NextPageWithAuth = () => {
             setPreselectedHotelId("");
             setPreselectedIntent(isUser ? "hotel" : "support");
             setSupportSourcePath("");
-            void router.push(`/chats/${chatId}`);
+            setSelectedChatId(chatId);
           }}
+        />
+      )}
+
+      {/* Chat thread popup */}
+      {selectedChatId && (
+        <ChatThreadPopup
+          chatId={selectedChatId}
+          onClose={() => { setSelectedChatId(null); }}
         />
       )}
 
@@ -1094,10 +1103,11 @@ const ChatsPage: NextPageWithAuth = () => {
               const statusCfg = STATUS_CONFIG[chat.chatStatus];
 
               return (
-                <Link
+                <button
                   key={chat._id}
-                  href={`/chats/${chat._id}`}
-                  className={`group flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50 ${
+                  type="button"
+                  onClick={() => { setSelectedChatId(chat._id); }}
+                  className={`group flex w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-slate-50 ${
                     i < filteredChats.length - 1 ? "border-b border-slate-50" : ""
                   }`}
                   style={{
@@ -1177,7 +1187,7 @@ const ChatsPage: NextPageWithAuth = () => {
                       </span>
                     </div>
                   </div>
-                </Link>
+                </button>
               );
             })}
           </div>

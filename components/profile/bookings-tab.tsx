@@ -7,7 +7,14 @@ import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
 import { GET_HOTEL_CARD_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
-import { CalendarDays, ChevronRight } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  CreditCard,
+  MapPin,
+  Moon,
+  Search,
+} from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,17 +50,18 @@ interface GetHotelCardData {
     _id: string;
     hotelTitle: string;
     hotelImages: string[];
+    hotelLocation?: string;
   };
 }
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, string> = {
-  PENDING: "bg-amber-50 text-amber-700",
-  CONFIRMED: "bg-sky-50 text-sky-700",
-  CHECKED_IN: "bg-emerald-50 text-emerald-700",
-  CHECKED_OUT: "bg-slate-100 text-slate-600",
-  CANCELLED: "bg-rose-50 text-rose-600",
+  PENDING: "border-amber-200 bg-amber-50 text-amber-700",
+  CONFIRMED: "border-sky-200 bg-sky-50 text-sky-700",
+  CHECKED_IN: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  CHECKED_OUT: "border-slate-200 bg-slate-50 text-slate-600",
+  CANCELLED: "border-rose-200 bg-rose-50 text-rose-600",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -64,14 +72,39 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELLED: "Cancelled",
 };
 
+const PAYMENT_BADGE: Record<string, string> = {
+  PENDING: "border-amber-200 bg-amber-50 text-amber-700",
+  PARTIAL: "border-violet-200 bg-violet-50 text-violet-700",
+  PAID: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  FAILED: "border-rose-200 bg-rose-50 text-rose-600",
+  REFUNDED: "border-slate-200 bg-slate-50 text-slate-600",
+};
+
+const PAYMENT_LABEL: Record<string, string> = {
+  PENDING: "Unpaid",
+  PARTIAL: "Partial",
+  PAID: "Paid",
+  FAILED: "Failed",
+  REFUNDED: "Refunded",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric",
   });
+}
+
+function diffNights(checkIn: string, checkOut: string): number {
+  const msPerDay = 86_400_000;
+  return Math.max(
+    0,
+    Math.round(
+      (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / msPerDay,
+    ),
+  );
 }
 
 // ─── BookingRow ───────────────────────────────────────────────────────────────
@@ -85,59 +118,91 @@ function BookingRow({ booking }: { booking: BookingListItem }) {
   const hotel = data?.getHotel;
   const cover = hotel?.hotelImages[0];
   const statusClass =
-    STATUS_BADGE[booking.bookingStatus] ?? "bg-slate-100 text-slate-600";
+    STATUS_BADGE[booking.bookingStatus] ??
+    "border-slate-200 bg-slate-50 text-slate-600";
   const statusLabel =
     STATUS_LABEL[booking.bookingStatus] ?? booking.bookingStatus;
+  const paymentClass =
+    PAYMENT_BADGE[booking.paymentStatus] ??
+    "border-slate-200 bg-slate-50 text-slate-600";
+  const paymentLabel =
+    PAYMENT_LABEL[booking.paymentStatus] ?? booking.paymentStatus;
+  const nights = diffNights(booking.checkInDate, booking.checkOutDate);
 
   return (
     <Link
       href={`/bookings/${booking._id}`}
-      className="hover-lift flex items-center gap-3 rounded-2xl border border-slate-100/80 bg-white px-4 py-3.5 shadow-sm transition hover:border-slate-200 hover:shadow-md"
+      className="group flex gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.08)] transition-all hover:border-slate-300 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.15)]"
     >
       {/* Hotel thumbnail */}
-      <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
-        {cover && (
+      <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-24 sm:w-28">
+        {cover ? (
           <Image
             src={cover}
             alt={hotel?.hotelTitle ?? ""}
             fill
-            sizes="64px"
-            className="object-cover"
+            sizes="(max-width: 640px) 80px, 112px"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <CalendarDays size={18} className="text-slate-300" />
+          </div>
         )}
       </div>
 
-      {/* Info */}
+      {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="truncate text-sm font-medium text-slate-800">
-            {hotel?.hotelTitle ?? `Hotel #${booking.hotelId.slice(-6)}`}
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-[family-name:var(--font-display)] text-sm font-semibold text-slate-900 sm:text-base">
+              {hotel?.hotelTitle ?? `Hotel #${booking.hotelId.slice(-6)}`}
+            </p>
+            {hotel?.hotelLocation && (
+              <div className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400">
+                <MapPin size={9} className="flex-shrink-0" />
+                <span className="truncate">{hotel.hotelLocation}</span>
+              </div>
+            )}
+          </div>
           <span
-            className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusClass}`}
+            className={`flex-shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] ${statusClass}`}
           >
             {statusLabel}
           </span>
         </div>
-        <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-          <CalendarDays size={11} />
-          <span>
-            {formatDate(booking.checkInDate)} →{" "}
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+          <span className="flex items-center gap-1">
+            <CalendarDays size={10} className="text-slate-400" />
+            {formatDate(booking.checkInDate)} –{" "}
             {formatDate(booking.checkOutDate)}
           </span>
-        </div>
-        <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-400">
-          <span className="font-mono text-slate-400">
-            #{booking.bookingCode}
+          <span className="flex items-center gap-1">
+            <Moon size={10} className="text-slate-400" />
+            {nights}n
           </span>
-          <span>·</span>
-          <span className="font-medium text-slate-600">
+          <span
+            className={`rounded-full border px-1.5 py-px text-[9px] font-semibold uppercase tracking-[0.04em] ${paymentClass}`}
+          >
+            {paymentLabel}
+          </span>
+        </div>
+
+        <div className="mt-2 flex items-end justify-between gap-2">
+          <span className="rounded-md bg-slate-100 px-1.5 py-px font-mono text-[10px] font-medium text-slate-500">
+            {booking.bookingCode}
+          </span>
+          <span className="font-[family-name:var(--font-display)] text-sm font-semibold text-slate-900">
             ₩{booking.totalPrice.toLocaleString()}
           </span>
         </div>
       </div>
 
-      <ChevronRight size={14} className="flex-shrink-0 text-slate-300" />
+      <ChevronRight
+        size={14}
+        className="mt-1 flex-shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5"
+      />
     </Link>
   );
 }
@@ -190,16 +255,17 @@ export function BookingsTab() {
 
       {/* Loading skeleton */}
       {loading && bookings.length === 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3"
+              className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4"
             >
-              <div className="h-12 w-16 flex-shrink-0 animate-pulse rounded-lg bg-slate-100" />
-              <div className="flex-1 space-y-2">
-                <div className="h-3.5 w-2/3 animate-pulse rounded-full bg-slate-100" />
-                <div className="h-3 w-1/2 animate-pulse rounded-full bg-slate-50" />
+              <div className="h-24 w-28 flex-shrink-0 animate-pulse rounded-xl bg-slate-100" />
+              <div className="flex-1 space-y-2.5 py-1">
+                <div className="h-4 w-2/3 animate-pulse rounded-lg bg-slate-100" />
+                <div className="h-3 w-1/2 animate-pulse rounded-lg bg-slate-50" />
+                <div className="h-3 w-1/3 animate-pulse rounded-lg bg-slate-50" />
               </div>
             </div>
           ))}
@@ -208,17 +274,19 @@ export function BookingsTab() {
 
       {/* Empty state */}
       {!loading && bookings.length === 0 && !error && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <CalendarDays size={32} className="text-slate-300" />
-          <p className="mt-3 text-sm font-medium text-slate-700">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-center shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+            <Search size={20} className="text-slate-400" />
+          </div>
+          <p className="mt-4 font-[family-name:var(--font-display)] text-base font-semibold text-slate-800">
             No bookings yet
           </p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-sm text-slate-400">
             Your stays will appear here once you book a hotel.
           </p>
           <Link
             href="/hotels"
-            className="mt-4 rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-900 hover:text-slate-900"
+            className="mt-5 rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
           >
             Browse hotels
           </Link>
@@ -228,12 +296,22 @@ export function BookingsTab() {
       {/* Booking list */}
       {bookings.length > 0 && (
         <>
-          <p className="text-xs font-medium text-slate-500">
-            {total} booking{total !== 1 ? "s" : ""} total
-          </p>
-          {bookings.map((b) => (
-            <BookingRow key={b._id} booking={b} />
-          ))}
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-slate-400">
+              {total} booking{total !== 1 ? "s" : ""} total
+            </p>
+            <Link
+              href="/bookings"
+              className="text-xs font-semibold text-slate-500 underline underline-offset-2 transition hover:text-slate-700"
+            >
+              View all
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {bookings.map((b) => (
+              <BookingRow key={b._id} booking={b} />
+            ))}
+          </div>
           {hasMore && (
             <button
               type="button"
@@ -241,7 +319,7 @@ export function BookingsTab() {
                 void handleLoadMore();
               }}
               disabled={loadingMore}
-              className="w-full rounded-xl border border-slate-200 py-2.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-50"
+              className="w-full rounded-xl border border-slate-200 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-50"
             >
               {loadingMore ? "Loading..." : "Load more"}
             </button>

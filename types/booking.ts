@@ -124,6 +124,15 @@ export interface GetAgentBookingsQueryVars {
   input: PaginationInput;
 }
 
+export interface GetAllBookingsAdminQueryData {
+  getAllBookingsAdmin: BookingsDto;
+}
+
+export interface GetAllBookingsAdminQueryVars {
+  input: PaginationInput;
+  statusFilter?: BookingStatus;
+}
+
 export interface GetBookingQueryData {
   getBooking: BookingDetailDto;
 }

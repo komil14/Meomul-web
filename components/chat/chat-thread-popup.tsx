@@ -1,13 +1,10 @@
 import { gql } from "@apollo/client";
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import type { Socket } from "socket.io-client";
 import { useToast } from "@/components/ui/toast-provider";
 import {
-  CLAIM_CHAT_MUTATION,
-  CLOSE_CHAT_MUTATION,
   GET_CHAT_QUERY,
   MARK_CHAT_MESSAGES_AS_READ_MUTATION,
   SEND_MESSAGE_MUTATION,
@@ -16,13 +13,10 @@ import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
-import { confirmAction, confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
+import { errorAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
+import { SUPPORT_CHAT_TITLE, avatarBg } from "@/lib/chat/chat-helpers";
 import type {
-  ClaimChatMutationData,
-  ClaimChatMutationVars,
-  CloseChatMutationData,
-  CloseChatMutationVars,
   GetChatQueryData,
   GetChatQueryVars,
   MarkChatMessagesAsReadMutationData,
@@ -31,29 +25,25 @@ import type {
   SendMessageMutationData,
   SendMessageMutationVars,
 } from "@/types/chat";
-import type { NextPageWithAuth } from "@/types/page";
 import {
-  ArrowLeft,
   Check,
   CheckCheck,
   Download,
   File,
   Headset,
   ImagePlus,
+  Maximize2,
   MessageSquare,
   Send,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
-import {
-  SUPPORT_CHAT_TITLE,
-  avatarBg,
-} from "@/lib/chat/chat-helpers";
 
-// ─── Hotel title query ────────────────────────────────────────────────────────
+// ─── Hotel title query ─────────────────────────────────────────────────────
 
 const GET_HOTEL_TITLE_QUERY = gql`
-  query GetHotelTitleForChat($hotelId: String!) {
+  query GetHotelTitleForPopup($hotelId: String!) {
     getHotel(hotelId: $hotelId) {
       _id
       hotelTitle
@@ -66,7 +56,7 @@ interface HotelTitleResult {
   getHotel: { _id: string; hotelTitle: string; hotelLocation: string };
 }
 
-// ─── Socket types ─────────────────────────────────────────────────────────────
+// ─── Socket types ──────────────────────────────────────────────────────────
 
 interface SocketAck {
   success: boolean;
@@ -81,7 +71,7 @@ interface TypingEventPayload extends ChatRoomEventPayload {
   userId: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
 const API_BASE = env.graphqlUrl.replace(/\/graphql\/?$/i, "");
 
@@ -91,12 +81,6 @@ function resolveMediaUrl(url: string | null | undefined): string {
   if (url.startsWith("http") || url.startsWith("//") || url.startsWith("blob:")) return url;
   return `${API_BASE}/${url}`;
 }
-
-const logBackgroundChatError = (context: string, error: unknown): void => {
-  if (process.env.NODE_ENV !== "production") {
-    console.error(`[Chat] ${context}: ${getErrorMessage(error)}`);
-  }
-};
 
 function formatMessageTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString("en-US", {
@@ -125,7 +109,7 @@ function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
 
-// ─── Typing indicator ─────────────────────────────────────────────────────────
+// ─── Typing indicator ──────────────────────────────────────────────────────
 
 function TypingIndicator({
   firstLetter,
@@ -157,7 +141,7 @@ function TypingIndicator({
   );
 }
 
-// ─── Message bubble ───────────────────────────────────────────────────────────
+// ─── Message bubble ────────────────────────────────────────────────────────
 
 function MessageBubble({
   message,
@@ -168,28 +152,24 @@ function MessageBubble({
   isOwn: boolean;
   isLastInGroup: boolean;
 }) {
-  // Light blue for sent (matches iMessage/KakaoTalk soft palette), white for received
   const sentCls = `bg-[#d4e5f7] text-slate-900 ${isLastInGroup ? "rounded-2xl rounded-br-sm" : "rounded-2xl"}`;
   const recvCls = `bg-white text-slate-900 border border-slate-100 shadow-sm ${isLastInGroup ? "rounded-2xl rounded-bl-sm" : "rounded-2xl"}`;
 
   return (
     <div className={`relative overflow-hidden ${isOwn ? sentCls : recvCls}`}>
-      {/* IMAGE */}
       {message.messageType === "IMAGE" && message.imageUrl && (
-        <a href={message.imageUrl} target="_blank" rel="noreferrer" className="block">
+        <a href={resolveMediaUrl(message.imageUrl)} target="_blank" rel="noreferrer" className="block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={message.imageUrl}
+            src={resolveMediaUrl(message.imageUrl)}
             alt="Shared image"
             className="block max-h-64 w-full object-cover"
           />
         </a>
       )}
-
-      {/* FILE */}
       {message.messageType === "FILE" && message.fileUrl && (
         <a
-          href={message.fileUrl}
+          href={resolveMediaUrl(message.fileUrl)}
           download
           target="_blank"
           rel="noreferrer"
@@ -207,8 +187,6 @@ function MessageBubble({
           <Download size={13} className="text-slate-400" />
         </a>
       )}
-
-      {/* TEXT */}
       {message.messageType === "TEXT" && (
         <p className="break-words px-3.5 py-2.5 text-sm leading-relaxed">
           {message.content}
@@ -218,29 +196,31 @@ function MessageBubble({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Popup ─────────────────────────────────────────────────────────────────
 
-const ChatThreadPage: NextPageWithAuth = () => {
-  const router = useRouter();
+interface ChatThreadPopupProps {
+  chatId: string;
+  onClose: () => void;
+}
+
+export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
   const isPageVisible = usePageVisible();
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
   const isOperatorSide = !isUser;
-  const isAgent = memberType === "AGENT";
-  const chatId =
-    typeof router.query.chatId === "string" ? router.query.chatId : "";
 
   const [messageInput, setMessageInput] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
-
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingImageRef = useRef<{ file: File; previewUrl: string } | null>(null);
   const lastMarkedKeyRef = useRef("");
   const socketRef = useRef<Socket | null>(null);
   const remoteTypingTimeoutRef = useRef<number | null>(null);
@@ -249,7 +229,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const socketJoinFailedRef = useRef(false);
   const lastEventRefetchAtRef = useRef(0);
   const queuedEventRefetchTimeoutRef = useRef<number | null>(null);
-  // Track count to know which messages are "new" (for entry animation)
   const prevMessageCountRef = useRef(0);
 
   /** QUERIES **/
@@ -282,23 +261,21 @@ const ChatThreadPage: NextPageWithAuth = () => {
     MarkChatMessagesAsReadMutationVars
   >(MARK_CHAT_MESSAGES_AS_READ_MUTATION);
 
-  const [claimChat, { loading: claiming }] = useMutation<
-    ClaimChatMutationData,
-    ClaimChatMutationVars
-  >(CLAIM_CHAT_MUTATION);
-
-  const [closeChat, { loading: closing }] = useMutation<
-    CloseChatMutationData,
-    CloseChatMutationVars
-  >(CLOSE_CHAT_MUTATION);
-
   /** EFFECTS **/
 
-  const unreadForMe = chat
-    ? isUser
-      ? chat.unreadGuestMessages
-      : chat.unreadAgentMessages
-    : 0;
+  // Keep pendingImageRef in sync for unmount cleanup
+  useEffect(() => {
+    pendingImageRef.current = pendingImage;
+  }, [pendingImage]);
+
+  // Revoke object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingImageRef.current) URL.revokeObjectURL(pendingImageRef.current.previewUrl);
+    };
+  }, []);
+
+  const unreadForMe = chat ? (isUser ? chat.unreadGuestMessages : chat.unreadAgentMessages) : 0;
 
   // Auto mark-as-read
   useEffect(() => {
@@ -306,9 +283,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
     const markKey = `${chat._id}:${chat.messages.length}:${unreadForMe}`;
     if (lastMarkedKeyRef.current === markKey) return;
     lastMarkedKeyRef.current = markKey;
-    void markRead({ variables: { chatId: chat._id } }).catch((e: unknown) => {
-      logBackgroundChatError("mark-as-read", e);
-    });
+    void markRead({ variables: { chatId: chat._id } }).catch(() => undefined);
   }, [chat, markRead, unreadForMe]);
 
   // Fallback polling when socket disconnected
@@ -322,12 +297,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
       stopPolling();
     };
   }, [chatId, isPageVisible, socketConnected, startPolling, stopPolling]);
-
-  // Refetch on visibility restore (no socket)
-  useEffect(() => {
-    if (!chatId || socketConnected || !isPageVisible) return;
-    void refetch();
-  }, [chatId, isPageVisible, refetch, socketConnected]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -387,7 +356,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
         }
         socket.emit("joinChat", { chatId }, (joinAck?: SocketAck) => {
           if (!joinAck?.success && !socketJoinFailedRef.current) {
-            toast.info(joinAck?.error ?? "Realtime join failed. Using polling fallback.");
             socketJoinFailedRef.current = true;
             return;
           }
@@ -538,25 +506,36 @@ const ChatThreadPage: NextPageWithAuth = () => {
     }
   };
 
-  const onSelectImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onSelectImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !chat) return;
-    // Reset input so the same file can be re-selected
+    if (!file) return;
     e.target.value = "";
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!allowed.includes(file.type)) {
-      await errorAlert("Unsupported file type", "Please select a JPEG, PNG, WebP, or GIF image.");
+      void errorAlert("Unsupported file type", "Please select a JPEG, PNG, WebP, or GIF image.");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      await errorAlert("File too large", "Images must be under 10 MB.");
+      void errorAlert("File too large", "Images must be under 10 MB.");
       return;
     }
+    // Revoke previous preview URL if any
+    if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl);
+    setPendingImage({ file, previewUrl: URL.createObjectURL(file) });
+  };
+
+  const clearPendingImage = () => {
+    if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl);
+    setPendingImage(null);
+  };
+
+  const sendPendingImage = async () => {
+    if (!pendingImage || !chat) return;
     setUploadingImage(true);
     try {
       const apiUrl = env.graphqlUrl.replace(/\/graphql\/?$/i, "");
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", pendingImage.file);
       const res = await fetch(`${apiUrl}/upload/image?target=chat`, {
         method: "POST",
         headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
@@ -567,6 +546,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       await sendMessage({
         variables: { input: { chatId: chat._id, messageType: "IMAGE", imageUrl: json.url } },
       });
+      clearPendingImage();
     } catch (uploadError) {
       await errorAlert("Upload failed", getErrorMessage(uploadError));
     } finally {
@@ -574,48 +554,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
     }
   };
 
-  const onClaimChat = async () => {
-    if (!chat) return;
-    const confirmed = await confirmAction({
-      title: "Claim this chat?",
-      text: "You will be assigned as the active agent.",
-      confirmText: "Claim",
-    });
-    if (!confirmed) return;
-    try {
-      await claimChat({ variables: { input: { chatId: chat._id } } });
-      await refetch();
-      await successAlert("Chat claimed");
-    } catch (mutationError) {
-      await errorAlert("Could not claim chat", getErrorMessage(mutationError));
-    }
-  };
-
-  const onCloseChat = async () => {
-    if (!chat) return;
-    const confirmed = await confirmDanger({
-      title: "Close this chat?",
-      text: "This conversation will be marked as closed.",
-      warningText: "Closed chats cannot receive new messages.",
-      confirmText: "Close chat",
-    });
-    if (!confirmed) return;
-    try {
-      await closeChat({ variables: { chatId: chat._id } });
-      await refetch();
-      await successAlert("Chat closed");
-    } catch (mutationError) {
-      await errorAlert("Could not close chat", getErrorMessage(mutationError));
-    }
-  };
-
   /** COMPUTED **/
 
-  const canClaim = Boolean(
-    chat && isAgent && !chat.assignedAgentId && chat.chatStatus !== "CLOSED",
-  );
   const canSend = Boolean(chat && chat.chatStatus !== "CLOSED");
-  const canClose = Boolean(chat && chat.chatStatus !== "CLOSED" && isOperatorSide);
 
   const isSupportChat = chat?.chatScope === "SUPPORT";
   const hotelTitle = isSupportChat
@@ -628,132 +569,103 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const incomingSenderLabel = isSupportChat ? "Support Team" : "Hotel Staff";
   const hotelAvatarColor = avatarBg(chat?.hotelId ?? chat?._id ?? hotelTitle);
 
-  const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-    WAITING: { label: "Waiting for agent", color: "text-amber-600", dot: "bg-amber-400" },
-    ACTIVE: { label: "Active", color: "text-emerald-600", dot: "bg-emerald-400" },
-    CLOSED: { label: "Closed", color: "text-slate-400", dot: "bg-slate-300" },
-  };
-
-  if (!chatId) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <p className="text-slate-500">Missing chat ID.</p>
-        <Link href="/chats" className="mt-3 text-sm text-sky-500 underline">
-          Back to chats
-        </Link>
-      </div>
-    );
-  }
-
-  const statusCfg = chat ? (STATUS_CONFIG[chat.chatStatus] ?? STATUS_CONFIG.CLOSED) : null;
+  const statusSubtitle = chat
+    ? isSupportChat
+      ? supportMeta
+      : hotelLocation || (chat.chatStatus === "CLOSED" ? "Closed" : "")
+    : null;
 
   return (
     <>
       <style>{`
-        @keyframes msgSlideIn {
+        @keyframes popupFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes popupSlideUp {
+          from { opacity: 0; transform: translateY(40px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes popupMsgIn {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes typingFade {
+        @keyframes popupTypingFade {
           from { opacity: 0; transform: translateY(4px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes headerFade {
-          from { opacity: 0; transform: translateY(-4px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
-      <main
-        className="-mx-3 -my-8 flex flex-col overflow-hidden sm:-mx-6 sm:-my-10"
-        style={{ height: "calc(100svh - 57px)" }}
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+        style={{ animation: "popupFadeIn 0.2s ease-out both" }}
+        onClick={onClose}
+      />
+
+      {/* Phone-sized panel */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[700px] sm:w-[390px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+        style={{ animation: "popupSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both" }}
       >
         {/* ── Header ── */}
-        <header
-          className="flex flex-none items-center gap-3 border-b border-slate-100 bg-white px-4 py-3.5 shadow-sm"
-          style={{ animation: "headerFade 0.25s ease-out both" }}
-        >
-          {/* Back */}
-          <Link
-            href="/chats"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
-          >
-            <ArrowLeft size={18} />
-          </Link>
-
+        <div className="flex flex-none items-center gap-2.5 border-b border-slate-100 bg-white px-4 py-3">
           {/* Avatar */}
           <div
-            className={`relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${hotelAvatarColor} text-sm font-bold uppercase text-white`}
+            className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
+              isSupportChat ? "bg-teal-500" : hotelAvatarColor
+            }`}
           >
-            {hotelTitle.charAt(0)}
-            {chat && statusCfg && (
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white ${statusCfg.dot}`}
-              />
-            )}
+            {isSupportChat ? <Headset size={16} /> : hotelTitle.charAt(0)}
           </div>
 
-          {/* Name + status */}
+          {/* Name + subtitle */}
           <div className="min-w-0 flex-1">
             {chat ? (
               <>
-                <p className="truncate text-[15px] font-semibold text-slate-900">
-                  {hotelTitle}
-                </p>
+                <p className="truncate text-sm font-semibold text-slate-900">{hotelTitle}</p>
                 <div className="flex items-center gap-1.5">
-                  <p className={`text-xs ${statusCfg?.color ?? "text-slate-400"}`}>
-                    {statusCfg?.label ?? chat.chatStatus}
-                    {isSupportChat
-                      ? ` · ${supportMeta}`
-                      : hotelLocation
-                        ? ` · ${hotelLocation}`
-                        : ""}
-                  </p>
-                  <span title={socketConnected ? "Live connection" : "Polling fallback"}>
+                  {statusSubtitle ? (
+                    <p className="truncate text-xs text-slate-400">{statusSubtitle}</p>
+                  ) : null}
+                  <span title={socketConnected ? "Live connection" : "Polling mode"}>
                     {socketConnected ? (
-                      <Wifi size={10} className="text-emerald-400" />
+                      <Wifi size={9} className="text-emerald-400" />
                     ) : (
-                      <WifiOff size={10} className="text-slate-300" />
+                      <WifiOff size={9} className="text-slate-300" />
                     )}
                   </span>
                 </div>
               </>
             ) : (
               <div className="space-y-1.5">
-                <div className="h-3.5 w-32 animate-pulse rounded-full bg-slate-100" />
-                <div className="h-3 w-20 animate-pulse rounded-full bg-slate-100" />
+                <div className="h-3.5 w-28 animate-pulse rounded-full bg-slate-100" />
+                <div className="h-3 w-16 animate-pulse rounded-full bg-slate-100" />
               </div>
             )}
           </div>
 
-          {/* Agent actions */}
-          <div className="flex flex-shrink-0 items-center gap-2">
-            {canClaim && (
-              <button
-                type="button"
-                onClick={() => {
-                  void onClaimChat();
-                }}
-                disabled={claiming}
-                className="rounded-full bg-sky-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600 disabled:opacity-60 active:scale-95"
-              >
-                {claiming ? "Claiming…" : "Claim"}
-              </button>
-            )}
-            {canClose && (
-              <button
-                type="button"
-                onClick={() => {
-                  void onCloseChat();
-                }}
-                disabled={closing}
-                className="rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 disabled:opacity-60 active:scale-95"
-              >
-                {closing ? "Closing…" : "Close"}
-              </button>
-            )}
-          </div>
-        </header>
+          {/* Expand to full page */}
+          <Link
+            href={`/chats/${chatId}`}
+            onClick={onClose}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            title="Open full page"
+            aria-label="Open full page"
+          >
+            <Maximize2 size={14} />
+          </Link>
+
+          {/* Close */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            aria-label="Close chat"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
         {/* ── Error banner ── */}
         {error && (
@@ -781,9 +693,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
           {/* Empty state */}
           {chat && chat.messages.length === 0 && (
-            <div className="flex h-full flex-col items-center justify-center py-24 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm">
-                <MessageSquare size={22} className="text-slate-300" />
+            <div className="flex h-full flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm">
+                <MessageSquare size={20} className="text-slate-300" />
               </div>
               <p className="text-sm font-semibold text-slate-700">Start the conversation</p>
               <p className="mt-1 text-xs text-slate-400">
@@ -813,8 +725,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 const isFirstInGroup =
                   !prevMessage || prevMessage.senderType !== message.senderType;
                 const showTime = isLastInGroup || message.messageType !== "TEXT";
-
-                // New messages (arrived after initial load) animate in
                 const isNewMsg = index >= prevMessageCountRef.current;
 
                 return (
@@ -837,7 +747,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                       }`}
                       style={
                         isNewMsg
-                          ? { animation: "msgSlideIn 0.2s ease-out both" }
+                          ? { animation: "popupMsgIn 0.2s ease-out both" }
                           : undefined
                       }
                     >
@@ -846,9 +756,11 @@ const ChatThreadPage: NextPageWithAuth = () => {
                         <div className="flex-shrink-0">
                           {isLastInGroup ? (
                             <div
-                              className={`flex h-7 w-7 items-center justify-center rounded-full ${hotelAvatarColor} text-[9px] font-bold uppercase text-white`}
+                              className={`flex h-7 w-7 items-center justify-center rounded-full ${
+                                isSupportChat ? "bg-teal-500" : hotelAvatarColor
+                              } text-[9px] font-bold uppercase text-white`}
                             >
-                              {hotelTitle.charAt(0)}
+                              {isSupportChat ? <Headset size={9} /> : hotelTitle.charAt(0)}
                             </div>
                           ) : (
                             <div className="h-7 w-7" />
@@ -856,7 +768,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                         </div>
                       )}
 
-                      {/* Sent: time shown to the LEFT of bubble */}
+                      {/* Sent: time shown LEFT of bubble */}
                       {isOwn && showTime && (
                         <div className="flex flex-shrink-0 flex-col items-end gap-0.5 pb-0.5">
                           <span className="text-[10px] leading-none text-slate-400">
@@ -870,8 +782,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
                         </div>
                       )}
 
-                      {/* Bubble (+ sender label for received) */}
-                      <div className="flex max-w-[72%] flex-col gap-0.5 sm:max-w-[62%]">
+                      {/* Bubble */}
+                      <div className="flex max-w-[75%] flex-col gap-0.5">
                         {!isOwn && isFirstInGroup && (
                           <p className="ml-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                             {incomingSenderLabel}
@@ -884,7 +796,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                         />
                       </div>
 
-                      {/* Received: time shown to the RIGHT of bubble */}
+                      {/* Received: time shown RIGHT of bubble */}
                       {!isOwn && showTime && (
                         <span className="flex-shrink-0 pb-0.5 text-[10px] leading-none text-slate-400">
                           {formatMessageTime(message.timestamp)}
@@ -897,7 +809,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
               {/* Typing indicator */}
               {typingUserId && (
-                <div style={{ animation: "typingFade 0.2s ease-out both" }}>
+                <div style={{ animation: "popupTypingFade 0.2s ease-out both" }}>
                   <TypingIndicator firstLetter={hotelTitle.charAt(0)} isSupport={isSupportChat} />
                 </div>
               )}
@@ -909,73 +821,100 @@ const ChatThreadPage: NextPageWithAuth = () => {
         </div>
 
         {/* ── Input area ── */}
-        <div className="flex-none border-t border-slate-100 bg-white px-4 py-3.5 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
+        <div className="flex-none border-t border-slate-100 bg-white px-4 py-3 shadow-[0_-1px_8px_rgba(0,0,0,0.04)]">
           {!canSend ? (
             <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 py-3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
               <p className="text-sm text-slate-500">This conversation is closed</p>
             </div>
           ) : (
-            <form onSubmit={(e) => { void onSendMessage(e); }}>
-              <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={(e) => { void onSelectImage(e); }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingImage || sending}
-                  className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
-                    uploadingImage ? "text-sky-400 animate-pulse" : "text-slate-300 hover:text-slate-500"
-                  }`}
-                  aria-label="Upload image"
-                >
-                  <ImagePlus size={16} />
-                </button>
-                <textarea
-                  ref={textareaRef}
-                  value={messageInput}
-                  onChange={onInputChange}
-                  onKeyDown={onKeyDown}
-                  onBlur={() => {
-                    stopTypingSignal();
-                  }}
-                  rows={1}
-                  placeholder="Write a message…"
-                  disabled={sending}
-                  className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
-                  style={{ minHeight: "32px", maxHeight: "160px" }}
-                />
-                <button
-                  type="submit"
-                  disabled={!messageInput.trim() || sending}
-                  className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
-                    messageInput.trim()
-                      ? "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
-                      : "text-slate-300"
-                  }`}
-                  aria-label="Send message"
-                >
-                  <Send size={15} />
-                </button>
-              </div>
-              {messageInput.trim() && (
-                <p className="mt-1.5 text-right text-[10px] text-slate-400">⌘↩ to send</p>
+            <>
+              {/* Image preview strip */}
+              {pendingImage && (
+                <div className="mb-2.5 flex items-end gap-3">
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={pendingImage.previewUrl}
+                      alt="Preview"
+                      className="h-20 w-20 rounded-2xl object-cover shadow-sm ring-1 ring-slate-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={clearPendingImage}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-white shadow transition hover:bg-slate-900"
+                      aria-label="Remove image"
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { void sendPendingImage(); }}
+                    disabled={uploadingImage || !chat}
+                    className={`mb-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
+                      uploadingImage
+                        ? "animate-pulse bg-sky-300 text-white"
+                        : "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
+                    }`}
+                    aria-label="Send image"
+                  >
+                    <Send size={15} />
+                  </button>
+                </div>
               )}
-            </form>
+
+              {/* Text input */}
+              <form onSubmit={(e) => { void onSendMessage(e); }}>
+                <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={onSelectImage}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage || sending}
+                    className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
+                      pendingImage ? "text-sky-500" : "text-slate-300 hover:text-slate-500"
+                    }`}
+                    aria-label="Upload image"
+                  >
+                    <ImagePlus size={16} />
+                  </button>
+                  <textarea
+                    ref={textareaRef}
+                    value={messageInput}
+                    onChange={onInputChange}
+                    onKeyDown={onKeyDown}
+                    onBlur={() => { stopTypingSignal(); }}
+                    rows={1}
+                    placeholder="Write a message…"
+                    disabled={sending}
+                    className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
+                    style={{ minHeight: "32px", maxHeight: "120px" }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!messageInput.trim() || sending}
+                    className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
+                      messageInput.trim()
+                        ? "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
+                        : "text-slate-300"
+                    }`}
+                    aria-label="Send message"
+                  >
+                    <Send size={15} />
+                  </button>
+                </div>
+              </form>
+            </>
           )}
         </div>
-      </main>
+      </div>
     </>
   );
-};
-
-ChatThreadPage.auth = {
-  roles: ["USER", "AGENT", "ADMIN", "ADMIN_OPERATOR"],
-};
-
-export default ChatThreadPage;
+}

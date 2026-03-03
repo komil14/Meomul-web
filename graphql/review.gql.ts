@@ -49,6 +49,29 @@ export const GET_MY_REVIEWS_QUERY = gql`
   ${REVIEW_FIELDS}
 `;
 
+export const GET_ALL_REVIEWS_ADMIN_QUERY = gql`
+  query GetAllReviewsAdmin($input: PaginationInput!, $statusFilter: ReviewStatus) {
+    getAllReviewsAdmin(input: $input, statusFilter: $statusFilter) {
+      list {
+        ...ReviewFields
+      }
+      metaCounter {
+        total
+      }
+      ratingsSummary {
+        totalReviews
+        overallRating
+        cleanlinessRating
+        locationRating
+        serviceRating
+        amenitiesRating
+        valueRating
+      }
+    }
+  }
+  ${REVIEW_FIELDS}
+`;
+
 export const GET_REVIEW_QUERY = gql`
   query GetReview($reviewId: String!) {
     getReview(reviewId: $reviewId) {
