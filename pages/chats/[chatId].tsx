@@ -176,10 +176,10 @@ function MessageBubble({
     <div className={`relative overflow-hidden ${isOwn ? sentCls : recvCls}`}>
       {/* IMAGE */}
       {message.messageType === "IMAGE" && message.imageUrl && (
-        <a href={message.imageUrl} target="_blank" rel="noreferrer" className="block">
+        <a href={resolveMediaUrl(message.imageUrl)} target="_blank" rel="noreferrer" className="block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={message.imageUrl}
+            src={resolveMediaUrl(message.imageUrl)}
             alt="Shared image"
             className="block max-h-64 w-full object-cover"
           />
@@ -189,7 +189,7 @@ function MessageBubble({
       {/* FILE */}
       {message.messageType === "FILE" && message.fileUrl && (
         <a
-          href={message.fileUrl}
+          href={resolveMediaUrl(message.fileUrl)}
           download
           target="_blank"
           rel="noreferrer"
