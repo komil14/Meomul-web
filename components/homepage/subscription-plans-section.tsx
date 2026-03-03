@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Check, Crown } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { getSessionMember } from "@/lib/auth/session";
 
 // ─── Tier definitions ──────────────────────────────────────────────────────────
@@ -74,9 +74,14 @@ const TIERS: Tier[] = [
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function SubscriptionPlansSection() {
-  const member = useMemo(() => getSessionMember(), []);
-  const ctaHref = member ? "/profile?tab=subscription" : "/auth/signup";
-  const ctaLabel = member ? "View plans" : "Get started free";
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(Boolean(getSessionMember()));
+  }, []);
+
+  const ctaHref = isLoggedIn ? "/profile?tab=subscription" : "/auth/signup";
+  const ctaLabel = isLoggedIn ? "View plans" : "Get started free";
 
   return (
     <section className="border-t border-slate-100 py-16">
