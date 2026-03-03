@@ -13,6 +13,7 @@ import {
   SEND_MESSAGE_MUTATION,
 } from "@/graphql/chat.gql";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
+import { env } from "@/lib/config/env";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { confirmAction, confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
@@ -37,11 +38,17 @@ import {
   CheckCheck,
   Download,
   File,
+  Headset,
+  ImagePlus,
   MessageSquare,
   Send,
   Wifi,
   WifiOff,
 } from "lucide-react";
+import {
+  SUPPORT_CHAT_TITLE,
+  avatarBg,
+} from "@/lib/chat/chat-helpers";
 
 // ─── Hotel title query ────────────────────────────────────────────────────────
 
@@ -72,24 +79,6 @@ interface ChatRoomEventPayload {
 
 interface TypingEventPayload extends ChatRoomEventPayload {
   userId: string;
-}
-
-// ─── Avatar color helper ──────────────────────────────────────────────────────
-
-const AVATAR_COLORS = [
-  "bg-sky-500",
-  "bg-violet-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-indigo-500",
-  "bg-teal-500",
-];
-const SUPPORT_CHAT_TITLE = "Meomul Support";
-
-function avatarBg(id: string): string {
-  if (!id) return AVATAR_COLORS[0];
-  return AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -129,14 +118,22 @@ function isSameDay(a: string, b: string): boolean {
 
 // ─── Typing indicator ─────────────────────────────────────────────────────────
 
-function TypingIndicator() {
+function TypingIndicator({
+  firstLetter,
+  isSupport,
+}: {
+  firstLetter: string;
+  isSupport: boolean;
+}) {
   return (
     <div className="flex items-end gap-2 py-1">
       <div
-        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-[9px] font-bold text-slate-400"
+        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${
+          isSupport ? "bg-teal-500" : "bg-slate-400"
+        }`}
         aria-hidden
       >
-        H
+        {isSupport ? <Headset size={10} /> : firstLetter.toUpperCase()}
       </div>
       <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-slate-100 bg-white px-3.5 py-2.5 shadow-sm">
         {[0, 160, 320].map((delay) => (
@@ -230,8 +227,11 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const [socketConnected, setSocketConnected] = useState(false);
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
 
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const lastMarkedKeyRef = useRef("");
   const socketRef = useRef<Socket | null>(null);
   const remoteTypingTimeoutRef = useRef<number | null>(null);
@@ -526,6 +526,42 @@ const ChatThreadPage: NextPageWithAuth = () => {
       if (textareaRef.current) textareaRef.current.style.height = "auto";
     } catch (mutationError) {
       await errorAlert("Could not send message", getErrorMessage(mutationError));
+    }
+  };
+
+  const onSelectImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !chat) return;
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowed.includes(file.type)) {
+      await errorAlert("Unsupported file type", "Please select a JPEG, PNG, WebP, or GIF image.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      await errorAlert("File too large", "Images must be under 10 MB.");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const apiUrl = env.graphqlUrl.replace(/\/graphql\/?$/i, "");
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${apiUrl}/upload/image?target=chat`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+      const json = (await res.json()) as { url: string };
+      await sendMessage({
+        variables: { input: { chatId: chat._id, messageType: "IMAGE", imageUrl: json.url } },
+      });
+    } catch (uploadError) {
+      await errorAlert("Upload failed", getErrorMessage(uploadError));
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -853,7 +889,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
               {/* Typing indicator */}
               {typingUserId && (
                 <div style={{ animation: "typingFade 0.2s ease-out both" }}>
-                  <TypingIndicator />
+                  <TypingIndicator firstLetter={hotelTitle.charAt(0)} isSupport={isSupportChat} />
                 </div>
               )}
 
@@ -873,6 +909,24 @@ const ChatThreadPage: NextPageWithAuth = () => {
           ) : (
             <form onSubmit={(e) => { void onSendMessage(e); }}>
               <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => { void onSelectImage(e); }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage || sending}
+                  className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
+                    uploadingImage ? "text-sky-400 animate-pulse" : "text-slate-300 hover:text-slate-500"
+                  }`}
+                  aria-label="Upload image"
+                >
+                  <ImagePlus size={16} />
+                </button>
                 <textarea
                   ref={textareaRef}
                   value={messageInput}

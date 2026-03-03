@@ -5,12 +5,20 @@ import type { Socket } from "socket.io-client";
 import {
   GET_CHAT_QUERY,
   GET_MY_CHATS_QUERY,
+  GET_MY_UNREAD_CHAT_COUNT_QUERY,
   MARK_CHAT_MESSAGES_AS_READ_MUTATION,
   SEND_MESSAGE_MUTATION,
 } from "@/graphql/chat.gql";
 import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import { createChatSocket } from "@/lib/socket/chat";
+import {
+  SUPPORT_CHAT_TITLE,
+  avatarBg,
+  fmtTime,
+  getLastPreview,
+  timeAgo,
+} from "@/lib/chat/chat-helpers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   ChatDto,
@@ -35,66 +43,12 @@ import {
   Check,
   CheckCheck,
   ExternalLink,
+  Headset,
   MessageSquare,
   Send,
+  SquarePen,
   X,
 } from "lucide-react";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const AVATAR_COLORS = [
-  "bg-sky-500",
-  "bg-violet-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-indigo-500",
-  "bg-teal-500",
-];
-const SUPPORT_CHAT_TITLE = "Meomul Support";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function avatarBg(id: string): string {
-  if (!id) return AVATAR_COLORS[0];
-  return AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length];
-}
-
-function timeAgo(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diffMs / 60000);
-  const h = Math.floor(diffMs / 3600000);
-  const d = Math.floor(diffMs / 86400000);
-  if (m < 1) return "now";
-  if (m < 60) return `${m}m`;
-  if (h < 24) return `${h}h`;
-  if (d === 1) return "Yesterday";
-  if (d < 7)
-    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-      new Date(dateStr).getDay()
-    ];
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function fmtTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Seoul",
-  });
-}
-
-function getLastPreview(chat: ChatDto): string {
-  const msg = chat.messages.at(-1);
-  if (!msg) return "Start the conversation";
-  if (msg.messageType === "IMAGE") return "📷 Photo";
-  if (msg.messageType === "FILE") return "📎 Attachment";
-  return msg.content?.trim() || "Message";
-}
 
 // ─── Compact message bubble ───────────────────────────────────────────────────
 
@@ -273,7 +227,7 @@ function ListView({
     [],
   );
   const hotelsInput = useMemo(
-    () => ({ page: 1, limit: 100, sort: "createdAt", direction: -1 as const }),
+    () => ({ page: 1, limit: 20, sort: "createdAt", direction: -1 as const }),
     [],
   );
 
@@ -287,6 +241,17 @@ function ListView({
     nextFetchPolicy: "cache-and-network",
     pollInterval: 30000,
   });
+
+  const { data: agentUnreadData } = useQuery<{ getMyUnreadChatCount: number }>(
+    GET_MY_UNREAD_CHAT_COUNT_QUERY,
+    {
+      skip: isUser || !isOpen,
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+      pollInterval: 30000,
+    },
+  );
+  const agentUnreadCount = agentUnreadData?.getMyUnreadChatCount ?? 0;
 
   const { data: hotelsData } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(
     GET_HOTELS_QUERY,
@@ -326,6 +291,17 @@ function ListView({
             View all
             <ExternalLink size={11} />
           </Link>
+          {isUser && (
+            <Link
+              href="/chats?openNew=1"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
+              title="New conversation"
+              aria-label="New conversation"
+            >
+              <SquarePen size={15} />
+            </Link>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -339,23 +315,37 @@ function ListView({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto">
-        {/* Non-user: staff prompt */}
+        {/* Non-user: staff mini-stats + link */}
         {!isUser && (
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <MessageSquare size={32} className="mb-3 text-slate-300" />
-            <p className="font-semibold text-slate-700">
-              Staff chat management
-            </p>
-            <p className="mt-1.5 text-sm text-slate-400">
-              Use the full chat interface to manage hotel conversations
-            </p>
+          <div className="flex flex-col gap-2 px-4 py-5">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <MessageSquare size={15} className="flex-shrink-0 text-slate-400" />
+              <p className="flex-1 text-sm text-slate-600">
+                {agentUnreadCount > 0 ? (
+                  <>
+                    <span className="font-bold text-slate-900">
+                      {agentUnreadCount}
+                    </span>{" "}
+                    unread conversation
+                    {agentUnreadCount !== 1 ? "s" : ""}
+                  </>
+                ) : (
+                  "No unread conversations"
+                )}
+              </p>
+              {agentUnreadCount > 0 && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-sky-500 px-1.5 text-[10px] font-bold text-white">
+                  {agentUnreadCount > 99 ? "99+" : agentUnreadCount}
+                </span>
+              )}
+            </div>
             <Link
               href="/chats"
               onClick={onClose}
-              className="mt-4 flex items-center gap-1.5 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600"
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
             >
-              Open chats
               <ExternalLink size={13} />
+              Open chat management
             </Link>
           </div>
         )}
@@ -377,20 +367,30 @@ function ListView({
 
         {/* User: empty state */}
         {isUser && !chatsLoading && chats.length === 0 && (
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <MessageSquare size={32} className="mb-3 text-slate-200" />
+          <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+            <MessageSquare size={28} className="mb-3 text-slate-200" />
             <p className="font-semibold text-slate-700">No conversations yet</p>
             <p className="mt-1.5 text-sm text-slate-400">
-              Start from any hotel page or use the support button
+              Message a hotel directly or reach our support team
             </p>
-            <Link
-              href="/chats"
-              onClick={onClose}
-              className="mt-4 flex items-center gap-1.5 rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600"
-            >
-              Go to chats
-              <ExternalLink size={13} />
-            </Link>
+            <div className="mt-5 flex w-full flex-col gap-2">
+              <Link
+                href="/chats?openNew=1"
+                onClick={onClose}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+              >
+                <SquarePen size={13} />
+                New message
+              </Link>
+              <Link
+                href="/chats?openNew=1&openSupport=1"
+                onClick={onClose}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <Headset size={13} />
+                Contact support
+              </Link>
+            </div>
           </div>
         )}
 
@@ -399,8 +399,13 @@ function ListView({
           <div className="divide-y divide-slate-50">
             {chats.map((chat) => {
               const isSupportChat = chat.chatScope === "SUPPORT";
-              const hotel = !isSupportChat && chat.hotelId ? hotelsMap.get(chat.hotelId) : undefined;
-              const hotelName = isSupportChat ? SUPPORT_CHAT_TITLE : hotel?.hotelTitle ?? "Hotel Support";
+              const hotel =
+                !isSupportChat && chat.hotelId
+                  ? hotelsMap.get(chat.hotelId)
+                  : undefined;
+              const hotelName = isSupportChat
+                ? SUPPORT_CHAT_TITLE
+                : hotel?.hotelTitle ?? "Hotel Support";
               const unread = chat.unreadGuestMessages;
               const preview = getLastPreview(chat);
               const time = timeAgo(chat.lastMessageAt);
@@ -413,12 +418,18 @@ function ListView({
                   onClick={() => onSelectChat(chat._id, hotelName)}
                   className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 active:bg-slate-100"
                 >
-                  {/* Hotel-colored avatar with status dot */}
+                  {/* Avatar with status dot */}
                   <div className="relative flex-shrink-0">
                     <div
-                      className={`flex h-11 w-11 items-center justify-center rounded-full ${color} text-sm font-bold uppercase text-white`}
+                      className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold uppercase text-white ${
+                        isSupportChat ? "bg-teal-500" : color
+                      }`}
                     >
-                      {hotelName.charAt(0)}
+                      {isSupportChat ? (
+                        <Headset size={18} />
+                      ) : (
+                        hotelName.charAt(0)
+                      )}
                     </div>
                     <span
                       className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-white ${
@@ -450,20 +461,15 @@ function ListView({
                       </span>
                     </div>
                     <div className="mt-0.5 flex items-center justify-between gap-1">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <p
-                          className={`truncate text-xs ${
-                            unread > 0
-                              ? "font-medium text-slate-700"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          {preview}
-                        </p>
-                        <span className="flex-shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-500">
-                          {isSupportChat ? "Support" : "Hotel"}
-                        </span>
-                      </div>
+                      <p
+                        className={`truncate text-xs ${
+                          unread > 0
+                            ? "font-medium text-slate-700"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {preview}
+                      </p>
                       {unread > 0 && (
                         <span className="flex min-w-[18px] flex-shrink-0 items-center justify-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
                           {unread > 99 ? "99+" : unread}
@@ -474,6 +480,25 @@ function ListView({
                 </button>
               );
             })}
+
+            {/* ── Sticky Contact Support entry ── */}
+            <Link
+              href="/chats?openNew=1&openSupport=1"
+              onClick={onClose}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 active:bg-slate-100"
+            >
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-teal-500 text-white">
+                <Headset size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-800">
+                  Contact Support
+                </p>
+                <p className="mt-0.5 truncate text-xs text-slate-400">
+                  Meomul platform support
+                </p>
+              </div>
+            </Link>
           </div>
         )}
       </div>
@@ -499,12 +524,13 @@ function ThreadView({
   onClose: () => void;
 }) {
   const [messageInput, setMessageInput] = useState("");
+  const [socketConnected, setSocketConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const socketRef = useRef<Socket | null>(null);
   const lastMarkedRef = useRef("");
 
-  const { data, loading, error, refetch } = useQuery<
+  const { data, loading, error, refetch, startPolling, stopPolling } = useQuery<
     GetChatQueryData,
     GetChatQueryVars
   >(GET_CHAT_QUERY, {
@@ -512,7 +538,6 @@ function ThreadView({
     variables: { chatId },
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
-    pollInterval: 15000,
   });
 
   const [sendMessage, { loading: sending }] = useMutation<
@@ -546,6 +571,18 @@ function ThreadView({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat?.messages.length]);
 
+  // Fallback polling when socket is disconnected
+  useEffect(() => {
+    if (!chatId || !isOpen || socketConnected) {
+      stopPolling();
+      return;
+    }
+    startPolling(30000);
+    return () => {
+      stopPolling();
+    };
+  }, [chatId, isOpen, socketConnected, startPolling, stopPolling]);
+
   // Socket — connect only when open
   useEffect(() => {
     if (!chatId || !isOpen) return;
@@ -556,10 +593,12 @@ function ThreadView({
     socketRef.current = socket;
 
     socket.on("connect", () => {
+      setSocketConnected(true);
       socket.emit("authenticate", { token }, () => {
         socket.emit("joinChat", { chatId });
       });
     });
+    socket.on("disconnect", () => setSocketConnected(false));
 
     socket.on("newMessage", (payload: { chatId: string }) => {
       if (payload?.chatId === chatId) void refetch();
@@ -572,8 +611,11 @@ function ThreadView({
       socket.emit("leaveChat", { chatId });
       socket.off("newMessage");
       socket.off("messagesRead");
+      socket.off("connect");
+      socket.off("disconnect");
       socket.disconnect();
       socketRef.current = null;
+      setSocketConnected(false);
     };
   }, [chatId, isOpen, refetch]);
 
@@ -612,9 +654,15 @@ function ThreadView({
         </button>
 
         <div
-          className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${hotelColor} text-xs font-bold uppercase text-white`}
+          className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase text-white ${
+            hotelName === SUPPORT_CHAT_TITLE ? "bg-teal-500" : hotelColor
+          }`}
         >
-          {hotelName.charAt(0)}
+          {hotelName === SUPPORT_CHAT_TITLE ? (
+            <Headset size={14} />
+          ) : (
+            hotelName.charAt(0)
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -763,16 +811,6 @@ function ThreadView({
           </form>
         )}
 
-        <p className="mt-1.5 text-center text-[10px] text-slate-400">
-          File uploads &amp; more in{" "}
-          <Link
-            href={`/chats/${chatId}`}
-            onClick={onClose}
-            className="text-sky-500"
-          >
-            full view
-          </Link>
-        </p>
       </div>
     </>
   );

@@ -23,15 +23,16 @@ const SignupPage: NextPageWithAuth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const redirectTarget = useMemo(() => {
     if (typeof router.query.next !== "string") {
-      return "/dashboard";
+      return "/";
     }
 
-    return router.query.next.startsWith("/") ? router.query.next : "/dashboard";
+    return router.query.next.startsWith("/") ? router.query.next : "/";
   }, [router.query.next]);
 
-  const [signupMember, { loading }] = useMutation<SignupMemberMutationData, SignupMemberMutationVars>(
-    SIGNUP_MEMBER_MUTATION,
-  );
+  const [signupMember, { loading }] = useMutation<
+    SignupMemberMutationData,
+    SignupMemberMutationVars
+  >(SIGNUP_MEMBER_MUTATION);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -62,7 +63,10 @@ const SignupPage: NextPageWithAuth = () => {
       }
 
       saveAuthSession(authMember);
-      const nextRoute = await resolvePostAuthRedirect(authMember, redirectTarget);
+      const nextRoute = await resolvePostAuthRedirect(
+        authMember,
+        redirectTarget,
+      );
       await successAlert("Account created", "Signup complete. Redirecting...");
       await router.push(nextRoute);
     } catch (error) {
@@ -73,11 +77,18 @@ const SignupPage: NextPageWithAuth = () => {
   return (
     <main className="mx-auto flex w-full max-w-md flex-col justify-center">
       <h1 className="text-3xl font-semibold text-slate-900">Create Account</h1>
-      <p className="mt-2 text-sm text-slate-600">New registrations are created with USER role and EMAIL auth.</p>
+      <p className="mt-2 text-sm text-slate-600">
+        New registrations are created with USER role and EMAIL auth.
+      </p>
 
-      <form className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6" onSubmit={onSubmit}>
+      <form
+        className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6"
+        onSubmit={onSubmit}
+      >
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Member Nick</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Member Nick
+          </span>
           <input
             value={memberNick}
             onChange={(event) => setMemberNick(event.target.value)}
@@ -88,7 +99,9 @@ const SignupPage: NextPageWithAuth = () => {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Full Name (Optional)</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Full Name (Optional)
+          </span>
           <input
             value={memberFullName}
             onChange={(event) => setMemberFullName(event.target.value)}
@@ -98,7 +111,9 @@ const SignupPage: NextPageWithAuth = () => {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Phone</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Phone
+          </span>
           <input
             value={memberPhone}
             onChange={(event) => setMemberPhone(event.target.value)}
@@ -109,7 +124,9 @@ const SignupPage: NextPageWithAuth = () => {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Password</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Password
+          </span>
           <input
             type="password"
             value={memberPassword}
@@ -121,7 +138,9 @@ const SignupPage: NextPageWithAuth = () => {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Confirm Password</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Confirm Password
+          </span>
           <input
             type="password"
             value={confirmPassword}

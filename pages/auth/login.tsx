@@ -21,15 +21,16 @@ const LoginPage: NextPageWithAuth = () => {
 
   const redirectTarget = useMemo(() => {
     if (typeof router.query.next !== "string") {
-      return "/dashboard";
+      return "/";
     }
 
-    return router.query.next.startsWith("/") ? router.query.next : "/dashboard";
+    return router.query.next.startsWith("/") ? router.query.next : "/";
   }, [router.query.next]);
 
-  const [loginMember, { loading }] = useMutation<LoginMemberMutationData, LoginMemberMutationVars>(
-    LOGIN_MEMBER_MUTATION,
-  );
+  const [loginMember, { loading }] = useMutation<
+    LoginMemberMutationData,
+    LoginMemberMutationVars
+  >(LOGIN_MEMBER_MUTATION);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -51,7 +52,10 @@ const LoginPage: NextPageWithAuth = () => {
       }
 
       saveAuthSession(authMember);
-      const nextRoute = await resolvePostAuthRedirect(authMember, redirectTarget);
+      const nextRoute = await resolvePostAuthRedirect(
+        authMember,
+        redirectTarget,
+      );
       await successAlert("Login successful", "You are now signed in.");
       await router.push(nextRoute);
     } catch (error) {
@@ -62,11 +66,18 @@ const LoginPage: NextPageWithAuth = () => {
   return (
     <main className="mx-auto flex w-full max-w-md flex-col justify-center">
       <h1 className="text-3xl font-semibold text-slate-900">Login</h1>
-      <p className="mt-2 text-sm text-slate-600">Use your member nick and password to continue.</p>
+      <p className="mt-2 text-sm text-slate-600">
+        Use your member nick and password to continue.
+      </p>
 
-      <form className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6" onSubmit={onSubmit}>
+      <form
+        className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6"
+        onSubmit={onSubmit}
+      >
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Member Nick</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Member Nick
+          </span>
           <input
             value={memberNick}
             onChange={(event) => setMemberNick(event.target.value)}
@@ -77,7 +88,9 @@ const LoginPage: NextPageWithAuth = () => {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">Password</span>
+          <span className="mb-2 block text-sm font-medium text-slate-700">
+            Password
+          </span>
           <input
             type="password"
             value={memberPassword}
@@ -101,7 +114,10 @@ const LoginPage: NextPageWithAuth = () => {
         <Link href="/auth/signup" className="underline underline-offset-4">
           Create account
         </Link>
-        <Link href="/auth/forgot-password" className="underline underline-offset-4">
+        <Link
+          href="/auth/forgot-password"
+          className="underline underline-offset-4"
+        >
           Forgot password
         </Link>
       </div>

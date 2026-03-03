@@ -13,6 +13,12 @@ import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
+import {
+  SUPPORT_CHAT_TITLE,
+  avatarBg,
+  getLastPreview,
+  timeAgo,
+} from "@/lib/chat/chat-helpers";
 import { errorAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -48,6 +54,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Headset,
   MessageSquare,
   Search,
   Send,
@@ -60,7 +67,6 @@ import {
 const PAGE_LIMIT = 20;
 const HOTEL_LIST_LIMIT = 100;
 const CHAT_STATUSES: ChatStatus[] = ["WAITING", "ACTIVE", "CLOSED"];
-const SUPPORT_CHAT_TITLE = "Meomul Support";
 
 const STATUS_CONFIG: Record<
   ChatStatus,
@@ -71,48 +77,7 @@ const STATUS_CONFIG: Record<
   CLOSED: { label: "Closed", dot: "bg-slate-300", text: "text-slate-400" },
 };
 
-const AVATAR_COLORS = [
-  "bg-sky-500",
-  "bg-violet-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-indigo-500",
-  "bg-teal-500",
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function timeAgo(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diffMs / 60000);
-  const h = Math.floor(diffMs / 3600000);
-  const d = Math.floor(diffMs / 86400000);
-  if (m < 1) return "now";
-  if (m < 60) return `${m}m`;
-  if (h < 24) return `${h}h`;
-  if (d === 1) return "Yesterday";
-  if (d < 7)
-    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-      new Date(dateStr).getDay()
-    ];
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function avatarBg(id: string): string {
-  return AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length];
-}
-
-function getLastMessagePreview(chat: ChatDto): string {
-  const msg = chat.messages.at(-1);
-  if (!msg) return "Start the conversation";
-  if (msg.messageType === "IMAGE") return "Photo";
-  if (msg.messageType === "FILE") return "Attachment";
-  return msg.content?.trim() || "Message";
-}
 
 function getChatTitle(chat: ChatDto, hotelsMap: Map<string, HotelListItem>): string {
   if (chat.chatScope === "SUPPORT") return SUPPORT_CHAT_TITLE;
@@ -720,6 +685,8 @@ const ChatsPage: NextPageWithAuth = () => {
     isAgent || memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
   const canStartNewConversation = isUser || isAgent;
 
+  type ChatTypeFilter = "ALL" | "HOTELS" | "SUPPORT";
+  const [chatTypeFilter, setChatTypeFilter] = useState<ChatTypeFilter>("ALL");
   const [showNewChat, setShowNewChat] = useState(false);
   const [manualStaffHotelId, setManualStaffHotelId] = useState("");
   const [preselectedHotelId, setPreselectedHotelId] = useState("");
@@ -896,6 +863,13 @@ const ChatsPage: NextPageWithAuth = () => {
     ? (hotelChatsData?.getHotelChats.metaCounter.total ?? 0)
     : (myChatsData?.getMyChats.metaCounter.total ?? 0);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
+
+  const filteredChats = useMemo(() => {
+    if (!isUser || chatTypeFilter === "ALL") return chats;
+    return chats.filter((c) =>
+      chatTypeFilter === "SUPPORT" ? c.chatScope === "SUPPORT" : c.chatScope === "HOTEL",
+    );
+  }, [chats, chatTypeFilter, isUser]);
   const loading = isStaff ? hotelChatsLoading : myChatsLoading;
   const error = isStaff ? hotelChatsError : myChatsError;
   const hotelsLoading = agentHotelsLoading;
@@ -1084,14 +1058,34 @@ const ChatsPage: NextPageWithAuth = () => {
           </div>
         )}
 
+        {/* ── Chat type filter tabs (users only) ── */}
+        {isUser && chats.length > 0 && (
+          <div className="flex gap-2">
+            {(["ALL", "HOTELS", "SUPPORT"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => { setChatTypeFilter(tab); }}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                  chatTypeFilter === tab
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {tab === "ALL" ? "All" : tab === "HOTELS" ? "Hotels" : "Support"}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* ── Chat list ── */}
-        {chats.length > 0 && (
+        {filteredChats.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            {chats.map((chat, i) => {
+            {filteredChats.map((chat, i) => {
               const isSupportChat = chat.chatScope === "SUPPORT";
               const hotelName = getChatTitle(chat, hotelsMap);
               const unread = unreadForMe(chat);
-              const preview = getLastMessagePreview(chat);
+              const preview = getLastPreview(chat);
               const time = timeAgo(chat.lastMessageAt);
               const lastMsg = chat.messages.at(-1);
               const isLastMsgFromMe =
@@ -1104,7 +1098,7 @@ const ChatsPage: NextPageWithAuth = () => {
                   key={chat._id}
                   href={`/chats/${chat._id}`}
                   className={`group flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50 ${
-                    i < chats.length - 1 ? "border-b border-slate-50" : ""
+                    i < filteredChats.length - 1 ? "border-b border-slate-50" : ""
                   }`}
                   style={{
                     animation: "chatFadeIn 0.25s ease-out both",
@@ -1190,7 +1184,7 @@ const ChatsPage: NextPageWithAuth = () => {
         )}
 
         {/* ── Pagination ── */}
-        {total > PAGE_LIMIT && (
+        {total > PAGE_LIMIT && (!isUser || chatTypeFilter === "ALL") && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-slate-500">
               Page <span className="font-semibold text-slate-800">{page}</span>{" "}

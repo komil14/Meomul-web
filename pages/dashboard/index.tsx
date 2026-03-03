@@ -67,8 +67,12 @@ interface StatTileProps {
 function StatTile({ label, value }: StatTileProps) {
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-900">{formatNumber(value)}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-semibold text-slate-900">
+        {formatNumber(value)}
+      </p>
     </article>
   );
 }
@@ -81,12 +85,10 @@ const DashboardPage: NextPageWithAuth = () => {
   const wasVisibleRef = useRef(false);
   const lastRefreshAtRef = useRef(0);
   const [analyticsPage, setAnalyticsPage] = useState(1);
-  const [analyticsDraftFilters, setAnalyticsDraftFilters] = useState<AnalyticsFilterFormState>(
-    INITIAL_ANALYTICS_FILTERS,
-  );
-  const [analyticsAppliedFilters, setAnalyticsAppliedFilters] = useState<AnalyticsFilterFormState>(
-    INITIAL_ANALYTICS_FILTERS,
-  );
+  const [analyticsDraftFilters, setAnalyticsDraftFilters] =
+    useState<AnalyticsFilterFormState>(INITIAL_ANALYTICS_FILTERS);
+  const [analyticsAppliedFilters, setAnalyticsAppliedFilters] =
+    useState<AnalyticsFilterFormState>(INITIAL_ANALYTICS_FILTERS);
 
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
@@ -151,12 +153,15 @@ const DashboardPage: NextPageWithAuth = () => {
     data: agentHotelsData,
     loading: agentHotelsLoading,
     error: agentHotelsError,
-  } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(GET_AGENT_HOTELS_QUERY, {
-    skip: !isAgent,
-    variables: { input: DASHBOARD_LIST_INPUT },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(
+    GET_AGENT_HOTELS_QUERY,
+    {
+      skip: !isAgent,
+      variables: { input: DASHBOARD_LIST_INPUT },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
   const {
     data: dashboardStatsData,
@@ -174,7 +179,10 @@ const DashboardPage: NextPageWithAuth = () => {
     loading: analyticsEventsLoading,
     error: analyticsEventsError,
     refetch: refetchAnalyticsEvents,
-  } = useQuery<GetAnalyticsEventsAdminQueryData, GetAnalyticsEventsAdminQueryVars>(GET_ANALYTICS_EVENTS_ADMIN_QUERY, {
+  } = useQuery<
+    GetAnalyticsEventsAdminQueryData,
+    GetAnalyticsEventsAdminQueryVars
+  >(GET_ANALYTICS_EVENTS_ADMIN_QUERY, {
     skip: !isAdminArea,
     variables: {
       input: {
@@ -221,14 +229,25 @@ const DashboardPage: NextPageWithAuth = () => {
       void refetchDashboardStats();
       void refetchAnalyticsEvents();
     }
-  }, [isAdminArea, isPageVisible, refetchAnalyticsEvents, refetchAuth, refetchDashboardStats]);
+  }, [
+    isAdminArea,
+    isPageVisible,
+    refetchAnalyticsEvents,
+    refetchAuth,
+    refetchDashboardStats,
+  ]);
 
   const userHotels = userHotelsData?.getHotels.list ?? [];
   const agentHotels = agentHotelsData?.getAgentHotels.list ?? [];
   const stats = dashboardStatsData?.getDashboardStats;
-  const analyticsEvents = analyticsEventsData?.getAnalyticsEventsAdmin.list ?? [];
-  const analyticsTotal = analyticsEventsData?.getAnalyticsEventsAdmin.metaCounter.total ?? 0;
-  const analyticsTotalPages = Math.max(1, Math.ceil(analyticsTotal / ANALYTICS_LIST_LIMIT));
+  const analyticsEvents =
+    analyticsEventsData?.getAnalyticsEventsAdmin.list ?? [];
+  const analyticsTotal =
+    analyticsEventsData?.getAnalyticsEventsAdmin.metaCounter.total ?? 0;
+  const analyticsTotalPages = Math.max(
+    1,
+    Math.ceil(analyticsTotal / ANALYTICS_LIST_LIMIT),
+  );
 
   const applyAnalyticsFilters = () => {
     setAnalyticsPage(1);
@@ -252,9 +271,15 @@ const DashboardPage: NextPageWithAuth = () => {
     <main className="mx-auto w-full max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
-          <p className="text-sm font-medium uppercase tracking-[0.15em] text-slate-500">Dashboard</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Welcome, {member?.memberNick ?? "Member"}</h1>
-          <p className="mt-2 text-sm text-slate-600">Role: {member?.memberType ?? "Unknown"}</p>
+          <p className="text-sm font-medium uppercase tracking-[0.15em] text-slate-500">
+            Dashboard
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-900">
+            Welcome, {member?.memberNick ?? "Member"}
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Role: {member?.memberType ?? "Unknown"}
+          </p>
         </div>
         <button
           onClick={() => {
@@ -267,10 +292,20 @@ const DashboardPage: NextPageWithAuth = () => {
       </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-slate-900">Backend Auth Check</h2>
-        {authLoading ? <p className="mt-2 text-sm text-slate-600">Verifying token against backend...</p> : null}
-        {authError ? <ErrorNotice className="mt-2" message={getErrorMessage(authError)} /> : null}
-        {authData?.checkAuth ? <p className="mt-2 text-sm text-emerald-700">{authData.checkAuth}</p> : null}
+        <h2 className="text-lg font-semibold text-slate-900">
+          Backend Auth Check
+        </h2>
+        {authLoading ? (
+          <p className="mt-2 text-sm text-slate-600">
+            Verifying token against backend...
+          </p>
+        ) : null}
+        {authError ? (
+          <ErrorNotice className="mt-2" message={getErrorMessage(authError)} />
+        ) : null}
+        {authData?.checkAuth ? (
+          <p className="mt-2 text-sm text-emerald-700">{authData.checkAuth}</p>
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -281,7 +316,10 @@ const DashboardPage: NextPageWithAuth = () => {
               Unread message count is shown in the top navigation chat badge.
             </p>
           </div>
-          <Link href="/chats" className="text-sm font-semibold text-slate-700 underline underline-offset-4">
+          <Link
+            href="/chats"
+            className="text-sm font-semibold text-slate-700 underline underline-offset-4"
+          >
             Open chats
           </Link>
         </div>
@@ -291,16 +329,27 @@ const DashboardPage: NextPageWithAuth = () => {
         <section className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">User Section</h2>
-              <p className="text-sm text-slate-600">Quick browse of public hotels.</p>
+              <h2 className="text-lg font-semibold text-slate-900">
+                User Section
+              </h2>
+              <p className="text-sm text-slate-600">
+                Quick browse of public hotels.
+              </p>
             </div>
-            <Link href="/hotels" className="text-sm font-semibold text-emerald-700 underline underline-offset-4">
+            <Link
+              href="/hotels"
+              className="text-sm font-semibold text-emerald-700 underline underline-offset-4"
+            >
               View all hotels
             </Link>
           </div>
 
-          {userHotelsError ? <ErrorNotice message={getErrorMessage(userHotelsError)} /> : null}
-          {userHotelsLoading && userHotels.length === 0 ? <p className="text-sm text-slate-600">Loading hotels...</p> : null}
+          {userHotelsError ? (
+            <ErrorNotice message={getErrorMessage(userHotelsError)} />
+          ) : null}
+          {userHotelsLoading && userHotels.length === 0 ? (
+            <p className="text-sm text-slate-600">Loading hotels...</p>
+          ) : null}
           {userHotels.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {userHotels.map((hotel, index) => (
@@ -320,17 +369,25 @@ const DashboardPage: NextPageWithAuth = () => {
         <section className="space-y-4 rounded-2xl border border-sky-200 bg-sky-50/50 p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Agent Section</h2>
-              <p className="text-sm text-slate-600">Your managed hotels snapshot.</p>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Agent Section
+              </h2>
+              <p className="text-sm text-slate-600">
+                Your managed hotels snapshot.
+              </p>
             </div>
           </div>
 
-          {agentHotelsError ? <ErrorNotice message={getErrorMessage(agentHotelsError)} /> : null}
+          {agentHotelsError ? (
+            <ErrorNotice message={getErrorMessage(agentHotelsError)} />
+          ) : null}
           {agentHotelsLoading && agentHotels.length === 0 ? (
             <p className="text-sm text-slate-600">Loading your hotels...</p>
           ) : null}
           {!agentHotelsLoading && agentHotels.length === 0 ? (
-            <p className="text-sm text-slate-600">No managed hotels found for your account.</p>
+            <p className="text-sm text-slate-600">
+              No managed hotels found for your account.
+            </p>
           ) : null}
           {agentHotels.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -350,12 +407,20 @@ const DashboardPage: NextPageWithAuth = () => {
       {isAdminArea ? (
         <section className="space-y-4 rounded-2xl border border-violet-200 bg-violet-50/40 p-5">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Admin Section</h2>
-            <p className="text-sm text-slate-600">Live operational metrics for platform health.</p>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Admin Section
+            </h2>
+            <p className="text-sm text-slate-600">
+              Live operational metrics for platform health.
+            </p>
           </div>
 
-          {dashboardStatsError ? <ErrorNotice message={getErrorMessage(dashboardStatsError)} /> : null}
-          {dashboardStatsLoading && !stats ? <p className="text-sm text-slate-600">Loading dashboard stats...</p> : null}
+          {dashboardStatsError ? (
+            <ErrorNotice message={getErrorMessage(dashboardStatsError)} />
+          ) : null}
+          {dashboardStatsLoading && !stats ? (
+            <p className="text-sm text-slate-600">Loading dashboard stats...</p>
+          ) : null}
 
           {stats ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -364,16 +429,26 @@ const DashboardPage: NextPageWithAuth = () => {
               <StatTile label="Total Bookings" value={stats.totalBookings} />
               <StatTile label="Total Revenue" value={stats.totalRevenue} />
               <StatTile label="Pending Hotels" value={stats.pendingHotels} />
-              <StatTile label="Pending Bookings" value={stats.pendingBookings} />
-              <StatTile label="New Bookings Today" value={stats.newBookingsToday} />
+              <StatTile
+                label="Pending Bookings"
+                value={stats.pendingBookings}
+              />
+              <StatTile
+                label="New Bookings Today"
+                value={stats.newBookingsToday}
+              />
               <StatTile label="Today Revenue" value={stats.todayRevenue} />
             </div>
           ) : null}
 
           <section className="space-y-4 rounded-xl border border-violet-200 bg-white/80 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-slate-900">Onboarding Analytics Events</h3>
-              <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Total {analyticsTotal}</p>
+              <h3 className="text-base font-semibold text-slate-900">
+                Onboarding Analytics Events
+              </h3>
+              <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">
+                Total {analyticsTotal}
+              </p>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -382,7 +457,10 @@ const DashboardPage: NextPageWithAuth = () => {
                 <input
                   value={analyticsDraftFilters.eventName}
                   onChange={(event) =>
-                    setAnalyticsDraftFilters((prev) => ({ ...prev, eventName: event.target.value }))
+                    setAnalyticsDraftFilters((prev) => ({
+                      ...prev,
+                      eventName: event.target.value,
+                    }))
                   }
                   placeholder="onboarding_completed"
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
@@ -394,7 +472,10 @@ const DashboardPage: NextPageWithAuth = () => {
                 <input
                   value={analyticsDraftFilters.memberId}
                   onChange={(event) =>
-                    setAnalyticsDraftFilters((prev) => ({ ...prev, memberId: event.target.value }))
+                    setAnalyticsDraftFilters((prev) => ({
+                      ...prev,
+                      memberId: event.target.value,
+                    }))
                   }
                   placeholder="Mongo ObjectId"
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-900 outline-none transition focus:border-slate-500"
@@ -408,7 +489,8 @@ const DashboardPage: NextPageWithAuth = () => {
                   onChange={(event) =>
                     setAnalyticsDraftFilters((prev) => ({
                       ...prev,
-                      memberType: event.target.value as AnalyticsFilterFormState["memberType"],
+                      memberType: event.target
+                        .value as AnalyticsFilterFormState["memberType"],
                     }))
                   }
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
@@ -425,7 +507,12 @@ const DashboardPage: NextPageWithAuth = () => {
                 <span className="font-medium text-slate-700">Source</span>
                 <input
                   value={analyticsDraftFilters.source}
-                  onChange={(event) => setAnalyticsDraftFilters((prev) => ({ ...prev, source: event.target.value }))}
+                  onChange={(event) =>
+                    setAnalyticsDraftFilters((prev) => ({
+                      ...prev,
+                      source: event.target.value,
+                    }))
+                  }
                   placeholder="web"
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
                 />
@@ -437,7 +524,10 @@ const DashboardPage: NextPageWithAuth = () => {
                   type="date"
                   value={analyticsDraftFilters.fromDate}
                   onChange={(event) =>
-                    setAnalyticsDraftFilters((prev) => ({ ...prev, fromDate: event.target.value }))
+                    setAnalyticsDraftFilters((prev) => ({
+                      ...prev,
+                      fromDate: event.target.value,
+                    }))
                   }
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
                 />
@@ -448,7 +538,12 @@ const DashboardPage: NextPageWithAuth = () => {
                 <input
                   type="date"
                   value={analyticsDraftFilters.toDate}
-                  onChange={(event) => setAnalyticsDraftFilters((prev) => ({ ...prev, toDate: event.target.value }))}
+                  onChange={(event) =>
+                    setAnalyticsDraftFilters((prev) => ({
+                      ...prev,
+                      toDate: event.target.value,
+                    }))
+                  }
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
                 />
               </label>
@@ -471,12 +566,18 @@ const DashboardPage: NextPageWithAuth = () => {
               </button>
             </div>
 
-            {analyticsEventsError ? <ErrorNotice message={getErrorMessage(analyticsEventsError)} /> : null}
+            {analyticsEventsError ? (
+              <ErrorNotice message={getErrorMessage(analyticsEventsError)} />
+            ) : null}
             {analyticsEventsLoading && analyticsEvents.length === 0 ? (
-              <p className="text-sm text-slate-600">Loading analytics events...</p>
+              <p className="text-sm text-slate-600">
+                Loading analytics events...
+              </p>
             ) : null}
             {!analyticsEventsLoading && analyticsEvents.length === 0 ? (
-              <p className="text-sm text-slate-600">No analytics events found for the selected filters.</p>
+              <p className="text-sm text-slate-600">
+                No analytics events found for the selected filters.
+              </p>
             ) : null}
 
             {analyticsEvents.length > 0 ? (
@@ -495,27 +596,36 @@ const DashboardPage: NextPageWithAuth = () => {
                     </thead>
                     <tbody>
                       {analyticsEvents.map((eventItem) => (
-                        <tr key={eventItem._id} className="border-t border-slate-200 bg-white">
+                        <tr
+                          key={eventItem._id}
+                          className="border-t border-slate-200 bg-white"
+                        >
                           <td className="whitespace-nowrap px-3 py-2 font-medium text-slate-900">
                             {new Date(eventItem.createdAt).toLocaleString()}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2">{eventItem.eventName}</td>
-                          <td className="px-3 py-2">
-                            <p className="font-medium text-slate-800">{eventItem.memberType}</p>
-                            <p className="font-mono text-[11px] text-slate-500">{eventItem.memberId}</p>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {eventItem.eventName}
                           </td>
-                          <td className="px-3 py-2">{eventItem.eventPath ?? "-"}</td>
-                          <td className="whitespace-nowrap px-3 py-2">{eventItem.source ?? "-"}</td>
+                          <td className="px-3 py-2">
+                            <p className="font-medium text-slate-800">
+                              {eventItem.memberType}
+                            </p>
+                            <p className="font-mono text-[11px] text-slate-500">
+                              {eventItem.memberId}
+                            </p>
+                          </td>
+                          <td className="px-3 py-2">
+                            {eventItem.eventPath ?? "-"}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {eventItem.source ?? "-"}
+                          </td>
                           <td className="max-w-[26rem] px-3 py-2 text-slate-600">
-                            {eventItem.payload ? (
-                              eventItem.payload.length > 180 ? (
-                                `${eventItem.payload.slice(0, 180)}...`
-                              ) : (
-                                eventItem.payload
-                              )
-                            ) : (
-                              "-"
-                            )}
+                            {eventItem.payload
+                              ? eventItem.payload.length > 180
+                                ? `${eventItem.payload.slice(0, 180)}...`
+                                : eventItem.payload
+                              : "-"}
                           </td>
                         </tr>
                       ))}
@@ -555,10 +665,16 @@ const DashboardPage: NextPageWithAuth = () => {
       ) : null}
 
       <div className="flex gap-3 pt-2">
-        <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
+        <Link
+          href="/hotels"
+          className="text-sm text-slate-600 underline underline-offset-4"
+        >
           Browse hotels
         </Link>
-        <Link href="/" className="text-sm text-slate-600 underline underline-offset-4">
+        <Link
+          href="/"
+          className="text-sm text-slate-600 underline underline-offset-4"
+        >
           Back to home
         </Link>
       </div>
@@ -567,7 +683,7 @@ const DashboardPage: NextPageWithAuth = () => {
 };
 
 DashboardPage.auth = {
-  roles: ["USER", "AGENT", "ADMIN", "ADMIN_OPERATOR"],
+  roles: ["AGENT", "ADMIN", "ADMIN_OPERATOR"],
 };
 
 export default DashboardPage;
