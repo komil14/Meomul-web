@@ -1,0 +1,59 @@
+import Image from "next/image";
+import Link from "next/link";
+import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
+import type { HotelListItem } from "@/types/hotel";
+import styles from "@/styles/home-landing-ovastin.module.css";
+
+interface TrendingSectionProps {
+  hotels: HotelListItem[];
+}
+
+export function TrendingSection({ hotels }: TrendingSectionProps) {
+  if (hotels.length === 0) return null;
+
+  return (
+    <section className={styles.trendingSection}>
+      <div className={styles.trendingHeader}>
+        <div>
+          <p className={styles.trendingEyebrow}>Trending Now</p>
+          <h2 className={styles.trendingTitle}>Stays guests are booking right now</h2>
+        </div>
+        <Link href="/hotels" className={styles.trendingLink}>
+          Browse all stays <span aria-hidden>↗</span>
+        </Link>
+      </div>
+
+      <div className={styles.trendingRail} role="list">
+        {hotels.map((hotel) => (
+          <article key={`trending-hotel-${hotel._id}`} className={styles.trendingCard} role="listitem">
+            <Link href={`/hotels/${hotel._id}`} className={styles.trendingCardLink}>
+              {hotel.hotelImages[0] ? (
+                <Image
+                  src={resolveMediaUrl(hotel.hotelImages[0])}
+                  alt={hotel.hotelTitle}
+                  fill
+                  sizes="(max-width: 640px) 88vw, (max-width: 1180px) 46vw, 28vw"
+                  className={styles.trendingCardImage}
+                />
+              ) : (
+                <div className={styles.trendingCardFallback} />
+              )}
+              <div className={styles.trendingCardShade} />
+              <div className={styles.trendingCardContent}>
+                <h3>{hotel.hotelTitle}</h3>
+                <p className={styles.trendingMeta}>
+                  {formatHotelLocationLabel(hotel.hotelLocation)} · {hotel.hotelType}
+                </p>
+                <div className={styles.trendingStats}>
+                  <span>★ {hotel.hotelRating.toFixed(1)}</span>
+                  <span>{hotel.hotelLikes.toLocaleString()} likes</span>
+                </div>
+              </div>
+            </Link>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
