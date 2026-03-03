@@ -416,105 +416,105 @@ const ProfilePage: NextPageWithAuth = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Display name */}
+              {/* Display name */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Display name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={nick}
+                  onChange={(e) => {
+                    setNick(e.target.value);
+                    markDirty();
+                  }}
+                  minLength={3}
+                  maxLength={20}
+                  required
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                />
+              </div>
+
+              {/* Full name */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Full name
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    markDirty();
+                  }}
+                  maxLength={80}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                />
+              </div>
+
+              {/* Phone — read only */}
+              {member?.memberPhone && (
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Display name <span className="text-rose-500">*</span>
+                    Phone
                   </label>
-                  <input
-                    type="text"
-                    value={nick}
-                    onChange={(e) => {
-                      setNick(e.target.value);
-                      markDirty();
-                    }}
-                    minLength={3}
-                    maxLength={20}
-                    required
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                  />
-                </div>
-
-                {/* Full name */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Full name
-                  </label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => {
-                      setFullName(e.target.value);
-                      markDirty();
-                    }}
-                    maxLength={80}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                  />
-                </div>
-
-                {/* Phone — read only */}
-                {member?.memberPhone && (
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Phone
-                    </label>
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
-                      <span className="flex-1">{member.memberPhone}</span>
-                      <Lock size={12} className="text-slate-300" />
-                    </div>
+                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                    <span className="flex-1">{member.memberPhone}</span>
+                    <Lock size={12} className="text-slate-300" />
                   </div>
-                )}
-
-                {/* Address */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => {
-                      setAddress(e.target.value);
-                      markDirty();
-                    }}
-                    maxLength={200}
-                    placeholder="City, District..."
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                  />
                 </div>
+              )}
 
-                {/* About me */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Bio
-                  </label>
-                  <textarea
-                    value={desc}
-                    onChange={(e) => {
-                      setDesc(e.target.value);
-                      markDirty();
-                    }}
-                    maxLength={300}
-                    rows={3}
-                    placeholder="Tell us a bit about yourself..."
-                    className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                  />
-                  <p className="mt-1 text-right text-xs text-slate-400">
-                    {desc.length}/300
-                  </p>
-                </div>
+              {/* Address */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    markDirty();
+                  }}
+                  maxLength={200}
+                  placeholder="City, District..."
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                />
+              </div>
 
-                <div className="flex justify-end border-t border-slate-100 pt-4">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
-                  >
-                    {saving ? "Saving..." : "Save changes"}
-                  </button>
-                </div>
-              </form>
-            )}
+              {/* About me */}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Bio
+                </label>
+                <textarea
+                  value={desc}
+                  onChange={(e) => {
+                    setDesc(e.target.value);
+                    markDirty();
+                  }}
+                  maxLength={300}
+                  rows={3}
+                  placeholder="Tell us a bit about yourself..."
+                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                />
+                <p className="mt-1 text-right text-xs text-slate-400">
+                  {desc.length}/300
+                </p>
+              </div>
+
+              <div className="flex justify-end border-t border-slate-100 pt-4">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {memberType === "USER" && (
@@ -535,7 +535,9 @@ const ProfilePage: NextPageWithAuth = () => {
               </div>
             )}
             {visitedTabs.has("subscription") && (
-              <div className={activeTab === "subscription" ? undefined : "hidden"}>
+              <div
+                className={activeTab === "subscription" ? undefined : "hidden"}
+              >
                 <SubscriptionTab />
               </div>
             )}
