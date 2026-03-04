@@ -2,6 +2,7 @@ import { useQuery } from "@apollo/client/react";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_ALL_CHATS_ADMIN_QUERY } from "@/graphql/chat.gql";
+import { resolveImageUrl } from "@/lib/config/env";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -163,14 +164,14 @@ function ChatDetailDrawer({
                     )}
                     {msg.imageUrl && (
                       <img
-                        src={`${process.env.NEXT_PUBLIC_API_URL}/${msg.imageUrl}`}
+                        src={resolveImageUrl(msg.imageUrl)}
                         alt="chat image"
                         className="mt-2 h-32 w-auto rounded-lg object-cover"
                       />
                     )}
                     {msg.fileUrl && (
                       <a
-                        href={`${process.env.NEXT_PUBLIC_API_URL}/${msg.fileUrl}`}
+                        href={resolveImageUrl(msg.fileUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-1 inline-block text-xs text-sky-600 underline"

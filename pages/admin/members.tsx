@@ -6,6 +6,7 @@ import {
   GET_ALL_MEMBERS_BY_ADMIN_QUERY,
   UPDATE_MEMBER_BY_ADMIN_MUTATION,
 } from "@/graphql/member.gql";
+import { resolveImageUrl } from "@/lib/config/env";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -409,7 +410,7 @@ const AdminMembersPage: NextPageWithAuth = () => {
                       <div className="flex items-center gap-3">
                         {m.memberImage ? (
                           <img
-                            src={`${process.env.NEXT_PUBLIC_API_URL}/${m.memberImage}`}
+                            src={resolveImageUrl(m.memberImage)}
                             alt={m.memberNick}
                             className="h-9 w-9 rounded-full object-cover"
                           />

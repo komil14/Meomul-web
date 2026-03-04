@@ -5,6 +5,7 @@ import {
   GET_ALL_ROOMS_ADMIN_QUERY,
   UPDATE_ROOM_BY_ADMIN_MUTATION,
 } from "@/graphql/hotel.gql";
+import { resolveImageUrl } from "@/lib/config/env";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatCurrencyKrw, formatNumber } from "@/lib/utils/format";
 import type {
@@ -116,7 +117,7 @@ function EditRoomDrawer({
           {room.roomImages.length > 0 && (
             <div className="overflow-hidden rounded-xl">
               <img
-                src={`${process.env.NEXT_PUBLIC_API_URL}/${room.roomImages[0]}`}
+                src={resolveImageUrl(room.roomImages[0])}
                 alt={room.roomName}
                 className="h-44 w-full object-cover"
               />
@@ -413,7 +414,7 @@ const AdminRoomsPage: NextPageWithAuth = () => {
                       <div className="flex items-center gap-3">
                         {r.roomImages.length > 0 ? (
                           <img
-                            src={`${process.env.NEXT_PUBLIC_API_URL}/${r.roomImages[0]}`}
+                            src={resolveImageUrl(r.roomImages[0])}
                             alt={r.roomName}
                             className="h-10 w-14 rounded-lg object-cover"
                           />

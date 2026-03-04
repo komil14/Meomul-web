@@ -5,6 +5,7 @@ import {
   GET_ALL_HOTELS_ADMIN_QUERY,
   UPDATE_HOTEL_BY_ADMIN_MUTATION,
 } from "@/graphql/hotel.gql";
+import { resolveImageUrl } from "@/lib/config/env";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -128,7 +129,7 @@ function EditHotelDrawer({
           {hotel.hotelImages.length > 0 && (
             <div className="overflow-hidden rounded-xl">
               <img
-                src={`${process.env.NEXT_PUBLIC_API_URL}/${hotel.hotelImages[0]}`}
+                src={resolveImageUrl(hotel.hotelImages[0])}
                 alt={hotel.hotelTitle}
                 className="h-44 w-full object-cover"
               />
@@ -458,7 +459,7 @@ const AdminHotelsPage: NextPageWithAuth = () => {
                       <div className="flex items-center gap-3">
                         {h.hotelImages.length > 0 ? (
                           <img
-                            src={`${process.env.NEXT_PUBLIC_API_URL}/${h.hotelImages[0]}`}
+                            src={resolveImageUrl(h.hotelImages[0])}
                             alt={h.hotelTitle}
                             className="h-10 w-14 rounded-lg object-cover"
                           />

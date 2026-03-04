@@ -6,6 +6,7 @@ import {
   GET_ALL_REVIEWS_ADMIN_QUERY,
   UPDATE_REVIEW_STATUS_MUTATION,
 } from "@/graphql/review.gql";
+import { resolveImageUrl } from "@/lib/config/env";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -139,7 +140,7 @@ function ReviewDetailDrawer({
           <div className="flex items-center gap-3">
             {review.reviewerImage ? (
               <img
-                src={`${process.env.NEXT_PUBLIC_API_URL}/${review.reviewerImage}`}
+                src={resolveImageUrl(review.reviewerImage)}
                 alt={review.reviewerNick ?? "reviewer"}
                 className="h-10 w-10 rounded-full object-cover"
               />
@@ -212,7 +213,7 @@ function ReviewDetailDrawer({
                 {review.guestPhotos.map((photo, i) => (
                   <img
                     key={i}
-                    src={`${process.env.NEXT_PUBLIC_API_URL}/${photo}`}
+                    src={resolveImageUrl(photo)}
                     alt={`Guest photo ${i + 1}`}
                     className="h-20 w-20 rounded-lg object-cover"
                   />
@@ -553,7 +554,7 @@ const AdminReviewsPage: NextPageWithAuth = () => {
                       <div className="flex items-center gap-3">
                         {r.reviewerImage ? (
                           <img
-                            src={`${process.env.NEXT_PUBLIC_API_URL}/${r.reviewerImage}`}
+                            src={resolveImageUrl(r.reviewerImage)}
                             alt={r.reviewerNick ?? "reviewer"}
                             className="h-8 w-8 rounded-full object-cover"
                           />
