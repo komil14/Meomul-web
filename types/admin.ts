@@ -5,7 +5,7 @@ import type { MetaCounterDto, PaginationInput } from "@/types/hotel";
 // ─── Member status / subscription ──────────────────────────────────────────────
 
 export type MemberStatus = "ACTIVE" | "BLOCK" | "DELETE";
-export type SubscriptionTier = "NONE" | "BASIC" | "PREMIUM" | "VIP";
+export type SubscriptionTier = "NONE" | "BASIC" | "PREMIUM" | "ELITE";
 
 // ─── Admin member item (matches MEMBER_FIELDS fragment) ────────────────────────
 
@@ -30,9 +30,17 @@ export interface AdminMemberItem {
   createdAt: string;
 }
 
+export interface MemberTypeCounts {
+  USER: number;
+  AGENT: number;
+  ADMIN: number;
+  ADMIN_OPERATOR: number;
+}
+
 export interface AdminMembersDto {
   list: AdminMemberItem[];
   metaCounter: MetaCounterDto;
+  typeCounts?: MemberTypeCounts;
 }
 
 // ─── Query / mutation types ────────────────────────────────────────────────────

@@ -111,6 +111,12 @@ export const GET_ALL_MEMBERS_BY_ADMIN_QUERY = gql`
       metaCounter {
         total
       }
+      typeCounts {
+        USER
+        AGENT
+        ADMIN
+        ADMIN_OPERATOR
+      }
     }
   }
   ${MEMBER_FIELDS}

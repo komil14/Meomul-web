@@ -62,7 +62,7 @@ const TIER_COLOR: Record<SubscriptionTier, string> = {
   NONE: "bg-slate-50 text-slate-600 border-slate-200",
   BASIC: "bg-sky-50 text-sky-700 border-sky-200",
   PREMIUM: "bg-violet-50 text-violet-700 border-violet-200",
-  VIP: "bg-amber-50 text-amber-700 border-amber-200",
+  ELITE: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
 function formatDate(value: string): string {
@@ -165,7 +165,7 @@ function EditMemberDrawer({
               <option value="NONE">NONE</option>
               <option value="BASIC">BASIC</option>
               <option value="PREMIUM">PREMIUM</option>
-              <option value="VIP">VIP</option>
+              <option value="ELITE">ELITE</option>
             </select>
           </div>
 
@@ -269,14 +269,13 @@ const AdminMembersPage: NextPageWithAuth = () => {
     [deleteMember, refetch],
   );
 
-  // count by type
-  const typeCounts = useMemo(() => {
-    const c = { USER: 0, AGENT: 0, ADMIN: 0, ADMIN_OPERATOR: 0 };
-    members.forEach((m) => {
-      c[m.memberType] += 1;
-    });
-    return c;
-  }, [members]);
+  // count by type (from server)
+  const typeCounts = data?.getAllMembersByAdmin.typeCounts ?? {
+    USER: 0,
+    AGENT: 0,
+    ADMIN: 0,
+    ADMIN_OPERATOR: 0,
+  };
 
   return (
     <main className="mx-auto w-full max-w-7xl space-y-6 pb-12">
