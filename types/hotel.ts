@@ -771,3 +771,188 @@ export interface CancelPriceLockMutationData {
 export interface CancelPriceLockMutationVars {
   priceLockId: string;
 }
+
+// ─── Agent hotel & room management ───────────────────────────────────────────
+
+export interface AgentRoomListItem {
+  _id: string;
+  hotelId: string;
+  roomName: string;
+  roomType: RoomType;
+  roomNumber?: string | null;
+  roomDesc: string;
+  maxOccupancy: number;
+  bedType: BedType;
+  bedCount: number;
+  basePrice: number;
+  weekendSurcharge: number;
+  roomSize: number;
+  viewType: ViewType;
+  roomAmenities: string[];
+  roomImages: string[];
+  roomStatus: RoomStatus;
+  totalRooms: number;
+  availableRooms: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentRoomsDto {
+  list: AgentRoomListItem[];
+  metaCounter: MetaCounterDto;
+}
+
+export interface GetAgentRoomsQueryData {
+  getAgentRooms: AgentRoomsDto;
+}
+
+export interface GetAgentRoomsQueryVars {
+  hotelId: string;
+  input: PaginationInput;
+}
+
+export interface DetailedLocationInput {
+  city: HotelLocation;
+  address: string;
+  coordinates: { lat: number; lng: number };
+  district?: string;
+  dong?: string;
+  nearestSubway?: string;
+  subwayExit?: string;
+  walkingDistance?: number;
+}
+
+export interface AmenitiesInput {
+  wifi?: boolean;
+  parking?: boolean;
+  breakfast?: boolean;
+  breakfastIncluded?: boolean;
+  roomService?: boolean;
+  gym?: boolean;
+  pool?: boolean;
+  workspace?: boolean;
+  familyRoom?: boolean;
+  kidsFriendly?: boolean;
+  wheelchairAccessible?: boolean;
+  elevator?: boolean;
+  accessibleBathroom?: boolean;
+  visualAlarms?: boolean;
+  serviceAnimalsAllowed?: boolean;
+  airportShuttle?: boolean;
+  evCharging?: boolean;
+  playground?: boolean;
+  meetingRoom?: boolean;
+  privateBath?: boolean;
+  restaurant?: boolean;
+  spa?: boolean;
+  coupleRoom?: boolean;
+  romanticView?: boolean;
+}
+
+export interface SafetyFeaturesInput {
+  fireSafety?: boolean;
+  securityCameras?: boolean;
+  frontDesk24h?: boolean;
+  roomSafe?: boolean;
+  femaleOnlyFloors?: boolean;
+  wellLitParking?: boolean;
+}
+
+export interface AgentHotelCreateInput {
+  hotelType: HotelType;
+  hotelTitle: string;
+  hotelLocation: HotelLocation;
+  detailedLocation: DetailedLocationInput;
+  hotelDesc?: string;
+  starRating?: number;
+  checkInTime?: string;
+  checkOutTime?: string;
+  cancellationPolicy?: CancellationPolicy;
+  petsAllowed?: boolean;
+  smokingAllowed?: boolean;
+  amenities?: AmenitiesInput;
+  hotelImages?: string[];
+}
+
+export interface AgentHotelUpdateInput {
+  _id: string;
+  hotelTitle?: string;
+  hotelDesc?: string;
+  starRating?: number;
+  checkInTime?: string;
+  checkOutTime?: string;
+  cancellationPolicy?: CancellationPolicy;
+  petsAllowed?: boolean;
+  maxPetWeight?: number;
+  smokingAllowed?: boolean;
+  amenities?: AmenitiesInput;
+  safetyFeatures?: SafetyFeaturesInput;
+  suitableFor?: string[];
+  hotelImages?: string[];
+  flexibleCheckIn?: { enabled: boolean; times?: string[]; fee?: number };
+  flexibleCheckOut?: { enabled: boolean; times?: string[]; fee?: number };
+}
+
+export interface CreateHotelMutationData {
+  createHotel: HotelListItem & { hotelStatus: HotelStatus; memberId: string };
+}
+
+export interface CreateHotelMutationVars {
+  input: AgentHotelCreateInput;
+}
+
+export interface UpdateHotelMutationData {
+  updateHotel: HotelDetailItem;
+}
+
+export interface UpdateHotelMutationVars {
+  input: AgentHotelUpdateInput;
+}
+
+export interface AgentRoomCreateInput {
+  hotelId: string;
+  roomType: RoomType;
+  roomName: string;
+  maxOccupancy: number;
+  bedType: BedType;
+  bedCount: number;
+  basePrice: number;
+  totalRooms: number;
+  roomNumber?: string;
+  roomDesc?: string;
+  weekendSurcharge?: number;
+  roomSize?: number;
+  viewType?: ViewType;
+  roomAmenities?: string[];
+  roomImages?: string[];
+}
+
+export interface AgentRoomUpdateInput {
+  _id: string;
+  roomName?: string;
+  roomDesc?: string;
+  basePrice?: number;
+  weekendSurcharge?: number;
+  roomSize?: number;
+  viewType?: ViewType;
+  roomAmenities?: string[];
+  totalRooms?: number;
+  roomImages?: string[];
+  roomStatus?: RoomStatus;
+}
+
+export interface CreateRoomMutationData {
+  createRoom: AgentRoomListItem;
+}
+
+export interface CreateRoomMutationVars {
+  input: AgentRoomCreateInput;
+}
+
+export interface UpdateRoomMutationData {
+  updateRoom: AgentRoomListItem;
+}
+
+export interface UpdateRoomMutationVars {
+  input: AgentRoomUpdateInput;
+}

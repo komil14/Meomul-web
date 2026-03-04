@@ -66,15 +66,15 @@ const NAV_LINKS = {
   staff: [
     { href: "/",                label: "Home" },
     { href: "/hotels",          label: "Hotels" },
+    { href: "/hotels/manage",   label: "My Hotels" },
     { href: "/bookings/manage", label: "Bookings" },
     { href: "/chats",           label: "Chats" },
     { href: "/dashboard",       label: "Dashboard" },
-    { href: "/about",           label: "About" },
-    { href: "/support",         label: "Support" },
   ],
   admin: [
     { href: "/",                label: "Home" },
     { href: "/hotels",          label: "Hotels" },
+    { href: "/hotels/manage",   label: "My Hotels" },
     { href: "/bookings/manage", label: "Bookings" },
     { href: "/chats",           label: "Chats" },
     { href: "/dashboard",       label: "Dashboard" },

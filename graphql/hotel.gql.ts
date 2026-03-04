@@ -225,6 +225,7 @@ export const GET_AGENT_HOTELS_QUERY = gql`
         hotelTitle
         hotelLocation
         hotelType
+        hotelStatus
         hotelRating
         hotelLikes
         hotelImages
@@ -764,6 +765,164 @@ export const GET_HOTEL_CARD_QUERY = gql`
       hotelRating
       hotelLikes
       hotelImages
+    }
+  }
+`;
+
+// ─── Agent hotel & room management ────────────────────────────────────────────
+
+export const GET_AGENT_ROOMS_QUERY = gql`
+  query GetAgentRooms($hotelId: String!, $input: PaginationInput!) {
+    getAgentRooms(hotelId: $hotelId, input: $input) {
+      list {
+        _id
+        hotelId
+        roomName
+        roomType
+        roomNumber
+        roomDesc
+        maxOccupancy
+        bedType
+        bedCount
+        basePrice
+        weekendSurcharge
+        roomSize
+        viewType
+        roomAmenities
+        roomImages
+        roomStatus
+        totalRooms
+        availableRooms
+        createdAt
+        updatedAt
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+`;
+
+export const CREATE_HOTEL_MUTATION = gql`
+  mutation CreateHotel($input: HotelInput!) {
+    createHotel(input: $input) {
+      _id
+      hotelTitle
+      hotelType
+      hotelLocation
+      hotelStatus
+      memberId
+      createdAt
+    }
+  }
+`;
+
+export const UPDATE_HOTEL_MUTATION = gql`
+  mutation UpdateHotel($input: HotelUpdate!) {
+    updateHotel(input: $input) {
+      _id
+      hotelTitle
+      hotelDesc
+      starRating
+      checkInTime
+      checkOutTime
+      cancellationPolicy
+      petsAllowed
+      maxPetWeight
+      smokingAllowed
+      hotelImages
+      suitableFor
+      amenities {
+        wifi
+        parking
+        breakfast
+        breakfastIncluded
+        roomService
+        gym
+        pool
+        workspace
+        familyRoom
+        kidsFriendly
+        wheelchairAccessible
+        elevator
+        accessibleBathroom
+        visualAlarms
+        serviceAnimalsAllowed
+        airportShuttle
+        evCharging
+        playground
+        meetingRoom
+        privateBath
+        restaurant
+        spa
+        coupleRoom
+        romanticView
+      }
+      safetyFeatures {
+        fireSafety
+        securityCameras
+        frontDesk24h
+        roomSafe
+        femaleOnlyFloors
+        wellLitParking
+      }
+      flexibleCheckIn {
+        enabled
+        times
+        fee
+      }
+      flexibleCheckOut {
+        enabled
+        times
+        fee
+      }
+    }
+  }
+`;
+
+export const CREATE_ROOM_MUTATION = gql`
+  mutation CreateRoom($input: RoomInput!) {
+    createRoom(input: $input) {
+      _id
+      hotelId
+      roomName
+      roomType
+      roomNumber
+      roomDesc
+      maxOccupancy
+      bedType
+      bedCount
+      basePrice
+      weekendSurcharge
+      roomSize
+      viewType
+      roomAmenities
+      roomImages
+      roomStatus
+      totalRooms
+      availableRooms
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+export const UPDATE_ROOM_MUTATION = gql`
+  mutation UpdateRoom($input: RoomUpdate!) {
+    updateRoom(input: $input) {
+      _id
+      roomName
+      roomDesc
+      basePrice
+      weekendSurcharge
+      roomSize
+      viewType
+      roomAmenities
+      totalRooms
+      roomImages
+      roomStatus
+      availableRooms
+      updatedAt
     }
   }
 `;
