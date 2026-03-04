@@ -595,7 +595,7 @@ function SummaryCard({
 }
 
 AdminChatsPage.auth = {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "ADMIN_OPERATOR"],
 };
 
 export default AdminChatsPage;

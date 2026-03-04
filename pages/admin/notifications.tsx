@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useMemo, useState, useCallback } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
+import { useToast } from "@/components/ui/toast-provider";
 import {
   DELETE_NOTIFICATION_MUTATION,
   GET_ALL_NOTIFICATIONS_ADMIN_QUERY,
@@ -112,19 +113,28 @@ function NotificationDetailDrawer({
     DELETE_NOTIFICATION_MUTATION,
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const toast = useToast();
 
   const handleMarkRead = async () => {
-    await markRead({ variables: { notificationId: notification._id } });
-    onAction();
-    onClose();
+    try {
+      await markRead({ variables: { notificationId: notification._id } });
+      onAction();
+      onClose();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
   };
 
   const handleDelete = async () => {
-    await deleteNotification({
-      variables: { notificationId: notification._id },
-    });
-    onAction();
-    onClose();
+    try {
+      await deleteNotification({
+        variables: { notificationId: notification._id },
+      });
+      onAction();
+      onClose();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
   };
 
   const typeConf = TYPE_CONFIG[notification.type] ?? DEFAULT_TYPE;
@@ -603,7 +613,7 @@ function SummaryCard({
 }
 
 AdminNotificationsPage.auth = {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "ADMIN_OPERATOR"],
 };
 
 export default AdminNotificationsPage;

@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
+import { useToast } from "@/components/ui/toast-provider";
 import {
   DELETE_REVIEW_MUTATION,
   GET_ALL_REVIEWS_ADMIN_QUERY,
@@ -100,17 +101,26 @@ function ReviewDetailDrawer({
     DELETE_REVIEW_MUTATION,
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const toast = useToast();
 
   const handleStatus = async (status: ReviewStatus) => {
-    await updateStatus({ variables: { reviewId: review._id, status } });
-    onStatusChanged();
-    onClose();
+    try {
+      await updateStatus({ variables: { reviewId: review._id, status } });
+      onStatusChanged();
+      onClose();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
   };
 
   const handleDelete = async () => {
-    await deleteReview({ variables: { reviewId: review._id } });
-    onStatusChanged();
-    onClose();
+    try {
+      await deleteReview({ variables: { reviewId: review._id } });
+      onStatusChanged();
+      onClose();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
   };
 
   return (
@@ -719,7 +729,7 @@ function SummaryCard({
 }
 
 AdminReviewsPage.auth = {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "ADMIN_OPERATOR"],
 };
 
 export default AdminReviewsPage;

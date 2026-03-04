@@ -582,7 +582,7 @@ function SummaryCard({
 }
 
 AdminRoomsPage.auth = {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "ADMIN_OPERATOR"],
 };
 
 export default AdminRoomsPage;

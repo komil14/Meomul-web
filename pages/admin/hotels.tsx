@@ -649,7 +649,7 @@ function SummaryCard({
 }
 
 AdminHotelsPage.auth = {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "ADMIN_OPERATOR"],
 };
 
 export default AdminHotelsPage;

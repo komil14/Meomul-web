@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
+import { useToast } from "@/components/ui/toast-provider";
 import {
   DELETE_MEMBER_BY_ADMIN_MUTATION,
   GET_ALL_MEMBERS_BY_ADMIN_QUERY,
@@ -218,6 +219,7 @@ function InfoRow({
 /* ─── Main page ────────────────────────────────────────────────────────────── */
 
 const AdminMembersPage: NextPageWithAuth = () => {
+  const toast = useToast();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingMember, setEditingMember] = useState<AdminMemberItem | null>(
@@ -262,11 +264,15 @@ const AdminMembersPage: NextPageWithAuth = () => {
 
   const handleDelete = useCallback(
     async (memberId: string) => {
-      await deleteMember({ variables: { memberId } });
-      setConfirmDelete(null);
-      void refetch();
+      try {
+        await deleteMember({ variables: { memberId } });
+        setConfirmDelete(null);
+        void refetch();
+      } catch (err) {
+        toast.error(getErrorMessage(err));
+      }
     },
-    [deleteMember, refetch],
+    [deleteMember, refetch, toast],
   );
 
   // count by type (from server)
@@ -591,7 +597,7 @@ function SummaryCard({
 }
 
 AdminMembersPage.auth = {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "ADMIN_OPERATOR"],
 };
 
 export default AdminMembersPage;

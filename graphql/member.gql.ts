@@ -62,8 +62,8 @@ export const REQUEST_SUBSCRIPTION_MUTATION = gql`
 `;
 
 export const CANCEL_SUBSCRIPTION_MUTATION = gql`
-  mutation CancelSubscription {
-    cancelSubscription {
+  mutation CancelMySubscription {
+    cancelMySubscription {
       message
       success
     }
