@@ -194,7 +194,10 @@ function NotificationDetailDrawer({
           {/* meta */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-2">
             <InfoRow label="ID" value={notification._id} mono />
-            <InfoRow label="User ID" value={notification.userId} mono />
+            <InfoRow
+              label="User"
+              value={notification.userNick ?? notification.userId}
+            />
             <InfoRow
               label="Created"
               value={formatDateTime(notification.createdAt)}
@@ -306,7 +309,8 @@ const AdminNotificationsPage: NextPageWithAuth = () => {
           n.message.toLowerCase().includes(q) ||
           n.type.toLowerCase().includes(q) ||
           n._id.includes(q) ||
-          n.userId.includes(q),
+          n.userId.includes(q) ||
+          (n.userNick?.toLowerCase().includes(q) ?? false),
       );
     }
 
@@ -491,8 +495,8 @@ const AdminNotificationsPage: NextPageWithAuth = () => {
                       </td>
                       {/* user */}
                       <td className="px-4 py-3.5">
-                        <p className="font-mono text-[11px] text-slate-500 truncate max-w-[100px]">
-                          {n.userId}
+                        <p className="text-xs text-slate-600 truncate max-w-[120px] font-medium">
+                          {n.userNick ?? n.userId}
                         </p>
                       </td>
                       {/* time */}

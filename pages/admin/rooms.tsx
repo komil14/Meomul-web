@@ -131,10 +131,10 @@ function EditRoomDrawer({
             <InfoRow label="Type" value={room.roomType} />
             <InfoRow label="Bed" value={room.bedType} />
             <InfoRow label="View" value={room.viewType} />
-            <InfoRow label="Max Guests" value={String(room.maxGuests)} />
+            <InfoRow label="Max Guests" value={String(room.maxOccupancy)} />
             <InfoRow
               label="Size"
-              value={room.squareMeters ? `${room.squareMeters} m²` : "N/A"}
+              value={room.roomSize ? `${room.roomSize} m²` : "N/A"}
             />
             <InfoRow label="Price" value={formatCurrencyKrw(room.basePrice)} />
             <InfoRow label="Available" value={String(room.availableRooms)} />
@@ -466,7 +466,7 @@ const AdminRoomsPage: NextPageWithAuth = () => {
                     <td className="px-4 py-3.5">
                       <span className="inline-flex items-center gap-1 text-xs text-slate-600">
                         <Ruler size={11} />
-                        {r.squareMeters ? `${r.squareMeters} m²` : "-"}
+                        {r.roomSize ? `${r.roomSize} m²` : "-"}
                       </span>
                     </td>
                     {/* Price */}

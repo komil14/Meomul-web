@@ -329,8 +329,8 @@ export const GET_ALL_ROOMS_ADMIN_QUERY = gql`
         roomImages
         bedType
         viewType
-        maxGuests
-        squareMeters
+        maxOccupancy
+        roomSize
       }
       metaCounter {
         total

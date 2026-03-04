@@ -69,6 +69,7 @@ export const GET_ALL_NOTIFICATIONS_ADMIN_QUERY = gql`
       list {
         _id
         userId
+        userNick
         type
         title
         message

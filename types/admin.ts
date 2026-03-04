@@ -111,6 +111,7 @@ export interface GetAllChatsAdminQueryVars {
 export interface NotificationItem {
   _id: string;
   userId: string;
+  userNick?: string;
   type: string;
   title: string;
   message: string;

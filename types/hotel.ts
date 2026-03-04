@@ -426,8 +426,8 @@ export interface AdminRoomListItem {
   roomImages: string[];
   bedType: BedType;
   viewType: ViewType;
-  maxGuests: number;
-  squareMeters: number;
+  maxOccupancy: number;
+  roomSize: number;
 }
 
 export interface AdminRoomsDto {
