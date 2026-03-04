@@ -143,16 +143,45 @@ export const CLOSE_CHAT_MUTATION = gql`
 
 // ─── Admin queries ─────────────────────────────────────────────────────────────
 
+// Lightweight fragment for list views — excludes messages array for performance
+const CHAT_LIST_FIELDS = gql`
+  fragment ChatListFields on ChatDto {
+    _id
+    guestId
+    hotelId
+    bookingId
+    chatScope
+    supportTopic
+    sourcePath
+    assignedAgentId
+    chatStatus
+    unreadGuestMessages
+    unreadAgentMessages
+    lastMessageAt
+    createdAt
+    updatedAt
+  }
+`;
+
 export const GET_ALL_CHATS_ADMIN_QUERY = gql`
   query GetAllChatsAdmin($input: PaginationInput!, $statusFilter: ChatStatus) {
     getAllChatsAdmin(input: $input, statusFilter: $statusFilter) {
       list {
-        ...ChatFields
+        ...ChatListFields
       }
       metaCounter {
         total
       }
     }
   }
-  ${CHAT_FIELDS}
+  ${CHAT_LIST_FIELDS}
+`;
+
+export const REASSIGN_CHAT_MUTATION = gql`
+  mutation ReassignChat($chatId: String!, $newAgentId: String!) {
+    reassignChat(chatId: $chatId, newAgentId: $newAgentId) {
+      ...ChatListFields
+    }
+  }
+  ${CHAT_LIST_FIELDS}
 `;

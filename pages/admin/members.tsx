@@ -60,7 +60,7 @@ const STATUS_COLOR: Record<MemberStatus, string> = {
 };
 
 const TIER_COLOR: Record<SubscriptionTier, string> = {
-  NONE: "bg-slate-50 text-slate-600 border-slate-200",
+  FREE: "bg-slate-50 text-slate-600 border-slate-200",
   BASIC: "bg-sky-50 text-sky-700 border-sky-200",
   PREMIUM: "bg-violet-50 text-violet-700 border-violet-200",
   ELITE: "bg-amber-50 text-amber-700 border-amber-200",
@@ -163,7 +163,7 @@ function EditMemberDrawer({
               onChange={(e) => setTier(e.target.value as SubscriptionTier)}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400"
             >
-              <option value="NONE">NONE</option>
+              <option value="FREE">FREE</option>
               <option value="BASIC">BASIC</option>
               <option value="PREMIUM">PREMIUM</option>
               <option value="ELITE">ELITE</option>
@@ -452,7 +452,7 @@ const AdminMembersPage: NextPageWithAuth = () => {
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${TIER_COLOR[m.subscriptionTier]}`}
                       >
-                        {m.subscriptionTier !== "NONE" ? (
+                        {m.subscriptionTier !== "FREE" ? (
                           <Crown size={10} />
                         ) : null}
                         {m.subscriptionTier}

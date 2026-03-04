@@ -8,6 +8,7 @@ import {
   CREATE_ROOM_MUTATION,
   UPDATE_ROOM_MUTATION,
 } from "@/graphql/hotel.gql";
+import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
 import { successAlert, errorAlert } from "@/lib/ui/alerts";
 import { formatCurrencyKrw } from "@/lib/utils/format";
@@ -190,6 +191,20 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
   const hotel = hotelData?.getHotel;
   const rooms = roomsData?.getAgentRooms.list ?? [];
+
+  // Ownership guard — redirect non-owners back to manage page
+  const sessionMember = getSessionMember();
+  const isOwner =
+    !hotel ||
+    hotel.memberId === sessionMember?._id ||
+    sessionMember?.memberType === "ADMIN" ||
+    sessionMember?.memberType === "ADMIN_OPERATOR";
+
+  useEffect(() => {
+    if (hotel && !isOwner) {
+      void router.replace("/hotels/manage");
+    }
+  }, [hotel, isOwner, router]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 

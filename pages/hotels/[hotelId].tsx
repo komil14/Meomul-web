@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
 import { Loader2, MessageSquare } from "lucide-react";
 import { getSessionMember } from "@/lib/auth/session";
 import { createApolloClient } from "@/lib/apollo/client";
@@ -16,7 +16,7 @@ import { HotelRoomsSection } from "@/components/hotels/detail/hotel-rooms-sectio
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
-import { START_CHAT_MUTATION } from "@/graphql/chat.gql";
+import { GET_MY_CHATS_QUERY, START_CHAT_MUTATION } from "@/graphql/chat.gql";
 import { GET_HOTEL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { useHotelDetailPageData } from "@/lib/hooks/use-hotel-detail-page-data";
 import { ROOM_PAGE_SIZE } from "@/lib/hotels/detail-page-helpers";
@@ -31,6 +31,7 @@ import type {
   RoomListItem,
 } from "@/types/hotel";
 import type {
+  GetMyChatsQueryData,
   StartChatMutationData,
   StartChatMutationVars,
 } from "@/types/chat";
@@ -71,6 +72,14 @@ export default function HotelDetailPage({
   const [startingChat, setStartingChat] = useState(false);
   const [startChat] = useMutation<StartChatMutationData, StartChatMutationVars>(
     START_CHAT_MUTATION,
+  );
+  const { data: myChatsData } = useQuery<GetMyChatsQueryData>(
+    GET_MY_CHATS_QUERY,
+    {
+      variables: { input: { page: 1, limit: 50, sort: "lastMessageAt", direction: -1 } },
+      skip: !isUser,
+      fetchPolicy: "cache-first",
+    },
   );
   const trackedHotelIdRef = useRef<string>("");
   const {
@@ -383,6 +392,14 @@ export default function HotelDetailPage({
           type="button"
           disabled={startingChat}
           onClick={async () => {
+            // Navigate to existing open chat if one exists for this hotel
+            const existingChat = myChatsData?.getMyChats.list.find(
+              (c) => c.hotelId === hotelId && c.chatStatus !== "CLOSED",
+            );
+            if (existingChat) {
+              void router.push(`/chats/${existingChat._id}`);
+              return;
+            }
             setStartingChat(true);
             try {
               const { data } = await startChat({

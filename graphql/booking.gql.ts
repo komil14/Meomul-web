@@ -13,6 +13,10 @@ const BOOKING_LIST_FIELDS = gql`
     createdAt
     guestId
     hotelId
+    hotelTitle
+    hotelLocation
+    hotelType
+    hotelImages
     rooms {
       roomType
       quantity
@@ -73,8 +77,8 @@ export const SEARCH_MEMBERS_FOR_BOOKING_QUERY = gql`
 `;
 
 export const GET_MY_BOOKINGS_QUERY = gql`
-  query GetMyBookings($input: PaginationInput!) {
-    getMyBookings(input: $input) {
+  query GetMyBookings($input: PaginationInput!, $statusFilter: BookingStatus) {
+    getMyBookings(input: $input, statusFilter: $statusFilter) {
       list {
         ...BookingListFields
       }

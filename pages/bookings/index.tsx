@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
-import { GET_HOTEL_CARD_QUERY } from "@/graphql/hotel.gql";
 import { getErrorMessage } from "@/lib/utils/error";
 import {
   CalendarDays,
@@ -80,17 +79,6 @@ const PAYMENT_LABEL: Record<string, string> = {
   REFUNDED: "Refunded",
 };
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface GetHotelCardData {
-  getHotel: {
-    _id: string;
-    hotelTitle: string;
-    hotelImages: string[];
-    hotelLocation?: string;
-  };
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string): string {
@@ -127,13 +115,7 @@ function BookingCard({
   booking: BookingListItem;
   index: number;
 }) {
-  const { data } = useQuery<GetHotelCardData>(GET_HOTEL_CARD_QUERY, {
-    variables: { hotelId: booking.hotelId },
-    fetchPolicy: "cache-first",
-  });
-
-  const hotel = data?.getHotel;
-  const cover = hotel?.hotelImages[0];
+  const cover = booking.hotelImages?.[0];
   const statusClass =
     STATUS_BADGE[booking.bookingStatus] ??
     "border-slate-200 bg-slate-50 text-slate-600";
@@ -158,7 +140,7 @@ function BookingCard({
         {cover ? (
           <Image
             src={cover}
-            alt={hotel?.hotelTitle ?? ""}
+            alt={booking.hotelTitle ?? ""}
             fill
             sizes="(max-width: 640px) 96px, 144px"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -176,12 +158,12 @@ function BookingCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate font-[family-name:var(--font-display)] text-base font-semibold text-slate-900 sm:text-lg">
-              {hotel?.hotelTitle ?? `Hotel #${booking.hotelId.slice(-6)}`}
+              {booking.hotelTitle ?? `Hotel #${booking.hotelId.slice(-6)}`}
             </p>
-            {hotel?.hotelLocation && (
+            {booking.hotelLocation && (
               <div className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
                 <MapPin size={10} className="flex-shrink-0" />
-                <span className="truncate">{hotel.hotelLocation}</span>
+                <span className="truncate">{booking.hotelLocation}</span>
               </div>
             )}
           </div>
@@ -277,27 +259,26 @@ const MyBookingsPage: NextPageWithAuth = () => {
     GetMyBookingsQueryData,
     GetMyBookingsQueryVars
   >(GET_MY_BOOKINGS_QUERY, {
-    variables: { input: paginationInput },
+    variables: {
+      input: paginationInput,
+      ...(statusFilter !== "ALL" ? { statusFilter } : {}),
+    },
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
   });
 
-  const allBookings = data?.getMyBookings.list ?? [];
-  const bookings =
-    statusFilter === "ALL"
-      ? allBookings
-      : allBookings.filter((b) => b.bookingStatus === statusFilter);
+  const bookings = data?.getMyBookings.list ?? [];
   const total = data?.getMyBookings.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
   // Summary counts from current page data
-  const upcoming = allBookings.filter(
+  const upcoming = bookings.filter(
     (b) => b.bookingStatus === "CONFIRMED" || b.bookingStatus === "PENDING",
   ).length;
-  const active = allBookings.filter(
+  const active = bookings.filter(
     (b) => b.bookingStatus === "CHECKED_IN",
   ).length;
-  const completed = allBookings.filter(
+  const completed = bookings.filter(
     (b) => b.bookingStatus === "CHECKED_OUT",
   ).length;
 
@@ -332,7 +313,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
       {error && <ErrorNotice message={getErrorMessage(error)} />}
 
       {/* ── Summary strip ──────────────────────────────────────────────── */}
-      {!loading && allBookings.length > 0 && (
+      {!loading && bookings.length > 0 && (
         <div className="motion-fade-up flex flex-wrap gap-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)] sm:gap-10">
           <SummaryStat label="Total" value={total} />
           <div className="w-px self-stretch bg-slate-100" />

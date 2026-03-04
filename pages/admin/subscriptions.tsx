@@ -10,6 +10,7 @@ import {
 import { GET_SUBSCRIPTION_REQUESTS_QUERY } from "@/graphql/notification.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { timeAgo } from "@/lib/utils/format";
 import { Check, Crown, RefreshCw, X } from "lucide-react";
 import type { NextPageWithAuth } from "@/types/page";
 
@@ -57,20 +58,6 @@ function parseMemberIdFromLink(link?: string | null): string {
   return link.split("/").pop() ?? "";
 }
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diff / 60000);
-  const h = Math.floor(diff / 3600000);
-  const d = Math.floor(diff / 86400000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
-  if (h < 24) return `${h}h ago`;
-  if (d === 1) return "Yesterday";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 // ─── Approve modal ─────────────────────────────────────────────────────────────
 
@@ -139,8 +126,9 @@ function ApproveModal({
           {/* Tier select */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Tier
+              Tier (from request)
             </label>
+            <p className="mb-2 text-[11px] text-amber-600">Verify tier before approving</p>
             <div className="flex gap-2">
               {["BASIC", "PREMIUM", "ELITE"].map((t) => (
                 <button
@@ -200,7 +188,8 @@ function ApproveModal({
               void handleApprove();
             }}
             disabled={loading || !memberId}
-            className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50"
+            title={!memberId ? "Cannot approve: no member ID found in request link" : undefined}
+            className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Approving..." : "Approve"}
           </button>

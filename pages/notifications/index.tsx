@@ -11,6 +11,7 @@ import {
 } from "@/graphql/notification.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { timeAgo } from "@/lib/utils/format";
 import type { NextPageWithAuth } from "@/types/page";
 import {
   AlertTriangle,
@@ -132,21 +133,6 @@ const ICON_CONFIG: Record<
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function timeAgo(dateStr: string): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const m = Math.floor(diffMs / 60000);
-  const h = Math.floor(diffMs / 3600000);
-  const d = Math.floor(diffMs / 86400000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
-  if (h < 24) return `${h}h ago`;
-  if (d === 1) return "Yesterday";
-  if (d < 7) return `${d}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function resolveLink(notification: NotificationDto): string | null {
   if (notification.link) return notification.link;
@@ -273,7 +259,7 @@ const NotificationsPage: NextPageWithAuth = () => {
     GET_MY_NOTIFICATIONS_QUERY,
     {
       skip: !member,
-      variables: { unreadOnly },
+      variables: { unreadOnly, limit: 50 },
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
     },
@@ -281,7 +267,7 @@ const NotificationsPage: NextPageWithAuth = () => {
 
   const [markAsRead] = useMutation<MarkAsReadData>(MARK_AS_READ_MUTATION, {
     refetchQueries: [
-      { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly } },
+      { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly, limit: 50 } },
       { query: GET_UNREAD_COUNT_QUERY },
     ],
   });
@@ -289,7 +275,7 @@ const NotificationsPage: NextPageWithAuth = () => {
   const [markAllAsRead, { loading: markAllLoading }] =
     useMutation<MarkAllAsReadData>(MARK_ALL_AS_READ_MUTATION, {
       refetchQueries: [
-        { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly } },
+        { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly, limit: 50 } },
         { query: GET_UNREAD_COUNT_QUERY },
       ],
     });
@@ -298,7 +284,7 @@ const NotificationsPage: NextPageWithAuth = () => {
     DELETE_NOTIFICATION_MUTATION,
     {
       refetchQueries: [
-        { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly } },
+        { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly, limit: 50 } },
         { query: GET_UNREAD_COUNT_QUERY },
       ],
     },

@@ -1,8 +1,8 @@
 import { gql } from "@apollo/client";
 
 export const GET_MY_NOTIFICATIONS_QUERY = gql`
-  query GetMyNotifications($unreadOnly: Boolean) {
-    getMyNotifications(unreadOnly: $unreadOnly) {
+  query GetMyNotifications($unreadOnly: Boolean, $limit: Float) {
+    getMyNotifications(unreadOnly: $unreadOnly, limit: $limit) {
       _id
       userId
       type

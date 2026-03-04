@@ -762,6 +762,14 @@ const ChatThreadPage: NextPageWithAuth = () => {
           </div>
         )}
 
+        {/* ── Socket disconnection banner ── */}
+        {!socketConnected && (
+          <div className="flex flex-none items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+            <WifiOff size={12} className="flex-shrink-0" />
+            Reconnecting… Messages will be delivered when connection restores.
+          </div>
+        )}
+
         {/* ── Messages area ── */}
         <div className="flex-1 overflow-y-auto bg-slate-50">
           {/* Loading skeletons */}

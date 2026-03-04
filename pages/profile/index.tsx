@@ -228,7 +228,7 @@ const ProfilePage: NextPageWithAuth = () => {
         ) : null}
       </div>
 
-      {memberType === "USER" && (
+      {(memberType === "USER" || memberType === "AGENT") && (
         <>
           {visitedTabs.has("reviews") && (
             <div
@@ -251,6 +251,11 @@ const ProfilePage: NextPageWithAuth = () => {
               <BookingsTab />
             </div>
           )}
+        </>
+      )}
+
+      {memberType === "USER" && (
+        <>
           {visitedTabs.has("subscription") && (
             <div
               className={

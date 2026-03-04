@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { GET_AGENT_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
@@ -77,18 +77,20 @@ const HotelsManagePage: NextPageWithAuth = () => {
   );
 
   // Refetch when tab regains focus
-  const wasVisibleRef = { current: false };
-  const mountedRef = { current: false };
-  if (isPageVisible) {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-    } else if (!wasVisibleRef.current) {
-      wasVisibleRef.current = true;
-      void refetch();
+  const wasVisibleRef = useRef(false);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (isPageVisible) {
+      if (!mountedRef.current) {
+        mountedRef.current = true;
+      } else if (!wasVisibleRef.current) {
+        wasVisibleRef.current = true;
+        void refetch();
+      }
+    } else {
+      wasVisibleRef.current = false;
     }
-  } else {
-    wasVisibleRef.current = false;
-  }
+  }, [isPageVisible, refetch]);
 
   const hotels = data?.getAgentHotels.list ?? [];
   const isAgent = member?.memberType === "AGENT";

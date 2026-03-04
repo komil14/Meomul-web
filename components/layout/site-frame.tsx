@@ -672,7 +672,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
       skip: !canPollUnread,
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
-      pollInterval: UNREAD_POLL_INTERVAL_MS,
+      pollInterval: isPageVisible ? UNREAD_POLL_INTERVAL_MS : 0,
     });
 
   const unreadCount = unreadData?.getMyUnreadChatCount ?? 0;
@@ -684,7 +684,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
     skip: !canTrackUnread,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
-    pollInterval: NOTIFICATION_POLL_INTERVAL_MS,
+    pollInterval: isPageVisible ? NOTIFICATION_POLL_INTERVAL_MS : 0,
   });
 
   const notifUnreadCount = notifUnreadData?.getUnreadCount ?? 0;

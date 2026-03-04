@@ -3,20 +3,24 @@ import { useMemo } from "react";
 import { getSessionMember } from "@/lib/auth/session";
 
 const TABS = [
-  { id: "profile", label: "Overview" },
-  { id: "reviews", label: "Reviews", userOnly: true },
-  { id: "likes", label: "Saved Hotels", userOnly: true },
-  { id: "bookings", label: "Bookings", userOnly: true },
-  { id: "subscription", label: "Subscription", userOnly: true },
+  { id: "profile", label: "Overview", access: "all" },
+  { id: "reviews", label: "Reviews", access: "user+agent" },
+  { id: "likes", label: "Saved Hotels", access: "user+agent" },
+  { id: "bookings", label: "Bookings", access: "user+agent" },
+  { id: "subscription", label: "Subscription", access: "user" },
 ] as const;
 
 export function ProfileNav() {
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
   const activeTab = (router.query.tab as string) ?? "profile";
-  const tabs = TABS.filter(
-    (t) => !("userOnly" in t) || member?.memberType === "USER",
-  );
+  const memberType = member?.memberType ?? "";
+  const tabs = TABS.filter((t) => {
+    if (t.access === "all") return true;
+    if (t.access === "user") return memberType === "USER";
+    if (t.access === "user+agent") return memberType === "USER" || memberType === "AGENT";
+    return false;
+  });
 
   const goTo = (id: string) => {
     void router.push(

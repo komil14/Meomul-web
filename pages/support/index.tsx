@@ -32,6 +32,7 @@ import type {
 } from "@/types/chat";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
+import { timeAgo } from "@/lib/utils/format";
 import type { NextPageWithAuth } from "@/types/page";
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -173,20 +174,6 @@ function StatusDot({ status }: { status: string }) {
   );
 }
 
-function timeAgo(dateStr: string): string {
-  const ms = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(ms / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(ms / 3600000);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(ms / 86400000);
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    PAGE

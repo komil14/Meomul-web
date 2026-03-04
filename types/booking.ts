@@ -99,6 +99,10 @@ export interface BookingListItem {
   createdAt: string;
   guestId: string;
   hotelId: string;
+  hotelTitle?: string | null;
+  hotelLocation?: string | null;
+  hotelType?: string | null;
+  hotelImages?: string[] | null;
   rooms: Array<Pick<BookedRoomDto, "roomType" | "quantity" | "guestName">>;
 }
 
@@ -113,6 +117,7 @@ export interface GetMyBookingsQueryData {
 
 export interface GetMyBookingsQueryVars {
   input: PaginationInput;
+  statusFilter?: BookingStatus;
 }
 
 export interface GetAgentBookingsQueryData {

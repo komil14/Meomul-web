@@ -301,15 +301,15 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     return map;
   }, [availableHotels]);
 
-  // Agent: selected hotel from URL param
+  // Agent: selected hotel from URL param; "ALL" shows cross-hotel summary
   const selectedHotelId = isAgent
-    ? hotelIdFromQuery || availableHotels[0]?._id || ""
+    ? hotelIdFromQuery || "ALL"
     : "";
 
   useEffect(() => {
-    if (!isAgent || hotelIdFromQuery || availableHotels.length === 0) return;
-    replaceQuery({ extra: { hotelId: availableHotels[0]._id } });
-  }, [availableHotels, hotelIdFromQuery, isAgent, replaceQuery]);
+    if (!isAgent || hotelIdFromQuery) return;
+    // Default to "ALL" — no auto-redirect needed
+  }, [hotelIdFromQuery, isAgent]);
 
   // ─── Booking queries ──────────────────────────────────────────────────────
 
@@ -326,7 +326,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   } = useQuery<GetAgentBookingsQueryData, GetAgentBookingsQueryVars>(
     GET_AGENT_BOOKINGS_QUERY,
     {
-      skip: !isAgent || !selectedHotelId,
+      skip: !isAgent || !selectedHotelId || selectedHotelId === "ALL",
       variables: { hotelId: selectedHotelId, input: bookingInput },
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
@@ -867,6 +867,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                 disabled={availableHotels.length === 0}
                 className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none ring-sky-400 transition focus:ring-2"
               >
+                <option value="ALL">All Hotels</option>
                 {availableHotels.length === 0 && (
                   <option value="">No hotels</option>
                 )}
@@ -961,7 +962,47 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
           <ErrorNotice message={getErrorMessage(bookingsError)} />
         )}
 
+        {/* Agent "All Hotels" summary view */}
+        {isAgent && selectedHotelId === "ALL" && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Hotels Overview
+            </p>
+            {hotelsLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+                ))}
+              </div>
+            ) : availableHotels.length === 0 ? (
+              <p className="text-sm text-slate-400">No hotels found.</p>
+            ) : (
+              <div className="space-y-3">
+                {availableHotels.map((h) => (
+                  <div
+                    key={h._id}
+                    className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{h.hotelTitle}</p>
+                      <p className="text-xs text-slate-500">{h.hotelLocation} · {h.hotelType}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => pushManageQuery({ hotelId: h._id, page: 1 })}
+                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
+                    >
+                      View bookings →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Booking table */}
+        {(!isAgent || selectedHotelId !== "ALL") && (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-sm">
@@ -1206,6 +1247,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
             </div>
           )}
         </div>
+        )}
       </main>
     </>
   );

@@ -40,7 +40,7 @@ export interface ChatDto {
   lastMessageAt: string;
   createdAt: string;
   updatedAt: string;
-  messages: MessageDto[];
+  messages?: MessageDto[];
 }
 
 export interface ChatsDto {
@@ -147,4 +147,13 @@ export interface CloseChatMutationData {
 
 export interface CloseChatMutationVars {
   chatId: string;
+}
+
+export interface ReassignChatMutationData {
+  reassignChat: ChatDto;
+}
+
+export interface ReassignChatMutationVars {
+  chatId: string;
+  newAgentId: string;
 }

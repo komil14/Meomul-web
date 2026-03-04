@@ -1,15 +1,24 @@
-import { useQuery } from "@apollo/client/react";
+import { useMutation, useQuery } from "@apollo/client/react";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { GET_ALL_CHATS_ADMIN_QUERY } from "@/graphql/chat.gql";
-import { resolveImageUrl } from "@/lib/config/env";
+import { useToast } from "@/components/ui/toast-provider";
+import { GET_ALL_CHATS_ADMIN_QUERY, GET_CHAT_QUERY, REASSIGN_CHAT_MUTATION } from "@/graphql/chat.gql";
+import { GET_ALL_MEMBERS_BY_ADMIN_QUERY } from "@/graphql/member.gql";
 import { getErrorMessage } from "@/lib/utils/error";
-import { formatNumber } from "@/lib/utils/format";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
+import { formatNumber, timeAgo } from "@/lib/utils/format";
 import type {
   GetAllChatsAdminQueryData,
   GetAllChatsAdminQueryVars,
+  GetAllMembersByAdminQueryData,
 } from "@/types/admin";
-import type { ChatDto, ChatStatus } from "@/types/chat";
+import type {
+  ChatStatus,
+  GetChatQueryData,
+  GetChatQueryVars,
+  ReassignChatMutationData,
+  ReassignChatMutationVars,
+} from "@/types/chat";
 import type { PaginationInput } from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
 import {
@@ -59,26 +68,45 @@ function formatDateTime(value: string): string {
   });
 }
 
-function timeAgo(value: string): string {
-  const diff = Date.now() - new Date(value).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
-
 /* ─── Chat detail drawer ───────────────────────────────────────────────────── */
 
 function ChatDetailDrawer({
-  chat,
+  chatId,
   onClose,
 }: {
-  chat: ChatDto;
+  chatId: string;
   onClose: () => void;
 }) {
+  const toast = useToast();
+  const [newAgentId, setNewAgentId] = useState("");
+
+  const { data, loading, refetch } = useQuery<GetChatQueryData, GetChatQueryVars>(
+    GET_CHAT_QUERY,
+    { variables: { chatId }, fetchPolicy: "cache-and-network" },
+  );
+  const chat = data?.getChat;
+
+  const agentsInput = useMemo(() => ({ page: 1, limit: 50, sort: "createdAt", direction: -1 as const }), []);
+  const { data: agentsData } = useQuery<GetAllMembersByAdminQueryData>(
+    GET_ALL_MEMBERS_BY_ADMIN_QUERY,
+    { variables: { input: agentsInput }, fetchPolicy: "cache-first" },
+  );
+  const agents = (agentsData?.getAllMembersByAdmin.list ?? []).filter(
+    (m) => m.memberType === "AGENT",
+  );
+
+  const [reassignChat, { loading: reassigning }] = useMutation<
+    ReassignChatMutationData,
+    ReassignChatMutationVars
+  >(REASSIGN_CHAT_MUTATION, {
+    onCompleted: () => {
+      toast.success("Chat reassigned successfully");
+      setNewAgentId("");
+      void refetch();
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
@@ -102,88 +130,126 @@ function ChatDetailDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          {/* meta */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-2">
-            <InfoRow label="Chat ID" value={chat._id} mono />
-            <InfoRow label="Guest ID" value={chat.guestId} mono />
-            {chat.hotelId && (
-              <InfoRow label="Hotel ID" value={chat.hotelId} mono />
-            )}
-            {chat.bookingId && (
-              <InfoRow label="Booking ID" value={chat.bookingId} mono />
-            )}
-            <InfoRow label="Scope" value={chat.chatScope} />
-            {chat.supportTopic && (
-              <InfoRow label="Topic" value={chat.supportTopic} />
-            )}
-            <InfoRow label="Status" value={chat.chatStatus} />
-            <InfoRow
-              label="Assigned Agent"
-              value={chat.assignedAgentId ?? "None"}
-            />
-            <InfoRow label="Created" value={formatDateTime(chat.createdAt)} />
-            <InfoRow label="Last Message" value={timeAgo(chat.lastMessageAt)} />
-            <InfoRow
-              label="Unread (Guest)"
-              value={String(chat.unreadGuestMessages)}
-            />
-            <InfoRow
-              label="Unread (Agent)"
-              value={String(chat.unreadAgentMessages)}
-            />
-          </div>
-
-          {/* messages */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
-              Messages ({chat.messages.length})
-            </p>
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {chat.messages.length === 0 ? (
-                <p className="text-sm text-slate-400 italic">No messages</p>
-              ) : (
-                chat.messages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`rounded-xl p-3 text-sm ${
-                      msg.senderType === "GUEST"
-                        ? "bg-slate-100 text-slate-700 mr-8"
-                        : "bg-sky-50 text-sky-800 ml-8"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-semibold uppercase tracking-wide">
-                        {msg.senderType}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {timeAgo(msg.timestamp)}
-                      </span>
-                    </div>
-                    {msg.content && (
-                      <p className="leading-relaxed">{msg.content}</p>
-                    )}
-                    {msg.imageUrl && (
-                      <img
-                        src={resolveImageUrl(msg.imageUrl)}
-                        alt="chat image"
-                        className="mt-2 h-32 w-auto rounded-lg object-cover"
-                      />
-                    )}
-                    {msg.fileUrl && (
-                      <a
-                        href={resolveImageUrl(msg.fileUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-1 inline-block text-xs text-sky-600 underline"
-                      >
-                        View file
-                      </a>
-                    )}
-                  </div>
-                ))
-              )}
+          {loading && !chat ? (
+            <div className="flex items-center justify-center gap-2 py-12">
+              <Loader2 size={18} className="animate-spin text-slate-400" />
+              <p className="text-sm text-slate-500">Loading chat...</p>
             </div>
-          </div>
+          ) : chat ? (
+            <>
+              {/* meta */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-2">
+                <InfoRow label="Chat ID" value={chat._id} mono />
+                <InfoRow label="Guest ID" value={chat.guestId} mono />
+                {chat.hotelId && (
+                  <InfoRow label="Hotel ID" value={chat.hotelId} mono />
+                )}
+                {chat.bookingId && (
+                  <InfoRow label="Booking ID" value={chat.bookingId} mono />
+                )}
+                <InfoRow label="Scope" value={chat.chatScope} />
+                {chat.supportTopic && (
+                  <InfoRow label="Topic" value={chat.supportTopic} />
+                )}
+                <InfoRow label="Status" value={chat.chatStatus} />
+                <InfoRow
+                  label="Assigned Agent"
+                  value={chat.assignedAgentId ?? "None"}
+                />
+                <InfoRow label="Created" value={formatDateTime(chat.createdAt)} />
+                <InfoRow label="Last Message" value={timeAgo(chat.lastMessageAt)} />
+                <InfoRow
+                  label="Unread (Guest)"
+                  value={String(chat.unreadGuestMessages)}
+                />
+                <InfoRow
+                  label="Unread (Agent)"
+                  value={String(chat.unreadAgentMessages)}
+                />
+              </div>
+
+              {/* reassign */}
+              {(chat.chatStatus === "WAITING" || chat.chatStatus === "ACTIVE") && (
+                <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                    Reassign Agent
+                  </p>
+                  <select
+                    value={newAgentId}
+                    onChange={(e) => setNewAgentId(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  >
+                    <option value="">Select an agent…</option>
+                    {agents.map((a) => (
+                      <option key={a._id} value={a._id}>
+                        {a.memberNick}{a.memberFullName ? ` (${a.memberFullName})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!newAgentId || reassigning}
+                    onClick={() => void reassignChat({ variables: { chatId, newAgentId } })}
+                    className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {reassigning ? "Reassigning…" : "Reassign"}
+                  </button>
+                </div>
+              )}
+
+              {/* messages */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-3">
+                  Messages ({chat.messages?.length ?? 0})
+                </p>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {(chat.messages?.length ?? 0) === 0 ? (
+                    <p className="text-sm text-slate-400 italic">No messages</p>
+                  ) : (
+                    chat.messages!.map((msg, i) => (
+                      <div
+                        key={i}
+                        className={`rounded-xl p-3 text-sm ${
+                          msg.senderType === "GUEST"
+                            ? "bg-slate-100 text-slate-700 mr-8"
+                            : "bg-sky-50 text-sky-800 ml-8"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide">
+                            {msg.senderType}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {timeAgo(msg.timestamp)}
+                          </span>
+                        </div>
+                        {msg.content && (
+                          <p className="leading-relaxed">{msg.content}</p>
+                        )}
+                        {msg.imageUrl && (
+                          <img
+                            src={resolveMediaUrl(msg.imageUrl)}
+                            alt="chat image"
+                            className="mt-2 h-32 w-auto rounded-lg object-cover"
+                          />
+                        )}
+                        {msg.fileUrl && (
+                          <a
+                            href={resolveMediaUrl(msg.fileUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-block text-xs text-sky-600 underline"
+                          >
+                            View file
+                          </a>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className="border-t border-slate-200 px-6 py-4">
@@ -227,7 +293,7 @@ const AdminChatsPage: NextPageWithAuth = () => {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<ChatStatus | "ALL">("ALL");
-  const [selectedChat, setSelectedChat] = useState<ChatDto | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 
   const input = useMemo<PaginationInput>(
     () => ({ page, limit: PAGE_SIZE, sort: "lastMessageAt", direction: -1 }),
@@ -262,13 +328,25 @@ const AdminChatsPage: NextPageWithAuth = () => {
     );
   }, [chats, searchTerm]);
 
-  const statusCounts = useMemo(() => {
-    const c: Record<string, number> = { WAITING: 0, ACTIVE: 0, CLOSED: 0 };
-    chats.forEach((ch) => {
-      if (c[ch.chatStatus] !== undefined) c[ch.chatStatus] += 1;
-    });
-    return c;
-  }, [chats]);
+  // Separate count queries per status for platform-wide totals
+  const countInput = useMemo(() => ({ page: 1, limit: 1, sort: "lastMessageAt", direction: -1 as const }), []);
+  const { data: waitingCountData } = useQuery<GetAllChatsAdminQueryData, GetAllChatsAdminQueryVars>(
+    GET_ALL_CHATS_ADMIN_QUERY,
+    { variables: { input: countInput, statusFilter: "WAITING" }, fetchPolicy: "cache-and-network" },
+  );
+  const { data: activeCountData } = useQuery<GetAllChatsAdminQueryData, GetAllChatsAdminQueryVars>(
+    GET_ALL_CHATS_ADMIN_QUERY,
+    { variables: { input: countInput, statusFilter: "ACTIVE" }, fetchPolicy: "cache-and-network" },
+  );
+  const { data: closedCountData } = useQuery<GetAllChatsAdminQueryData, GetAllChatsAdminQueryVars>(
+    GET_ALL_CHATS_ADMIN_QUERY,
+    { variables: { input: countInput, statusFilter: "CLOSED" }, fetchPolicy: "cache-and-network" },
+  );
+  const statusCounts = {
+    WAITING: waitingCountData?.getAllChatsAdmin.metaCounter.total ?? 0,
+    ACTIVE: activeCountData?.getAllChatsAdmin.metaCounter.total ?? 0,
+    CLOSED: closedCountData?.getAllChatsAdmin.metaCounter.total ?? 0,
+  };
 
   const handleTabChange = useCallback((val: ChatStatus | "ALL") => {
     setStatusFilter(val);
@@ -413,10 +491,6 @@ const AdminChatsPage: NextPageWithAuth = () => {
               </thead>
               <tbody>
                 {filteredChats.map((c) => {
-                  const lastMsg =
-                    c.messages.length > 0
-                      ? c.messages[c.messages.length - 1]
-                      : null;
                   const totalUnread =
                     c.unreadGuestMessages + c.unreadAgentMessages;
                   return (
@@ -462,8 +536,8 @@ const AdminChatsPage: NextPageWithAuth = () => {
                         </span>
                       </td>
                       {/* Messages count */}
-                      <td className="px-4 py-3.5 text-sm text-slate-700 font-semibold">
-                        {c.messages.length}
+                      <td className="px-4 py-3.5 text-sm text-slate-400">
+                        —
                       </td>
                       {/* Unread */}
                       <td className="px-4 py-3.5">
@@ -477,28 +551,15 @@ const AdminChatsPage: NextPageWithAuth = () => {
                       </td>
                       {/* Last message */}
                       <td className="px-4 py-3.5">
-                        <div className="max-w-[140px]">
-                          {lastMsg ? (
-                            <>
-                              <p className="truncate text-xs text-slate-600">
-                                {lastMsg.content ?? "(media)"}
-                              </p>
-                              <p className="text-[10px] text-slate-400">
-                                {timeAgo(lastMsg.timestamp)}
-                              </p>
-                            </>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">
-                              No messages
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-xs text-slate-500">
+                          {c.lastMessageAt ? timeAgo(c.lastMessageAt) : "—"}
+                        </span>
                       </td>
                       {/* Actions */}
                       <td className="px-4 py-3.5">
                         <button
                           type="button"
-                          onClick={() => setSelectedChat(c)}
+                          onClick={() => setSelectedChatId(c._id)}
                           className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
                           title="View chat"
                         >
@@ -542,10 +603,10 @@ const AdminChatsPage: NextPageWithAuth = () => {
       </section>
 
       {/* chat detail drawer */}
-      {selectedChat ? (
+      {selectedChatId ? (
         <ChatDetailDrawer
-          chat={selectedChat}
-          onClose={() => setSelectedChat(null)}
+          chatId={selectedChatId}
+          onClose={() => setSelectedChatId(null)}
         />
       ) : null}
     </main>
