@@ -19,6 +19,7 @@ interface SubscriptionStatusDto {
   active: boolean;
   expiresAt?: string | null;
   daysRemaining?: number | null;
+  pendingRequestedTier?: string | null;
 }
 
 interface GetSubscriptionStatusData {
@@ -112,6 +113,7 @@ export function SubscriptionTab() {
   const status = data?.getSubscriptionStatus;
   const currentTier = status?.tier ?? "FREE";
   const isActive = status?.active ?? false;
+  const pendingTier = status?.pendingRequestedTier ?? null;
 
   const handleRequest = async (tierId: string) => {
     if (tierId === currentTier) return;
@@ -181,13 +183,17 @@ export function SubscriptionTab() {
       <div className="grid gap-3 sm:grid-cols-2">
         {TIERS.map((tier) => {
           const isCurrent = tier.id === currentTier;
+          const isPending = pendingTier === tier.id;
+          const hasAnyPending = !!pendingTier;
           return (
             <div
               key={tier.id}
               className={`hover-lift flex flex-col rounded-2xl border p-5 shadow-sm transition ${
                 isCurrent
                   ? "border-slate-900 bg-white shadow-md"
-                  : "border-slate-100/80 bg-white hover:border-slate-300"
+                  : isPending
+                    ? "border-amber-300 bg-amber-50/30 shadow-sm"
+                    : "border-slate-100/80 bg-white hover:border-slate-300"
               }`}
             >
               <div className="flex items-start justify-between">
@@ -205,6 +211,11 @@ export function SubscriptionTab() {
                 {isCurrent && (
                   <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
                     Current
+                  </span>
+                )}
+                {isPending && (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">
+                    Pending
                   </span>
                 )}
               </div>
@@ -228,14 +239,34 @@ export function SubscriptionTab() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (isPending) {
+                      toast.error(
+                        "You already have a pending subscription request. Please wait for admin review.",
+                      );
+                      return;
+                    }
+                    if (hasAnyPending) {
+                      toast.error(
+                        "You already have a pending request. Please wait for admin review before requesting another tier.",
+                      );
+                      return;
+                    }
                     void handleRequest(tier.id);
                   }}
                   disabled={requesting}
-                  className="mt-4 w-full rounded-lg border border-slate-200 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-900 hover:text-slate-900 disabled:opacity-50"
+                  className={`mt-4 w-full rounded-lg border py-2 text-xs font-medium transition disabled:opacity-50 ${
+                    isPending
+                      ? "border-amber-200 bg-amber-50 text-amber-600 cursor-not-allowed"
+                      : hasAnyPending
+                        ? "border-slate-200 text-slate-400 cursor-not-allowed"
+                        : "border-slate-200 text-slate-700 hover:border-slate-900 hover:text-slate-900"
+                  }`}
                 >
-                  {tier.id === "FREE"
-                    ? "Downgrade to Free"
-                    : `Request ${tier.label}`}
+                  {isPending
+                    ? "Awaiting approval..."
+                    : tier.id === "FREE"
+                      ? "Downgrade to Free"
+                      : `Request ${tier.label}`}
                 </button>
               )}
             </div>

@@ -50,21 +50,34 @@ const NOTIFICATION_POLL_INTERVAL_MS = 60000;
 // ─── Role-aware navigation ────────────────────────────────────────────────────
 
 const NAV_LINKS = {
-  guest: [{ href: "/hotels", label: "Hotels" }],
+  guest: [
+    { href: "/",        label: "Home" },
+    { href: "/hotels",  label: "Hotels" },
+    { href: "/about",   label: "About" },
+    { href: "/support", label: "Support" },
+  ],
   user: [
-    { href: "/hotels", label: "Hotels" },
-    { href: "/bookings", label: "My bookings" },
-    { href: "/bookings/new", label: "New booking" },
+    { href: "/",         label: "Home" },
+    { href: "/hotels",   label: "Hotels" },
+    { href: "/bookings", label: "My Bookings" },
+    { href: "/about",    label: "About" },
+    { href: "/support",  label: "Support" },
   ],
   staff: [
-    { href: "/hotels", label: "Hotels" },
-    { href: "/bookings/manage", label: "Manage" },
-    { href: "/dashboard", label: "Dashboard" },
+    { href: "/",                label: "Home" },
+    { href: "/hotels",          label: "Hotels" },
+    { href: "/bookings/manage", label: "Bookings" },
+    { href: "/chats",           label: "Chats" },
+    { href: "/dashboard",       label: "Dashboard" },
+    { href: "/about",           label: "About" },
+    { href: "/support",         label: "Support" },
   ],
   admin: [
-    { href: "/hotels", label: "Hotels" },
-    { href: "/bookings/manage", label: "Manage" },
-    { href: "/dashboard", label: "Dashboard" },
+    { href: "/",                label: "Home" },
+    { href: "/hotels",          label: "Hotels" },
+    { href: "/bookings/manage", label: "Bookings" },
+    { href: "/chats",           label: "Chats" },
+    { href: "/dashboard",       label: "Dashboard" },
   ],
 } as const;
 
@@ -644,6 +657,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const hasPolledOnVisibleRef = useRef(false);
 
   const navLinks = getNavLinks(member);
+  const isStaff =
+    member?.memberType === "AGENT" ||
+    member?.memberType === "ADMIN" ||
+    member?.memberType === "ADMIN_OPERATOR";
 
   const handleLogout = () => {
     clearAuthSession();
@@ -742,12 +759,19 @@ export function SiteFrame({ children }: PropsWithChildren) {
     previousUnreadRef.current = unreadCount;
   }, [canPollUnread, canTrackUnread, router.pathname, toast, unreadCount]);
 
-  // Chat icon button — only for logged-in members not already on chat routes
+  // Chat icon button — only for logged-in members not already on chat routes.
+  // Staff (AGENT/ADMIN) navigate to the full /chats dashboard; users open the drawer.
   const chatIconButton =
     member && !isChatRoute ? (
       <button
         type="button"
-        onClick={() => setIsChatPanelOpen((prev) => !prev)}
+        onClick={() => {
+          if (isStaff) {
+            void router.push("/chats");
+          } else {
+            setIsChatPanelOpen((prev) => !prev);
+          }
+        }}
         className="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
         aria-label="Open chat"
       >

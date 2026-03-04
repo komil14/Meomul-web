@@ -48,6 +48,7 @@ export const GET_SUBSCRIPTION_STATUS_QUERY = gql`
       active
       expiresAt
       daysRemaining
+      pendingRequestedTier
     }
   }
 `;
