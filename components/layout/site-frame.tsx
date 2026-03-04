@@ -27,15 +27,21 @@ import type { SessionMember } from "@/types/auth";
 import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
 import {
   Bell,
+  BellRing,
+  Building2,
   CheckCheck,
+  ChevronDown,
   Crown,
+  DoorOpen,
   Headset,
   Heart,
   LogOut,
   MessageSquare,
   Settings,
+  ShieldCheck,
   Star,
   User,
+  Users,
 } from "lucide-react";
 
 const UNREAD_POLL_INTERVAL_MS = 120000;
@@ -59,14 +65,24 @@ const NAV_LINKS = {
     { href: "/hotels", label: "Hotels" },
     { href: "/bookings/manage", label: "Manage" },
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/admin/subscriptions", label: "Subscriptions" },
   ],
 } as const;
+
+const ADMIN_PAGES = [
+  { href: "/admin/members", label: "Members", icon: Users },
+  { href: "/admin/hotels", label: "Hotels", icon: Building2 },
+  { href: "/admin/rooms", label: "Rooms", icon: DoorOpen },
+  { href: "/admin/reviews", label: "Reviews", icon: Star },
+  { href: "/admin/chats", label: "Chats", icon: MessageSquare },
+  { href: "/admin/notifications", label: "Notifications", icon: BellRing },
+  { href: "/admin/subscriptions", label: "Subscriptions", icon: Crown },
+] as const;
 
 function getNavLinks(member: SessionMember | null) {
   if (!member) return NAV_LINKS.guest;
   if (member.memberType === "USER") return NAV_LINKS.user;
-  if (member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR") return NAV_LINKS.admin;
+  if (member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR")
+    return NAV_LINKS.admin;
   return NAV_LINKS.staff;
 }
 
@@ -203,6 +219,74 @@ function UserAvatarMenu({
               Sign out
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Admin dropdown menu ──────────────────────────────────────────────────────
+
+function AdminDropdown({ pathname }: { pathname: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const anyActive = ADMIN_PAGES.some((p) => isActive(pathname, p.href));
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+          anyActive
+            ? "bg-slate-900 text-white"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        }`}
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        <ShieldCheck size={14} />
+        Admin
+        <ChevronDown
+          size={13}
+          className={`transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-10 z-50 w-52 overflow-hidden rounded-2xl border border-slate-100 bg-white py-1 shadow-2xl">
+          {ADMIN_PAGES.map((page) => {
+            const Icon = page.icon;
+            const active = isActive(pathname, page.href);
+            return (
+              <Link
+                key={page.href}
+                href={page.href}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition ${
+                  active
+                    ? "bg-slate-50 font-semibold text-slate-900"
+                    : "text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                <Icon
+                  size={14}
+                  className={active ? "text-sky-500" : "text-slate-400"}
+                />
+                {page.label}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -458,7 +542,8 @@ function SupportFab({
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {
-      if (!panelRef.current || panelRef.current.contains(event.target as Node)) return;
+      if (!panelRef.current || panelRef.current.contains(event.target as Node))
+        return;
       setOpen(false);
     };
     document.addEventListener("mousedown", handler);
@@ -470,10 +555,15 @@ function SupportFab({
     : "bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:bottom-6";
 
   return (
-    <div className={`fixed right-3 z-50 sm:right-5 ${containerBottom}`} ref={panelRef}>
+    <div
+      className={`fixed right-3 z-50 sm:right-5 ${containerBottom}`}
+      ref={panelRef}
+    >
       <div
         className={`absolute bottom-[4.35rem] right-0 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl transition ${
-          open ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0"
+          open
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-2 opacity-0"
         }`}
       >
         <button
@@ -531,13 +621,16 @@ export function SiteFrame({ children }: PropsWithChildren) {
   // Subscribe to Apollo cache for live memberImage updates when profile is saved.
   // fetchPolicy:"cache-only" means no extra network request — it just reads
   // whatever the profile page already fetched and updates when the mutation fires.
-  const { data: memberCacheData } = useQuery<{ getMember: { memberImage?: string | null } }>(
-    GET_MEMBER_QUERY,
-    { skip: !member, fetchPolicy: "cache-only" },
-  );
+  const { data: memberCacheData } = useQuery<{
+    getMember: { memberImage?: string | null };
+  }>(GET_MEMBER_QUERY, { skip: !member, fetchPolicy: "cache-only" });
   // Merge live image into member so both desktop and mobile avatars auto-update
   const memberWithLiveImage = member
-    ? { ...member, memberImage: memberCacheData?.getMember.memberImage ?? member.memberImage }
+    ? {
+        ...member,
+        memberImage:
+          memberCacheData?.getMember.memberImage ?? member.memberImage,
+      }
     : null;
 
   const isPageVisible = usePageVisible();
@@ -722,6 +815,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
                 </Link>
               );
             })}
+            {(member?.memberType === "ADMIN" ||
+              member?.memberType === "ADMIN_OPERATOR") && (
+              <AdminDropdown pathname={router.pathname} />
+            )}
           </nav>
 
           {/* Divider + right-side actions */}
@@ -730,7 +827,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
               <>
                 {notifBellButton}
                 {chatIconButton}
-                <UserAvatarMenu member={memberWithLiveImage ?? member} onLogout={handleLogout} />
+                <UserAvatarMenu
+                  member={memberWithLiveImage ?? member}
+                  onLogout={handleLogout}
+                />
               </>
             ) : (
               <>
@@ -832,6 +932,39 @@ export function SiteFrame({ children }: PropsWithChildren) {
                 );
               })}
             </nav>
+
+            {/* Admin management links */}
+            {(member?.memberType === "ADMIN" ||
+              member?.memberType === "ADMIN_OPERATOR") && (
+              <div className="mt-3 border-t border-slate-100 pt-3">
+                <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  Admin
+                </p>
+                <nav className="flex flex-col gap-0.5">
+                  {ADMIN_PAGES.map((page) => {
+                    const Icon = page.icon;
+                    const active = isActive(router.pathname, page.href);
+                    return (
+                      <Link
+                        key={`mobile-${page.href}`}
+                        href={page.href}
+                        className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                          active
+                            ? "bg-slate-900 text-white"
+                            : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <Icon
+                          size={15}
+                          className={active ? "text-white" : "text-slate-400"}
+                        />
+                        {page.label}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            )}
 
             {/* Bottom section: settings/logout or auth buttons */}
             <div className="mt-3 border-t border-slate-100 pt-3">

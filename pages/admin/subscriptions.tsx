@@ -39,10 +39,10 @@ const TIER_DURATION_DEFAULT: Record<string, number> = {
 };
 
 const TIER_COLOR: Record<string, string> = {
-  BASIC: "bg-sky-100 text-sky-700",
-  PREMIUM: "bg-violet-100 text-violet-700",
-  ELITE: "bg-amber-100 text-amber-700",
-  FREE: "bg-slate-100 text-slate-600",
+  BASIC: "bg-sky-50 text-sky-700 border-sky-200",
+  PREMIUM: "bg-violet-50 text-violet-700 border-violet-200",
+  ELITE: "bg-amber-50 text-amber-700 border-amber-200",
+  FREE: "bg-slate-50 text-slate-600 border-slate-200",
 };
 
 /** Extract tier from message e.g. "Nick requested PREMIUM subscription" */
@@ -66,7 +66,10 @@ function timeAgo(dateStr: string): string {
   if (m < 60) return `${m}m ago`;
   if (h < 24) return `${h}h ago`;
   if (d === 1) return "Yesterday";
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 // ─── Approve modal ─────────────────────────────────────────────────────────────
@@ -90,9 +93,12 @@ function ApproveModal({
     TIER_DURATION_DEFAULT[tier] ?? 30,
   );
 
-  const [approveSubscription, { loading }] = useMutation(APPROVE_SUBSCRIPTION_MUTATION, {
-    refetchQueries: [{ query: GET_SUBSCRIPTION_REQUESTS_QUERY }],
-  });
+  const [approveSubscription, { loading }] = useMutation(
+    APPROVE_SUBSCRIPTION_MUTATION,
+    {
+      refetchQueries: [{ query: GET_SUBSCRIPTION_REQUESTS_QUERY }],
+    },
+  );
 
   const handleApprove = async () => {
     if (!memberId) {
@@ -103,7 +109,9 @@ function ApproveModal({
       await approveSubscription({
         variables: { memberId, tier: selectedTier, durationDays },
       });
-      toast.success(`Subscription approved — ${selectedTier} for ${durationDays} days.`);
+      toast.success(
+        `Subscription approved — ${selectedTier} for ${durationDays} days.`,
+      );
       onApproved();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -116,16 +124,21 @@ function ApproveModal({
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/30"
       />
-      <div className="relative w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
-        <h3 className="text-base font-bold text-slate-900">Approve subscription</h3>
+      <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Approve
+        </p>
+        <h3 className="mt-2 text-lg font-semibold text-slate-900 font-[family-name:var(--font-display)]">
+          Subscription
+        </h3>
         <p className="mt-1 text-sm text-slate-500">{request.message}</p>
 
         <div className="mt-5 space-y-4">
           {/* Tier select */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               Tier
             </label>
             <div className="flex gap-2">
@@ -137,10 +150,10 @@ function ApproveModal({
                     setSelectedTier(t);
                     setDurationDays(TIER_DURATION_DEFAULT[t] ?? 30);
                   }}
-                  className={`flex-1 rounded-xl py-2 text-sm font-semibold transition ${
+                  className={`flex-1 rounded-xl border py-2 text-sm font-semibold transition ${
                     selectedTier === t
                       ? TIER_COLOR[t]
-                      : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                      : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"
                   }`}
                 >
                   {t.charAt(0) + t.slice(1).toLowerCase()}
@@ -151,7 +164,7 @@ function ApproveModal({
 
           {/* Duration */}
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               Duration (days)
             </label>
             <div className="flex gap-2">
@@ -177,15 +190,17 @@ function ApproveModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            className="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={() => { void handleApprove(); }}
+            onClick={() => {
+              void handleApprove();
+            }}
             disabled={loading || !memberId}
-            className="flex-1 rounded-xl bg-emerald-500 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-60"
+            className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50"
           >
             {loading ? "Approving..." : "Approve"}
           </button>
@@ -210,9 +225,12 @@ function DenyModal({
   const memberId = parseMemberIdFromLink(request.link);
   const [reason, setReason] = useState("");
 
-  const [denySubscription, { loading }] = useMutation(DENY_SUBSCRIPTION_MUTATION, {
-    refetchQueries: [{ query: GET_SUBSCRIPTION_REQUESTS_QUERY }],
-  });
+  const [denySubscription, { loading }] = useMutation(
+    DENY_SUBSCRIPTION_MUTATION,
+    {
+      refetchQueries: [{ query: GET_SUBSCRIPTION_REQUESTS_QUERY }],
+    },
+  );
 
   const handleDeny = async () => {
     if (!memberId) {
@@ -236,15 +254,23 @@ function DenyModal({
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/30"
       />
-      <div className="relative w-full max-w-sm rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
-        <h3 className="text-base font-bold text-slate-900">Deny request</h3>
+      <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Deny
+        </p>
+        <h3 className="mt-2 text-lg font-semibold text-slate-900 font-[family-name:var(--font-display)]">
+          Subscription Request
+        </h3>
         <p className="mt-1 text-sm text-slate-500">{request.message}</p>
 
         <div className="mt-4">
-          <label className="mb-1.5 block text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Reason <span className="font-normal normal-case text-slate-400">(optional)</span>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Reason{" "}
+            <span className="font-normal normal-case text-slate-400">
+              (optional)
+            </span>
           </label>
           <textarea
             value={reason}
@@ -260,15 +286,17 @@ function DenyModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            className="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={() => { void handleDeny(); }}
+            onClick={() => {
+              void handleDeny();
+            }}
             disabled={loading || !memberId}
-            className="flex-1 rounded-xl bg-rose-500 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:opacity-60"
+            className="flex-1 rounded-xl bg-rose-600 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-50"
           >
             {loading ? "Denying..." : "Deny"}
           </button>
@@ -283,17 +311,17 @@ function DenyModal({
 const AdminSubscriptionsPage: NextPageWithAuth = () => {
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
-  const [approving, setApproving] = useState<SubscriptionRequestNotif | null>(null);
+  const [approving, setApproving] = useState<SubscriptionRequestNotif | null>(
+    null,
+  );
   const [denying, setDenying] = useState<SubscriptionRequestNotif | null>(null);
 
-  const { data, loading, error, refetch } = useQuery<GetSubscriptionRequestsData>(
-    GET_SUBSCRIPTION_REQUESTS_QUERY,
-    {
+  const { data, loading, error, refetch } =
+    useQuery<GetSubscriptionRequestsData>(GET_SUBSCRIPTION_REQUESTS_QUERY, {
       skip: !member,
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
-    },
-  );
+    });
 
   const requests = data?.getSubscriptionRequests ?? [];
 
@@ -319,27 +347,37 @@ const AdminSubscriptionsPage: NextPageWithAuth = () => {
         />
       )}
 
-      <main className="mx-auto max-w-2xl space-y-6">
+      <main className="mx-auto w-full max-w-3xl space-y-6 pb-12">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Subscription Requests</h1>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {requests.length > 0
-                ? `${requests.length} pending request${requests.length !== 1 ? "s" : ""}`
-                : "No pending requests"}
-            </p>
+        <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)]">
+          <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-violet-50 blur-3xl" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                Admin Panel
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 font-[family-name:var(--font-display)]">
+                Subscription Requests
+              </h1>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
+                {requests.length > 0
+                  ? `${requests.length} pending request${requests.length !== 1 ? "s" : ""} awaiting review.`
+                  : "No pending requests at this time."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void refetch();
+              }}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-400 disabled:opacity-60"
+            >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => { void refetch(); }}
-            disabled={loading}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 disabled:opacity-60"
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
-        </div>
+        </section>
 
         {error && <ErrorNotice message={getErrorMessage(error)} />}
 
@@ -347,7 +385,10 @@ const AdminSubscriptionsPage: NextPageWithAuth = () => {
         {loading && requests.length === 0 && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4">
+              <div
+                key={i}
+                className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)]"
+              >
                 <div className="h-10 w-10 animate-pulse rounded-full bg-slate-100" />
                 <div className="flex-1 space-y-2">
                   <div className="h-3.5 w-2/3 animate-pulse rounded-full bg-slate-100" />
@@ -360,39 +401,49 @@ const AdminSubscriptionsPage: NextPageWithAuth = () => {
 
         {/* Empty state */}
         {!loading && requests.length === 0 && !error && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white py-16">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-              <Crown size={24} className="text-slate-300" />
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50">
+              <Crown size={24} className="text-violet-400" />
             </div>
-            <p className="mt-4 text-base font-semibold text-slate-700">All caught up</p>
-            <p className="mt-1 text-sm text-slate-400">No pending subscription requests.</p>
+            <p className="mt-4 text-base font-semibold text-slate-700 font-[family-name:var(--font-display)]">
+              All caught up
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              No pending subscription requests.
+            </p>
           </div>
         )}
 
         {/* Request list */}
         {requests.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {requests.map((req) => {
               const tier = parseTierFromMessage(req.message);
               const tierCls = TIER_COLOR[tier] ?? TIER_COLOR.BASIC;
               return (
                 <div
                   key={req._id}
-                  className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-100 bg-white px-5 py-4"
+                  className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)] transition hover:border-slate-300"
                 >
                   {/* Icon */}
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-violet-50">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-violet-50">
                     <Crown size={18} className="text-violet-500" />
                   </div>
 
                   {/* Info */}
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900">{req.message}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${tierCls}`}>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {req.message}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${tierCls}`}
+                      >
                         {tier}
                       </span>
-                      <span className="text-xs text-slate-400">{timeAgo(req.createdAt)}</span>
+                      <span className="text-xs text-slate-400">
+                        {timeAgo(req.createdAt)}
+                      </span>
                     </div>
                   </div>
 
@@ -409,7 +460,7 @@ const AdminSubscriptionsPage: NextPageWithAuth = () => {
                     <button
                       type="button"
                       onClick={() => setApproving(req)}
-                      className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-600"
+                      className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
                     >
                       <Check size={13} />
                       Approve

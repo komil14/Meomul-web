@@ -236,17 +236,118 @@ export const GET_AGENT_HOTELS_QUERY = gql`
   }
 `;
 
+export const GET_ALL_HOTELS_ADMIN_QUERY = gql`
+  query GetAllHotelsAdmin(
+    $input: PaginationInput!
+    $statusFilter: HotelStatus
+  ) {
+    getAllHotelsAdmin(input: $input, statusFilter: $statusFilter) {
+      list {
+        _id
+        hotelTitle
+        hotelLocation
+        hotelType
+        hotelStatus
+        verificationStatus
+        badgeLevel
+        hotelRating
+        hotelLikes
+        hotelImages
+        warningStrikes
+        safeStayCertified
+        starRating
+        createdAt
+        updatedAt
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+`;
+
 export const GET_DASHBOARD_STATS_QUERY = gql`
   query GetDashboardStats {
     getDashboardStats {
       totalMembers
       totalHotels
+      totalRooms
       totalBookings
-      totalRevenue
-      pendingHotels
-      pendingBookings
+      totalReviews
       newBookingsToday
+      checkInsToday
+      checkOutsToday
+      newReviewsToday
+      newMembersToday
+      pendingHotels
+      activeHotels
+      pendingBookings
+      confirmedBookings
+      totalRevenue
       todayRevenue
+      totalChats
+      waitingChats
+      activeChats
+      availableRooms
+      maintenanceRooms
+      totalNotifications
+      unreadNotifications
+    }
+  }
+`;
+
+export const UPDATE_HOTEL_BY_ADMIN_MUTATION = gql`
+  mutation UpdateHotelByAdmin($input: HotelUpdate!) {
+    updateHotelByAdmin(input: $input) {
+      _id
+      hotelTitle
+      hotelLocation
+      hotelType
+      hotelStatus
+      verificationStatus
+      badgeLevel
+      hotelRating
+      hotelLikes
+      hotelImages
+      warningStrikes
+      safeStayCertified
+    }
+  }
+`;
+
+export const GET_ALL_ROOMS_ADMIN_QUERY = gql`
+  query GetAllRoomsAdmin($input: PaginationInput!, $statusFilter: RoomStatus) {
+    getAllRoomsAdmin(input: $input, statusFilter: $statusFilter) {
+      list {
+        _id
+        hotelId
+        roomName
+        roomType
+        roomStatus
+        basePrice
+        availableRooms
+        roomImages
+        bedType
+        viewType
+        maxGuests
+        squareMeters
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+`;
+
+export const UPDATE_ROOM_BY_ADMIN_MUTATION = gql`
+  mutation UpdateRoomByAdmin($input: RoomUpdate!) {
+    updateRoomByAdmin(input: $input) {
+      _id
+      roomName
+      roomType
+      roomStatus
+      basePrice
+      availableRooms
     }
   }
 `;

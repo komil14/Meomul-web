@@ -9,17 +9,42 @@ export type HotelLocation =
   | "GYEONGJU"
   | "GANGNEUNG";
 
-export type HotelType = "HOTEL" | "MOTEL" | "RESORT" | "GUESTHOUSE" | "HANOK" | "PENSION";
+export type HotelType =
+  | "HOTEL"
+  | "MOTEL"
+  | "RESORT"
+  | "GUESTHOUSE"
+  | "HANOK"
+  | "PENSION";
 export type CancellationPolicy = "FLEXIBLE" | "MODERATE" | "STRICT";
-export type HotelStatus = "PENDING" | "ACTIVE" | "INACTIVE" | "SUSPENDED" | "DELETE";
+export type HotelStatus =
+  | "PENDING"
+  | "ACTIVE"
+  | "INACTIVE"
+  | "SUSPENDED"
+  | "DELETE";
 export type VerificationStatus = "PENDING" | "VERIFIED" | "REJECTED";
 export type BadgeLevel = "NONE" | "VERIFIED" | "SUPERHOST" | "INSPECTED";
 
-export type RoomType = "STANDARD" | "DELUXE" | "SUITE" | "FAMILY" | "PREMIUM" | "PENTHOUSE";
+export type RoomType =
+  | "STANDARD"
+  | "DELUXE"
+  | "SUITE"
+  | "FAMILY"
+  | "PREMIUM"
+  | "PENTHOUSE";
 export type RoomStatus = "AVAILABLE" | "BOOKED" | "MAINTENANCE" | "INACTIVE";
 export type BedType = "SINGLE" | "DOUBLE" | "QUEEN" | "KING" | "TWIN";
 export type ViewType = "CITY" | "OCEAN" | "MOUNTAIN" | "GARDEN" | "NONE";
-export type StayPurpose = "BUSINESS" | "ROMANTIC" | "FAMILY" | "SOLO" | "STAYCATION" | "EVENT" | "MEDICAL" | "LONG_TERM";
+export type StayPurpose =
+  | "BUSINESS"
+  | "ROMANTIC"
+  | "FAMILY"
+  | "SOLO"
+  | "STAYCATION"
+  | "EVENT"
+  | "MEDICAL"
+  | "LONG_TERM";
 export type HotelAmenityKey =
   | "workspace"
   | "wifi"
@@ -320,12 +345,114 @@ export interface GetAgentHotelsQueryVars {
 export interface DashboardStatsDto {
   totalMembers: number;
   totalHotels: number;
+  totalRooms: number;
   totalBookings: number;
-  totalRevenue: number;
-  pendingHotels: number;
-  pendingBookings: number;
+  totalReviews: number;
   newBookingsToday: number;
+  checkInsToday: number;
+  checkOutsToday: number;
+  newReviewsToday: number;
+  newMembersToday: number;
+  pendingHotels: number;
+  activeHotels: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  totalRevenue: number;
   todayRevenue: number;
+  totalChats: number;
+  waitingChats: number;
+  activeChats: number;
+  availableRooms: number;
+  maintenanceRooms: number;
+  totalNotifications: number;
+  unreadNotifications: number;
+}
+
+export interface AdminHotelListItem {
+  _id: string;
+  hotelTitle: string;
+  hotelLocation: HotelLocation;
+  hotelType: HotelType;
+  hotelStatus: HotelStatus;
+  verificationStatus: VerificationStatus;
+  badgeLevel: BadgeLevel;
+  hotelRating: number;
+  hotelLikes: number;
+  hotelImages: string[];
+  warningStrikes: number;
+  safeStayCertified: boolean;
+  starRating?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AdminHotelsDto {
+  list: AdminHotelListItem[];
+  metaCounter: MetaCounterDto;
+}
+
+export interface GetAllHotelsAdminQueryData {
+  getAllHotelsAdmin: AdminHotelsDto;
+}
+
+export interface GetAllHotelsAdminQueryVars {
+  input: PaginationInput;
+  statusFilter?: HotelStatus;
+}
+
+export interface HotelUpdateInput {
+  _id: string;
+  hotelStatus?: HotelStatus;
+  badgeLevel?: BadgeLevel;
+  starRating?: number;
+}
+
+export interface UpdateHotelByAdminMutationVars {
+  input: HotelUpdateInput;
+}
+
+export interface UpdateHotelByAdminMutationData {
+  updateHotelByAdmin: AdminHotelListItem;
+}
+
+export interface AdminRoomListItem {
+  _id: string;
+  hotelId: string;
+  roomName: string;
+  roomType: RoomType;
+  roomStatus: RoomStatus;
+  basePrice: number;
+  availableRooms: number;
+  roomImages: string[];
+  bedType: BedType;
+  viewType: ViewType;
+  maxGuests: number;
+  squareMeters: number;
+}
+
+export interface AdminRoomsDto {
+  list: AdminRoomListItem[];
+  metaCounter: MetaCounterDto;
+}
+
+export interface GetAllRoomsAdminQueryData {
+  getAllRoomsAdmin: AdminRoomsDto;
+}
+
+export interface GetAllRoomsAdminQueryVars {
+  input: PaginationInput;
+  statusFilter?: RoomStatus;
+}
+
+export interface UpdateRoomByAdminMutationData {
+  updateRoomByAdmin: {
+    _id: string;
+    roomName: string;
+    roomType: RoomType;
+    roomStatus: RoomStatus;
+    basePrice: number;
+    availableRooms: number;
+  };
 }
 
 export interface GetDashboardStatsQueryData {
@@ -363,6 +490,8 @@ export interface ReviewDto {
   verifiedStay: boolean;
   stayDate: string;
   createdAt: string;
+  updatedAt?: string;
+  reviewViews?: number;
   hotelResponse?: HotelResponseDto | null;
 }
 

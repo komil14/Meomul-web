@@ -7,8 +7,8 @@ import { GET_ANALYTICS_EVENTS_ADMIN_QUERY } from "@/graphql/analytics.gql";
 import { GET_ALL_BOOKINGS_ADMIN_QUERY } from "@/graphql/booking.gql";
 import {
   GET_AGENT_HOTELS_QUERY,
+  GET_ALL_HOTELS_ADMIN_QUERY,
   GET_DASHBOARD_STATS_QUERY,
-  GET_HOTELS_QUERY,
 } from "@/graphql/hotel.gql";
 import { GET_ALL_REVIEWS_ADMIN_QUERY } from "@/graphql/review.gql";
 import { getSessionMember } from "@/lib/auth/session";
@@ -27,30 +27,34 @@ import type {
   GetAllBookingsAdminQueryVars,
 } from "@/types/booking";
 import type {
+  AdminHotelListItem,
   GetAgentHotelsQueryData,
   GetAgentHotelsQueryVars,
+  GetAllHotelsAdminQueryData,
+  GetAllHotelsAdminQueryVars,
   GetAllReviewsAdminQueryData,
   GetAllReviewsAdminQueryVars,
   GetDashboardStatsQueryData,
-  GetHotelsQueryData,
-  GetHotelsQueryVars,
-  HotelListItem,
   PaginationInput,
   ReviewStatus,
 } from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
 import {
-  ArrowDownRight,
+  AlertCircle,
   ArrowUpRight,
+  BellRing,
   BookCheck,
   Building2,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock3,
+  Crown,
+  DoorOpen,
   Loader2,
-  MessageSquareText,
+  MessageSquare,
   RefreshCcw,
+  Star,
   UsersRound,
   Wallet,
 } from "lucide-react";
@@ -60,7 +64,7 @@ const DASHBOARD_REFRESH_COOLDOWN_MS = 60000;
 const ANALYTICS_LIST_LIMIT = 10;
 const ADMIN_HOTELS_INPUT: PaginationInput = {
   page: 1,
-  limit: 120,
+  limit: 100,
   sort: "createdAt",
   direction: -1,
 };
@@ -129,14 +133,22 @@ function monthStart(date: Date): Date {
 }
 
 function addMonths(date: Date, delta: number): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + delta, 1));
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + delta, 1),
+  );
 }
 
 function buildCalendarDays(cursor: Date): Date[] {
   const firstOfMonth = monthStart(cursor);
   const weekday = firstOfMonth.getUTCDay();
   const mondayBasedOffset = weekday === 0 ? 6 : weekday - 1;
-  const start = new Date(Date.UTC(firstOfMonth.getUTCFullYear(), firstOfMonth.getUTCMonth(), 1 - mondayBasedOffset));
+  const start = new Date(
+    Date.UTC(
+      firstOfMonth.getUTCFullYear(),
+      firstOfMonth.getUTCMonth(),
+      1 - mondayBasedOffset,
+    ),
+  );
   return Array.from({ length: 42 }, (_, index) => {
     const day = new Date(start);
     day.setUTCDate(start.getUTCDate() + index);
@@ -172,60 +184,41 @@ function formatDateTime(value: string): string {
 }
 
 function memberTypeTone(memberType: MemberType): string {
-  if (memberType === "ADMIN" || memberType === "ADMIN_OPERATOR") return "bg-rose-100 text-rose-700";
+  if (memberType === "ADMIN" || memberType === "ADMIN_OPERATOR")
+    return "bg-rose-100 text-rose-700";
   if (memberType === "AGENT") return "bg-violet-100 text-violet-700";
   return "bg-sky-100 text-sky-700";
-}
-
-function RingGauge({ label, value, color }: { label: string; value: number; color: string }) {
-  const clamped = Math.max(0, Math.min(100, Math.round(value)));
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="flex items-center gap-4">
-        <div
-          className="relative h-16 w-16 rounded-full"
-          style={{ background: `conic-gradient(${color} ${clamped * 3.6}deg, #e2e8f0 0deg)` }}
-        >
-          <div className="absolute inset-[8px] rounded-full bg-white" />
-        </div>
-        <div>
-          <p className="text-3xl font-semibold text-slate-900">{clamped}%</p>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-        </div>
-      </div>
-    </article>
-  );
 }
 
 function KpiCard({
   title,
   value,
-  deltaText,
+  sub,
   tone,
   icon,
 }: {
   title: string;
   value: string;
-  deltaText: string;
+  sub: string;
   tone: "sky" | "emerald" | "amber" | "rose";
   icon: React.ReactNode;
 }) {
-  const toneClass: Record<typeof tone, string> = {
-    sky: "from-sky-500 to-sky-400",
-    emerald: "from-emerald-500 to-emerald-400",
-    amber: "from-amber-500 to-amber-400",
-    rose: "from-rose-500 to-orange-400",
+  const iconBg: Record<typeof tone, string> = {
+    sky: "bg-sky-100 text-sky-600",
+    emerald: "bg-emerald-100 text-emerald-600",
+    amber: "bg-amber-100 text-amber-600",
+    rose: "bg-rose-100 text-rose-600",
   };
   return (
-    <article className={`rounded-2xl bg-gradient-to-br ${toneClass[tone]} p-5 text-white shadow-sm`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/80">{title}</p>
-          <p className="mt-3 text-3xl font-semibold">{value}</p>
-          <p className="mt-2 text-sm text-white/90">{deltaText}</p>
-        </div>
-        <span className="rounded-xl bg-white/20 p-2.5 text-white">{icon}</span>
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+          {title}
+        </p>
+        <span className={`rounded-xl p-2 ${iconBg[tone]}`}>{icon}</span>
       </div>
+      <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+      <p className="mt-1 text-xs font-medium text-slate-500">{sub}</p>
     </article>
   );
 }
@@ -239,6 +232,7 @@ const DashboardPage: NextPageWithAuth = () => {
 
   const [monthCursor, setMonthCursor] = useState(() => monthStart(new Date()));
   const [analyticsPage, setAnalyticsPage] = useState(1);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [analyticsDraftFilters, setAnalyticsDraftFilters] =
     useState<AnalyticsFilterFormState>(INITIAL_ANALYTICS_FILTERS);
   const [analyticsAppliedFilters, setAnalyticsAppliedFilters] =
@@ -256,10 +250,13 @@ const DashboardPage: NextPageWithAuth = () => {
     const search: AnalyticsEventSearchInput = {};
     if (eventName) search.eventName = eventName;
     if (memberId) search.memberId = memberId;
-    if (analyticsAppliedFilters.memberType) search.memberType = analyticsAppliedFilters.memberType;
+    if (analyticsAppliedFilters.memberType)
+      search.memberType = analyticsAppliedFilters.memberType;
     if (source) search.source = source;
-    if (analyticsAppliedFilters.fromDate) search.fromDate = analyticsAppliedFilters.fromDate;
-    if (analyticsAppliedFilters.toDate) search.toDate = analyticsAppliedFilters.toDate;
+    if (analyticsAppliedFilters.fromDate)
+      search.fromDate = analyticsAppliedFilters.fromDate;
+    if (analyticsAppliedFilters.toDate)
+      search.toDate = analyticsAppliedFilters.toDate;
     return Object.keys(search).length > 0 ? search : undefined;
   }, [analyticsAppliedFilters, isAdminArea]);
 
@@ -289,12 +286,15 @@ const DashboardPage: NextPageWithAuth = () => {
     loading: adminHotelsLoading,
     error: adminHotelsError,
     refetch: refetchAdminHotels,
-  } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(GET_HOTELS_QUERY, {
-    skip: !isAdminArea,
-    variables: { input: ADMIN_HOTELS_INPUT },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-  });
+  } = useQuery<GetAllHotelsAdminQueryData, GetAllHotelsAdminQueryVars>(
+    GET_ALL_HOTELS_ADMIN_QUERY,
+    {
+      skip: !isAdminArea,
+      variables: { input: ADMIN_HOTELS_INPUT },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
   const {
     data: allBookingsData,
@@ -334,23 +334,23 @@ const DashboardPage: NextPageWithAuth = () => {
     loading: analyticsEventsLoading,
     error: analyticsEventsError,
     refetch: refetchAnalyticsEvents,
-  } = useQuery<GetAnalyticsEventsAdminQueryData, GetAnalyticsEventsAdminQueryVars>(
-    GET_ANALYTICS_EVENTS_ADMIN_QUERY,
-    {
-      skip: !isAdminArea,
-      variables: {
-        input: {
-          page: analyticsPage,
-          limit: ANALYTICS_LIST_LIMIT,
-          sort: "createdAt",
-          direction: -1,
-        },
-        ...(analyticsSearch ? { search: analyticsSearch } : {}),
+  } = useQuery<
+    GetAnalyticsEventsAdminQueryData,
+    GetAnalyticsEventsAdminQueryVars
+  >(GET_ANALYTICS_EVENTS_ADMIN_QUERY, {
+    skip: !isAdminArea,
+    variables: {
+      input: {
+        page: analyticsPage,
+        limit: ANALYTICS_LIST_LIMIT,
+        sort: "createdAt",
+        direction: -1,
       },
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
+      ...(analyticsSearch ? { search: analyticsSearch } : {}),
     },
-  );
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
 
   const {
     data: agentHotelsData,
@@ -381,7 +381,8 @@ const DashboardPage: NextPageWithAuth = () => {
     if (!becameVisible) return;
 
     const nowMs = Date.now();
-    if (nowMs - lastRefreshAtRef.current < DASHBOARD_REFRESH_COOLDOWN_MS) return;
+    if (nowMs - lastRefreshAtRef.current < DASHBOARD_REFRESH_COOLDOWN_MS)
+      return;
     lastRefreshAtRef.current = nowMs;
 
     void refetchAuth();
@@ -403,9 +404,12 @@ const DashboardPage: NextPageWithAuth = () => {
     refetchDashboardStats,
   ]);
 
-  const hotels = useMemo(() => adminHotelsData?.getHotels.list ?? [], [adminHotelsData]);
+  const hotels = useMemo(
+    () => adminHotelsData?.getAllHotelsAdmin.list ?? [],
+    [adminHotelsData],
+  );
   const hotelsMap = useMemo(() => {
-    const map = new Map<string, HotelListItem>();
+    const map = new Map<string, AdminHotelListItem>();
     hotels.forEach((hotel) => {
       map.set(hotel._id, hotel);
     });
@@ -421,9 +425,14 @@ const DashboardPage: NextPageWithAuth = () => {
     () => allReviewsData?.getAllReviewsAdmin.list ?? [],
     [allReviewsData],
   );
-  const analyticsEvents = analyticsEventsData?.getAnalyticsEventsAdmin.list ?? [];
-  const analyticsTotal = analyticsEventsData?.getAnalyticsEventsAdmin.metaCounter.total ?? 0;
-  const analyticsTotalPages = Math.max(1, Math.ceil(analyticsTotal / ANALYTICS_LIST_LIMIT));
+  const analyticsEvents =
+    analyticsEventsData?.getAnalyticsEventsAdmin.list ?? [];
+  const analyticsTotal =
+    analyticsEventsData?.getAnalyticsEventsAdmin.metaCounter.total ?? 0;
+  const analyticsTotalPages = Math.max(
+    1,
+    Math.ceil(analyticsTotal / ANALYTICS_LIST_LIMIT),
+  );
 
   const bookingCounts = useMemo(() => {
     const counts: Record<BookingStatus, number> = {
@@ -440,10 +449,6 @@ const DashboardPage: NextPageWithAuth = () => {
     return counts;
   }, [recentBookings]);
 
-  const completedBase = Math.max(1, bookingCounts.CHECKED_IN + bookingCounts.CHECKED_OUT + bookingCounts.CONFIRMED);
-  const checkInPercent = (bookingCounts.CHECKED_IN / completedBase) * 100;
-  const checkOutPercent = (bookingCounts.CHECKED_OUT / completedBase) * 100;
-
   const bookingDensityByDay = useMemo(() => {
     const map = new Map<string, number>();
     recentBookings.forEach((booking) => {
@@ -453,8 +458,14 @@ const DashboardPage: NextPageWithAuth = () => {
     return map;
   }, [recentBookings]);
 
-  const calendarDays = useMemo(() => buildCalendarDays(monthCursor), [monthCursor]);
-  const monthLabel = useMemo(() => formatMonthLabel(monthCursor), [monthCursor]);
+  const calendarDays = useMemo(
+    () => buildCalendarDays(monthCursor),
+    [monthCursor],
+  );
+  const monthLabel = useMemo(
+    () => formatMonthLabel(monthCursor),
+    [monthCursor],
+  );
   const activeMonth = monthCursor.getUTCMonth();
   const todayKey = useMemo(() => toDayKey(new Date().toISOString()), []);
 
@@ -479,7 +490,9 @@ const DashboardPage: NextPageWithAuth = () => {
     return (
       <main className="mx-auto w-full max-w-5xl space-y-5">
         <section className="rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">Agent Workspace</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
+            Agent Workspace
+          </p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-900">
             Welcome, {member?.memberNick ?? "Agent"}
           </h1>
@@ -502,7 +515,9 @@ const DashboardPage: NextPageWithAuth = () => {
           </div>
         </section>
 
-        {agentHotelsError ? <ErrorNotice message={getErrorMessage(agentHotelsError)} /> : null}
+        {agentHotelsError ? (
+          <ErrorNotice message={getErrorMessage(agentHotelsError)} />
+        ) : null}
         {agentHotelsLoading && agentHotels.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
             Loading your hotels...
@@ -515,7 +530,9 @@ const DashboardPage: NextPageWithAuth = () => {
         ) : null}
         {agentHotels.length > 0 ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="text-lg font-semibold text-slate-900">Assigned Hotels</h2>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Assigned Hotels
+            </h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {agentHotels.map((hotel) => (
                 <Link
@@ -523,12 +540,15 @@ const DashboardPage: NextPageWithAuth = () => {
                   href={`/hotels/${hotel._id}`}
                   className="rounded-xl border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50"
                 >
-                  <p className="font-semibold text-slate-900">{hotel.hotelTitle}</p>
+                  <p className="font-semibold text-slate-900">
+                    {hotel.hotelTitle}
+                  </p>
                   <p className="mt-1 text-sm text-slate-500">
                     {hotel.hotelLocation} · {hotel.hotelType}
                   </p>
                   <p className="mt-2 text-xs text-slate-500">
-                    Rating {hotel.hotelRating.toFixed(1)} · Likes {formatNumber(hotel.hotelLikes)}
+                    Rating {hotel.hotelRating.toFixed(1)} · Likes{" "}
+                    {formatNumber(hotel.hotelLikes)}
                   </p>
                 </Link>
               ))}
@@ -540,470 +560,715 @@ const DashboardPage: NextPageWithAuth = () => {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl space-y-5">
-      <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-100 via-white to-cyan-50 p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Admin Control Center</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Dashboard</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Real-time overview of bookings, reviews, inventory health, and onboarding event activity.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
-                {member?.memberType ?? "ADMIN"}
+    <main className="mx-auto w-full max-w-6xl space-y-6">
+      {/* ── Header ── */}
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Admin Dashboard
+          </p>
+          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-slate-900">
+            Welcome back{member ? `, ${member.memberNick}` : ""}
+          </h1>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-white">
+              {member?.memberType ?? "ADMIN"}
+            </span>
+            {authData?.checkAuth ? (
+              <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                <CheckCircle2 size={10} />
+                Verified
               </span>
-              {authData?.checkAuth ? (
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  Token verified
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                void refetchDashboardStats();
-                void refetchAllBookings();
-                void refetchAllReviews();
-                void refetchAnalyticsEvents();
-              }}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
-            >
-              <RefreshCcw size={14} />
-              Refresh
-            </button>
-            <Link
-              href="/bookings/manage"
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-            >
-              Manage bookings
-              <ArrowUpRight size={14} />
-            </Link>
+            ) : null}
           </div>
         </div>
-        {authLoading ? (
-          <p className="mt-3 text-xs text-slate-500">Refreshing auth status...</p>
-        ) : null}
-        {authError ? <ErrorNotice className="mt-3" message={getErrorMessage(authError)} /> : null}
-      </section>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void refetchDashboardStats();
+              void refetchAllBookings();
+              void refetchAllReviews();
+              void refetchAnalyticsEvents();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900"
+          >
+            <RefreshCcw size={13} />
+            Refresh
+          </button>
+          <Link
+            href="/bookings/manage"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
+          >
+            Manage bookings
+            <ArrowUpRight size={13} />
+          </Link>
+        </div>
+      </header>
+      {authLoading ? (
+        <p className="text-xs text-slate-400">Checking session…</p>
+      ) : null}
+      {authError ? <ErrorNotice message={getErrorMessage(authError)} /> : null}
 
-      {dashboardStatsError ? <ErrorNotice message={getErrorMessage(dashboardStatsError)} /> : null}
+      {/* ── Quick Actions ── */}
+      <nav className="flex flex-wrap gap-2" aria-label="Admin quick actions">
+        {(
+          [
+            { href: "/admin/members", label: "Members", Icon: UsersRound },
+            { href: "/admin/hotels", label: "Hotels", Icon: Building2 },
+            { href: "/admin/rooms", label: "Rooms", Icon: DoorOpen },
+            { href: "/admin/reviews", label: "Reviews", Icon: Star },
+            { href: "/admin/chats", label: "Chats", Icon: MessageSquare },
+            {
+              href: "/admin/notifications",
+              label: "Notifications",
+              Icon: BellRing,
+            },
+            {
+              href: "/admin/subscriptions",
+              label: "Subscriptions",
+              Icon: Crown,
+            },
+          ] as const
+        ).map((a) => (
+          <Link
+            key={a.href}
+            href={a.href}
+            className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+          >
+            <a.Icon
+              size={14}
+              className="text-slate-400 transition group-hover:text-slate-600"
+            />
+            {a.label}
+          </Link>
+        ))}
+      </nav>
+
+      {dashboardStatsError ? (
+        <ErrorNotice message={getErrorMessage(dashboardStatsError)} />
+      ) : null}
       {dashboardStatsLoading && !stats ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-          Loading dashboard metrics...
-        </section>
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">
+          <Loader2 size={14} className="animate-spin" />
+          Loading dashboard…
+        </div>
       ) : null}
 
       {stats ? (
         <>
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* ── KPI Cards ── */}
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
-              title="Total Members"
+              title="Members"
               value={formatNumber(stats.totalMembers)}
-              deltaText={`${formatNumber(stats.newBookingsToday)} new bookings today`}
+              sub={`+${formatNumber(stats.newMembersToday)} today`}
               tone="sky"
-              icon={<UsersRound size={20} />}
+              icon={<UsersRound size={18} />}
             />
             <KpiCard
-              title="Total Hotels"
+              title="Hotels"
               value={formatNumber(stats.totalHotels)}
-              deltaText={`${formatNumber(stats.pendingHotels)} pending verification`}
+              sub={`${formatNumber(stats.activeHotels)} active`}
               tone="emerald"
-              icon={<Building2 size={20} />}
+              icon={<Building2 size={18} />}
             />
             <KpiCard
-              title="Total Bookings"
+              title="Bookings"
               value={formatNumber(stats.totalBookings)}
-              deltaText={`${formatNumber(stats.pendingBookings)} still pending`}
+              sub={`${formatNumber(stats.confirmedBookings)} confirmed`}
               tone="amber"
-              icon={<BookCheck size={20} />}
+              icon={<BookCheck size={18} />}
             />
             <KpiCard
-              title="Total Revenue"
+              title="Revenue"
               value={`₩ ${formatNumber(stats.totalRevenue)}`}
-              deltaText={`₩ ${formatNumber(stats.todayRevenue)} today`}
+              sub={`₩ ${formatNumber(stats.todayRevenue)} today`}
               tone="rose"
-              icon={<Wallet size={20} />}
+              icon={<Wallet size={18} />}
             />
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Booking Calendar</p>
-                  <h2 className="mt-1 text-2xl font-semibold text-slate-900">{monthLabel}</h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMonthCursor((prev) => addMonths(prev, -1))}
-                    className="rounded-lg border border-slate-300 p-2 text-slate-700 transition hover:border-slate-500"
-                    aria-label="Previous month"
-                  >
-                    <ChevronLeft size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMonthCursor((prev) => addMonths(prev, 1))}
-                    className="rounded-lg border border-slate-300 p-2 text-slate-700 transition hover:border-slate-500"
-                    aria-label="Next month"
-                  >
-                    <ChevronRight size={15} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                {WEEK_LABELS.map((label) => (
-                  <div key={label} className="pb-1 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    {label}
+          {/* ── Main Grid ── */}
+          <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
+            {/* Left Column */}
+            <div className="space-y-5">
+              {/* Calendar */}
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+                      Booking Calendar
+                    </p>
+                    <h2 className="mt-0.5 text-lg font-bold text-slate-900">
+                      {monthLabel}
+                    </h2>
                   </div>
-                ))}
-                {calendarDays.map((day) => {
-                  const key = toDayKey(day.toISOString());
-                  const inCurrentMonth = day.getUTCMonth() === activeMonth;
-                  const dayCount = bookingDensityByDay.get(key) ?? 0;
-                  const isToday = key === todayKey;
-                  return (
-                    <div
-                      key={`${key}-${inCurrentMonth ? "current" : "edge"}`}
-                      className={`relative min-h-[64px] rounded-xl border px-2 py-1.5 transition ${
-                        inCurrentMonth
-                          ? "border-slate-200 bg-white"
-                          : "border-slate-100 bg-slate-50 text-slate-300"
-                      } ${isToday ? "ring-2 ring-sky-300" : ""}`}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMonthCursor((prev) => addMonths(prev, -1))
+                      }
+                      className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+                      aria-label="Previous month"
                     >
-                      <p className={`text-sm font-semibold ${inCurrentMonth ? "text-slate-800" : "text-slate-300"}`}>
-                        {day.getUTCDate()}
-                      </p>
-                      {dayCount > 0 ? (
-                        <span className="absolute bottom-1.5 left-2 inline-flex items-center rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700">
-                          {dayCount} bk
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMonthCursor((prev) => addMonths(prev, 1))
+                      }
+                      className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200">
+                    {WEEK_LABELS.map((label) => (
+                      <div
+                        key={label}
+                        className="bg-slate-50 py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400"
+                      >
+                        {label}
+                      </div>
+                    ))}
+                    {calendarDays.map((day) => {
+                      const key = toDayKey(day.toISOString());
+                      const inCurrentMonth = day.getUTCMonth() === activeMonth;
+                      const dayCount = bookingDensityByDay.get(key) ?? 0;
+                      const isToday = key === todayKey;
+                      return (
+                        <div
+                          key={`${key}-${inCurrentMonth ? "c" : "e"}`}
+                          className={`relative min-h-[52px] bg-white px-1.5 py-1 ${
+                            !inCurrentMonth ? "bg-slate-50/60" : ""
+                          } ${isToday ? "ring-2 ring-inset ring-sky-400" : ""}`}
+                        >
+                          <p
+                            className={`text-xs font-semibold ${
+                              inCurrentMonth
+                                ? "text-slate-700"
+                                : "text-slate-300"
+                            }`}
+                          >
+                            {day.getUTCDate()}
+                          </p>
+                          {dayCount > 0 ? (
+                            <span className="absolute bottom-1 left-1 rounded bg-sky-100 px-1 py-px text-[9px] font-bold text-sky-600">
+                              {dayCount}
+                            </span>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
 
-              <div className="mt-5">
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-slate-900">Newest Bookings</h3>
-                  <Link href="/bookings/manage" className="text-sm font-semibold text-sky-700">
-                    Open all
+              {/* Recent Bookings */}
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Recent Bookings
+                  </h3>
+                  <Link
+                    href="/bookings/manage"
+                    className="text-xs font-semibold text-sky-600 transition hover:text-sky-700"
+                  >
+                    View all →
                   </Link>
                 </div>
-                {allBookingsError ? <ErrorNotice message={getErrorMessage(allBookingsError)} /> : null}
+                {allBookingsError ? (
+                  <ErrorNotice message={getErrorMessage(allBookingsError)} />
+                ) : null}
                 {allBookingsLoading && recentBookings.length === 0 ? (
-                  <p className="text-sm text-slate-600">Loading recent bookings...</p>
+                  <p className="text-sm text-slate-600">Loading…</p>
                 ) : null}
                 {recentBookings.length > 0 ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {recentBookings.slice(0, 6).map((booking) => {
+                  <div className="divide-y divide-slate-100">
+                    {recentBookings.slice(0, 8).map((booking) => {
                       const hotel = hotelsMap.get(booking.hotelId);
                       return (
                         <Link
                           key={booking._id}
                           href={`/bookings/${booking._id}`}
-                          className="rounded-xl border border-slate-200 p-3 transition hover:border-slate-300 hover:bg-slate-50"
+                          className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-slate-50"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-semibold text-slate-900">{hotel?.hotelTitle ?? "Unknown Hotel"}</p>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${BOOKING_STATUS_COLOR[booking.bookingStatus]}`}>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-800">
+                              {hotel?.hotelTitle ?? "Unknown Hotel"}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-slate-400">
+                              #{booking.bookingCode} ·{" "}
+                              {formatDateShort(booking.checkInDate)} –{" "}
+                              {formatDateShort(booking.checkOutDate)}
+                            </p>
+                          </div>
+                          <div className="flex flex-shrink-0 items-center gap-2.5">
+                            <span className="text-xs font-semibold text-slate-700">
+                              ₩ {formatNumber(booking.totalPrice)}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${BOOKING_STATUS_COLOR[booking.bookingStatus]}`}
+                            >
                               {BOOKING_STATUS_LABEL[booking.bookingStatus]}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">#{booking.bookingCode}</p>
-                          <p className="mt-1 text-xs text-slate-600">
-                            {formatDateShort(booking.checkInDate)} - {formatDateShort(booking.checkOutDate)}
-                          </p>
-                          <p className="mt-1 text-xs font-medium text-slate-700">₩ {formatNumber(booking.totalPrice)}</p>
                         </Link>
                       );
                     })}
                   </div>
                 ) : null}
-              </div>
-            </section>
+              </section>
+            </div>
 
-            <div className="space-y-4">
-              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-slate-900">Reservation Split</h3>
-                  <span className="text-xs text-slate-500">Recent {recentBookings.length} records</span>
+            {/* Right Column */}
+            <div className="space-y-5">
+              {/* Needs Attention */}
+              <section className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white p-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <AlertCircle size={15} className="text-amber-500" />
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Needs Attention
+                  </h3>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-                  <RingGauge label="Check in" value={checkInPercent} color="#2563eb" />
-                  <RingGauge label="Check out" value={checkOutPercent} color="#f59e0b" />
+                <div className="space-y-1.5">
+                  {(
+                    [
+                      {
+                        label: "Hotels pending verification",
+                        count: stats.pendingHotels,
+                        href: "/admin/hotels",
+                      },
+                      {
+                        label: "Bookings awaiting action",
+                        count: stats.pendingBookings,
+                        href: "/bookings/manage",
+                      },
+                      {
+                        label: "Chats waiting for response",
+                        count: stats.waitingChats,
+                        href: "/admin/chats",
+                      },
+                      {
+                        label: "Unread notifications",
+                        count: stats.unreadNotifications,
+                        href: "/admin/notifications",
+                      },
+                      {
+                        label: "Rooms in maintenance",
+                        count: stats.maintenanceRooms,
+                        href: "/admin/rooms",
+                      },
+                    ] as const
+                  )
+                    .filter((item) => item.count > 0)
+                    .map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2.5 text-sm transition hover:bg-white"
+                      >
+                        <span className="text-slate-600">{item.label}</span>
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                          {formatNumber(item.count)}
+                        </span>
+                      </Link>
+                    ))}
+                  {stats.pendingHotels === 0 &&
+                    stats.pendingBookings === 0 &&
+                    stats.waitingChats === 0 &&
+                    stats.unreadNotifications === 0 &&
+                    stats.maintenanceRooms === 0 && (
+                      <p className="py-2 text-center text-sm text-emerald-600">
+                        All clear — nothing needs attention.
+                      </p>
+                    )}
                 </div>
-                <div className="mt-4 space-y-2">
-                  {(["PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED"] as const).map((status) => (
-                    <div key={status} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${status === "CHECKED_OUT" ? "bg-indigo-500" : status === "CHECKED_IN" ? "bg-emerald-500" : status === "CONFIRMED" ? "bg-sky-500" : status === "PENDING" ? "bg-amber-500" : "bg-rose-500"}`} />
-                        <p className="text-xs font-medium text-slate-600">{BOOKING_STATUS_LABEL[status]}</p>
-                      </div>
-                      <p className="text-sm font-semibold text-slate-900">{formatNumber(bookingCounts[status])}</p>
+              </section>
+
+              {/* Today's Activity */}
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="mb-3 text-sm font-bold text-slate-900">
+                  Today&apos;s Activity
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      {
+                        label: "New Bookings",
+                        val: formatNumber(stats.newBookingsToday),
+                        c: "text-sky-600",
+                      },
+                      {
+                        label: "Check-ins",
+                        val: formatNumber(stats.checkInsToday),
+                        c: "text-emerald-600",
+                      },
+                      {
+                        label: "Check-outs",
+                        val: formatNumber(stats.checkOutsToday),
+                        c: "text-indigo-600",
+                      },
+                      {
+                        label: "New Reviews",
+                        val: formatNumber(stats.newReviewsToday),
+                        c: "text-amber-600",
+                      },
+                      {
+                        label: "New Members",
+                        val: formatNumber(stats.newMembersToday),
+                        c: "text-violet-600",
+                      },
+                      {
+                        label: "Revenue",
+                        val: `₩${formatNumber(stats.todayRevenue)}`,
+                        c: "text-rose-600",
+                      },
+                    ] as const
+                  ).map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-xl bg-slate-50 px-3 py-2.5"
+                    >
+                      <p className={`text-lg font-bold ${item.c}`}>
+                        {item.val}
+                      </p>
+                      <p className="text-[11px] font-medium text-slate-400">
+                        {item.label}
+                      </p>
                     </div>
                   ))}
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              {/* Booking Status */}
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-slate-900">Latest Customer Reviews</h3>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Booking Status
+                  </h3>
+                  <span className="text-[11px] text-slate-400">
+                    {recentBookings.length} records
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {(
+                    [
+                      "PENDING",
+                      "CONFIRMED",
+                      "CHECKED_IN",
+                      "CHECKED_OUT",
+                      "CANCELLED",
+                      "NO_SHOW",
+                    ] as const
+                  ).map((status) => {
+                    const count = bookingCounts[status];
+                    const pct =
+                      recentBookings.length > 0
+                        ? (count / recentBookings.length) * 100
+                        : 0;
+                    const bar: Record<string, string> = {
+                      PENDING: "bg-amber-400",
+                      CONFIRMED: "bg-sky-400",
+                      CHECKED_IN: "bg-emerald-400",
+                      CHECKED_OUT: "bg-indigo-400",
+                      CANCELLED: "bg-rose-400",
+                      NO_SHOW: "bg-slate-400",
+                    };
+                    return (
+                      <div key={status}>
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-600">
+                            {BOOKING_STATUS_LABEL[status]}
+                          </span>
+                          <span className="text-xs font-bold text-slate-800">
+                            {formatNumber(count)}
+                          </span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className={`h-full rounded-full transition-all ${bar[status]}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Latest Reviews */}
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Latest Reviews
+                  </h3>
                   {allReviewsData?.getAllReviewsAdmin.ratingsSummary ? (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                      Avg {allReviewsData.getAllReviewsAdmin.ratingsSummary.overallRating.toFixed(1)}
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                      Avg{" "}
+                      {allReviewsData.getAllReviewsAdmin.ratingsSummary.overallRating.toFixed(
+                        1,
+                      )}
+                      ★
                     </span>
                   ) : null}
                 </div>
-                {allReviewsError ? <ErrorNotice message={getErrorMessage(allReviewsError)} /> : null}
+                {allReviewsError ? (
+                  <div className="p-4">
+                    <ErrorNotice message={getErrorMessage(allReviewsError)} />
+                  </div>
+                ) : null}
                 {allReviewsLoading && recentReviews.length === 0 ? (
-                  <p className="text-sm text-slate-600">Loading latest reviews...</p>
+                  <div className="p-4 text-sm text-slate-500">Loading…</div>
                 ) : null}
                 {recentReviews.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="divide-y divide-slate-100">
                     {recentReviews.slice(0, 4).map((review) => {
                       const hotel = hotelsMap.get(review.hotelId);
                       return (
-                        <article key={review._id} className="rounded-xl border border-slate-200 p-3">
+                        <div key={review._id} className="px-5 py-3">
                           <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">
-                                {review.reviewerNick ?? "Verified Guest"}
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-slate-800">
+                                {review.reviewerNick ?? "Guest"}
                               </p>
-                              <p className="text-xs text-slate-500">
-                                {hotel?.hotelTitle ?? "Unknown Hotel"} · {formatDateShort(review.createdAt)}
+                              <p className="text-[11px] text-slate-400">
+                                {hotel?.hotelTitle ?? "Unknown"} ·{" "}
+                                {formatDateShort(review.createdAt)}
                               </p>
                             </div>
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                            <span className="flex-shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
                               {review.overallRating.toFixed(1)}★
                             </span>
                           </div>
-                          <p className="mt-2 line-clamp-2 text-sm text-slate-700">{review.reviewText}</p>
-                        </article>
+                          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-600">
+                            {review.reviewText}
+                          </p>
+                        </div>
                       );
                     })}
                   </div>
                 ) : null}
               </section>
             </div>
-          </section>
+          </div>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-end justify-between gap-3">
+          {/* ── Analytics Event Stream (Collapsible) ── */}
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <button
+              type="button"
+              onClick={() => setShowAnalytics((prev) => !prev)}
+              className="flex w-full items-center justify-between px-5 py-4 text-left transition hover:bg-slate-50"
+            >
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onboarding Analytics</p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-900">Event Stream</h2>
-                <p className="mt-1 text-sm text-slate-600">Filter member onboarding and behavior events for support and growth checks.</p>
-              </div>
-              <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
-                Total {formatNumber(analyticsTotal)}
-              </span>
-            </div>
-
-            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-              <input
-                value={analyticsDraftFilters.eventName}
-                onChange={(event) => setAnalyticsDraftFilters((prev) => ({ ...prev, eventName: event.target.value }))}
-                placeholder="Event name"
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
-              />
-              <input
-                value={analyticsDraftFilters.memberId}
-                onChange={(event) => setAnalyticsDraftFilters((prev) => ({ ...prev, memberId: event.target.value }))}
-                placeholder="Member ID"
-                className="rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm text-slate-900 outline-none transition focus:border-slate-500"
-              />
-              <input
-                value={analyticsDraftFilters.source}
-                onChange={(event) => setAnalyticsDraftFilters((prev) => ({ ...prev, source: event.target.value }))}
-                placeholder="Source"
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
-              />
-              <select
-                value={analyticsDraftFilters.memberType}
-                onChange={(event) => setAnalyticsDraftFilters((prev) => ({ ...prev, memberType: event.target.value as AnalyticsFilterFormState["memberType"] }))}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
-              >
-                <option value="">All member types</option>
-                <option value="USER">USER</option>
-                <option value="AGENT">AGENT</option>
-                <option value="ADMIN">ADMIN</option>
-                <option value="ADMIN_OPERATOR">ADMIN_OPERATOR</option>
-              </select>
-              <input
-                type="date"
-                value={analyticsDraftFilters.fromDate}
-                onChange={(event) => setAnalyticsDraftFilters((prev) => ({ ...prev, fromDate: event.target.value }))}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
-              />
-              <input
-                type="date"
-                value={analyticsDraftFilters.toDate}
-                onChange={(event) => setAnalyticsDraftFilters((prev) => ({ ...prev, toDate: event.target.value }))}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500"
-              />
-              <button
-                type="button"
-                onClick={applyAnalyticsFilters}
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-              >
-                Apply filters
-              </button>
-              <button
-                type="button"
-                onClick={resetAnalyticsFilters}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
-              >
-                Reset
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {analyticsEventsError ? <ErrorNotice message={getErrorMessage(analyticsEventsError)} /> : null}
-              {analyticsEventsLoading && analyticsEvents.length === 0 ? (
-                <p className="text-sm text-slate-600">Loading analytics events...</p>
-              ) : null}
-              {!analyticsEventsLoading && analyticsEvents.length === 0 ? (
-                <p className="text-sm text-slate-600">No analytics events found for the selected filters.</p>
-              ) : null}
-              {analyticsEvents.map((eventItem) => (
-                <article key={eventItem._id} className="rounded-xl border border-slate-200 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                        {eventItem.eventName}
-                      </span>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${memberTypeTone(eventItem.memberType)}`}>
-                        {eventItem.memberType}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500">{formatDateTime(eventItem.createdAt)}</p>
-                  </div>
-                  <div className="mt-2 grid gap-2 text-xs text-slate-600 md:grid-cols-3">
-                    <p className="truncate font-mono text-[11px] text-slate-500">{eventItem.memberId}</p>
-                    <p>{eventItem.eventPath ?? "-"}</p>
-                    <p>{eventItem.source ?? "-"}</p>
-                  </div>
-                  {eventItem.payload ? (
-                    <p className="mt-2 line-clamp-2 text-xs text-slate-600">
-                      {eventItem.payload.length > 180
-                        ? `${eventItem.payload.slice(0, 180)}...`
-                        : eventItem.payload}
-                    </p>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-
-            {analyticsTotal > 0 ? (
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-xs text-slate-600">
-                  Page {analyticsPage} / {analyticsTotalPages}
+                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  Onboarding Analytics
                 </p>
-                <div className="flex items-center gap-2">
+                <p className="mt-0.5 text-sm font-bold text-slate-900">
+                  Event Stream
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600">
+                  {formatNumber(analyticsTotal)} events
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={`text-slate-400 transition-transform ${showAnalytics ? "rotate-180" : ""}`}
+                />
+              </div>
+            </button>
+
+            {showAnalytics ? (
+              <div className="border-t border-slate-100 p-5">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <input
+                    value={analyticsDraftFilters.eventName}
+                    onChange={(e) =>
+                      setAnalyticsDraftFilters((prev) => ({
+                        ...prev,
+                        eventName: e.target.value,
+                      }))
+                    }
+                    placeholder="Event name"
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  />
+                  <input
+                    value={analyticsDraftFilters.memberId}
+                    onChange={(e) =>
+                      setAnalyticsDraftFilters((prev) => ({
+                        ...prev,
+                        memberId: e.target.value,
+                      }))
+                    }
+                    placeholder="Member ID"
+                    className="rounded-xl border border-slate-200 px-3 py-2 font-mono text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  />
+                  <input
+                    value={analyticsDraftFilters.source}
+                    onChange={(e) =>
+                      setAnalyticsDraftFilters((prev) => ({
+                        ...prev,
+                        source: e.target.value,
+                      }))
+                    }
+                    placeholder="Source"
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  />
+                  <select
+                    value={analyticsDraftFilters.memberType}
+                    onChange={(e) =>
+                      setAnalyticsDraftFilters((prev) => ({
+                        ...prev,
+                        memberType: e.target
+                          .value as AnalyticsFilterFormState["memberType"],
+                      }))
+                    }
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  >
+                    <option value="">All types</option>
+                    <option value="USER">USER</option>
+                    <option value="AGENT">AGENT</option>
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="ADMIN_OPERATOR">ADMIN_OPERATOR</option>
+                  </select>
+                  <input
+                    type="date"
+                    value={analyticsDraftFilters.fromDate}
+                    onChange={(e) =>
+                      setAnalyticsDraftFilters((prev) => ({
+                        ...prev,
+                        fromDate: e.target.value,
+                      }))
+                    }
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  />
+                  <input
+                    type="date"
+                    value={analyticsDraftFilters.toDate}
+                    onChange={(e) =>
+                      setAnalyticsDraftFilters((prev) => ({
+                        ...prev,
+                        toDate: e.target.value,
+                      }))
+                    }
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                  />
                   <button
                     type="button"
-                    disabled={analyticsPage <= 1}
-                    onClick={() => handleAnalyticsPageChange(analyticsPage - 1)}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={applyAnalyticsFilters}
+                    className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
                   >
-                    Prev
+                    Apply
                   </button>
                   <button
                     type="button"
-                    disabled={analyticsPage >= analyticsTotalPages}
-                    onClick={() => handleAnalyticsPageChange(analyticsPage + 1)}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={resetAnalyticsFilters}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400"
                   >
-                    Next
+                    Reset
                   </button>
                 </div>
+
+                <div className="mt-4 space-y-2">
+                  {analyticsEventsError ? (
+                    <ErrorNotice
+                      message={getErrorMessage(analyticsEventsError)}
+                    />
+                  ) : null}
+                  {analyticsEventsLoading && analyticsEvents.length === 0 ? (
+                    <p className="text-sm text-slate-500">Loading events…</p>
+                  ) : null}
+                  {!analyticsEventsLoading && analyticsEvents.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No events match the current filters.
+                    </p>
+                  ) : null}
+                  {analyticsEvents.map((ev) => (
+                    <article
+                      key={ev._id}
+                      className="rounded-xl border border-slate-100 bg-slate-50/50 p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                            {ev.eventName}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${memberTypeTone(ev.memberType)}`}
+                          >
+                            {ev.memberType}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          {formatDateTime(ev.createdAt)}
+                        </p>
+                      </div>
+                      <div className="mt-2 grid gap-1 text-[11px] text-slate-500 md:grid-cols-3">
+                        <p className="truncate font-mono">{ev.memberId}</p>
+                        <p>{ev.eventPath ?? "—"}</p>
+                        <p>{ev.source ?? "—"}</p>
+                      </div>
+                      {ev.payload ? (
+                        <p className="mt-1.5 line-clamp-2 text-[11px] text-slate-500">
+                          {ev.payload.length > 180
+                            ? `${ev.payload.slice(0, 180)}…`
+                            : ev.payload}
+                        </p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+
+                {analyticsTotal > 0 ? (
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <p className="text-xs text-slate-500">
+                      Page {analyticsPage} / {analyticsTotalPages}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={analyticsPage <= 1}
+                        onClick={() =>
+                          handleAnalyticsPageChange(analyticsPage - 1)
+                        }
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        disabled={analyticsPage >= analyticsTotalPages}
+                        onClick={() =>
+                          handleAnalyticsPageChange(analyticsPage + 1)
+                        }
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
-          </section>
-
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <article className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">Pending Hotels</p>
-                <Clock3 size={16} className="text-slate-400" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{formatNumber(stats.pendingHotels)}</p>
-              <p className="mt-1 text-xs text-slate-500">Need admin verification</p>
-            </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">Pending Bookings</p>
-                <MessageSquareText size={16} className="text-slate-400" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{formatNumber(stats.pendingBookings)}</p>
-              <p className="mt-1 text-xs text-slate-500">Awaiting payment/action</p>
-            </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">New Bookings Today</p>
-                <ArrowUpRight size={16} className="text-emerald-500" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{formatNumber(stats.newBookingsToday)}</p>
-              <p className="mt-1 text-xs text-slate-500">Daily intake trend</p>
-            </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">Today Revenue</p>
-                <ArrowDownRight size={16} className="text-sky-500" />
-              </div>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">₩ {formatNumber(stats.todayRevenue)}</p>
-              <p className="mt-1 text-xs text-slate-500">Collected in last 24h</p>
-            </article>
           </section>
         </>
       ) : null}
 
-      {adminHotelsError ? <ErrorNotice message={getErrorMessage(adminHotelsError)} /> : null}
-      {adminHotelsLoading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-          <span className="inline-flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin text-slate-500" />
-            Loading hotel context...
-          </span>
-        </div>
+      {adminHotelsError ? (
+        <ErrorNotice message={getErrorMessage(adminHotelsError)} />
       ) : null}
-      {hotels.length > 0 ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900">Hotel Inventory Snapshot</h3>
-            <Link href="/hotels" className="text-sm font-semibold text-sky-700">
-              Browse hotels
-            </Link>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            {hotels.slice(0, 8).map((hotel) => (
-              <Link
-                key={hotel._id}
-                href={`/hotels/${hotel._id}`}
-                className="rounded-xl border border-slate-200 p-3 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                <p className="truncate text-sm font-semibold text-slate-900">{hotel.hotelTitle}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {hotel.hotelLocation} · {hotel.hotelType}
-                </p>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                    <CheckCircle2 size={10} />
-                    {hotel.hotelRating.toFixed(1)}
-                  </span>
-                  <span className="text-[11px] text-slate-500">Likes {formatNumber(hotel.hotelLikes)}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+      {adminHotelsLoading ? (
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+          <Loader2 size={14} className="animate-spin" />
+          Loading hotel context…
+        </div>
       ) : null}
     </main>
   );

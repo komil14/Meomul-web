@@ -99,3 +99,47 @@ export const DENY_SUBSCRIPTION_MUTATION = gql`
     }
   }
 `;
+
+// ─── Admin queries ─────────────────────────────────────────────────────────────
+
+export const GET_ALL_MEMBERS_BY_ADMIN_QUERY = gql`
+  query GetAllMembersByAdmin($input: PaginationInput!) {
+    getAllMembersByAdmin(input: $input) {
+      list {
+        ...MemberFields
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+  ${MEMBER_FIELDS}
+`;
+
+export const GET_MEMBER_BY_ADMIN_QUERY = gql`
+  query GetMemberByAdmin($memberId: String!) {
+    getMemberByAdmin(memberId: $memberId) {
+      ...MemberFields
+    }
+  }
+  ${MEMBER_FIELDS}
+`;
+
+export const UPDATE_MEMBER_BY_ADMIN_MUTATION = gql`
+  mutation UpdateMemberByAdmin($input: MemberUpdate!) {
+    updateMemberByAdmin(input: $input) {
+      ...MemberFields
+    }
+  }
+  ${MEMBER_FIELDS}
+`;
+
+export const DELETE_MEMBER_BY_ADMIN_MUTATION = gql`
+  mutation DeleteMemberByAdmin($memberId: String!) {
+    deleteMemberByAdmin(memberId: $memberId) {
+      _id
+      memberNick
+      memberStatus
+    }
+  }
+`;

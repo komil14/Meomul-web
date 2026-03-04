@@ -51,8 +51,16 @@ export const GET_MY_CHATS_QUERY = gql`
 `;
 
 export const GET_HOTEL_CHATS_QUERY = gql`
-  query GetHotelChats($hotelId: String!, $input: PaginationInput!, $statusFilter: ChatStatus) {
-    getHotelChats(hotelId: $hotelId, input: $input, statusFilter: $statusFilter) {
+  query GetHotelChats(
+    $hotelId: String!
+    $input: PaginationInput!
+    $statusFilter: ChatStatus
+  ) {
+    getHotelChats(
+      hotelId: $hotelId
+      input: $input
+      statusFilter: $statusFilter
+    ) {
       list {
         ...ChatFields
       }
@@ -128,6 +136,22 @@ export const CLOSE_CHAT_MUTATION = gql`
   mutation CloseChat($chatId: String!) {
     closeChat(chatId: $chatId) {
       ...ChatFields
+    }
+  }
+  ${CHAT_FIELDS}
+`;
+
+// ─── Admin queries ─────────────────────────────────────────────────────────────
+
+export const GET_ALL_CHATS_ADMIN_QUERY = gql`
+  query GetAllChatsAdmin($input: PaginationInput!, $statusFilter: ChatStatus) {
+    getAllChatsAdmin(input: $input, statusFilter: $statusFilter) {
+      list {
+        ...ChatFields
+      }
+      metaCounter {
+        total
+      }
     }
   }
   ${CHAT_FIELDS}
