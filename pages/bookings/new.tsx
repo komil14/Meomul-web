@@ -482,6 +482,16 @@ const NewBookingPage: NextPageWithAuth = () => {
       setCheckOutDate(initialCheckOutFromQuery);
   }, [checkOutDate, initialCheckOutFromQuery]);
 
+  // Fix: router.query is empty on SSR first render — sync counts once router is ready
+  useEffect(() => {
+    if (!router.isReady) return;
+    setAdultCount(initialAdults);
+    setChildCount(initialChildren);
+    setQuantity(initialQty);
+    // Intentionally run only when router becomes ready (values already derived from query)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
+
   // Debounced guest keyword
   useEffect(() => {
     if (!isStaffCreator) return;
@@ -785,7 +795,7 @@ const NewBookingPage: NextPageWithAuth = () => {
   const isLoading =
     hotelLoading || roomLoading || (priceLockLoading && !isStaffCreator);
 
-  if (isLoading && !hotel && !room) {
+  if (!hotel || !room) {
     return (
       <main className="space-y-6">
         <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200" />
@@ -1051,6 +1061,23 @@ const NewBookingPage: NextPageWithAuth = () => {
                             ))}
                           </div>
                         )}
+                        {debouncedGuestKeyword.length >= 2 &&
+                          !guestCandidatesLoading &&
+                          guestCandidates.length === 0 && (
+                            <div className="mt-3 space-y-2">
+                              <p className="text-xs text-slate-500">
+                                No members found. Enter member ID directly:
+                              </p>
+                              <input
+                                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                                placeholder="Member ID"
+                                value={targetGuestId}
+                                onChange={(e) =>
+                                  setTargetGuestId(e.target.value.trim())
+                                }
+                              />
+                            </div>
+                          )}
                         {targetGuestId && (
                           <p className="mt-2 flex items-center gap-1 text-xs font-medium text-emerald-600">
                             <Check size={12} strokeWidth={3} /> Guest selected
@@ -1200,6 +1227,12 @@ const NewBookingPage: NextPageWithAuth = () => {
                       <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
                         {submitError}
                       </div>
+                    )}
+
+                    {bookingValidationMessage && !submitError && (
+                      <p className="text-center text-sm text-rose-500">
+                        {bookingValidationMessage}
+                      </p>
                     )}
 
                     <button
