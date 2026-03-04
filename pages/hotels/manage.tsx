@@ -243,6 +243,13 @@ const HotelsManagePage: NextPageWithAuth = () => {
                         Rooms
                       </Link>
                       <Link
+                        href={`/hotels/${hotel._id}/reviews`}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                      >
+                        <Star size={13} />
+                        Reviews
+                      </Link>
+                      <Link
                         href={`/hotels/${hotel._id}/edit`}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                       >

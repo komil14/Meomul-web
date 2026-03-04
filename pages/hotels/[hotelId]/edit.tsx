@@ -638,12 +638,20 @@ const EditHotelPage: NextPageWithAuth = () => {
 
       {/* Bottom save (mobile convenience) */}
       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <Link
-          href={`/hotels/${hotelId}/rooms`}
-          className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-        >
-          Manage Rooms →
-        </Link>
+        <div className="flex gap-4">
+          <Link
+            href={`/hotels/${hotelId}/rooms`}
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Manage Rooms →
+          </Link>
+          <Link
+            href={`/hotels/${hotelId}/reviews`}
+            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+          >
+            Reviews →
+          </Link>
+        </div>
         <button
           type="button"
           onClick={() => void handleSave()}

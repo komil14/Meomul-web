@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { CHECK_AUTH_QUERY } from "@/graphql/auth.gql";
 import { GET_ANALYTICS_EVENTS_ADMIN_QUERY } from "@/graphql/analytics.gql";
-import { GET_ALL_BOOKINGS_ADMIN_QUERY } from "@/graphql/booking.gql";
+import { GET_ALL_BOOKINGS_ADMIN_QUERY, GET_AGENT_BOOKINGS_QUERY } from "@/graphql/booking.gql";
 import {
   GET_AGENT_HOTELS_QUERY,
   GET_ALL_HOTELS_ADMIN_QUERY,
@@ -22,7 +22,10 @@ import type {
   GetAnalyticsEventsAdminQueryVars,
 } from "@/types/analytics";
 import type {
+  BookingListItem,
   BookingStatus,
+  GetAgentBookingsQueryData,
+  GetAgentBookingsQueryVars,
   GetAllBookingsAdminQueryData,
   GetAllBookingsAdminQueryVars,
 } from "@/types/booking";
@@ -239,7 +242,6 @@ const DashboardPage: NextPageWithAuth = () => {
     useState<AnalyticsFilterFormState>(INITIAL_ANALYTICS_FILTERS);
 
   const memberType = member?.memberType;
-  const isAgent = memberType === "AGENT";
   const isAdminArea = memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 
   const analyticsSearch = useMemo<AnalyticsEventSearchInput | undefined>(() => {
@@ -359,8 +361,35 @@ const DashboardPage: NextPageWithAuth = () => {
   } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(
     GET_AGENT_HOTELS_QUERY,
     {
-      skip: !isAgent,
+      skip: isAdminArea,
       variables: { input: AGENT_HOTELS_INPUT },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
+
+  const [selectedHotelId, setSelectedHotelId] = useState<string>("");
+
+  const agentHotelList = useMemo(
+    () => agentHotelsData?.getAgentHotels.list ?? [],
+    [agentHotelsData],
+  );
+
+  // Derive effective hotel ID immediately — no async state cycle needed
+  const effectiveHotelId = selectedHotelId || agentHotelList[0]?._id || "";
+
+  const {
+    data: agentBookingsData,
+    loading: agentBookingsLoading,
+    refetch: refetchAgentBookings,
+  } = useQuery<GetAgentBookingsQueryData, GetAgentBookingsQueryVars>(
+    GET_AGENT_BOOKINGS_QUERY,
+    {
+      skip: !effectiveHotelId,
+      variables: {
+        hotelId: effectiveHotelId,
+        input: { page: 1, limit: 100, sort: "createdAt", direction: -1 },
+      },
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
     },
@@ -392,11 +421,14 @@ const DashboardPage: NextPageWithAuth = () => {
       void refetchAllBookings();
       void refetchAllReviews();
       void refetchAnalyticsEvents();
+    } else {
+      void refetchAgentBookings();
     }
   }, [
     isAdminArea,
     isPageVisible,
     refetchAdminHotels,
+    refetchAgentBookings,
     refetchAllBookings,
     refetchAllReviews,
     refetchAnalyticsEvents,
@@ -486,75 +518,375 @@ const DashboardPage: NextPageWithAuth = () => {
   };
 
   if (!isAdminArea) {
-    const agentHotels = agentHotelsData?.getAgentHotels.list ?? [];
+    const allBookings = agentBookingsData?.getAgentBookings.list ?? [];
+    const today = new Date().toISOString().slice(0, 10);
+
+    const pending      = allBookings.filter(b => b.bookingStatus === "PENDING").length;
+    const confirmed    = allBookings.filter(b => b.bookingStatus === "CONFIRMED").length;
+    const checkedIn    = allBookings.filter(b => b.bookingStatus === "CHECKED_IN").length;
+    const arrivalsToday   = allBookings.filter(b => b.bookingStatus === "CONFIRMED" && b.checkInDate?.slice(0, 10) === today).length;
+    const departuresToday = allBookings.filter(b => b.bookingStatus === "CHECKED_IN" && b.checkOutDate?.slice(0, 10) === today).length;
+    const newToday     = allBookings.filter(b => b.createdAt?.slice(0, 10) === today).length;
+    const estimatedRevenue = allBookings
+      .filter(b => b.bookingStatus !== "CANCELLED" && b.bookingStatus !== "NO_SHOW")
+      .reduce((sum, b) => sum + (b.totalPrice ?? 0), 0);
+
+    const agentBookingDensity = new Map<string, number>();
+    allBookings.forEach(b => {
+      const key = toDayKey(b.checkInDate);
+      agentBookingDensity.set(key, (agentBookingDensity.get(key) ?? 0) + 1);
+    });
+
+    const recentBookings = [...allBookings].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
+    const selectedHotel = agentHotelList.find(h => h._id === effectiveHotelId);
+
     return (
-      <main className="mx-auto w-full max-w-5xl space-y-5">
-        <section className="rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-700">
-            Agent Workspace
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">
-            Welcome, {member?.memberNick ?? "Agent"}
-          </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Use chats and manage bookings/hotels from your assigned inventory.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href="/chats"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+      <main className="mx-auto w-full max-w-6xl space-y-6">
+        {/* ── Header ── */}
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              My Dashboard
+            </p>
+            <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-slate-900">
+              Welcome back{member ? `, ${member.memberNick}` : ""}
+            </h1>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-white">
+                {member?.memberType ?? "AGENT"}
+              </span>
+              {agentHotelList.length > 1 && (
+                <select
+                  value={effectiveHotelId}
+                  onChange={e => setSelectedHotelId(e.target.value)}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-0.5 text-[11px] font-semibold text-slate-700 focus:outline-none"
+                >
+                  {agentHotelList.map(h => (
+                    <option key={h._id} value={h._id}>{h.hotelTitle}</option>
+                  ))}
+                </select>
+              )}
+              {agentHotelList.length === 1 && selectedHotel && (
+                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+                  {selectedHotel.hotelTitle}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void refetchAgentBookings()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900"
             >
-              Open chats
-            </Link>
+              <RefreshCcw size={13} />
+              Refresh
+            </button>
             <Link
               href="/bookings/manage"
-              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
             >
               Manage bookings
+              <ArrowUpRight size={13} />
             </Link>
           </div>
-        </section>
+        </header>
 
-        {agentHotelsError ? (
-          <ErrorNotice message={getErrorMessage(agentHotelsError)} />
-        ) : null}
-        {agentHotelsLoading && agentHotels.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-            Loading your hotels...
-          </div>
-        ) : null}
-        {!agentHotelsLoading && agentHotels.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-            No managed hotels found for your account.
-          </div>
-        ) : null}
-        {agentHotels.length > 0 ? (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Assigned Hotels
-            </h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {agentHotels.map((hotel) => (
-                <Link
-                  key={hotel._id}
-                  href={`/hotels/${hotel._id}`}
-                  className="rounded-xl border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  <p className="font-semibold text-slate-900">
-                    {hotel.hotelTitle}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {hotel.hotelLocation} · {hotel.hotelType}
-                  </p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Rating {hotel.hotelRating.toFixed(1)} · Likes{" "}
-                    {formatNumber(hotel.hotelLikes)}
-                  </p>
-                </Link>
-              ))}
-            </div>
+        {agentHotelsError && <ErrorNotice message={getErrorMessage(agentHotelsError)} />}
+
+        {/* ── Quick Actions ── */}
+        <nav className="flex flex-wrap gap-2" aria-label="Agent quick actions">
+          {(
+            [
+              { href: "/hotels/manage",   label: "My Hotels",  Icon: Building2 },
+              { href: "/bookings/manage", label: "Bookings",   Icon: BookCheck },
+              ...(effectiveHotelId ? [
+                { href: `/hotels/${effectiveHotelId}/rooms`,   label: "Rooms",   Icon: DoorOpen },
+                { href: `/hotels/${effectiveHotelId}/reviews`, label: "Reviews", Icon: Star },
+              ] : []),
+              { href: "/chats",           label: "Chats",      Icon: MessageSquare },
+            ] as const
+          ).map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+            >
+              <a.Icon size={14} className="text-slate-400 transition group-hover:text-slate-600" />
+              {a.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* ── KPI Cards ── */}
+        {agentBookingsLoading && !agentBookingsData ? (
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+            ))}
           </section>
-        ) : null}
+        ) : (
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              title="Total Bookings"
+              value={formatNumber(allBookings.length)}
+              sub={`${formatNumber(confirmed)} confirmed`}
+              tone="sky"
+              icon={<BookCheck size={18} />}
+            />
+            <KpiCard
+              title="Pending Action"
+              value={formatNumber(pending)}
+              sub="awaiting confirmation"
+              tone="amber"
+              icon={<AlertCircle size={18} />}
+            />
+            <KpiCard
+              title="Checked In"
+              value={formatNumber(checkedIn)}
+              sub="active stays"
+              tone="emerald"
+              icon={<DoorOpen size={18} />}
+            />
+            <KpiCard
+              title="Est. Revenue"
+              value={`₩ ${formatNumber(estimatedRevenue)}`}
+              sub="excl. cancelled"
+              tone="rose"
+              icon={<Wallet size={18} />}
+            />
+          </section>
+        )}
+
+        {/* ── Main Grid ── */}
+        <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
+          {/* Left Column */}
+          <div className="space-y-5">
+            {/* Booking Calendar */}
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+                    Booking Calendar
+                  </p>
+                  <h2 className="mt-0.5 text-lg font-bold text-slate-900">{monthLabel}</h2>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMonthCursor(prev => addMonths(prev, -1))}
+                    className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMonthCursor(prev => addMonths(prev, 1))}
+                    className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+                    aria-label="Next month"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200">
+                  {WEEK_LABELS.map(label => (
+                    <div key={label} className="bg-slate-50 py-1.5 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                      {label}
+                    </div>
+                  ))}
+                  {calendarDays.map(day => {
+                    const key = toDayKey(day.toISOString());
+                    const inCurrentMonth = day.getUTCMonth() === activeMonth;
+                    const dayCount = agentBookingDensity.get(key) ?? 0;
+                    const isToday = key === todayKey;
+                    return (
+                      <div
+                        key={`${key}-${inCurrentMonth ? "c" : "e"}`}
+                        className={`relative min-h-[52px] bg-white px-1.5 py-1 ${!inCurrentMonth ? "bg-slate-50/60" : ""} ${isToday ? "ring-2 ring-inset ring-sky-400" : ""}`}
+                      >
+                        <p className={`text-xs font-semibold ${inCurrentMonth ? "text-slate-700" : "text-slate-300"}`}>
+                          {day.getUTCDate()}
+                        </p>
+                        {dayCount > 0 ? (
+                          <span className="absolute bottom-1 left-1 rounded bg-sky-100 px-1 py-px text-[9px] font-bold text-sky-600">
+                            {dayCount}
+                          </span>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+
+            {/* Recent Bookings */}
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <h3 className="text-sm font-bold text-slate-900">Recent Bookings</h3>
+                <Link href="/bookings/manage" className="text-xs font-semibold text-sky-600 transition hover:text-sky-700">
+                  View all →
+                </Link>
+              </div>
+              {agentBookingsLoading && recentBookings.length === 0 ? (
+                <p className="px-5 py-4 text-sm text-slate-500">Loading…</p>
+              ) : recentBookings.length > 0 ? (
+                <div className="divide-y divide-slate-100">
+                  {recentBookings.map(booking => (
+                    <Link
+                      key={booking._id}
+                      href={`/bookings/${booking._id}`}
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-slate-50"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-800">
+                          #{booking.bookingCode}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          {formatDateShort(booking.checkInDate)} – {formatDateShort(booking.checkOutDate)}
+                        </p>
+                      </div>
+                      <div className="flex flex-shrink-0 items-center gap-2.5">
+                        <span className="text-xs font-semibold text-slate-700">
+                          ₩ {formatNumber(booking.totalPrice)}
+                        </span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${BOOKING_STATUS_COLOR[booking.bookingStatus]}`}>
+                          {BOOKING_STATUS_LABEL[booking.bookingStatus]}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="px-5 py-4 text-sm text-slate-400">No bookings yet.</p>
+              )}
+            </section>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-5">
+            {/* Needs Attention */}
+            <section className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <AlertCircle size={15} className="text-amber-500" />
+                <h3 className="text-sm font-bold text-slate-900">Needs Attention</h3>
+              </div>
+              <div className="space-y-1.5">
+                {(
+                  [
+                    { label: "Bookings awaiting confirmation", count: pending,         href: "/bookings/manage" },
+                    { label: "Arrivals today",                 count: arrivalsToday,   href: "/bookings/manage" },
+                    { label: "Departures today",               count: departuresToday, href: "/bookings/manage" },
+                  ] as const
+                )
+                  .filter(item => item.count > 0)
+                  .map(item => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2.5 text-sm transition hover:bg-white"
+                    >
+                      <span className="text-slate-600">{item.label}</span>
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                        {formatNumber(item.count)}
+                      </span>
+                    </Link>
+                  ))}
+                {pending === 0 && arrivalsToday === 0 && departuresToday === 0 && (
+                  <p className="py-2 text-center text-sm text-emerald-600">
+                    All clear — nothing needs attention.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* Today's Activity */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-bold text-slate-900">Today&apos;s Activity</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    { label: "New Bookings",  val: formatNumber(newToday),        c: "text-sky-600" },
+                    { label: "Check-ins",     val: formatNumber(arrivalsToday),   c: "text-emerald-600" },
+                    { label: "Check-outs",    val: formatNumber(departuresToday), c: "text-indigo-600" },
+                    { label: "Pending",       val: formatNumber(pending),         c: "text-amber-600" },
+                  ] as const
+                ).map(item => (
+                  <div key={item.label} className="rounded-xl bg-slate-50 px-3 py-2.5">
+                    <p className={`text-lg font-bold ${item.c}`}>{item.val}</p>
+                    <p className="text-[11px] font-medium text-slate-400">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Booking Status */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900">Booking Status</h3>
+                <span className="text-[11px] text-slate-400">{allBookings.length} records</span>
+              </div>
+              <div className="space-y-3">
+                {(["PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED", "NO_SHOW"] as const).map(status => {
+                  const count = allBookings.filter(b => b.bookingStatus === status).length;
+                  const pct = allBookings.length > 0 ? (count / allBookings.length) * 100 : 0;
+                  const barColor: Record<string, string> = {
+                    PENDING: "bg-amber-400", CONFIRMED: "bg-sky-400", CHECKED_IN: "bg-emerald-400",
+                    CHECKED_OUT: "bg-indigo-400", CANCELLED: "bg-rose-400", NO_SHOW: "bg-slate-400",
+                  };
+                  return (
+                    <div key={status}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-xs font-medium text-slate-600">{BOOKING_STATUS_LABEL[status]}</span>
+                        <span className="text-xs font-bold text-slate-800">{formatNumber(count)}</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                        <div className={`h-full rounded-full transition-all ${barColor[status]}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* My Hotels */}
+            {agentHotelList.length > 0 && (
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+                  <h3 className="text-sm font-bold text-slate-900">My Hotels</h3>
+                  <Link href="/hotels/manage" className="text-xs font-semibold text-sky-600 transition hover:text-sky-700">
+                    Manage →
+                  </Link>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {agentHotelList.map(hotel => (
+                    <div key={hotel._id} className="flex items-center justify-between px-5 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{hotel.hotelTitle}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          {hotel.hotelLocation} · ★ {hotel.hotelRating.toFixed(1)}
+                        </p>
+                      </div>
+                      <div className="ml-3 flex flex-shrink-0 gap-1.5">
+                        <Link href={`/hotels/${hotel._id}/rooms`} className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">Rooms</Link>
+                        <Link href={`/hotels/${hotel._id}/edit`} className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">Edit</Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {!agentHotelsLoading && agentHotelList.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+                No hotels yet.{" "}
+                <Link href="/hotels/create" className="font-semibold text-slate-900 hover:underline">Register →</Link>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     );
   }

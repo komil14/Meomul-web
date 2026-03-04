@@ -529,6 +529,15 @@ export interface GetAllReviewsAdminQueryVars {
   statusFilter?: ReviewStatus;
 }
 
+export interface RespondToReviewMutationData {
+  respondToReview: ReviewDto;
+}
+
+export interface RespondToReviewMutationVars {
+  reviewId: string;
+  responseText: string;
+}
+
 export interface GetSimilarHotelsQueryData {
   getSimilarHotels: HotelListItem[];
 }

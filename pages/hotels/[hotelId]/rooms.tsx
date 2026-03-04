@@ -38,6 +38,7 @@ import {
   ChevronDown,
   DoorOpen,
   Plus,
+  Star,
   X,
 } from "lucide-react";
 
@@ -335,6 +336,13 @@ const HotelRoomsPage: NextPageWithAuth = () => {
             >
               <ArrowLeft size={15} />
               Edit hotel
+            </Link>
+            <Link
+              href={`/hotels/${hotelId}/reviews`}
+              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition"
+            >
+              <Star size={15} />
+              Reviews
             </Link>
             <span className="text-slate-300">/</span>
             <div>
