@@ -184,34 +184,6 @@ function UserAvatarMenu({
               <User size={14} className="text-slate-400" />
               Profile
             </Link>
-            {member.memberType === "USER" && (
-              <>
-                <Link
-                  href="/profile?tab=subscription"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Crown size={14} className="text-slate-400" />
-                  Subscription
-                </Link>
-                <Link
-                  href="/profile?tab=reviews"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Star size={14} className="text-slate-400" />
-                  My Reviews
-                </Link>
-                <Link
-                  href="/profile?tab=likes"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                >
-                  <Heart size={14} className="text-slate-400" />
-                  Saved Hotels
-                </Link>
-              </>
-            )}
             <Link
               href="/settings/preferences"
               onClick={() => setOpen(false)}
@@ -1001,31 +973,6 @@ export function SiteFrame({ children }: PropsWithChildren) {
                     <User size={15} className="text-slate-400" />
                     Profile
                   </Link>
-                  {member.memberType === "USER" && (
-                    <>
-                      <Link
-                        href="/profile?tab=subscription"
-                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
-                      >
-                        <Crown size={15} className="text-slate-400" />
-                        Subscription
-                      </Link>
-                      <Link
-                        href="/profile?tab=reviews"
-                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
-                      >
-                        <Star size={15} className="text-slate-400" />
-                        My Reviews
-                      </Link>
-                      <Link
-                        href="/profile?tab=likes"
-                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
-                      >
-                        <Heart size={15} className="text-slate-400" />
-                        Saved Hotels
-                      </Link>
-                    </>
-                  )}
                   <Link
                     href="/settings/preferences"
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"

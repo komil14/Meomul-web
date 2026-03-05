@@ -216,7 +216,7 @@ function EditReviewModal({
       await updateReview({
         variables: {
           input: {
-            reviewId: review._id,
+            _id: review._id,
             overallRating,
             reviewTitle: title.trim() || undefined,
             reviewText: text.trim(),
