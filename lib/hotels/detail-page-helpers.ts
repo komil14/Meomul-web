@@ -1,7 +1,7 @@
 import type { HotelDetailItem, HotelListItem } from "@/types/hotel";
 
 export const ROOM_PAGE_SIZE = 12;
-export const REVIEW_PAGE_SIZE = 5;
+export const REVIEW_PAGE_SIZE = 2;
 export const CARD_LIST_LIMIT = 6;
 
 export const amenityLabels: Partial<

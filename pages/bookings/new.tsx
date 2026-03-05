@@ -24,6 +24,7 @@ import {
 } from "@/lib/booking/booking-rules";
 import { getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -825,6 +826,25 @@ const NewBookingPage: NextPageWithAuth = () => {
     );
   }
 
+  // AGENT ownership guard — must own the hotel to create bookings here
+  if (memberType === "AGENT" && hotel.memberId !== member?._id) {
+    return (
+      <main className="space-y-6">
+        <Link
+          href="/hotels/manage"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800"
+        >
+          <ArrowLeft size={14} />
+          Back to my hotels
+        </Link>
+        <ErrorNotice
+          tone="warn"
+          message="You can only create bookings for hotels you own. This hotel belongs to another agent."
+        />
+      </main>
+    );
+  }
+
   const loadError = hotelError ?? roomError;
 
   // ── Wizard ───────────────────────────────────────────────────────────────────
@@ -1009,8 +1029,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                   <div className="space-y-4">
                     {isStaffCreator && (
                       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-                        Staff booking — search for a guest to book on their
-                        behalf
+                        Staff booking — search and select the guest you are booking for
                       </div>
                     )}
 
