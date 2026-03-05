@@ -271,16 +271,33 @@ const MyBookingsPage: NextPageWithAuth = () => {
   const total = data?.getMyBookings.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 
-  // Summary counts from current page data
-  const upcoming = bookings.filter(
-    (b) => b.bookingStatus === "CONFIRMED" || b.bookingStatus === "PENDING",
-  ).length;
-  const active = bookings.filter(
-    (b) => b.bookingStatus === "CHECKED_IN",
-  ).length;
-  const completed = bookings.filter(
-    (b) => b.bookingStatus === "CHECKED_OUT",
-  ).length;
+  const countInput = useMemo<PaginationInput>(
+    () => ({ page: 1, limit: 1, sort: "createdAt", direction: -1 }),
+    [],
+  );
+
+  const { data: confirmedData } = useQuery<GetMyBookingsQueryData, GetMyBookingsQueryVars>(
+    GET_MY_BOOKINGS_QUERY,
+    { variables: { input: countInput, statusFilter: "CONFIRMED" }, fetchPolicy: "cache-and-network" },
+  );
+  const { data: pendingData } = useQuery<GetMyBookingsQueryData, GetMyBookingsQueryVars>(
+    GET_MY_BOOKINGS_QUERY,
+    { variables: { input: countInput, statusFilter: "PENDING" }, fetchPolicy: "cache-and-network" },
+  );
+  const { data: checkedInData } = useQuery<GetMyBookingsQueryData, GetMyBookingsQueryVars>(
+    GET_MY_BOOKINGS_QUERY,
+    { variables: { input: countInput, statusFilter: "CHECKED_IN" }, fetchPolicy: "cache-and-network" },
+  );
+  const { data: checkedOutData } = useQuery<GetMyBookingsQueryData, GetMyBookingsQueryVars>(
+    GET_MY_BOOKINGS_QUERY,
+    { variables: { input: countInput, statusFilter: "CHECKED_OUT" }, fetchPolicy: "cache-and-network" },
+  );
+
+  const upcoming =
+    (confirmedData?.getMyBookings.metaCounter.total ?? 0) +
+    (pendingData?.getMyBookings.metaCounter.total ?? 0);
+  const active = checkedInData?.getMyBookings.metaCounter.total ?? 0;
+  const completed = checkedOutData?.getMyBookings.metaCounter.total ?? 0;
 
   const handleStatusChange = (status: BookingStatus | "ALL") => {
     setStatusFilter(status);
