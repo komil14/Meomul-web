@@ -19,23 +19,23 @@ import { ArrowLeft, Check, ChevronDown } from "lucide-react";
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const HOTEL_TYPES: Array<{ value: HotelType; label: string }> = [
-  { value: "HOTEL",      label: "Hotel" },
-  { value: "MOTEL",      label: "Motel" },
-  { value: "RESORT",     label: "Resort" },
+  { value: "HOTEL", label: "Hotel" },
+  { value: "MOTEL", label: "Motel" },
+  { value: "RESORT", label: "Resort" },
   { value: "GUESTHOUSE", label: "Guesthouse" },
-  { value: "HANOK",      label: "Hanok (Traditional)" },
-  { value: "PENSION",    label: "Pension" },
+  { value: "HANOK", label: "Hanok (Traditional)" },
+  { value: "PENSION", label: "Pension" },
 ];
 
 const LOCATIONS: Array<{ value: HotelLocation; label: string }> = [
-  { value: "SEOUL",     label: "Seoul" },
-  { value: "BUSAN",     label: "Busan" },
-  { value: "INCHEON",   label: "Incheon" },
-  { value: "DAEGU",     label: "Daegu" },
-  { value: "DAEJON",    label: "Daejeon" },
-  { value: "GWANGJU",   label: "Gwangju" },
-  { value: "JEJU",      label: "Jeju" },
-  { value: "GYEONGJU",  label: "Gyeongju" },
+  { value: "SEOUL", label: "Seoul" },
+  { value: "BUSAN", label: "Busan" },
+  { value: "INCHEON", label: "Incheon" },
+  { value: "DAEGU", label: "Daegu" },
+  { value: "DAEJON", label: "Daejeon" },
+  { value: "GWANGJU", label: "Gwangju" },
+  { value: "JEJU", label: "Jeju" },
+  { value: "GYEONGJU", label: "Gyeongju" },
   { value: "GANGNEUNG", label: "Gangneung" },
 ];
 
@@ -44,33 +44,45 @@ const CANCELLATION_OPTIONS: Array<{
   label: string;
   desc: string;
 }> = [
-  { value: "FLEXIBLE", label: "Flexible",  desc: "Free cancellation up to 24h before check-in" },
-  { value: "MODERATE", label: "Moderate",  desc: "Free cancellation up to 5 days before check-in" },
-  { value: "STRICT",   label: "Strict",    desc: "50% refund up to 7 days before check-in" },
+  {
+    value: "FLEXIBLE",
+    label: "Flexible",
+    desc: "Free cancellation up to 24h before check-in",
+  },
+  {
+    value: "MODERATE",
+    label: "Moderate",
+    desc: "Free cancellation up to 5 days before check-in",
+  },
+  {
+    value: "STRICT",
+    label: "Strict",
+    desc: "50% refund up to 7 days before check-in",
+  },
 ];
 
 const AMENITY_OPTIONS: Array<{ key: keyof AmenitiesInput; label: string }> = [
-  { key: "wifi",                label: "Wi-Fi" },
-  { key: "parking",             label: "Parking" },
-  { key: "breakfast",           label: "Breakfast" },
-  { key: "breakfastIncluded",   label: "Breakfast Included" },
-  { key: "gym",                 label: "Gym" },
-  { key: "pool",                label: "Pool" },
-  { key: "spa",                 label: "Spa" },
-  { key: "restaurant",          label: "Restaurant" },
-  { key: "roomService",         label: "Room Service" },
-  { key: "workspace",           label: "Business Center" },
-  { key: "meetingRoom",         label: "Meeting Room" },
-  { key: "familyRoom",          label: "Family Room" },
-  { key: "kidsFriendly",        label: "Kids Friendly" },
-  { key: "playground",          label: "Playground" },
-  { key: "elevator",            label: "Elevator" },
-  { key: "airportShuttle",      label: "Airport Shuttle" },
-  { key: "evCharging",          label: "EV Charging" },
-  { key: "wheelchairAccessible",label: "Wheelchair Accessible" },
-  { key: "coupleRoom",          label: "Couple Room" },
-  { key: "romanticView",        label: "Romantic View" },
-  { key: "privateBath",         label: "Private Bathroom" },
+  { key: "wifi", label: "Wi-Fi" },
+  { key: "parking", label: "Parking" },
+  { key: "breakfast", label: "Breakfast" },
+  { key: "breakfastIncluded", label: "Breakfast Included" },
+  { key: "gym", label: "Gym" },
+  { key: "pool", label: "Pool" },
+  { key: "spa", label: "Spa" },
+  { key: "restaurant", label: "Restaurant" },
+  { key: "roomService", label: "Room Service" },
+  { key: "workspace", label: "Business Center" },
+  { key: "meetingRoom", label: "Meeting Room" },
+  { key: "familyRoom", label: "Family Room" },
+  { key: "kidsFriendly", label: "Kids Friendly" },
+  { key: "playground", label: "Playground" },
+  { key: "elevator", label: "Elevator" },
+  { key: "airportShuttle", label: "Airport Shuttle" },
+  { key: "evCharging", label: "EV Charging" },
+  { key: "wheelchairAccessible", label: "Wheelchair Accessible" },
+  { key: "coupleRoom", label: "Couple Room" },
+  { key: "romanticView", label: "Romantic View" },
+  { key: "privateBath", label: "Private Bathroom" },
 ];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -79,21 +91,22 @@ const CreateHotelPage: NextPageWithAuth = () => {
   const router = useRouter();
 
   // Basic info
-  const [hotelTitle, setHotelTitle]     = useState("");
-  const [hotelType, setHotelType]       = useState<HotelType>("HOTEL");
+  const [hotelTitle, setHotelTitle] = useState("");
+  const [hotelType, setHotelType] = useState<HotelType>("HOTEL");
   const [hotelLocation, setHotelLocation] = useState<HotelLocation>("SEOUL");
-  const [address, setAddress]           = useState("");
-  const [lat, setLat]                   = useState("");
-  const [lng, setLng]                   = useState("");
-  const [hotelDesc, setHotelDesc]       = useState("");
-  const [starRating, setStarRating]     = useState(3);
-  const [checkInTime, setCheckInTime]   = useState("15:00");
+  const [address, setAddress] = useState("");
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [hotelDesc, setHotelDesc] = useState("");
+  const [starRating, setStarRating] = useState(3);
+  const [checkInTime, setCheckInTime] = useState("15:00");
   const [checkOutTime, setCheckOutTime] = useState("11:00");
-  const [hotelImages, setHotelImages]   = useState("");
+  const [hotelImages, setHotelImages] = useState("");
 
   // Policies
-  const [cancellationPolicy, setCancellationPolicy] = useState<CancellationPolicy>("MODERATE");
-  const [petsAllowed, setPetsAllowed]       = useState(false);
+  const [cancellationPolicy, setCancellationPolicy] =
+    useState<CancellationPolicy>("MODERATE");
+  const [petsAllowed, setPetsAllowed] = useState(false);
   const [smokingAllowed, setSmokingAllowed] = useState(false);
 
   // Amenities
@@ -101,13 +114,17 @@ const CreateHotelPage: NextPageWithAuth = () => {
 
   // UI
   const [openSection, setOpenSection] = useState<1 | 2 | 3>(1);
-  const [formError, setFormError]     = useState<string | null>(null);
-  const [created, setCreated]         = useState<{ id: string; title: string } | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ id: string; title: string } | null>(
+    null,
+  );
 
   const [createHotel, { loading }] = useMutation<
     CreateHotelMutationData,
     CreateHotelMutationVars
-  >(CREATE_HOTEL_MUTATION);
+  >(CREATE_HOTEL_MUTATION, {
+    refetchQueries: ["getHotels"],
+  });
 
   const toggleAmenity = (key: keyof AmenitiesInput) => {
     setAmenities((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -115,8 +132,14 @@ const CreateHotelPage: NextPageWithAuth = () => {
 
   const handleSubmit = async () => {
     setFormError(null);
-    if (!hotelTitle.trim()) { setFormError("Hotel name is required."); return; }
-    if (!address.trim())    { setFormError("Address is required."); return; }
+    if (!hotelTitle.trim()) {
+      setFormError("Hotel name is required.");
+      return;
+    }
+    if (!address.trim()) {
+      setFormError("Address is required.");
+      return;
+    }
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
     if (isNaN(latNum) || isNaN(lngNum)) {
@@ -148,7 +171,8 @@ const CreateHotelPage: NextPageWithAuth = () => {
             cancellationPolicy,
             petsAllowed,
             smokingAllowed,
-            amenities: Object.keys(amenities).length > 0 ? amenities : undefined,
+            amenities:
+              Object.keys(amenities).length > 0 ? amenities : undefined,
             hotelImages: imageUrls.length > 0 ? imageUrls : undefined,
           },
         },
@@ -157,7 +181,9 @@ const CreateHotelPage: NextPageWithAuth = () => {
       const hotel = result.data?.createHotel;
       if (hotel) {
         setCreated({ id: hotel._id, title: hotel.hotelTitle });
-        successAlert("Hotel registered! It will be reviewed by an admin before going live.");
+        successAlert(
+          "Hotel registered! It will be reviewed by an admin before going live.",
+        );
       }
     } catch (err) {
       setFormError(getErrorMessage(err));
@@ -189,11 +215,13 @@ const CreateHotelPage: NextPageWithAuth = () => {
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">
               Hotel Registered
             </p>
-            <h1 className="text-2xl font-semibold text-slate-900">{created.title}</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              {created.title}
+            </h1>
           </div>
           <div className="anim-cfade rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-            Your hotel is currently <strong>under admin review</strong>. It will go live once
-            approved. In the meantime, you can add rooms.
+            Your hotel is currently <strong>under admin review</strong>. It will
+            go live once approved. In the meantime, you can add rooms.
           </div>
           <div className="anim-cfade flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
@@ -237,7 +265,9 @@ const CreateHotelPage: NextPageWithAuth = () => {
         >
           {num}
         </div>
-        <span className={`font-semibold ${isOpen ? "text-slate-900" : "text-slate-500"}`}>
+        <span
+          className={`font-semibold ${isOpen ? "text-slate-900" : "text-slate-500"}`}
+        >
           {label}
         </span>
       </div>
@@ -286,7 +316,11 @@ const CreateHotelPage: NextPageWithAuth = () => {
         <div className="max-w-2xl space-y-3">
           {/* ── Section 1: Basic Info ── */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <SectionHeader num={1} label="Basic Information" isOpen={openSection === 1} />
+            <SectionHeader
+              num={1}
+              label="Basic Information"
+              isOpen={openSection === 1}
+            />
             {openSection === 1 && (
               <div className="section-body space-y-4 border-t border-slate-100 px-5 pb-5 pt-4">
                 <label className="block">
@@ -308,7 +342,9 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     </span>
                     <select
                       value={hotelType}
-                      onChange={(e) => setHotelType(e.target.value as HotelType)}
+                      onChange={(e) =>
+                        setHotelType(e.target.value as HotelType)
+                      }
                       className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     >
                       {HOTEL_TYPES.map((t) => (
@@ -325,7 +361,9 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     </span>
                     <select
                       value={hotelLocation}
-                      onChange={(e) => setHotelLocation(e.target.value as HotelLocation)}
+                      onChange={(e) =>
+                        setHotelLocation(e.target.value as HotelLocation)
+                      }
                       className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     >
                       {LOCATIONS.map((l) => (
@@ -379,13 +417,16 @@ const CreateHotelPage: NextPageWithAuth = () => {
                 </div>
                 <p className="text-xs text-slate-400">
                   Find coordinates at{" "}
-                  <span className="font-medium">maps.google.com</span> → right-click on your location.
+                  <span className="font-medium">maps.google.com</span> →
+                  right-click on your location.
                 </p>
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Description{" "}
-                    <span className="font-normal normal-case text-slate-400">(optional)</span>
+                    <span className="font-normal normal-case text-slate-400">
+                      (optional)
+                    </span>
                   </span>
                   <textarea
                     value={hotelDesc}
@@ -468,7 +509,11 @@ const CreateHotelPage: NextPageWithAuth = () => {
 
           {/* ── Section 2: Policies ── */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <SectionHeader num={2} label="Policies" isOpen={openSection === 2} />
+            <SectionHeader
+              num={2}
+              label="Policies"
+              isOpen={openSection === 2}
+            />
             {openSection === 2 && (
               <div className="section-body space-y-5 border-t border-slate-100 px-5 pb-5 pt-4">
                 <div>
@@ -514,16 +559,28 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     type="button"
                     onClick={() => setPetsAllowed((v) => !v)}
                     className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 transition ${
-                      petsAllowed ? "border-sky-300 bg-sky-50" : "border-slate-200 hover:bg-slate-50"
+                      petsAllowed
+                        ? "border-sky-300 bg-sky-50"
+                        : "border-slate-200 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="text-sm font-medium text-slate-800">Pets Allowed</span>
+                    <span className="text-sm font-medium text-slate-800">
+                      Pets Allowed
+                    </span>
                     <div
                       className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
-                        petsAllowed ? "border-sky-500 bg-sky-500" : "border-slate-300"
+                        petsAllowed
+                          ? "border-sky-500 bg-sky-500"
+                          : "border-slate-300"
                       }`}
                     >
-                      {petsAllowed && <Check size={11} className="text-white" strokeWidth={3} />}
+                      {petsAllowed && (
+                        <Check
+                          size={11}
+                          className="text-white"
+                          strokeWidth={3}
+                        />
+                      )}
                     </div>
                   </button>
 
@@ -531,16 +588,28 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     type="button"
                     onClick={() => setSmokingAllowed((v) => !v)}
                     className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 transition ${
-                      smokingAllowed ? "border-sky-300 bg-sky-50" : "border-slate-200 hover:bg-slate-50"
+                      smokingAllowed
+                        ? "border-sky-300 bg-sky-50"
+                        : "border-slate-200 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="text-sm font-medium text-slate-800">Smoking Allowed</span>
+                    <span className="text-sm font-medium text-slate-800">
+                      Smoking Allowed
+                    </span>
                     <div
                       className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
-                        smokingAllowed ? "border-sky-500 bg-sky-500" : "border-slate-300"
+                        smokingAllowed
+                          ? "border-sky-500 bg-sky-500"
+                          : "border-slate-300"
                       }`}
                     >
-                      {smokingAllowed && <Check size={11} className="text-white" strokeWidth={3} />}
+                      {smokingAllowed && (
+                        <Check
+                          size={11}
+                          className="text-white"
+                          strokeWidth={3}
+                        />
+                      )}
                     </div>
                   </button>
                 </div>
@@ -567,7 +636,11 @@ const CreateHotelPage: NextPageWithAuth = () => {
 
           {/* ── Section 3: Amenities ── */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <SectionHeader num={3} label="Amenities" isOpen={openSection === 3} />
+            <SectionHeader
+              num={3}
+              label="Amenities"
+              isOpen={openSection === 3}
+            />
             {openSection === 3 && (
               <div className="section-body space-y-4 border-t border-slate-100 px-5 pb-5 pt-4">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -586,12 +659,22 @@ const CreateHotelPage: NextPageWithAuth = () => {
                       >
                         <div
                           className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
-                            active ? "border-sky-500 bg-sky-500" : "border-slate-300"
+                            active
+                              ? "border-sky-500 bg-sky-500"
+                              : "border-slate-300"
                           }`}
                         >
-                          {active && <Check size={10} className="text-white" strokeWidth={3} />}
+                          {active && (
+                            <Check
+                              size={10}
+                              className="text-white"
+                              strokeWidth={3}
+                            />
+                          )}
                         </div>
-                        <span className="text-xs font-medium leading-tight">{opt.label}</span>
+                        <span className="text-xs font-medium leading-tight">
+                          {opt.label}
+                        </span>
                       </button>
                     );
                   })}

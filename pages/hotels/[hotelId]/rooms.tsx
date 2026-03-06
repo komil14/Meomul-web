@@ -53,56 +53,76 @@ const ROOM_PAGINATION: PaginationInput = {
 };
 
 const ROOM_TYPE_LABELS: Record<RoomType, string> = {
-  STANDARD:  "Standard",
-  DELUXE:    "Deluxe",
-  PREMIUM:   "Premium",
-  SUITE:     "Suite",
-  FAMILY:    "Family",
+  STANDARD: "Standard",
+  DELUXE: "Deluxe",
+  PREMIUM: "Premium",
+  SUITE: "Suite",
+  FAMILY: "Family",
   PENTHOUSE: "Penthouse",
 };
 
 const BED_TYPE_LABELS: Record<BedType, string> = {
   SINGLE: "Single",
   DOUBLE: "Double",
-  QUEEN:  "Queen",
-  KING:   "King",
-  TWIN:   "Twin",
+  QUEEN: "Queen",
+  KING: "King",
+  TWIN: "Twin",
 };
 
 const VIEW_TYPE_LABELS: Record<ViewType, string> = {
-  NONE:     "No view",
-  CITY:     "City view",
-  OCEAN:    "Ocean view",
+  NONE: "No view",
+  CITY: "City view",
+  OCEAN: "Ocean view",
   MOUNTAIN: "Mountain view",
-  GARDEN:   "Garden view",
+  GARDEN: "Garden view",
 };
 
 const ROOM_STATUS_CONFIG: Record<
   RoomStatus,
   { label: string; className: string; dotClass: string }
 > = {
-  AVAILABLE:   { label: "Available",   className: "bg-emerald-50 text-emerald-700 border border-emerald-200", dotClass: "bg-emerald-500" },
-  BOOKED:      { label: "Booked",      className: "bg-sky-50 text-sky-700 border border-sky-200",            dotClass: "bg-sky-500" },
-  MAINTENANCE: { label: "Maintenance", className: "bg-amber-50 text-amber-700 border border-amber-200",      dotClass: "bg-amber-500" },
-  INACTIVE:    { label: "Inactive",    className: "bg-slate-100 text-slate-500 border border-slate-200",     dotClass: "bg-slate-400" },
+  AVAILABLE: {
+    label: "Available",
+    className: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    dotClass: "bg-emerald-500",
+  },
+  BOOKED: {
+    label: "Booked",
+    className: "bg-sky-50 text-sky-700 border border-sky-200",
+    dotClass: "bg-sky-500",
+  },
+  MAINTENANCE: {
+    label: "Maintenance",
+    className: "bg-amber-50 text-amber-700 border border-amber-200",
+    dotClass: "bg-amber-500",
+  },
+  INACTIVE: {
+    label: "Inactive",
+    className: "bg-slate-100 text-slate-500 border border-slate-200",
+    dotClass: "bg-slate-400",
+  },
 };
 
 const ROOM_AMENITY_OPTIONS = [
-  { key: "AC",          label: "Air Conditioning" },
-  { key: "TV",          label: "TV" },
-  { key: "minibar",     label: "Minibar" },
+  { key: "AC", label: "Air Conditioning" },
+  { key: "TV", label: "TV" },
+  { key: "minibar", label: "Minibar" },
   { key: "coffeemaker", label: "Coffee Maker" },
-  { key: "hairdryer",   label: "Hair Dryer" },
-  { key: "safe",        label: "In-room Safe" },
-  { key: "bathtub",     label: "Bathtub" },
-  { key: "balcony",     label: "Balcony" },
-  { key: "workspace",   label: "Work Desk" },
-  { key: "sofa",        label: "Sofa" },
+  { key: "hairdryer", label: "Hair Dryer" },
+  { key: "safe", label: "In-room Safe" },
+  { key: "bathtub", label: "Bathtub" },
+  { key: "balcony", label: "Balcony" },
+  { key: "workspace", label: "Work Desk" },
+  { key: "sofa", label: "Sofa" },
   { key: "kitchenette", label: "Kitchenette" },
-  { key: "washer",      label: "Washer" },
+  { key: "washer", label: "Washer" },
 ];
 
-const EDITABLE_STATUSES: RoomStatus[] = ["AVAILABLE", "MAINTENANCE", "INACTIVE"];
+const EDITABLE_STATUSES: RoomStatus[] = [
+  "AVAILABLE",
+  "MAINTENANCE",
+  "INACTIVE",
+];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,10 +166,13 @@ const DEFAULT_FORM: RoomFormState = {
 
 const HotelRoomsPage: NextPageWithAuth = () => {
   const router = useRouter();
-  const hotelId = typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+  const hotelId =
+    typeof router.query.hotelId === "string" ? router.query.hotelId : "";
 
   const [panelMode, setPanelMode] = useState<PanelMode>("closed");
-  const [editingRoom, setEditingRoom] = useState<AgentRoomListItem | null>(null);
+  const [editingRoom, setEditingRoom] = useState<AgentRoomListItem | null>(
+    null,
+  );
   const [form, setForm] = useState<RoomFormState>(DEFAULT_FORM);
   const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null);
 
@@ -250,9 +273,18 @@ const HotelRoomsPage: NextPageWithAuth = () => {
   };
 
   const handleSubmit = async () => {
-    if (!form.roomName.trim()) { void errorAlert("Room name is required."); return; }
-    if (form.basePrice <= 0) { void errorAlert("Base price must be greater than 0."); return; }
-    if (form.maxOccupancy < 1) { void errorAlert("Max occupancy must be at least 1."); return; }
+    if (!form.roomName.trim()) {
+      void errorAlert("Room name is required.");
+      return;
+    }
+    if (form.basePrice <= 0) {
+      void errorAlert("Base price must be greater than 0.");
+      return;
+    }
+    if (form.maxOccupancy < 1) {
+      void errorAlert("Max occupancy must be at least 1.");
+      return;
+    }
 
     const imagesList = form.roomImages
       .split("\n")
@@ -272,7 +304,9 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           totalRooms: form.totalRooms,
           ...(form.roomNumber.trim() && { roomNumber: form.roomNumber.trim() }),
           ...(form.roomDesc.trim() && { roomDesc: form.roomDesc.trim() }),
-          ...(form.weekendSurcharge > 0 && { weekendSurcharge: form.weekendSurcharge }),
+          ...(form.weekendSurcharge > 0 && {
+            weekendSurcharge: form.weekendSurcharge,
+          }),
           ...(form.roomSize > 0 && { roomSize: form.roomSize }),
           viewType: form.viewType,
           roomAmenities: form.roomAmenities,
@@ -303,7 +337,10 @@ const HotelRoomsPage: NextPageWithAuth = () => {
     }
   };
 
-  const handleStatusChange = async (room: AgentRoomListItem, newStatus: RoomStatus) => {
+  const handleStatusChange = async (
+    room: AgentRoomListItem,
+    newStatus: RoomStatus,
+  ) => {
     setStatusDropdownId(null);
     try {
       await updateRoom({
@@ -394,7 +431,10 @@ const HotelRoomsPage: NextPageWithAuth = () => {
         {roomsLoading && rooms.length === 0 && (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 border-b border-slate-100 p-4 last:border-0">
+              <div
+                key={i}
+                className="flex items-center gap-4 border-b border-slate-100 p-4 last:border-0"
+              >
                 <div className="h-16 w-24 animate-pulse rounded-xl bg-slate-100" />
                 <div className="flex-1 space-y-2">
                   <div className="h-4 w-1/3 animate-pulse rounded-full bg-slate-100" />
@@ -455,6 +495,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                         <img
                           src={resolveMediaUrl(thumbnail)}
                           alt={room.roomName}
+                          loading="lazy"
                           className="h-full w-full object-cover"
                         />
                       ) : (
@@ -464,18 +505,25 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-900">{room.roomName}</p>
+                      <p className="truncate font-semibold text-slate-900">
+                        {room.roomName}
+                      </p>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {BED_TYPE_LABELS[room.bedType]} × {room.bedCount} · max {room.maxOccupancy} guests
+                        {BED_TYPE_LABELS[room.bedType]} × {room.bedCount} · max{" "}
+                        {room.maxOccupancy} guests
                       </p>
                       {room.roomNumber && (
-                        <p className="mt-0.5 text-xs text-slate-400">#{room.roomNumber}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          #{room.roomNumber}
+                        </p>
                       )}
                     </div>
                   </div>
 
                   {/* Type */}
-                  <span className="text-sm text-slate-600">{ROOM_TYPE_LABELS[room.roomType]}</span>
+                  <span className="text-sm text-slate-600">
+                    {ROOM_TYPE_LABELS[room.roomType]}
+                  </span>
 
                   {/* Price */}
                   <span className="text-sm font-semibold text-slate-800">
@@ -493,10 +541,14 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition hover:opacity-80 ${statusCfg.className}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setStatusDropdownId(statusDropdownId === room._id ? null : room._id);
+                        setStatusDropdownId(
+                          statusDropdownId === room._id ? null : room._id,
+                        );
                       }}
                     >
-                      <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass}`} />
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass}`}
+                      />
                       {statusCfg.label}
                       <ChevronDown size={10} />
                     </button>
@@ -517,7 +569,9 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                               onClick={() => void handleStatusChange(room, s)}
                               disabled={updating}
                             >
-                              <span className={`h-2 w-2 rounded-full ${cfg.dotClass}`} />
+                              <span
+                                className={`h-2 w-2 rounded-full ${cfg.dotClass}`}
+                              />
                               {cfg.label}
                             </button>
                           );
@@ -573,18 +627,23 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
             {/* Panel body */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-
               {/* Basic Info */}
               <section className="space-y-4">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Basic Info</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  Basic Info
+                </h3>
 
                 {/* Room name */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">Room Name *</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Room Name *
+                  </label>
                   <input
                     type="text"
                     value={form.roomName}
-                    onChange={(e) => setForm((p) => ({ ...p, roomName: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, roomName: e.target.value }))
+                    }
                     placeholder="e.g. Deluxe Ocean View"
                     className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                   />
@@ -593,23 +652,38 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                 {/* Room type + Room number */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Room Type</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Room Type
+                    </label>
                     <select
                       value={form.roomType}
-                      onChange={(e) => setForm((p) => ({ ...p, roomType: e.target.value as RoomType }))}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          roomType: e.target.value as RoomType,
+                        }))
+                      }
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     >
-                      {(Object.keys(ROOM_TYPE_LABELS) as RoomType[]).map((t) => (
-                        <option key={t} value={t}>{ROOM_TYPE_LABELS[t]}</option>
-                      ))}
+                      {(Object.keys(ROOM_TYPE_LABELS) as RoomType[]).map(
+                        (t) => (
+                          <option key={t} value={t}>
+                            {ROOM_TYPE_LABELS[t]}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Room Number</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Room Number
+                    </label>
                     <input
                       type="text"
                       value={form.roomNumber}
-                      onChange={(e) => setForm((p) => ({ ...p, roomNumber: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((p) => ({ ...p, roomNumber: e.target.value }))
+                      }
                       placeholder="e.g. 301 (optional)"
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
@@ -618,11 +692,15 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
                 {/* Description */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">Description</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Description
+                  </label>
                   <textarea
                     rows={3}
                     value={form.roomDesc}
-                    onChange={(e) => setForm((p) => ({ ...p, roomDesc: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, roomDesc: e.target.value }))
+                    }
                     placeholder="Describe the room's highlights..."
                     className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                   />
@@ -631,42 +709,80 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
               {/* Capacity & Bed */}
               <section className="space-y-4">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Capacity & Bed</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  Capacity & Bed
+                </h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   {/* Max occupancy */}
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Max Occupancy *</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Max Occupancy *
+                    </label>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setForm((p) => ({ ...p, maxOccupancy: Math.max(1, p.maxOccupancy - 1) }))}
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            maxOccupancy: Math.max(1, p.maxOccupancy - 1),
+                          }))
+                        }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      >−</button>
-                      <span className="w-10 text-center text-sm font-semibold">{form.maxOccupancy}</span>
+                      >
+                        −
+                      </button>
+                      <span className="w-10 text-center text-sm font-semibold">
+                        {form.maxOccupancy}
+                      </span>
                       <button
                         type="button"
-                        onClick={() => setForm((p) => ({ ...p, maxOccupancy: p.maxOccupancy + 1 }))}
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            maxOccupancy: p.maxOccupancy + 1,
+                          }))
+                        }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      >+</button>
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
 
                   {/* Total rooms */}
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Total Rooms *</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Total Rooms *
+                    </label>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setForm((p) => ({ ...p, totalRooms: Math.max(1, p.totalRooms - 1) }))}
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            totalRooms: Math.max(1, p.totalRooms - 1),
+                          }))
+                        }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      >−</button>
-                      <span className="w-10 text-center text-sm font-semibold">{form.totalRooms}</span>
+                      >
+                        −
+                      </button>
+                      <span className="w-10 text-center text-sm font-semibold">
+                        {form.totalRooms}
+                      </span>
                       <button
                         type="button"
-                        onClick={() => setForm((p) => ({ ...p, totalRooms: p.totalRooms + 1 }))}
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            totalRooms: p.totalRooms + 1,
+                          }))
+                        }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      >+</button>
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -674,33 +790,57 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                 <div className="grid grid-cols-2 gap-3">
                   {/* Bed type */}
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Bed Type</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Bed Type
+                    </label>
                     <select
                       value={form.bedType}
-                      onChange={(e) => setForm((p) => ({ ...p, bedType: e.target.value as BedType }))}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          bedType: e.target.value as BedType,
+                        }))
+                      }
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     >
                       {(Object.keys(BED_TYPE_LABELS) as BedType[]).map((t) => (
-                        <option key={t} value={t}>{BED_TYPE_LABELS[t]}</option>
+                        <option key={t} value={t}>
+                          {BED_TYPE_LABELS[t]}
+                        </option>
                       ))}
                     </select>
                   </div>
 
                   {/* Bed count */}
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Bed Count</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Bed Count
+                    </label>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setForm((p) => ({ ...p, bedCount: Math.max(1, p.bedCount - 1) }))}
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            bedCount: Math.max(1, p.bedCount - 1),
+                          }))
+                        }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      >−</button>
-                      <span className="w-10 text-center text-sm font-semibold">{form.bedCount}</span>
+                      >
+                        −
+                      </button>
+                      <span className="w-10 text-center text-sm font-semibold">
+                        {form.bedCount}
+                      </span>
                       <button
                         type="button"
-                        onClick={() => setForm((p) => ({ ...p, bedCount: p.bedCount + 1 }))}
+                        onClick={() =>
+                          setForm((p) => ({ ...p, bedCount: p.bedCount + 1 }))
+                        }
                         className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      >+</button>
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -708,27 +848,43 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
               {/* Pricing */}
               <section className="space-y-4">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Pricing</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  Pricing
+                </h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Base Price (₩) *</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Base Price (₩) *
+                    </label>
                     <input
                       type="number"
                       min={0}
                       value={form.basePrice || ""}
-                      onChange={(e) => setForm((p) => ({ ...p, basePrice: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          basePrice: Number(e.target.value),
+                        }))
+                      }
                       placeholder="100000"
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Weekend Surcharge (₩)</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Weekend Surcharge (₩)
+                    </label>
                     <input
                       type="number"
                       min={0}
                       value={form.weekendSurcharge || ""}
-                      onChange={(e) => setForm((p) => ({ ...p, weekendSurcharge: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          weekendSurcharge: Number(e.target.value),
+                        }))
+                      }
                       placeholder="0"
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
@@ -738,30 +894,50 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
               {/* Room details */}
               <section className="space-y-4">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Room Details</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  Room Details
+                </h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">Room Size (m²)</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      Room Size (m²)
+                    </label>
                     <input
                       type="number"
                       min={0}
                       value={form.roomSize || ""}
-                      onChange={(e) => setForm((p) => ({ ...p, roomSize: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          roomSize: Number(e.target.value),
+                        }))
+                      }
                       placeholder="e.g. 28"
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">View Type</label>
+                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                      View Type
+                    </label>
                     <select
                       value={form.viewType}
-                      onChange={(e) => setForm((p) => ({ ...p, viewType: e.target.value as ViewType }))}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          viewType: e.target.value as ViewType,
+                        }))
+                      }
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     >
-                      {(Object.keys(VIEW_TYPE_LABELS) as ViewType[]).map((v) => (
-                        <option key={v} value={v}>{VIEW_TYPE_LABELS[v]}</option>
-                      ))}
+                      {(Object.keys(VIEW_TYPE_LABELS) as ViewType[]).map(
+                        (v) => (
+                          <option key={v} value={v}>
+                            {VIEW_TYPE_LABELS[v]}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </div>
                 </div>
@@ -769,7 +945,9 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
               {/* Room amenities */}
               <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Room Amenities</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  Room Amenities
+                </h3>
                 <div className="grid grid-cols-3 gap-2">
                   {ROOM_AMENITY_OPTIONS.map(({ key, label }) => {
                     const active = form.roomAmenities.includes(key);
@@ -793,13 +971,19 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
               {/* Room images */}
               <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Room Images</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  Room Images
+                </h3>
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">Image URLs (one per line)</label>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                    Image URLs (one per line)
+                  </label>
                   <textarea
                     rows={3}
                     value={form.roomImages}
-                    onChange={(e) => setForm((p) => ({ ...p, roomImages: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, roomImages: e.target.value }))
+                    }
                     placeholder={"https://...\nhttps://..."}
                     className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 font-mono text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
                   />
@@ -823,8 +1007,8 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                 {creating || updating
                   ? "Saving..."
                   : panelMode === "create"
-                  ? "Add Room"
-                  : "Save Changes"}
+                    ? "Add Room"
+                    : "Save Changes"}
               </button>
             </div>
           </div>

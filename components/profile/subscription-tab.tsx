@@ -275,8 +275,8 @@ export function SubscriptionTab() {
       </div>
 
       <p className="text-center text-xs text-slate-400">
-        Subscription requests are manually reviewed. You'll be notified once
-        approved.
+        Subscription requests are manually reviewed. You&apos;ll be notified
+        once approved.
       </p>
     </div>
   );

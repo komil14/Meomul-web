@@ -17,6 +17,9 @@ const RoomBookingSidebar = dynamic(
 const ROOM_DETAIL_MOTION_INTENSITY_CLASS = "motion-intensity-bold";
 
 export default function RoomDetailPage() {
+  const liveInterestWidgetClass =
+    "bottom-[calc(env(safe-area-inset-bottom)+15.5rem)] sm:bottom-[16rem]";
+
   const {
     isHydrated,
     room,
@@ -173,7 +176,11 @@ export default function RoomDetailPage() {
           {showBottomLockBar ? (
             <PriceLockReadyBar basePrice={lockRequestPrice} locking={lockingPrice} onLockPrice={handleLockPrice} />
           ) : null}
-          <LiveInterestFabContainer roomId={room._id} availableRooms={selectedStayMinAvailable ?? room.availableRooms} />
+          <LiveInterestFabContainer
+            roomId={room._id}
+            availableRooms={selectedStayMinAvailable ?? room.availableRooms}
+            containerClassName={liveInterestWidgetClass}
+          />
         </>
       ) : null}
     </main>

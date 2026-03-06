@@ -52,7 +52,7 @@ export function fmtTime(dateStr: string): string {
 }
 
 export function getLastPreview(chat: ChatDto): string {
-  const msg = chat.messages.at(-1);
+  const msg = (chat.messages ?? []).at(-1);
   if (!msg) return "Start the conversation";
   if (msg.messageType === "IMAGE") return "📷 Photo";
   if (msg.messageType === "FILE") return "📎 Attachment";

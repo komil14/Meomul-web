@@ -396,18 +396,24 @@ const BookingDetailPage: NextPageWithAuth = () => {
   const [cancelBooking, { loading: cancellingAsGuest }] = useMutation<
     CancelBookingMutationData,
     CancelBookingMutationVars
-  >(CANCEL_BOOKING_MUTATION);
+  >(CANCEL_BOOKING_MUTATION, {
+    refetchQueries: ["getBooking", "getMyBookings"],
+  });
 
   const [cancelBookingByOperator, { loading: cancellingAsOperator }] =
     useMutation<
       CancelBookingByOperatorMutationData,
       CancelBookingByOperatorMutationVars
-    >(CANCEL_BOOKING_BY_OPERATOR_MUTATION);
+    >(CANCEL_BOOKING_BY_OPERATOR_MUTATION, {
+      refetchQueries: ["getBooking", "getMyBookings", "getAgentBookings"],
+    });
 
   const [createReview, { loading: submittingReview }] = useMutation<
     CreateReviewMutationData,
     CreateReviewMutationVars
-  >(CREATE_REVIEW_MUTATION);
+  >(CREATE_REVIEW_MUTATION, {
+    refetchQueries: ["getMyReviews", "getBooking"],
+  });
 
   const hotel = hotelData?.getHotel;
   const isStaff =

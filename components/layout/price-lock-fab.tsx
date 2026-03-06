@@ -2,7 +2,6 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { CANCEL_PRICE_LOCK_MUTATION, GET_MY_PRICE_LOCK_QUERY, GET_MY_PRICE_LOCKS_QUERY } from "@/graphql/hotel.gql";
-import { getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
@@ -14,8 +13,12 @@ import type {
   PriceLockDto,
 } from "@/types/hotel";
 
-const canUsePriceLock = (memberType: string | undefined): boolean =>
-  memberType === "USER" || memberType === "AGENT" || memberType === "ADMIN";
+const canUsePriceLock = (memberType: string | undefined, isAuthenticated: boolean): boolean =>
+  isAuthenticated &&
+  (memberType === "USER" ||
+    memberType === "AGENT" ||
+    memberType === "ADMIN" ||
+    memberType === "ADMIN_OPERATOR");
 
 const getRemainingSeconds = (expiresAt: string, nowMs: number): number => Math.max(0, Math.floor((new Date(expiresAt).getTime() - nowMs) / 1000));
 const ACTIVE_LOCK_POLL_INTERVAL_MS = 60000;
@@ -27,15 +30,27 @@ const formatCountdown = (seconds: number): string => {
   return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 };
 
-export function PriceLockFab() {
+interface PriceLockFabProps {
+  isAuthenticated: boolean;
+  memberType?: string;
+  onAuthRequired?: () => void;
+}
+
+export function PriceLockFab({
+  isAuthenticated,
+  memberType,
+  onAuthRequired,
+}: PriceLockFabProps) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [nowMs, setNowMs] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const isPageVisible = usePageVisible();
-  const member = useMemo(() => (isHydrated ? getSessionMember() : null), [isHydrated]);
-  const canUse = canUsePriceLock(member?.memberType);
+  const canUse = useMemo(
+    () => canUsePriceLock(memberType, isAuthenticated),
+    [memberType, isAuthenticated],
+  );
 
   const { data, loading, startPolling, stopPolling, refetch } = useQuery<GetMyPriceLocksQueryData>(GET_MY_PRICE_LOCKS_QUERY, {
     skip: !isHydrated || !canUse || !isPageVisible,
@@ -134,8 +149,46 @@ export function PriceLockFab() {
     }
   };
 
-  if (!isHydrated || !canUse) {
+  if (!isHydrated) {
     return null;
+  }
+
+  if (!canUse) {
+    if (!isAuthenticated) {
+      if (!onAuthRequired) {
+        return null;
+      }
+
+      return (
+        <button
+          type="button"
+          onClick={onAuthRequired}
+          className={`fixed right-3 z-50 inline-flex h-14 w-14 touch-manipulation flex-col items-center justify-center rounded-full bg-slate-900 text-white shadow-2xl transition hover:scale-[1.02] hover:bg-slate-700 sm:right-5 ${buttonBottomClass}`}
+          aria-label="Sign in to use price lock"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+            <rect x="5" y="11" width="14" height="9" rx="2" />
+            <path d="M8 11V8a4 4 0 118 0v3" />
+          </svg>
+          <span className="mt-0.5 text-[10px] font-semibold">Login</span>
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        className={`fixed right-3 z-50 inline-flex h-14 w-14 touch-manipulation flex-col items-center justify-center rounded-full bg-slate-500 text-white shadow-2xl ${buttonBottomClass}`}
+        aria-label="Price lock unavailable"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="6" x2="12" y2="14" />
+          <circle cx="12" cy="17" r="1" />
+        </svg>
+        <span className="mt-0.5 text-[9px] font-semibold">Locked</span>
+      </button>
+    );
   }
 
   return (

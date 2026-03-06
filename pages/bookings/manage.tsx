@@ -88,22 +88,40 @@ const BOOKING_STATUS_STYLE: Record<
   BookingStatus,
   { label: string; cls: string }
 > = {
-  PENDING:     { label: "Pending",     cls: "bg-amber-50 text-amber-700 border border-amber-200" },
-  CONFIRMED:   { label: "Confirmed",   cls: "bg-sky-50 text-sky-700 border border-sky-200" },
-  CHECKED_IN:  { label: "Checked In",  cls: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
-  CHECKED_OUT: { label: "Checked Out", cls: "bg-slate-100 text-slate-600 border border-slate-200" },
-  CANCELLED:   { label: "Cancelled",   cls: "bg-rose-50 text-rose-600 border border-rose-200" },
-  NO_SHOW:     { label: "No Show",     cls: "bg-orange-50 text-orange-600 border border-orange-200" },
+  PENDING: {
+    label: "Pending",
+    cls: "bg-amber-50 text-amber-700 border border-amber-200",
+  },
+  CONFIRMED: {
+    label: "Confirmed",
+    cls: "bg-sky-50 text-sky-700 border border-sky-200",
+  },
+  CHECKED_IN: {
+    label: "Checked In",
+    cls: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  },
+  CHECKED_OUT: {
+    label: "Checked Out",
+    cls: "bg-slate-100 text-slate-600 border border-slate-200",
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    cls: "bg-rose-50 text-rose-600 border border-rose-200",
+  },
+  NO_SHOW: {
+    label: "No Show",
+    cls: "bg-orange-50 text-orange-600 border border-orange-200",
+  },
 };
 
 const PAYMENT_STATUS_STYLE: Record<
   PaymentStatus,
   { label: string; dot: string }
 > = {
-  PENDING:  { label: "Pending",  dot: "bg-amber-400" },
-  PARTIAL:  { label: "Partial",  dot: "bg-blue-400" },
-  PAID:     { label: "Paid",     dot: "bg-emerald-400" },
-  FAILED:   { label: "Failed",   dot: "bg-rose-400" },
+  PENDING: { label: "Pending", dot: "bg-amber-400" },
+  PARTIAL: { label: "Partial", dot: "bg-blue-400" },
+  PAID: { label: "Paid", dot: "bg-emerald-400" },
+  FAILED: { label: "Failed", dot: "bg-rose-400" },
   REFUNDED: { label: "Refunded", dot: "bg-slate-300" },
 };
 
@@ -111,25 +129,31 @@ const NEXT_ACTION: Record<
   BookingStatus,
   { label: string; cls: string } | null
 > = {
-  PENDING:     { label: "Confirm →",    cls: "bg-sky-500 text-white hover:bg-sky-600" },
-  CONFIRMED:   { label: "Check-in →",  cls: "bg-emerald-500 text-white hover:bg-emerald-600" },
-  CHECKED_IN:  { label: "Check-out →", cls: "bg-slate-700 text-white hover:bg-slate-800" },
+  PENDING: {
+    label: "Confirm →",
+    cls: "bg-sky-500 text-white hover:bg-sky-600",
+  },
+  CONFIRMED: {
+    label: "Check-in →",
+    cls: "bg-emerald-500 text-white hover:bg-emerald-600",
+  },
+  CHECKED_IN: {
+    label: "Check-out →",
+    cls: "bg-slate-700 text-white hover:bg-slate-800",
+  },
   CHECKED_OUT: null,
-  CANCELLED:   null,
-  NO_SHOW:     null,
+  CANCELLED: null,
+  NO_SHOW: null,
 };
 
-const STATUS_FILTER_STYLE: Record<
-  BookingStatus | "ALL",
-  { dot: string }
-> = {
-  ALL:         { dot: "" },
-  PENDING:     { dot: "bg-amber-400" },
-  CONFIRMED:   { dot: "bg-sky-400" },
-  CHECKED_IN:  { dot: "bg-emerald-400" },
+const STATUS_FILTER_STYLE: Record<BookingStatus | "ALL", { dot: string }> = {
+  ALL: { dot: "" },
+  PENDING: { dot: "bg-amber-400" },
+  CONFIRMED: { dot: "bg-sky-400" },
+  CHECKED_IN: { dot: "bg-emerald-400" },
   CHECKED_OUT: { dot: "bg-slate-400" },
-  CANCELLED:   { dot: "bg-rose-400" },
-  NO_SHOW:     { dot: "bg-orange-400" },
+  CANCELLED: { dot: "bg-rose-400" },
+  NO_SHOW: { dot: "bg-orange-400" },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -153,9 +177,10 @@ interface OptimisticPatch {
   paidAmount?: number;
 }
 
-type ModalState =
-  | { type: "status" | "payment" | "cancel"; bookingId: string }
-  | null;
+type ModalState = {
+  type: "status" | "payment" | "cancel";
+  bookingId: string;
+} | null;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -256,7 +281,12 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   // ─── Hotel list inputs ────────────────────────────────────────────────────
 
   const hotelListInput = useMemo<GetAgentHotelsQueryVars["input"]>(
-    () => ({ page: 1, limit: HOTEL_LIST_LIMIT, sort: "createdAt", direction: -1 }),
+    () => ({
+      page: 1,
+      limit: HOTEL_LIST_LIMIT,
+      sort: "createdAt",
+      direction: -1,
+    }),
     [],
   );
 
@@ -302,9 +332,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   }, [availableHotels]);
 
   // Agent: selected hotel from URL param; "ALL" shows cross-hotel summary
-  const selectedHotelId = isAgent
-    ? hotelIdFromQuery || "ALL"
-    : "";
+  const selectedHotelId = isAgent ? hotelIdFromQuery || "ALL" : "";
 
   useEffect(() => {
     if (!isAgent || hotelIdFromQuery) return;
@@ -358,17 +386,23 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const [updateBookingStatus] = useMutation<
     UpdateBookingStatusMutationData,
     UpdateBookingStatusMutationVars
-  >(UPDATE_BOOKING_STATUS_MUTATION);
+  >(UPDATE_BOOKING_STATUS_MUTATION, {
+    refetchQueries: ["getAgentBookings", "getAllBookingsAdmin"],
+  });
 
   const [updatePaymentStatus] = useMutation<
     UpdatePaymentStatusMutationData,
     UpdatePaymentStatusMutationVars
-  >(UPDATE_PAYMENT_STATUS_MUTATION);
+  >(UPDATE_PAYMENT_STATUS_MUTATION, {
+    refetchQueries: ["getAgentBookings", "getAllBookingsAdmin"],
+  });
 
   const [cancelBookingByOperator] = useMutation<
     CancelBookingByOperatorMutationData,
     CancelBookingByOperatorMutationVars
-  >(CANCEL_BOOKING_BY_OPERATOR_MUTATION);
+  >(CANCEL_BOOKING_BY_OPERATOR_MUTATION, {
+    refetchQueries: ["getAgentBookings", "getAllBookingsAdmin"],
+  });
 
   // ─── Derived data ─────────────────────────────────────────────────────────
 
@@ -399,7 +433,14 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mergedBookings, statusFilter, isAgent, isAdmin, adminHotelFilter, codeSearch]);
+  }, [
+    mergedBookings,
+    statusFilter,
+    isAgent,
+    isAdmin,
+    adminHotelFilter,
+    codeSearch,
+  ]);
 
   const total = isAdmin
     ? (adminBookingsData?.getAllBookingsAdmin.metaCounter.total ?? 0)
@@ -446,7 +487,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
   // ─── Handlers ────────────────────────────────────────────────────────────
 
-  const handleStatusUpdate = async (booking: BookingListItem, nextStatus: BookingStatus) => {
+  const handleStatusUpdate = async (
+    booking: BookingListItem,
+    nextStatus: BookingStatus,
+  ) => {
     if (nextStatus === booking.bookingStatus) {
       await infoAlert("No change", `Status is already ${nextStatus}.`);
       return;
@@ -468,7 +512,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       await refetchBookings();
       clearPatchFields(booking._id, ["bookingStatus"]);
       closeModal();
-      await successAlert("Status updated", `${booking.bookingCode} is now ${nextStatus}.`);
+      await successAlert(
+        "Status updated",
+        `${booking.bookingCode} is now ${nextStatus}.`,
+      );
     } catch (err) {
       replacePatch(booking._id, previousPatch);
       await errorAlert("Update failed", getErrorMessage(err));
@@ -480,12 +527,18 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const handlePaymentUpdate = async (booking: BookingListItem) => {
     const nextPaymentStatus = paymentStatusDraft ?? booking.paymentStatus;
     if (nextPaymentStatus === "REFUNDED") {
-      await infoAlert("Use cancellation flow", "Use the cancel action to mark as refunded.");
+      await infoAlert(
+        "Use cancellation flow",
+        "Use the cancel action to mark as refunded.",
+      );
       return;
     }
     const nextPaidAmount = Number(paidAmountDraft);
     if (!Number.isInteger(nextPaidAmount) || nextPaidAmount < 0) {
-      await errorAlert("Invalid amount", "Paid amount must be a non-negative integer.");
+      await errorAlert(
+        "Invalid amount",
+        "Paid amount must be a non-negative integer.",
+      );
       return;
     }
     if (
@@ -520,7 +573,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       await refetchBookings();
       clearPatchFields(booking._id, ["paymentStatus", "paidAmount"]);
       closeModal();
-      await successAlert("Payment updated", `Payment updated for ${booking.bookingCode}.`);
+      await successAlert(
+        "Payment updated",
+        `Payment updated for ${booking.bookingCode}.`,
+      );
     } catch (err) {
       replacePatch(booking._id, previousPatch);
       await errorAlert("Update failed", getErrorMessage(err));
@@ -534,12 +590,18 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       booking.bookingStatus !== "PENDING" &&
       booking.bookingStatus !== "CONFIRMED"
     ) {
-      await infoAlert("Not cancellable", "Only PENDING or CONFIRMED bookings can be cancelled.");
+      await infoAlert(
+        "Not cancellable",
+        "Only PENDING or CONFIRMED bookings can be cancelled.",
+      );
       return;
     }
     const reason = cancelReasonDraft.trim();
     if (reason.length < 5 || reason.length > 500) {
-      await errorAlert("Invalid reason", "Cancellation reason must be 5–500 characters.");
+      await errorAlert(
+        "Invalid reason",
+        "Cancellation reason must be 5–500 characters.",
+      );
       return;
     }
     const confirmed = await confirmDanger({
@@ -559,13 +621,17 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         variables: {
           bookingId: booking._id,
           reason,
-          evidencePhotos: evidencePhotos.length > 0 ? evidencePhotos : undefined,
+          evidencePhotos:
+            evidencePhotos.length > 0 ? evidencePhotos : undefined,
         },
       });
       await refetchBookings();
       clearPatchFields(booking._id, ["bookingStatus"]);
       closeModal();
-      await successAlert("Cancelled", `Booking ${booking.bookingCode} has been cancelled.`);
+      await successAlert(
+        "Cancelled",
+        `Booking ${booking.bookingCode} has been cancelled.`,
+      );
     } catch (err) {
       replacePatch(booking._id, previousPatch);
       await errorAlert("Cancellation failed", getErrorMessage(err));
@@ -610,7 +676,9 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
           />
           <div
             className="fixed inset-x-4 bottom-0 z-50 flex flex-col rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-[440px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
-            style={{ animation: "modalSlideUp 0.25s cubic-bezier(0.16,1,0.3,1) both" }}
+            style={{
+              animation: "modalSlideUp 0.25s cubic-bezier(0.16,1,0.3,1) both",
+            }}
           >
             {/* Modal drag handle (mobile) */}
             <div className="flex justify-center pt-3 sm:hidden">
@@ -647,26 +715,31 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                   Advance to
                 </p>
                 <div className="space-y-2">
-                  {STATUS_TRANSITIONS[activeBooking.bookingStatus].length === 0 ? (
+                  {STATUS_TRANSITIONS[activeBooking.bookingStatus].length ===
+                  0 ? (
                     <p className="text-sm text-slate-500">
                       No further status transitions available.
                     </p>
                   ) : (
-                    STATUS_TRANSITIONS[activeBooking.bookingStatus].map((nextStatus) => {
-                      const style = BOOKING_STATUS_STYLE[nextStatus];
-                      return (
-                        <button
-                          key={nextStatus}
-                          type="button"
-                          disabled={submitting}
-                          onClick={() => void handleStatusUpdate(activeBooking, nextStatus)}
-                          className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition disabled:opacity-50 ${style.cls}`}
-                        >
-                          <span>{style.label}</span>
-                          <span className="text-xs opacity-70">→</span>
-                        </button>
-                      );
-                    })
+                    STATUS_TRANSITIONS[activeBooking.bookingStatus].map(
+                      (nextStatus) => {
+                        const style = BOOKING_STATUS_STYLE[nextStatus];
+                        return (
+                          <button
+                            key={nextStatus}
+                            type="button"
+                            disabled={submitting}
+                            onClick={() =>
+                              void handleStatusUpdate(activeBooking, nextStatus)
+                            }
+                            className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition disabled:opacity-50 ${style.cls}`}
+                          >
+                            <span>{style.label}</span>
+                            <span className="text-xs opacity-70">→</span>
+                          </button>
+                        );
+                      },
+                    )
                   )}
                 </div>
               </div>
@@ -705,9 +778,14 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                       }
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-900 outline-none ring-sky-400 transition focus:ring-2"
                     >
-                      {(PAYMENT_UPDATE_OPTIONS.includes(activeBooking.paymentStatus)
+                      {(PAYMENT_UPDATE_OPTIONS.includes(
+                        activeBooking.paymentStatus,
+                      )
                         ? PAYMENT_UPDATE_OPTIONS
-                        : [activeBooking.paymentStatus, ...PAYMENT_UPDATE_OPTIONS]
+                        : [
+                            activeBooking.paymentStatus,
+                            ...PAYMENT_UPDATE_OPTIONS,
+                          ]
                       ).map((s) => (
                         <option key={s} value={s}>
                           {PAYMENT_STATUS_STYLE[s].label}
@@ -720,7 +798,9 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                       Paid Amount (₩)
                     </label>
                     <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition focus-within:border-slate-300 focus-within:bg-white">
-                      <span className="text-sm font-semibold text-slate-400">₩</span>
+                      <span className="text-sm font-semibold text-slate-400">
+                        ₩
+                      </span>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -855,8 +935,8 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Agent: hotel selector */}
-          {isAgent && (
-            hotelsLoading ? (
+          {isAgent &&
+            (hotelsLoading ? (
               <div className="h-9 w-48 animate-pulse rounded-xl bg-slate-100" />
             ) : (
               <select
@@ -877,8 +957,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                   </option>
                 ))}
               </select>
-            )
-          )}
+            ))}
 
           {/* Admin: hotel filter (client-side) */}
           {isAdmin && (
@@ -971,7 +1050,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
             {hotelsLoading ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
-                  <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+                  <div
+                    key={i}
+                    className="h-16 animate-pulse rounded-xl bg-slate-100"
+                  />
                 ))}
               </div>
             ) : availableHotels.length === 0 ? (
@@ -984,12 +1066,18 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                     className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">{h.hotelTitle}</p>
-                      <p className="text-xs text-slate-500">{h.hotelLocation} · {h.hotelType}</p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {h.hotelTitle}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {h.hotelLocation} · {h.hotelType}
+                      </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => pushManageQuery({ hotelId: h._id, page: 1 })}
+                      onClick={() =>
+                        pushManageQuery({ hotelId: h._id, page: 1 })
+                      }
                       className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
                     >
                       View bookings →
@@ -1003,250 +1091,258 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
         {/* Booking table */}
         {(!isAgent || selectedHotelId !== "ALL") && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/80">
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Code
-                  </th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Guest / Room
-                  </th>
-                  {isAdmin && (
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/80">
                     <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                      Hotel
+                      Code
                     </th>
-                  )}
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Dates
-                  </th>
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Amount
-                  </th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {/* Loading skeletons */}
-                {bookingsLoading && sourceBookings.length === 0 &&
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i}>
-                      {Array.from({ length: isAdmin ? 7 : 6 }).map((__, j) => (
-                        <td key={j} className="px-5 py-4">
-                          <div className="h-3.5 w-full animate-pulse rounded-full bg-slate-100" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                }
-
-                {/* Empty state row */}
-                {!bookingsLoading && !bookingsError && visibleBookings.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={isAdmin ? 7 : 6}
-                      className="px-5 py-16 text-center"
-                    >
-                      <p className="font-semibold text-slate-700">
-                        No bookings found
-                      </p>
-                      <p className="mt-1 text-sm text-slate-400">
-                        {!selectedHotelId && isAgent
-                          ? "Select a hotel to view bookings"
-                          : "Try adjusting the status filter or search"}
-                      </p>
-                    </td>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Guest / Room
+                    </th>
+                    {isAdmin && (
+                      <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Hotel
+                      </th>
+                    )}
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Dates
+                    </th>
+                    <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Amount
+                    </th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Status
+                    </th>
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
                   </tr>
-                )}
-
-                {/* Booking rows */}
-                {visibleBookings.map((b, i) => {
-                  const guestName =
-                    b.rooms[0]?.guestName ||
-                    `Guest ···${b.guestId.slice(-6).toUpperCase()}`;
-                  const roomSummary = b.rooms
-                    .map((r) => `${r.quantity}× ${r.roomType}`)
-                    .join(", ");
-                  const nights = nightsBetween(b.checkInDate, b.checkOutDate);
-                  const hotelName =
-                    hotelsMap.get(b.hotelId)?.hotelTitle ??
-                    `Hotel ···${b.hotelId.slice(-4)}`;
-                  const nextAction = NEXT_ACTION[b.bookingStatus];
-                  const paymentLocked =
-                    b.bookingStatus === "CANCELLED" ||
-                    b.bookingStatus === "NO_SHOW";
-                  const canCancel =
-                    b.bookingStatus === "PENDING" ||
-                    b.bookingStatus === "CONFIRMED";
-
-                  return (
-                    <tr
-                      key={b._id}
-                      className="group transition hover:bg-slate-50/50"
-                      style={{
-                        animation: "rowFadeIn 0.2s ease-out both",
-                        animationDelay: `${i * 20}ms`,
-                      }}
-                    >
-                      {/* Code */}
-                      <td className="px-5 py-3.5">
-                        {memberType !== "ADMIN_OPERATOR" ? (
-                          <Link
-                            href={`/bookings/${b._id}`}
-                            className="font-mono text-xs font-semibold text-sky-600 hover:underline"
-                          >
-                            {b.bookingCode}
-                          </Link>
-                        ) : (
-                          <span className="font-mono text-xs font-semibold text-slate-700">
-                            {b.bookingCode}
-                          </span>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {/* Loading skeletons */}
+                  {bookingsLoading &&
+                    sourceBookings.length === 0 &&
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={i}>
+                        {Array.from({ length: isAdmin ? 7 : 6 }).map(
+                          (__, j) => (
+                            <td key={j} className="px-5 py-4">
+                              <div className="h-3.5 w-full animate-pulse rounded-full bg-slate-100" />
+                            </td>
+                          ),
                         )}
-                        <p className="mt-0.5 text-[10px] text-slate-400">
-                          {new Date(b.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </p>
-                      </td>
+                      </tr>
+                    ))}
 
-                      {/* Guest / Room */}
-                      <td className="px-5 py-3.5">
-                        <p className="text-sm font-medium text-slate-900">
-                          {guestName}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          {roomSummary}
-                        </p>
-                      </td>
-
-                      {/* Hotel (admin only) */}
-                      {isAdmin && (
-                        <td className="px-5 py-3.5">
-                          <p className="text-sm text-slate-700">{hotelName}</p>
-                        </td>
-                      )}
-
-                      {/* Dates */}
-                      <td className="px-5 py-3.5">
-                        <p className="text-sm text-slate-700">
-                          {formatDateKst(b.checkInDate)} →{" "}
-                          {formatDateKst(b.checkOutDate)}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          {nights} night{nights !== 1 ? "s" : ""}
-                        </p>
-                      </td>
-
-                      {/* Amount */}
-                      <td className="px-5 py-3.5 text-right">
-                        <p className="text-sm font-semibold text-slate-900">
-                          ₩{formatNumber(b.totalPrice)}
-                        </p>
-                        <div className="mt-0.5 flex items-center justify-end gap-1">
-                          <PaymentStatusBadge status={b.paymentStatus} />
-                        </div>
-                        {b.paidAmount > 0 && (
-                          <p className="text-[10px] text-slate-400">
-                            Paid: ₩{formatNumber(b.paidAmount)}
+                  {/* Empty state row */}
+                  {!bookingsLoading &&
+                    !bookingsError &&
+                    visibleBookings.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={isAdmin ? 7 : 6}
+                          className="px-5 py-16 text-center"
+                        >
+                          <p className="font-semibold text-slate-700">
+                            No bookings found
                           </p>
+                          <p className="mt-1 text-sm text-slate-400">
+                            {!selectedHotelId && isAgent
+                              ? "Select a hotel to view bookings"
+                              : "Try adjusting the status filter or search"}
+                          </p>
+                        </td>
+                      </tr>
+                    )}
+
+                  {/* Booking rows */}
+                  {visibleBookings.map((b, i) => {
+                    const guestName =
+                      b.rooms[0]?.guestName ||
+                      `Guest ···${b.guestId.slice(-6).toUpperCase()}`;
+                    const roomSummary = b.rooms
+                      .map((r) => `${r.quantity}× ${r.roomType}`)
+                      .join(", ");
+                    const nights = nightsBetween(b.checkInDate, b.checkOutDate);
+                    const hotelName =
+                      hotelsMap.get(b.hotelId)?.hotelTitle ??
+                      `Hotel ···${b.hotelId.slice(-4)}`;
+                    const nextAction = NEXT_ACTION[b.bookingStatus];
+                    const paymentLocked =
+                      b.bookingStatus === "CANCELLED" ||
+                      b.bookingStatus === "NO_SHOW";
+                    const canCancel =
+                      b.bookingStatus === "PENDING" ||
+                      b.bookingStatus === "CONFIRMED";
+
+                    return (
+                      <tr
+                        key={b._id}
+                        className="group transition hover:bg-slate-50/50"
+                        style={{
+                          animation: "rowFadeIn 0.2s ease-out both",
+                          animationDelay: `${i * 20}ms`,
+                        }}
+                      >
+                        {/* Code */}
+                        <td className="px-5 py-3.5">
+                          {memberType !== "ADMIN_OPERATOR" ? (
+                            <Link
+                              href={`/bookings/${b._id}`}
+                              className="font-mono text-xs font-semibold text-sky-600 hover:underline"
+                            >
+                              {b.bookingCode}
+                            </Link>
+                          ) : (
+                            <span className="font-mono text-xs font-semibold text-slate-700">
+                              {b.bookingCode}
+                            </span>
+                          )}
+                          <p className="mt-0.5 text-[10px] text-slate-400">
+                            {new Date(b.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                        </td>
+
+                        {/* Guest / Room */}
+                        <td className="px-5 py-3.5">
+                          <p className="text-sm font-medium text-slate-900">
+                            {guestName}
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-400">
+                            {roomSummary}
+                          </p>
+                        </td>
+
+                        {/* Hotel (admin only) */}
+                        {isAdmin && (
+                          <td className="px-5 py-3.5">
+                            <p className="text-sm text-slate-700">
+                              {hotelName}
+                            </p>
+                          </td>
                         )}
-                      </td>
 
-                      {/* Status */}
-                      <td className="px-5 py-3.5">
-                        <BookingStatusBadge status={b.bookingStatus} />
-                      </td>
+                        {/* Dates */}
+                        <td className="px-5 py-3.5">
+                          <p className="text-sm text-slate-700">
+                            {formatDateKst(b.checkInDate)} →{" "}
+                            {formatDateKst(b.checkOutDate)}
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-400">
+                            {nights} night{nights !== 1 ? "s" : ""}
+                          </p>
+                        </td>
 
-                      {/* Actions */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {/* Status advance */}
-                          {nextAction && (
-                            <button
-                              type="button"
-                              onClick={() => openModal("status", b._id)}
-                              className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${nextAction.cls}`}
-                            >
-                              {nextAction.label}
-                            </button>
+                        {/* Amount */}
+                        <td className="px-5 py-3.5 text-right">
+                          <p className="text-sm font-semibold text-slate-900">
+                            ₩{formatNumber(b.totalPrice)}
+                          </p>
+                          <div className="mt-0.5 flex items-center justify-end gap-1">
+                            <PaymentStatusBadge status={b.paymentStatus} />
+                          </div>
+                          {b.paidAmount > 0 && (
+                            <p className="text-[10px] text-slate-400">
+                              Paid: ₩{formatNumber(b.paidAmount)}
+                            </p>
                           )}
-                          {/* No-show (for CONFIRMED with no next action button) */}
-                          {b.bookingStatus === "CONFIRMED" && (
-                            <button
-                              type="button"
-                              onClick={() => openModal("status", b._id)}
-                              className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-600 transition hover:bg-orange-100"
-                            >
-                              ⋯
-                            </button>
-                          )}
-                          {/* Payment */}
-                          {!paymentLocked && (
-                            <button
-                              type="button"
-                              onClick={() => openModal("payment", b._id)}
-                              className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-                            >
-                              ₩ Pay
-                            </button>
-                          )}
-                          {/* Cancel */}
-                          {canCancel && (
-                            <button
-                              type="button"
-                              onClick={() => openModal("cancel", b._id)}
-                              className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-500 transition hover:bg-rose-50"
-                            >
-                              Cancel
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
-              <p className="text-xs text-slate-500">
-                Page{" "}
-                <span className="font-semibold text-slate-700">{page}</span> /{" "}
-                <span className="font-semibold text-slate-700">{totalPages}</span>{" "}
-                · {formatNumber(total)} total
-              </p>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => pushManageQuery({ page: page - 1 })}
-                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <button
-                  type="button"
-                  disabled={page >= totalPages}
-                  onClick={() => pushManageQuery({ page: page + 1 })}
-                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
+                        {/* Status */}
+                        <td className="px-5 py-3.5">
+                          <BookingStatusBadge status={b.bookingStatus} />
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-5 py-3.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {/* Status advance */}
+                            {nextAction && (
+                              <button
+                                type="button"
+                                onClick={() => openModal("status", b._id)}
+                                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${nextAction.cls}`}
+                              >
+                                {nextAction.label}
+                              </button>
+                            )}
+                            {/* No-show (for CONFIRMED with no next action button) */}
+                            {b.bookingStatus === "CONFIRMED" && (
+                              <button
+                                type="button"
+                                onClick={() => openModal("status", b._id)}
+                                className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-600 transition hover:bg-orange-100"
+                              >
+                                ⋯
+                              </button>
+                            )}
+                            {/* Payment */}
+                            {!paymentLocked && (
+                              <button
+                                type="button"
+                                onClick={() => openModal("payment", b._id)}
+                                className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                              >
+                                ₩ Pay
+                              </button>
+                            )}
+                            {/* Cancel */}
+                            {canCancel && (
+                              <button
+                                type="button"
+                                onClick={() => openModal("cancel", b._id)}
+                                className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-500 transition hover:bg-rose-50"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+                <p className="text-xs text-slate-500">
+                  Page{" "}
+                  <span className="font-semibold text-slate-700">{page}</span> /{" "}
+                  <span className="font-semibold text-slate-700">
+                    {totalPages}
+                  </span>{" "}
+                  · {formatNumber(total)} total
+                </p>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    disabled={page <= 1}
+                    onClick={() => pushManageQuery({ page: page - 1 })}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={page >= totalPages}
+                    onClick={() => pushManageQuery({ page: page + 1 })}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </main>
     </>

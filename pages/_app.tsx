@@ -5,11 +5,18 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { SiteFrame } from "@/components/layout/site-frame";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { persistApolloCache } from "@/lib/apollo/cache-storage";
 import { createApolloClient } from "@/lib/apollo/client";
 import { resolveGuardRedirect } from "@/lib/auth/route-guard";
-import { getSessionMember } from "@/lib/auth/session";
+import {
+  clearAuthSession,
+  getSessionMember,
+  getTokenRemainingMs,
+  isAuthenticated,
+} from "@/lib/auth/session";
+import { infoAlert } from "@/lib/ui/alerts";
 import type { NextPageWithAuth } from "@/types/page";
 
 type AppPropsWithAuth = AppProps & {
@@ -38,7 +45,10 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
   const [client] = useState(() => createApolloClient());
 
   const guestOnly = Boolean(Component.auth?.guestOnly);
-  const rolesKey = useMemo(() => Component.auth?.roles?.join(",") ?? "", [Component.auth?.roles]);
+  const rolesKey = useMemo(
+    () => Component.auth?.roles?.join(",") ?? "",
+    [Component.auth?.roles],
+  );
   const requiresGuard = guestOnly || rolesKey.length > 0;
   const guardKey = `${router.asPath}|guest:${guestOnly}|roles:${rolesKey}`;
 
@@ -62,7 +72,11 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
         setGuardState({ key: guardKey, ready: false });
       }
 
-      const redirectPath = await resolveGuardRedirect(Component.auth, getSessionMember(), router.asPath);
+      const redirectPath = await resolveGuardRedirect(
+        Component.auth,
+        getSessionMember(),
+        router.asPath,
+      );
       if (isCancelled) {
         return;
       }
@@ -150,24 +164,77 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
     };
   }, [client]);
 
+  // ─── Session expiry watcher ──────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const SESSION_CHECK_INTERVAL = 60_000; // check every minute
+    const WARNING_THRESHOLD = 5 * 60_000; // warn at 5 minutes remaining
+    let warned = false;
+
+    const checkSession = async () => {
+      if (!isAuthenticated()) {
+        warned = false;
+        return;
+      }
+
+      const remaining = getTokenRemainingMs();
+
+      if (remaining === 0) {
+        // Token already expired — clear and redirect
+        clearAuthSession();
+        await infoAlert(
+          "Session expired",
+          "Your session has expired. Please log in again.",
+        );
+        void router.push(
+          `/auth/login?next=${encodeURIComponent(router.asPath)}`,
+        );
+        warned = false;
+        return;
+      }
+
+      if (remaining <= WARNING_THRESHOLD && !warned) {
+        warned = true;
+        const mins = Math.ceil(remaining / 60_000);
+        await infoAlert(
+          "Session expiring soon",
+          `Your session will expire in ~${mins} minute${mins !== 1 ? "s" : ""}. Please save your work.`,
+        );
+      }
+    };
+
+    void checkSession();
+    const id = window.setInterval(
+      () => void checkSession(),
+      SESSION_CHECK_INTERVAL,
+    );
+
+    return () => window.clearInterval(id);
+  }, [router]);
+
   const isGuardReady = guardState.key === guardKey && guardState.ready;
   const showGuardLoading = requiresGuard && !isGuardReady;
 
   return (
-    <ApolloProvider client={client}>
-      <ToastProvider>
-        <div className={`${manrope.variable} ${spaceGrotesk.variable}`}>
-          <SiteFrame>
-            {showGuardLoading ? (
-              <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-slate-200 bg-white/80">
-                <p className="text-sm font-medium text-slate-600">Checking access...</p>
-              </div>
-            ) : (
-              <Component {...pageProps} />
-            )}
-          </SiteFrame>
-        </div>
-      </ToastProvider>
-    </ApolloProvider>
+    <ErrorBoundary>
+      <ApolloProvider client={client}>
+        <ToastProvider>
+          <div className={`${manrope.variable} ${spaceGrotesk.variable}`}>
+            <SiteFrame>
+              {showGuardLoading ? (
+                <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-slate-200 bg-white/80">
+                  <p className="text-sm font-medium text-slate-600">
+                    Checking access...
+                  </p>
+                </div>
+              ) : (
+                <Component {...pageProps} />
+              )}
+            </SiteFrame>
+          </div>
+        </ToastProvider>
+      </ApolloProvider>
+    </ErrorBoundary>
   );
 }

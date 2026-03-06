@@ -16,9 +16,12 @@ import {
   MARK_AS_READ_MUTATION,
 } from "@/graphql/notification.gql";
 import {
-  clearAuthSession,
   getAccessToken,
   getSessionMember,
+  getTokenRemainingMs,
+  isAuthenticated,
+  logoutSession,
+  silentRefreshAccessToken,
 } from "@/lib/auth/session";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
@@ -51,33 +54,33 @@ const NOTIFICATION_POLL_INTERVAL_MS = 60000;
 
 const NAV_LINKS = {
   guest: [
-    { href: "/",        label: "Home" },
-    { href: "/hotels",  label: "Hotels" },
-    { href: "/about",   label: "About" },
+    { href: "/", label: "Home" },
+    { href: "/hotels", label: "Hotels" },
+    { href: "/about", label: "About" },
     { href: "/support", label: "Support" },
   ],
   user: [
-    { href: "/",         label: "Home" },
-    { href: "/hotels",   label: "Hotels" },
+    { href: "/", label: "Home" },
+    { href: "/hotels", label: "Hotels" },
     { href: "/bookings", label: "My Bookings" },
-    { href: "/about",    label: "About" },
-    { href: "/support",  label: "Support" },
+    { href: "/about", label: "About" },
+    { href: "/support", label: "Support" },
   ],
   staff: [
-    { href: "/",                label: "Home" },
-    { href: "/hotels",          label: "Hotels" },
-    { href: "/hotels/manage",   label: "My Hotels" },
+    { href: "/", label: "Home" },
+    { href: "/hotels", label: "Hotels" },
+    { href: "/hotels/manage", label: "My Hotels" },
     { href: "/bookings/manage", label: "Bookings" },
-    { href: "/chats",           label: "Chats" },
-    { href: "/dashboard",       label: "Dashboard" },
+    { href: "/chats", label: "Chats" },
+    { href: "/dashboard", label: "Dashboard" },
   ],
   admin: [
-    { href: "/",                label: "Home" },
-    { href: "/hotels",          label: "Hotels" },
-    { href: "/hotels/manage",   label: "My Hotels" },
+    { href: "/", label: "Home" },
+    { href: "/hotels", label: "Hotels" },
+    { href: "/hotels/manage", label: "My Hotels" },
     { href: "/bookings/manage", label: "Bookings" },
-    { href: "/chats",           label: "Chats" },
-    { href: "/dashboard",       label: "Dashboard" },
+    { href: "/chats", label: "Chats" },
+    { href: "/dashboard", label: "Dashboard" },
   ],
 } as const;
 
@@ -515,10 +518,12 @@ function NotificationBellDrawer({
 
 function SupportFab({
   hasPriceLockWidget,
+  isRoomDetailPage,
   onStartSupport,
   onOpenInbox,
 }: {
   hasPriceLockWidget: boolean;
+  isRoomDetailPage: boolean;
   onStartSupport: () => void;
   onOpenInbox: () => void;
 }) {
@@ -536,12 +541,14 @@ function SupportFab({
   }, []);
 
   const containerBottom = hasPriceLockWidget
-    ? "bottom-[calc(env(safe-area-inset-bottom)+9rem)] sm:bottom-40"
+    ? isRoomDetailPage
+      ? "bottom-[calc(env(safe-area-inset-bottom)+10.75rem)] sm:bottom-44"
+      : "bottom-[calc(env(safe-area-inset-bottom)+9rem)] sm:bottom-40"
     : "bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:bottom-6";
 
   return (
     <div
-      className={`fixed right-3 z-50 sm:right-5 ${containerBottom}`}
+      className={`fixed right-3 z-40 sm:right-5 ${containerBottom}`}
       ref={panelRef}
     >
       <div
@@ -603,6 +610,33 @@ export function SiteFrame({ children }: PropsWithChildren) {
     setMember(getSessionMember());
   }, [router.asPath]);
 
+  // ── Proactive token refresh ──
+  // When the access token is about to expire (≤ 2 min remaining), silently
+  // refresh it using the httpOnly refresh-token cookie. Checks every 30 s.
+  useEffect(() => {
+    if (!member) return;
+
+    const REFRESH_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes before expiry
+    const CHECK_INTERVAL_MS = 30_000; // check every 30 seconds
+
+    const tryRefresh = async () => {
+      if (!isAuthenticated()) return;
+      const remaining = getTokenRemainingMs();
+      if (remaining > 0 && remaining <= REFRESH_THRESHOLD_MS) {
+        const ok = await silentRefreshAccessToken();
+        if (ok) {
+          // Update local member state with refreshed data
+          setMember(getSessionMember());
+        }
+      }
+    };
+
+    // Check immediately on mount in case token is already expiring
+    void tryRefresh();
+    const interval = setInterval(() => void tryRefresh(), CHECK_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [member]);
+
   // Subscribe to Apollo cache for live memberImage updates when profile is saved.
   // fetchPolicy:"cache-only" means no extra network request — it just reads
   // whatever the profile page already fetched and updates when the mutation fires.
@@ -619,11 +653,13 @@ export function SiteFrame({ children }: PropsWithChildren) {
     : null;
 
   const isPageVisible = usePageVisible();
-  const canTrackUnread = Boolean(member);
+  const hasValidSession = Boolean(member) && isAuthenticated();
+  const canTrackUnread = hasValidSession;
   const isChatRoute =
     router.pathname === "/chats" || router.pathname === "/chats/[chatId]";
-  const canOpenSupportChat =
-    member?.memberType === "USER" || member?.memberType === "AGENT";
+  const showFloatingWidgets = !isChatRoute;
+  const isRoomDetailPage = router.pathname === "/rooms/[roomId]";
+  const shouldShowPriceLockWidget = true;
   const canPollUnread = canTrackUnread && isPageVisible && !isChatRoute;
   const previousUnreadRef = useRef<number | null>(null);
   const hasPolledOnVisibleRef = useRef(false);
@@ -633,9 +669,8 @@ export function SiteFrame({ children }: PropsWithChildren) {
     member?.memberType === "AGENT" ||
     member?.memberType === "ADMIN" ||
     member?.memberType === "ADMIN_OPERATOR";
-
   const handleLogout = () => {
-    clearAuthSession();
+    void logoutSession();
     void router.push("/auth/login");
   };
 
@@ -680,13 +715,31 @@ export function SiteFrame({ children }: PropsWithChildren) {
     const socket = createNotificationSocket(token);
 
     socket.on("connect", () => {
-      socket.emit("authenticate", { token: `Bearer ${token}` });
+      socket.emit(
+        "authenticate",
+        { token: `Bearer ${token}` },
+        (ack: { success: boolean; error?: string }) => {
+          if (!ack?.success) {
+            console.warn("[notification-socket] auth ACK failed:", ack?.error);
+          }
+        },
+      );
     });
 
     socket.on("notification", handleNotificationEvent);
 
+    socket.on("error", (err: { message?: string }) => {
+      console.warn("[notification-socket] server error:", err?.message);
+    });
+
+    socket.on("connect_error", (err: Error) => {
+      console.warn("[notification-socket] connect error:", err.message);
+    });
+
     return () => {
       socket.off("notification", handleNotificationEvent);
+      socket.off("error");
+      socket.off("connect_error");
       socket.disconnect();
     };
   }, [member, handleNotificationEvent]);
@@ -766,7 +819,19 @@ export function SiteFrame({ children }: PropsWithChildren) {
     />
   ) : null;
 
+  const openLogin = () => {
+    void router.push({
+      pathname: "/auth/login",
+      query: { next: router.asPath },
+    });
+  };
+
   const openSupportChat = () => {
+    if (!hasValidSession) {
+      openLogin();
+      return;
+    }
+
     void router.push({
       pathname: "/chats",
       query: {
@@ -778,6 +843,11 @@ export function SiteFrame({ children }: PropsWithChildren) {
   };
 
   const openInbox = () => {
+    if (!hasValidSession) {
+      openLogin();
+      return;
+    }
+
     void router.push("/chats");
   };
 
@@ -1022,14 +1092,21 @@ export function SiteFrame({ children }: PropsWithChildren) {
           {children}
         </div>
       )}
-      {!isHomeRoute && <PriceLockFab />}
-      {canOpenSupportChat && !isChatRoute && (
+      {showFloatingWidgets && shouldShowPriceLockWidget ? (
+        <PriceLockFab
+          isAuthenticated={hasValidSession}
+          memberType={member?.memberType}
+          onAuthRequired={hasValidSession ? undefined : openLogin}
+        />
+      ) : null}
+      {showFloatingWidgets ? (
         <SupportFab
-          hasPriceLockWidget={!isHomeRoute}
+          hasPriceLockWidget={shouldShowPriceLockWidget}
+          isRoomDetailPage={isRoomDetailPage}
           onStartSupport={openSupportChat}
           onOpenInbox={openInbox}
         />
-      )}
+      ) : null}
       <ChatDrawer
         isOpen={isChatPanelOpen}
         onClose={() => setIsChatPanelOpen(false)}

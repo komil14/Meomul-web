@@ -37,3 +37,28 @@ export const CHECK_AUTH_QUERY = gql`
     checkAuth
   }
 `;
+
+export const REFRESH_TOKEN_MUTATION = gql`
+  mutation RefreshToken {
+    refreshToken {
+      _id
+      accessToken
+      memberNick
+      memberType
+      memberStatus
+      memberAuthType
+      memberPhone
+      memberFullName
+      memberImage
+    }
+  }
+`;
+
+export const LOGOUT_MUTATION = gql`
+  mutation Logout {
+    logout {
+      success
+      message
+    }
+  }
+`;

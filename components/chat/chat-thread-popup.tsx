@@ -1,7 +1,14 @@
 import { gql } from "@apollo/client";
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import type { Socket } from "socket.io-client";
 import { useToast } from "@/components/ui/toast-provider";
 import {
@@ -78,7 +85,8 @@ const API_BASE = env.graphqlUrl.replace(/\/graphql\/?$/i, "");
 /** Turns a relative `uploads/...` path into an absolute API URL. */
 function resolveMediaUrl(url: string | null | undefined): string {
   if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("//") || url.startsWith("blob:")) return url;
+  if (url.startsWith("http") || url.startsWith("//") || url.startsWith("blob:"))
+    return url;
   return `${API_BASE}/${url}`;
 }
 
@@ -158,11 +166,17 @@ function MessageBubble({
   return (
     <div className={`relative overflow-hidden ${isOwn ? sentCls : recvCls}`}>
       {message.messageType === "IMAGE" && message.imageUrl && (
-        <a href={resolveMediaUrl(message.imageUrl)} target="_blank" rel="noreferrer" className="block">
+        <a
+          href={resolveMediaUrl(message.imageUrl)}
+          target="_blank"
+          rel="noreferrer"
+          className="block"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={resolveMediaUrl(message.imageUrl)}
             alt="Shared image"
+            loading="lazy"
             className="block max-h-64 w-full object-cover"
           />
         </a>
@@ -215,12 +229,17 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   const [socketConnected, setSocketConnected] = useState(false);
   const [typingUserId, setTypingUserId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [pendingImage, setPendingImage] = useState<{
+    file: File;
+    previewUrl: string;
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const pendingImageRef = useRef<{ file: File; previewUrl: string } | null>(null);
+  const pendingImageRef = useRef<{ file: File; previewUrl: string } | null>(
+    null,
+  );
   const lastMarkedKeyRef = useRef("");
   const socketRef = useRef<Socket | null>(null);
   const remoteTypingTimeoutRef = useRef<number | null>(null);
@@ -245,11 +264,14 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
 
   const chat = data?.getChat;
 
-  const { data: hotelData } = useQuery<HotelTitleResult>(GET_HOTEL_TITLE_QUERY, {
-    skip: !chat?.hotelId,
-    variables: { hotelId: chat?.hotelId ?? "" },
-    fetchPolicy: "cache-and-network",
-  });
+  const { data: hotelData } = useQuery<HotelTitleResult>(
+    GET_HOTEL_TITLE_QUERY,
+    {
+      skip: !chat?.hotelId,
+      variables: { hotelId: chat?.hotelId ?? "" },
+      fetchPolicy: "cache-and-network",
+    },
+  );
 
   const [sendMessage, { loading: sending }] = useMutation<
     SendMessageMutationData,
@@ -271,16 +293,21 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   // Revoke object URL on unmount
   useEffect(() => {
     return () => {
-      if (pendingImageRef.current) URL.revokeObjectURL(pendingImageRef.current.previewUrl);
+      if (pendingImageRef.current)
+        URL.revokeObjectURL(pendingImageRef.current.previewUrl);
     };
   }, []);
 
-  const unreadForMe = chat ? (isUser ? chat.unreadGuestMessages : chat.unreadAgentMessages) : 0;
+  const unreadForMe = chat
+    ? isUser
+      ? chat.unreadGuestMessages
+      : chat.unreadAgentMessages
+    : 0;
 
   // Auto mark-as-read
   useEffect(() => {
     if (!chat || unreadForMe === 0) return;
-    const markKey = `${chat._id}:${chat.messages.length}:${unreadForMe}`;
+    const markKey = `${chat._id}:${(chat.messages ?? []).length}:${unreadForMe}`;
     if (lastMarkedKeyRef.current === markKey) return;
     lastMarkedKeyRef.current = markKey;
     void markRead({ variables: { chatId: chat._id } }).catch(() => undefined);
@@ -301,12 +328,12 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat?.messages.length]);
+  }, [chat?.messages?.length]);
 
   // Track previous message count for animation
   useEffect(() => {
-    prevMessageCountRef.current = chat?.messages.length ?? 0;
-  }, [chat?.messages.length]);
+    prevMessageCountRef.current = chat?.messages?.length ?? 0;
+  }, [chat?.messages?.length]);
 
   // Socket setup
   useEffect(() => {
@@ -349,7 +376,9 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
       socket.emit("authenticate", { token }, (authAck?: SocketAck) => {
         if (!authAck?.success) {
           if (!socketJoinFailedRef.current) {
-            toast.info(authAck?.error ?? "Realtime auth failed. Using polling fallback.");
+            toast.info(
+              authAck?.error ?? "Realtime auth failed. Using polling fallback.",
+            );
             socketJoinFailedRef.current = true;
           }
           return;
@@ -449,7 +478,8 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   };
 
   const scheduleStopTyping = () => {
-    if (localTypingTimeoutRef.current) window.clearTimeout(localTypingTimeoutRef.current);
+    if (localTypingTimeoutRef.current)
+      window.clearTimeout(localTypingTimeoutRef.current);
     localTypingTimeoutRef.current = window.setTimeout(() => {
       stopTypingSignal();
       localTypingTimeoutRef.current = null;
@@ -496,13 +526,18 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
     if (!content) return;
     try {
       await sendMessage({
-        variables: { input: { chatId: chat._id, messageType: "TEXT", content } },
+        variables: {
+          input: { chatId: chat._id, messageType: "TEXT", content },
+        },
       });
       stopTypingSignal();
       setMessageInput("");
       if (textareaRef.current) textareaRef.current.style.height = "auto";
     } catch (mutationError) {
-      await errorAlert("Could not send message", getErrorMessage(mutationError));
+      await errorAlert(
+        "Could not send message",
+        getErrorMessage(mutationError),
+      );
     }
   };
 
@@ -512,7 +547,10 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
     e.target.value = "";
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!allowed.includes(file.type)) {
-      void errorAlert("Unsupported file type", "Please select a JPEG, PNG, WebP, or GIF image.");
+      void errorAlert(
+        "Unsupported file type",
+        "Please select a JPEG, PNG, WebP, or GIF image.",
+      );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -544,7 +582,9 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       const json = (await res.json()) as { url: string };
       await sendMessage({
-        variables: { input: { chatId: chat._id, messageType: "IMAGE", imageUrl: json.url } },
+        variables: {
+          input: { chatId: chat._id, messageType: "IMAGE", imageUrl: json.url },
+        },
       });
       clearPendingImage();
     } catch (uploadError) {
@@ -561,8 +601,10 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   const isSupportChat = chat?.chatScope === "SUPPORT";
   const hotelTitle = isSupportChat
     ? SUPPORT_CHAT_TITLE
-    : hotelData?.getHotel.hotelTitle ?? "Hotel Support";
-  const hotelLocation = isSupportChat ? "" : hotelData?.getHotel.hotelLocation ?? "";
+    : (hotelData?.getHotel.hotelTitle ?? "Hotel Support");
+  const hotelLocation = isSupportChat
+    ? ""
+    : (hotelData?.getHotel.hotelLocation ?? "");
   const supportMeta =
     chat?.supportTopic?.trim() ||
     (chat?.sourcePath ? `From ${chat.sourcePath}` : "Platform support");
@@ -606,7 +648,9 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
       {/* Phone-sized panel */}
       <div
         className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[700px] sm:w-[390px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
-        style={{ animation: "popupSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both" }}
+        style={{
+          animation: "popupSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
+        }}
       >
         {/* ── Header ── */}
         <div className="flex flex-none items-center gap-2.5 border-b border-slate-100 bg-white px-4 py-3">
@@ -623,12 +667,18 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
           <div className="min-w-0 flex-1">
             {chat ? (
               <>
-                <p className="truncate text-sm font-semibold text-slate-900">{hotelTitle}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">
+                  {hotelTitle}
+                </p>
                 <div className="flex items-center gap-1.5">
                   {statusSubtitle ? (
-                    <p className="truncate text-xs text-slate-400">{statusSubtitle}</p>
+                    <p className="truncate text-xs text-slate-400">
+                      {statusSubtitle}
+                    </p>
                   ) : null}
-                  <span title={socketConnected ? "Live connection" : "Polling mode"}>
+                  <span
+                    title={socketConnected ? "Live connection" : "Polling mode"}
+                  >
                     {socketConnected ? (
                       <Wifi size={9} className="text-emerald-400" />
                     ) : (
@@ -680,7 +730,10 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
           {loading && !chat && (
             <div className="flex flex-col gap-4 px-5 py-8">
               {[false, true, false, true, false].map((own, i) => (
-                <div key={i} className={`flex ${own ? "justify-end" : "justify-start"}`}>
+                <div
+                  key={i}
+                  className={`flex ${own ? "justify-end" : "justify-start"}`}
+                >
                   <div
                     className={`h-10 animate-pulse rounded-2xl ${
                       own ? "w-44 bg-blue-100/60" : "w-56 bg-white shadow-sm"
@@ -692,12 +745,14 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
           )}
 
           {/* Empty state */}
-          {chat && chat.messages.length === 0 && (
+          {chat && (chat.messages ?? []).length === 0 && (
             <div className="flex h-full flex-col items-center justify-center py-16 text-center">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm">
                 <MessageSquare size={20} className="text-slate-300" />
               </div>
-              <p className="text-sm font-semibold text-slate-700">Start the conversation</p>
+              <p className="text-sm font-semibold text-slate-700">
+                Start the conversation
+              </p>
               <p className="mt-1 text-xs text-slate-400">
                 {isSupportChat
                   ? "Your message goes directly to Meomul support"
@@ -707,28 +762,35 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
           )}
 
           {/* Messages */}
-          {chat && chat.messages.length > 0 && (
+          {chat && (chat.messages ?? []).length > 0 && (
             <div className="space-y-0.5 px-4 py-5">
-              {chat.messages.map((message, index) => {
+              {(chat.messages ?? []).map((message, index) => {
                 const isOwn =
                   (message.senderType === "GUEST" && isUser) ||
                   (message.senderType === "AGENT" && isOperatorSide);
 
-                const prevMessage = index > 0 ? chat.messages[index - 1] : null;
+                const prevMessage =
+                  index > 0 ? (chat.messages ?? [])[index - 1] : null;
                 const nextMessage =
-                  index < chat.messages.length - 1 ? chat.messages[index + 1] : null;
+                  index < (chat.messages ?? []).length - 1
+                    ? (chat.messages ?? [])[index + 1]
+                    : null;
 
                 const showDateSep =
-                  !prevMessage || !isSameDay(prevMessage.timestamp, message.timestamp);
+                  !prevMessage ||
+                  !isSameDay(prevMessage.timestamp, message.timestamp);
                 const isLastInGroup =
                   !nextMessage || nextMessage.senderType !== message.senderType;
                 const isFirstInGroup =
                   !prevMessage || prevMessage.senderType !== message.senderType;
-                const showTime = isLastInGroup || message.messageType !== "TEXT";
+                const showTime =
+                  isLastInGroup || message.messageType !== "TEXT";
                 const isNewMsg = index >= prevMessageCountRef.current;
 
                 return (
-                  <div key={`${message.senderId}-${message.timestamp}-${index}`}>
+                  <div
+                    key={`${message.senderId}-${message.timestamp}-${index}`}
+                  >
                     {/* Date separator */}
                     {showDateSep && (
                       <div className="my-6 flex items-center gap-3">
@@ -760,7 +822,11 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                                 isSupportChat ? "bg-teal-500" : hotelAvatarColor
                               } text-[9px] font-bold uppercase text-white`}
                             >
-                              {isSupportChat ? <Headset size={9} /> : hotelTitle.charAt(0)}
+                              {isSupportChat ? (
+                                <Headset size={9} />
+                              ) : (
+                                hotelTitle.charAt(0)
+                              )}
                             </div>
                           ) : (
                             <div className="h-7 w-7" />
@@ -809,8 +875,13 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
 
               {/* Typing indicator */}
               {typingUserId && (
-                <div style={{ animation: "popupTypingFade 0.2s ease-out both" }}>
-                  <TypingIndicator firstLetter={hotelTitle.charAt(0)} isSupport={isSupportChat} />
+                <div
+                  style={{ animation: "popupTypingFade 0.2s ease-out both" }}
+                >
+                  <TypingIndicator
+                    firstLetter={hotelTitle.charAt(0)}
+                    isSupport={isSupportChat}
+                  />
                 </div>
               )}
 
@@ -825,7 +896,9 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
           {!canSend ? (
             <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 py-3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-              <p className="text-sm text-slate-500">This conversation is closed</p>
+              <p className="text-sm text-slate-500">
+                This conversation is closed
+              </p>
             </div>
           ) : (
             <>
@@ -850,7 +923,9 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => { void sendPendingImage(); }}
+                    onClick={() => {
+                      void sendPendingImage();
+                    }}
                     disabled={uploadingImage || !chat}
                     className={`mb-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
                       uploadingImage
@@ -865,7 +940,11 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
               )}
 
               {/* Text input */}
-              <form onSubmit={(e) => { void onSendMessage(e); }}>
+              <form
+                onSubmit={(e) => {
+                  void onSendMessage(e);
+                }}
+              >
                 <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
                   <input
                     ref={fileInputRef}
@@ -879,7 +958,9 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingImage || sending}
                     className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
-                      pendingImage ? "text-sky-500" : "text-slate-300 hover:text-slate-500"
+                      pendingImage
+                        ? "text-sky-500"
+                        : "text-slate-300 hover:text-slate-500"
                     }`}
                     aria-label="Upload image"
                   >
@@ -890,7 +971,9 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                     value={messageInput}
                     onChange={onInputChange}
                     onKeyDown={onKeyDown}
-                    onBlur={() => { stopTypingSignal(); }}
+                    onBlur={() => {
+                      stopTypingSignal();
+                    }}
                     rows={1}
                     placeholder="Write a message…"
                     disabled={sending}

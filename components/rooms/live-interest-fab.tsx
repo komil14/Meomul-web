@@ -4,6 +4,7 @@ interface LiveInterestFabProps {
   viewerCount: number;
   connected: boolean;
   availableRooms: number;
+  containerClassName?: string;
 }
 
 const TOUCH_MEDIA_QUERY = "(hover: none), (pointer: coarse)";
@@ -56,7 +57,12 @@ const getLiveTone = (viewerCount: number, connected: boolean, availableRooms: nu
   };
 };
 
-export const LiveInterestFab = memo(function LiveInterestFab({ viewerCount, connected, availableRooms }: LiveInterestFabProps) {
+export const LiveInterestFab = memo(function LiveInterestFab({
+  viewerCount,
+  connected,
+  availableRooms,
+  containerClassName,
+}: LiveInterestFabProps) {
   const [isTouchUi, setIsTouchUi] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const safeCount = Math.max(0, Math.trunc(viewerCount));
@@ -120,7 +126,11 @@ export const LiveInterestFab = memo(function LiveInterestFab({ viewerCount, conn
     : "pointer-events-none translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100";
 
   return (
-    <div className="group fixed bottom-[calc(env(safe-area-inset-bottom)+8.5rem)] right-3 z-50 sm:bottom-40 sm:right-5">
+    <div
+      className={`group fixed right-3 z-[55] sm:right-5 ${
+        containerClassName ?? "bottom-[calc(env(safe-area-inset-bottom)+8.5rem)] sm:bottom-40"
+      }`}
+    >
       <div className="relative inline-flex h-14 w-14 items-center justify-center">
         {connected ? (
           <span

@@ -1,9 +1,20 @@
-import { ApolloClient, HttpLink, InMemoryCache, from } from "@apollo/client";
+import {
+  ApolloClient,
+  HttpLink,
+  InMemoryCache,
+  Observable,
+  from,
+} from "@apollo/client";
 import { CombinedGraphQLErrors } from "@apollo/client/errors";
 import { SetContextLink } from "@apollo/client/link/context";
 import { ErrorLink } from "@apollo/client/link/error";
+import { RetryLink } from "@apollo/client/link/retry";
 import { restorePersistedApolloCache } from "@/lib/apollo/cache-storage";
-import { clearAuthSession, getAccessToken } from "@/lib/auth/session";
+import {
+  clearAuthSession,
+  getAccessToken,
+  silentRefreshAccessToken,
+} from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
 
 const authLink = new SetContextLink((prevContext) => {
@@ -17,20 +28,89 @@ const authLink = new SetContextLink((prevContext) => {
   };
 });
 
-const errorLink = new ErrorLink(({ error }) => {
+const errorLink = new ErrorLink(({ error, operation, forward }) => {
+  // Handle GraphQL errors
   if (CombinedGraphQLErrors.is(error)) {
     const unauthenticated = error.errors.some(
       (graphQLError) => graphQLError.extensions?.code === "UNAUTHENTICATED",
     );
 
     if (unauthenticated) {
-      clearAuthSession();
+      // Skip refresh for the refreshToken mutation itself to avoid infinite loops
+      if (operation.operationName === "RefreshToken") {
+        clearAuthSession();
+        if (typeof window !== "undefined") {
+          window.location.href = `/auth/login?next=${encodeURIComponent(window.location.pathname)}`;
+        }
+        return;
+      }
+
+      // Attempt silent token refresh, then retry the failed operation
+      return new Observable((subscriber) => {
+        silentRefreshAccessToken()
+          .then((refreshed) => {
+            if (!refreshed) {
+              clearAuthSession();
+              if (typeof window !== "undefined") {
+                window.location.href = `/auth/login?next=${encodeURIComponent(window.location.pathname)}`;
+              }
+              subscriber.complete();
+              return;
+            }
+
+            // Retry the original operation with the new token
+            const newToken = getAccessToken();
+            operation.setContext(
+              ({ headers }: { headers?: Record<string, string> }) => ({
+                headers: {
+                  ...headers,
+                  authorization: newToken ? `Bearer ${newToken}` : "",
+                },
+              }),
+            );
+
+            forward(operation).subscribe(subscriber);
+          })
+          .catch(() => {
+            clearAuthSession();
+            if (typeof window !== "undefined") {
+              window.location.href = `/auth/login?next=${encodeURIComponent(window.location.pathname)}`;
+            }
+            subscriber.complete();
+          });
+      });
     }
+    return;
   }
+
+  // Network or other errors (connection failures, timeouts, 5xx)
+  console.error(
+    "[Apollo] Network/transport error:",
+    (error as Error)?.message ?? error,
+  );
+});
+
+const retryLink = new RetryLink({
+  delay: {
+    initial: 300,
+    max: 5000,
+    jitter: true,
+  },
+  attempts: {
+    max: 3,
+    retryIf: (error) => {
+      // Retry on network errors (connection refused, timeout, etc.)
+      // Do NOT retry on HTTP errors with a known status code (4xx/5xx)
+      if (!error) return false;
+      const statusCode = (error as { statusCode?: number }).statusCode;
+      return !statusCode;
+    },
+  },
 });
 
 const httpLink = new HttpLink({
   uri: env.graphqlUrl,
+  credentials: "include",
 });
 
 export const createApolloClient = () => {
@@ -58,12 +138,12 @@ export const createApolloClient = () => {
       watchQuery: {
         fetchPolicy: "cache-and-network",
         nextFetchPolicy: "cache-and-network",
-        returnPartialData: true,
+        returnPartialData: false,
       },
       query: {
         fetchPolicy: "network-only",
       },
     },
-    link: from([errorLink, authLink, httpLink]),
+    link: from([errorLink, retryLink, authLink, httpLink]),
   });
 };

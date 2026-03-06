@@ -46,3 +46,14 @@ export interface SignupMemberMutationVars {
 export interface CheckAuthQueryData {
   checkAuth: string;
 }
+
+export interface RefreshTokenMutationData {
+  refreshToken: AuthMember;
+}
+
+export interface LogoutMutationData {
+  logout: {
+    success: boolean;
+    message: string;
+  };
+}

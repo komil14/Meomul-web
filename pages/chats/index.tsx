@@ -1,8 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChatThreadPopup } from "@/components/chat/chat-thread-popup";
-import { StaffChatsView } from "@/components/chat/staff-chats-view";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   GET_MY_CHATS_QUERY,
@@ -60,6 +59,21 @@ import {
   X,
 } from "lucide-react";
 
+const ChatThreadPopup = dynamic(
+  () =>
+    import("@/components/chat/chat-thread-popup").then(
+      (mod) => mod.ChatThreadPopup,
+    ),
+  { ssr: false },
+);
+const StaffChatsView = dynamic(
+  () =>
+    import("@/components/chat/staff-chats-view").then(
+      (mod) => mod.StaffChatsView,
+    ),
+  { ssr: false },
+);
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAGE_LIMIT = 20;
@@ -77,7 +91,10 @@ const STATUS_CONFIG: Record<
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getChatTitle(chat: ChatDto, hotelsMap: Map<string, HotelListItem>): string {
+function getChatTitle(
+  chat: ChatDto,
+  hotelsMap: Map<string, HotelListItem>,
+): string {
   if (chat.chatScope === "SUPPORT") return SUPPORT_CHAT_TITLE;
   if (!chat.hotelId) return "Hotel Support";
   return hotelsMap.get(chat.hotelId)?.hotelTitle ?? "Hotel Support";
@@ -157,9 +174,7 @@ function NewChatOverlay({
   onSuccess: (chatId: string) => void;
 }) {
   const [step, setStep] = useState<"select" | "compose">("select");
-  const [intent, setIntent] = useState<"hotel" | "support">(
-    initialIntent,
-  );
+  const [intent, setIntent] = useState<"hotel" | "support">(initialIntent);
   const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(
     null,
   );
@@ -199,7 +214,13 @@ function NewChatOverlay({
       setSelectedHotel(hotel);
       setStep("compose");
     }
-  }, [allowHotelChats, availableHotels, intent, preselectedHotelId, selectedHotel]);
+  }, [
+    allowHotelChats,
+    availableHotels,
+    intent,
+    preselectedHotelId,
+    selectedHotel,
+  ]);
 
   useEffect(() => {
     if (step === "select" && intent === "hotel") {
@@ -333,9 +354,7 @@ function NewChatOverlay({
                 <p className="truncate font-semibold text-slate-900">
                   {SUPPORT_CHAT_TITLE}
                 </p>
-                <p className="text-xs text-slate-400">
-                  Platform support team
-                </p>
+                <p className="text-xs text-slate-400">Platform support team</p>
               </>
             ) : (
               <>
@@ -419,7 +438,10 @@ function NewChatOverlay({
                   </div>
                   {supportSourcePath && (
                     <p className="mt-3 rounded-lg bg-white px-3 py-2 text-[11px] text-slate-500">
-                      Context from page: <span className="font-medium text-slate-700">{supportSourcePath}</span>
+                      Context from page:{" "}
+                      <span className="font-medium text-slate-700">
+                        {supportSourcePath}
+                      </span>
                     </p>
                   )}
                   <button
@@ -436,7 +458,10 @@ function NewChatOverlay({
               <div className="flex flex-1 flex-col overflow-hidden">
                 <div className="px-5 pb-3 pt-4">
                   <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 transition focus-within:border-slate-300 focus-within:bg-white">
-                    <Search size={14} className="flex-shrink-0 text-slate-400" />
+                    <Search
+                      size={14}
+                      className="flex-shrink-0 text-slate-400"
+                    />
                     <input
                       ref={searchRef}
                       value={searchQuery}
@@ -519,7 +544,9 @@ function NewChatOverlay({
                     {filteredHotels.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-10 text-center">
                         <Building2 size={24} className="mb-2 text-slate-200" />
-                        <p className="text-sm text-slate-400">No hotels found</p>
+                        <p className="text-sm text-slate-400">
+                          No hotels found
+                        </p>
                       </div>
                     ) : (
                       filteredHotels.map((hotel) => (
@@ -573,7 +600,10 @@ function NewChatOverlay({
                   </p>
                   {supportSourcePath && (
                     <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
-                      Sent from page: <span className="font-medium text-slate-700">{supportSourcePath}</span>
+                      Sent from page:{" "}
+                      <span className="font-medium text-slate-700">
+                        {supportSourcePath}
+                      </span>
                     </p>
                   )}
                 </>
@@ -703,11 +733,10 @@ const ChatsPage: NextPageWithAuth = () => {
   const sourcePathFromQuery =
     typeof router.query.sourcePath === "string" ? router.query.sourcePath : "";
 
-  const { page, pushQuery } =
-    usePaginationQueryState<ChatStatus>({
-      pathname: "/chats",
-      statusValues: CHAT_STATUSES,
-    });
+  const { page, pushQuery } = usePaginationQueryState<ChatStatus>({
+    pathname: "/chats",
+    statusValues: CHAT_STATUSES,
+  });
 
   const listInput = useMemo<PaginationInput>(
     () => ({ page, limit: PAGE_LIMIT, sort: "lastMessageAt", direction: -1 }),
@@ -825,7 +854,9 @@ const ChatsPage: NextPageWithAuth = () => {
   const filteredChats = useMemo(() => {
     if (chatTypeFilter === "ALL") return chats;
     return chats.filter((c) =>
-      chatTypeFilter === "SUPPORT" ? c.chatScope === "SUPPORT" : c.chatScope === "HOTEL",
+      chatTypeFilter === "SUPPORT"
+        ? c.chatScope === "SUPPORT"
+        : c.chatScope === "HOTEL",
     );
   }, [chats, chatTypeFilter]);
   const loading = myChatsLoading;
@@ -874,7 +905,9 @@ const ChatsPage: NextPageWithAuth = () => {
       {selectedChatId && (
         <ChatThreadPopup
           chatId={selectedChatId}
-          onClose={() => { setSelectedChatId(null); }}
+          onClose={() => {
+            setSelectedChatId(null);
+          }}
         />
       )}
 
@@ -948,7 +981,9 @@ const ChatsPage: NextPageWithAuth = () => {
               <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50">
                 <MessageSquare size={22} className="text-slate-400" />
               </div>
-              <p className="font-semibold text-slate-800">No conversations yet</p>
+              <p className="font-semibold text-slate-800">
+                No conversations yet
+              </p>
               <p className="mt-1.5 max-w-[220px] text-sm text-slate-400">
                 Start a support conversation or message any hotel
               </p>
@@ -970,14 +1005,20 @@ const ChatsPage: NextPageWithAuth = () => {
                 <button
                   key={tab}
                   type="button"
-                  onClick={() => { setChatTypeFilter(tab); }}
+                  onClick={() => {
+                    setChatTypeFilter(tab);
+                  }}
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                     chatTypeFilter === tab
                       ? "bg-slate-900 text-white"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
-                  {tab === "ALL" ? "All" : tab === "HOTELS" ? "Hotels" : "Support"}
+                  {tab === "ALL"
+                    ? "All"
+                    : tab === "HOTELS"
+                      ? "Hotels"
+                      : "Support"}
                 </button>
               ))}
             </div>
@@ -992,7 +1033,7 @@ const ChatsPage: NextPageWithAuth = () => {
                 const unread = unreadForMe(chat);
                 const preview = getLastPreview(chat);
                 const time = timeAgo(chat.lastMessageAt);
-                const lastMsg = chat.messages.at(-1);
+                const lastMsg = (chat.messages ?? []).at(-1);
                 const isLastMsgFromMe = lastMsg?.senderType === "GUEST";
                 const statusCfg = STATUS_CONFIG[chat.chatStatus];
 
@@ -1000,9 +1041,13 @@ const ChatsPage: NextPageWithAuth = () => {
                   <button
                     key={chat._id}
                     type="button"
-                    onClick={() => { setSelectedChatId(chat._id); }}
+                    onClick={() => {
+                      setSelectedChatId(chat._id);
+                    }}
                     className={`group flex w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-slate-50 ${
-                      i < filteredChats.length - 1 ? "border-b border-slate-50" : ""
+                      i < filteredChats.length - 1
+                        ? "border-b border-slate-50"
+                        : ""
                     }`}
                     style={{
                       animation: "chatFadeIn 0.25s ease-out both",
@@ -1091,9 +1136,11 @@ const ChatsPage: NextPageWithAuth = () => {
           {total > PAGE_LIMIT && chatTypeFilter === "ALL" && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-slate-500">
-                Page <span className="font-semibold text-slate-800">{page}</span>{" "}
-                of{" "}
-                <span className="font-semibold text-slate-800">{totalPages}</span>
+                Page{" "}
+                <span className="font-semibold text-slate-800">{page}</span> of{" "}
+                <span className="font-semibold text-slate-800">
+                  {totalPages}
+                </span>
               </p>
               <div className="flex gap-1.5">
                 <button

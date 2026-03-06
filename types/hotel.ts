@@ -310,6 +310,7 @@ export interface GetHotelQueryVars {
 
 export interface HotelContextItem {
   _id: string;
+  memberId: string;
   hotelTitle: string;
   hotelLocation: HotelLocation;
   hotelType: HotelType;

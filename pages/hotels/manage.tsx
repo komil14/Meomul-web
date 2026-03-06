@@ -13,7 +13,14 @@ import type {
   PaginationInput,
 } from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
-import { Building2, ChevronRight, DoorOpen, PenLine, Plus, Star } from "lucide-react";
+import {
+  Building2,
+  ChevronRight,
+  DoorOpen,
+  PenLine,
+  Plus,
+  Star,
+} from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -24,36 +31,49 @@ const PAGINATION: PaginationInput = {
   direction: -1,
 };
 
-const STATUS_CONFIG: Record<
-  HotelStatus,
-  { label: string; className: string }
-> = {
-  PENDING:   { label: "Pending Review", className: "bg-amber-50 text-amber-700 border border-amber-200" },
-  ACTIVE:    { label: "Active",         className: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
-  INACTIVE:  { label: "Inactive",       className: "bg-slate-100 text-slate-500 border border-slate-200" },
-  SUSPENDED: { label: "Suspended",      className: "bg-rose-50 text-rose-600 border border-rose-200" },
-  DELETE:    { label: "Deleted",        className: "bg-slate-100 text-slate-400 border border-slate-200" },
-};
+const STATUS_CONFIG: Record<HotelStatus, { label: string; className: string }> =
+  {
+    PENDING: {
+      label: "Pending Review",
+      className: "bg-amber-50 text-amber-700 border border-amber-200",
+    },
+    ACTIVE: {
+      label: "Active",
+      className: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    },
+    INACTIVE: {
+      label: "Inactive",
+      className: "bg-slate-100 text-slate-500 border border-slate-200",
+    },
+    SUSPENDED: {
+      label: "Suspended",
+      className: "bg-rose-50 text-rose-600 border border-rose-200",
+    },
+    DELETE: {
+      label: "Deleted",
+      className: "bg-slate-100 text-slate-400 border border-slate-200",
+    },
+  };
 
 const TYPE_LABELS: Record<HotelType, string> = {
-  HOTEL:      "Hotel",
-  MOTEL:      "Motel",
-  RESORT:     "Resort",
+  HOTEL: "Hotel",
+  MOTEL: "Motel",
+  RESORT: "Resort",
   GUESTHOUSE: "Guesthouse",
-  HANOK:      "Hanok",
-  PENSION:    "Pension",
+  HANOK: "Hanok",
+  PENSION: "Pension",
 };
 
 const LOCATION_LABELS: Record<string, string> = {
-  SEOUL:    "Seoul",
-  BUSAN:    "Busan",
-  INCHEON:  "Incheon",
-  DAEGU:    "Daegu",
-  DAEJON:   "Daejeon",
-  GWANGJU:  "Gwangju",
-  JEJU:     "Jeju",
+  SEOUL: "Seoul",
+  BUSAN: "Busan",
+  INCHEON: "Incheon",
+  DAEGU: "Daegu",
+  DAEJON: "Daejeon",
+  GWANGJU: "Gwangju",
+  JEJU: "Jeju",
   GYEONGJU: "Gyeongju",
-  GANGNEUNG:"Gangneung",
+  GANGNEUNG: "Gangneung",
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -62,19 +82,14 @@ const HotelsManagePage: NextPageWithAuth = () => {
   const member = useMemo(() => getSessionMember(), []);
   const isPageVisible = usePageVisible();
 
-  const {
-    data,
-    loading,
-    error,
-    refetch,
-  } = useQuery<GetAgentHotelsQueryData, GetAgentHotelsQueryVars>(
-    GET_AGENT_HOTELS_QUERY,
-    {
-      variables: { input: PAGINATION },
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-    },
-  );
+  const { data, loading, error, refetch } = useQuery<
+    GetAgentHotelsQueryData,
+    GetAgentHotelsQueryVars
+  >(GET_AGENT_HOTELS_QUERY, {
+    variables: { input: PAGINATION },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
 
   // Refetch when tab regains focus
   const wasVisibleRef = useRef(false);
@@ -155,9 +170,7 @@ const HotelsManagePage: NextPageWithAuth = () => {
         {!loading && hotels.length === 0 && (
           <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white text-center">
             <Building2 size={40} className="text-slate-300" />
-            <p className="mt-4 font-semibold text-slate-700">
-              No hotels yet
-            </p>
+            <p className="mt-4 font-semibold text-slate-700">No hotels yet</p>
             <p className="mt-1 text-sm text-slate-500">
               Register your first property to start accepting bookings.
             </p>
@@ -176,7 +189,9 @@ const HotelsManagePage: NextPageWithAuth = () => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {hotels.map((hotel, idx) => {
               const thumbnail = hotel.hotelImages?.[0];
-              const status = (hotel as typeof hotel & { hotelStatus?: HotelStatus }).hotelStatus;
+              const status = (
+                hotel as typeof hotel & { hotelStatus?: HotelStatus }
+              ).hotelStatus;
               const statusCfg = status ? STATUS_CONFIG[status] : null;
 
               return (
@@ -192,6 +207,7 @@ const HotelsManagePage: NextPageWithAuth = () => {
                       <img
                         src={resolveMediaUrl(thumbnail)}
                         alt={hotel.hotelTitle}
+                        loading="lazy"
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -217,12 +233,16 @@ const HotelsManagePage: NextPageWithAuth = () => {
                         </p>
                         <p className="mt-0.5 text-xs text-slate-500">
                           {TYPE_LABELS[hotel.hotelType]} ·{" "}
-                          {LOCATION_LABELS[hotel.hotelLocation] ?? hotel.hotelLocation}
+                          {LOCATION_LABELS[hotel.hotelLocation] ??
+                            hotel.hotelLocation}
                         </p>
                       </div>
                       {hotel.hotelRating > 0 && (
                         <div className="flex flex-shrink-0 items-center gap-1 text-sm font-semibold text-slate-700">
-                          <Star size={13} className="fill-amber-400 text-amber-400" />
+                          <Star
+                            size={13}
+                            className="fill-amber-400 text-amber-400"
+                          />
                           {hotel.hotelRating.toFixed(1)}
                         </div>
                       )}
@@ -231,7 +251,8 @@ const HotelsManagePage: NextPageWithAuth = () => {
                     {/* Pending notice for agents */}
                     {isAgent && status === "PENDING" && (
                       <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-600">
-                        Under admin review — your hotel will go live once approved.
+                        Under admin review — your hotel will go live once
+                        approved.
                       </p>
                     )}
 

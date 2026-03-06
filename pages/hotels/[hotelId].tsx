@@ -1,4 +1,5 @@
 import type { GetServerSideProps } from "next";
+import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
@@ -76,7 +77,9 @@ export default function HotelDetailPage({
   const { data: myChatsData } = useQuery<GetMyChatsQueryData>(
     GET_MY_CHATS_QUERY,
     {
-      variables: { input: { page: 1, limit: 50, sort: "lastMessageAt", direction: -1 } },
+      variables: {
+        input: { page: 1, limit: 50, sort: "lastMessageAt", direction: -1 },
+      },
       skip: !isUser,
       fetchPolicy: "cache-first",
     },
@@ -203,8 +206,84 @@ export default function HotelDetailPage({
     );
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://meomul.com";
+  const pageUrl = `${siteUrl}/hotels/${hotel._id}`;
+  const pageTitle = `${hotel.hotelTitle} — ${hotel.hotelLocation} | Meomul`;
+  const pageDescription =
+    shortDescription ||
+    `Book ${hotel.hotelTitle} in ${hotel.hotelLocation}. ${hotel.hotelType} rated ${hotel.hotelRating?.toFixed(1) ?? "N/A"}/5. Best prices on Meomul.`;
+  const ogImage = heroImage
+    ? resolveMediaUrl(heroImage)
+    : `${siteUrl}/og-default.png`;
+
+  const hotelStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "LodgingBusiness",
+    name: hotel.hotelTitle,
+    description: pageDescription,
+    image: ogImage,
+    url: pageUrl,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: hotel.hotelLocation,
+      addressCountry: "KR",
+    },
+    ...(hotel.hotelRating
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: hotel.hotelRating.toFixed(1),
+            bestRating: "5",
+            reviewCount: String(hotel.hotelReviews ?? 0),
+          },
+        }
+      : {}),
+    ...(fromPrice
+      ? {
+          priceRange: `₩${fromPrice.toLocaleString()}~`,
+        }
+      : {}),
+    checkinTime: hotel.checkInTime ?? undefined,
+    checkoutTime: hotel.checkOutTime ?? undefined,
+    starRating: hotel.starRating
+      ? { "@type": "Rating", ratingValue: String(hotel.starRating) }
+      : undefined,
+  };
+
   return (
     <>
+      <Head>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={pageUrl} />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="Meomul" />
+        <meta property="og:locale" content="en_US" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={ogImage} />
+
+        {/* Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(hotelStructuredData).replace(
+              /</g,
+              "\\u003c",
+            ),
+          }}
+        />
+      </Head>
+
       <main
         className={`space-y-6 [scroll-behavior:smooth] ${HOTEL_DETAIL_MOTION_INTENSITY_CLASS}`}
       >

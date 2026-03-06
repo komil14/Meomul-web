@@ -1,12 +1,37 @@
-const DEFAULT_GRAPHQL_URL = "http://localhost:3001/graphql";
-const DEFAULT_CHAT_SOCKET_URL = "http://localhost:3001";
-const DEFAULT_API_URL = "http://localhost:3001";
+const isProduction =
+  typeof process !== "undefined" && process.env.NODE_ENV === "production";
+const isDev =
+  typeof process !== "undefined" && process.env.NODE_ENV === "development";
+
+function requireEnv(name: string, fallback: string): string {
+  const value = process.env[name];
+  if (value) return value;
+
+  if (isProduction && typeof window === "undefined") {
+    // Server-side in production: hard-fail so misconfigured deploys are caught immediately
+    throw new Error(
+      `[env] FATAL: ${name} is not set. All NEXT_PUBLIC_* variables must be configured for production. Aborting.`,
+    );
+  }
+
+  if (!isDev && typeof window === "undefined") {
+    console.warn(
+      `[env] ${name} is not set — falling back to "${fallback}". Set it in .env.local for production.`,
+    );
+  }
+  return fallback;
+}
 
 export const env = {
-  graphqlUrl: process.env.NEXT_PUBLIC_GRAPHQL_URL ?? DEFAULT_GRAPHQL_URL,
-  chatSocketUrl:
-    process.env.NEXT_PUBLIC_CHAT_SOCKET_URL ?? DEFAULT_CHAT_SOCKET_URL,
-  apiUrl: process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL,
+  graphqlUrl: requireEnv(
+    "NEXT_PUBLIC_GRAPHQL_URL",
+    "http://localhost:3001/graphql",
+  ),
+  chatSocketUrl: requireEnv(
+    "NEXT_PUBLIC_CHAT_SOCKET_URL",
+    "http://localhost:3001",
+  ),
+  apiUrl: requireEnv("NEXT_PUBLIC_API_URL", "http://localhost:3001"),
 } as const;
 
 /**

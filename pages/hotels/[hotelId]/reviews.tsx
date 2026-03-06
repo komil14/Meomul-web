@@ -25,13 +25,16 @@ import { ArrowLeft, MessageSquare, Star } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
-const RATING_BARS: Array<{ key: keyof ReviewRatingsSummaryDto; label: string }> = [
-  { key: "overallRating",     label: "Overall" },
+const RATING_BARS: Array<{
+  key: keyof ReviewRatingsSummaryDto;
+  label: string;
+}> = [
+  { key: "overallRating", label: "Overall" },
   { key: "cleanlinessRating", label: "Cleanliness" },
-  { key: "locationRating",    label: "Location" },
-  { key: "serviceRating",     label: "Service" },
-  { key: "amenitiesRating",   label: "Amenities" },
-  { key: "valueRating",       label: "Value" },
+  { key: "locationRating", label: "Location" },
+  { key: "serviceRating", label: "Service" },
+  { key: "amenitiesRating", label: "Amenities" },
+  { key: "valueRating", label: "Value" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -57,7 +60,11 @@ const StarRow = ({ rating }: { rating: number }) => (
       <Star
         key={n}
         size={12}
-        className={n <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200"}
+        className={
+          n <= Math.round(rating)
+            ? "fill-amber-400 text-amber-400"
+            : "fill-slate-200 text-slate-200"
+        }
       />
     ))}
   </span>
@@ -107,7 +114,9 @@ const ReviewCard = ({
             </p>
             <div className="mt-0.5 flex items-center gap-2">
               <StarRow rating={review.overallRating} />
-              <span className="text-xs text-slate-400">{formatDate(review.createdAt)}</span>
+              <span className="text-xs text-slate-400">
+                {formatDate(review.createdAt)}
+              </span>
             </div>
           </div>
         </div>
@@ -118,9 +127,13 @@ const ReviewCard = ({
 
       {/* Review text */}
       {review.reviewTitle && (
-        <p className="mt-3 text-sm font-semibold text-slate-800">{review.reviewTitle}</p>
+        <p className="mt-3 text-sm font-semibold text-slate-800">
+          {review.reviewTitle}
+        </p>
       )}
-      <p className="mt-2 text-sm leading-relaxed text-slate-600">{review.reviewText}</p>
+      <p className="mt-2 text-sm leading-relaxed text-slate-600">
+        {review.reviewText}
+      </p>
 
       {/* Guest photos */}
       {review.guestPhotos.length > 0 && (
@@ -131,6 +144,7 @@ const ReviewCard = ({
               key={i}
               src={resolveMediaUrl(url)}
               alt=""
+              loading="lazy"
               className="h-16 w-16 flex-shrink-0 rounded-xl object-cover"
             />
           ))}
@@ -141,12 +155,15 @@ const ReviewCard = ({
       <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
         {[
           { label: "Cleanliness", val: review.cleanlinessRating },
-          { label: "Location",    val: review.locationRating },
-          { label: "Service",     val: review.serviceRating },
-          { label: "Value",       val: review.valueRating },
+          { label: "Location", val: review.locationRating },
+          { label: "Service", val: review.serviceRating },
+          { label: "Value", val: review.valueRating },
         ].map(({ label, val }) => (
           <span key={label}>
-            {label} <span className="font-semibold text-slate-700">{val.toFixed(1)}</span>
+            {label}{" "}
+            <span className="font-semibold text-slate-700">
+              {val.toFixed(1)}
+            </span>
           </span>
         ))}
       </div>
@@ -158,9 +175,14 @@ const ReviewCard = ({
       {review.hotelResponse ? (
         <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3">
           <p className="text-xs font-semibold text-slate-500">
-            Hotel response · {review.hotelResponse.respondedAt ? formatDate(review.hotelResponse.respondedAt) : ""}
+            Hotel response ·{" "}
+            {review.hotelResponse.respondedAt
+              ? formatDate(review.hotelResponse.respondedAt)
+              : ""}
           </p>
-          <p className="mt-1 text-sm text-slate-700">{review.hotelResponse.responseText}</p>
+          <p className="mt-1 text-sm text-slate-700">
+            {review.hotelResponse.responseText}
+          </p>
         </div>
       ) : (
         <div className="mt-4">
@@ -209,7 +231,8 @@ const ReviewCard = ({
 
 const HotelReviewsPage: NextPageWithAuth = () => {
   const router = useRouter();
-  const hotelId = typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+  const hotelId =
+    typeof router.query.hotelId === "string" ? router.query.hotelId : "";
 
   const [page, setPage] = useState(1);
   const [respondingId, setRespondingId] = useState<string | null>(null);
@@ -274,7 +297,12 @@ const HotelReviewsPage: NextPageWithAuth = () => {
   const handleSubmitResponse = async () => {
     if (!respondingId || !responseText.trim()) return;
     try {
-      await respondToReview({ variables: { reviewId: respondingId, responseText: responseText.trim() } });
+      await respondToReview({
+        variables: {
+          reviewId: respondingId,
+          responseText: responseText.trim(),
+        },
+      });
       void successAlert("Response posted successfully.");
       closeRespond();
       void refetchReviews();
@@ -337,24 +365,32 @@ const HotelReviewsPage: NextPageWithAuth = () => {
                   {summary.overallRating.toFixed(1)}
                 </p>
                 <StarRow rating={summary.overallRating} />
-                <p className="mt-1 text-xs text-slate-500">{summary.totalReviews} reviews</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {summary.totalReviews} reviews
+                </p>
               </div>
               <div className="flex-1 space-y-2">
-                {RATING_BARS.filter(r => r.key !== "overallRating").map(({ key, label }) => {
-                  const val = (summary[key] as number) ?? 0;
-                  return (
-                    <div key={key} className="flex items-center gap-3">
-                      <span className="w-24 flex-shrink-0 text-right text-xs text-slate-500">{label}</span>
-                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-amber-400 transition-all"
-                          style={{ width: `${(val / 5) * 100}%` }}
-                        />
+                {RATING_BARS.filter((r) => r.key !== "overallRating").map(
+                  ({ key, label }) => {
+                    const val = (summary[key] as number) ?? 0;
+                    return (
+                      <div key={key} className="flex items-center gap-3">
+                        <span className="w-24 flex-shrink-0 text-right text-xs text-slate-500">
+                          {label}
+                        </span>
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full bg-amber-400 transition-all"
+                            style={{ width: `${(val / 5) * 100}%` }}
+                          />
+                        </div>
+                        <span className="w-6 text-xs font-semibold text-slate-700">
+                          {val.toFixed(1)}
+                        </span>
                       </div>
-                      <span className="w-6 text-xs font-semibold text-slate-700">{val.toFixed(1)}</span>
-                    </div>
-                  );
-                })}
+                    );
+                  },
+                )}
               </div>
             </div>
           </div>
@@ -364,7 +400,10 @@ const HotelReviewsPage: NextPageWithAuth = () => {
         {reviewsLoading && reviews.length === 0 && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div
+                key={i}
+                className="rounded-2xl border border-slate-200 bg-white p-5"
+              >
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 animate-pulse rounded-full bg-slate-100" />
                   <div className="space-y-2">
@@ -396,7 +435,11 @@ const HotelReviewsPage: NextPageWithAuth = () => {
         {reviews.length > 0 && (
           <div className="space-y-4">
             {reviews.map((review, idx) => (
-              <div key={review._id} className="review-card" style={{ animationDelay: `${idx * 0.04}s` }}>
+              <div
+                key={review._id}
+                className="review-card"
+                style={{ animationDelay: `${idx * 0.04}s` }}
+              >
                 <ReviewCard
                   review={review}
                   respondingId={respondingId}

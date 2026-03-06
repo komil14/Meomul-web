@@ -196,6 +196,7 @@ function PriceSummaryPanel({
           <img
             src={resolveMediaUrl(thumbnail)}
             alt={room.roomName}
+            loading="lazy"
             className="h-full w-full object-cover"
           />
         </div>
@@ -217,7 +218,9 @@ function PriceSummaryPanel({
                 : "bg-amber-50 text-amber-600"
             }`}
           >
-            {priceSource === "PRICE_LOCK" ? "⚡ Price Lock" : "🔥 Last-minute Deal"}
+            {priceSource === "PRICE_LOCK"
+              ? "⚡ Price Lock"
+              : "🔥 Last-minute Deal"}
           </span>
         )}
 
@@ -319,8 +322,7 @@ const NewBookingPage: NextPageWithAuth = () => {
     [router.query.hotelId],
   );
   const roomId = useMemo(
-    () =>
-      typeof router.query.roomId === "string" ? router.query.roomId : "",
+    () => (typeof router.query.roomId === "string" ? router.query.roomId : ""),
     [router.query.roomId],
   );
   const initialGuestIdFromQuery = useMemo(
@@ -452,20 +454,22 @@ const NewBookingPage: NextPageWithAuth = () => {
   );
 
   const { data: guestCandidatesData, loading: guestCandidatesLoading } =
-    useQuery<SearchMembersForBookingQueryData, SearchMembersForBookingQueryVars>(
-      SEARCH_MEMBERS_FOR_BOOKING_QUERY,
-      {
-        skip: !isStaffCreator || debouncedGuestKeyword.length < 2,
-        variables: { keyword: debouncedGuestKeyword, limit: 8 },
-        fetchPolicy: "cache-and-network",
-        nextFetchPolicy: "cache-and-network",
-      },
-    );
+    useQuery<
+      SearchMembersForBookingQueryData,
+      SearchMembersForBookingQueryVars
+    >(SEARCH_MEMBERS_FOR_BOOKING_QUERY, {
+      skip: !isStaffCreator || debouncedGuestKeyword.length < 2,
+      variables: { keyword: debouncedGuestKeyword, limit: 8 },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    });
 
   const [createBooking, { loading: creating }] = useMutation<
     CreateBookingMutationData,
     CreateBookingMutationVars
-  >(CREATE_BOOKING_MUTATION);
+  >(CREATE_BOOKING_MUTATION, {
+    refetchQueries: ["getMyBookings"],
+  });
 
   // Effects — init from URL params
   useEffect(() => {
@@ -496,7 +500,10 @@ const NewBookingPage: NextPageWithAuth = () => {
   // Debounced guest keyword
   useEffect(() => {
     if (!isStaffCreator) return;
-    const t = setTimeout(() => setDebouncedGuestKeyword(guestKeyword.trim()), 250);
+    const t = setTimeout(
+      () => setDebouncedGuestKeyword(guestKeyword.trim()),
+      250,
+    );
     return () => clearTimeout(t);
   }, [guestKeyword, isStaffCreator]);
 
@@ -555,8 +562,7 @@ const NewBookingPage: NextPageWithAuth = () => {
   // Derived values
   const hotel = hotelData?.getHotel;
   const room = roomData?.getRoom;
-  const guestCandidates =
-    guestCandidatesData?.searchMembersForBooking ?? [];
+  const guestCandidates = guestCandidatesData?.searchMembersForBooking ?? [];
   const todayDate = useMemo(() => formatTodayDate(), []);
 
   const activePriceLock = isStaffCreator
@@ -653,7 +659,9 @@ const NewBookingPage: NextPageWithAuth = () => {
       return;
     }
     if (!hotel || !room) {
-      setSubmitError("Booking context is incomplete. Please refresh and try again.");
+      setSubmitError(
+        "Booking context is incomplete. Please refresh and try again.",
+      );
       return;
     }
     try {
@@ -701,7 +709,9 @@ const NewBookingPage: NextPageWithAuth = () => {
       <main className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center">
         <div>
           <p className="text-3xl">🏨</p>
-          <p className="mt-3 font-semibold text-slate-800">No booking context</p>
+          <p className="mt-3 font-semibold text-slate-800">
+            No booking context
+          </p>
           <p className="mt-1 text-sm text-slate-500">
             Open booking from a specific hotel room page.
           </p>
@@ -1029,7 +1039,8 @@ const NewBookingPage: NextPageWithAuth = () => {
                   <div className="space-y-4">
                     {isStaffCreator && (
                       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-                        Staff booking — search and select the guest you are booking for
+                        Staff booking — search and select the guest you are
+                        booking for
                       </div>
                     )}
 
@@ -1133,9 +1144,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                           </span>
                           <textarea
                             value={specialRequests}
-                            onChange={(e) =>
-                              setSpecialRequests(e.target.value)
-                            }
+                            onChange={(e) => setSpecialRequests(e.target.value)}
                             rows={3}
                             className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                             placeholder="Late arrival, accessibility needs, room preference…"
@@ -1257,9 +1266,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                     <button
                       type="button"
                       onClick={() => void handleConfirm()}
-                      disabled={
-                        creating || Boolean(bookingValidationMessage)
-                      }
+                      disabled={creating || Boolean(bookingValidationMessage)}
                       className="w-full rounded-full bg-sky-500 py-4 text-sm font-bold text-white shadow-md shadow-sky-200 transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {creating ? "Confirming…" : "Confirm Booking"}
@@ -1288,8 +1295,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                     type="button"
                     onClick={() => setStep(step + 1)}
                     disabled={
-                      (step === 1 && !step1Valid) ||
-                      (step === 2 && !step2Valid)
+                      (step === 1 && !step1Valid) || (step === 2 && !step2Valid)
                     }
                     className="rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >

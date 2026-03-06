@@ -25,57 +25,77 @@ const CANCELLATION_OPTIONS: Array<{
   label: string;
   desc: string;
 }> = [
-  { value: "FLEXIBLE", label: "Flexible",  desc: "Free cancellation up to 24h before check-in" },
-  { value: "MODERATE", label: "Moderate",  desc: "Free cancellation up to 5 days before check-in" },
-  { value: "STRICT",   label: "Strict",    desc: "50% refund up to 7 days before check-in" },
+  {
+    value: "FLEXIBLE",
+    label: "Flexible",
+    desc: "Free cancellation up to 24h before check-in",
+  },
+  {
+    value: "MODERATE",
+    label: "Moderate",
+    desc: "Free cancellation up to 5 days before check-in",
+  },
+  {
+    value: "STRICT",
+    label: "Strict",
+    desc: "50% refund up to 7 days before check-in",
+  },
 ];
 
 const AMENITY_OPTIONS: Array<{ key: keyof AmenitiesInput; label: string }> = [
-  { key: "wifi",                label: "Wi-Fi" },
-  { key: "parking",             label: "Parking" },
-  { key: "breakfast",           label: "Breakfast" },
-  { key: "breakfastIncluded",   label: "Breakfast Included" },
-  { key: "gym",                 label: "Gym" },
-  { key: "pool",                label: "Pool" },
-  { key: "spa",                 label: "Spa" },
-  { key: "restaurant",          label: "Restaurant" },
-  { key: "roomService",         label: "Room Service" },
-  { key: "workspace",           label: "Business Center" },
-  { key: "meetingRoom",         label: "Meeting Room" },
-  { key: "familyRoom",          label: "Family Room" },
-  { key: "kidsFriendly",        label: "Kids Friendly" },
-  { key: "playground",          label: "Playground" },
-  { key: "elevator",            label: "Elevator" },
-  { key: "airportShuttle",      label: "Airport Shuttle" },
-  { key: "evCharging",          label: "EV Charging" },
-  { key: "wheelchairAccessible",label: "Wheelchair Accessible" },
-  { key: "coupleRoom",          label: "Couple Room" },
-  { key: "romanticView",        label: "Romantic View" },
-  { key: "privateBath",         label: "Private Bathroom" },
+  { key: "wifi", label: "Wi-Fi" },
+  { key: "parking", label: "Parking" },
+  { key: "breakfast", label: "Breakfast" },
+  { key: "breakfastIncluded", label: "Breakfast Included" },
+  { key: "gym", label: "Gym" },
+  { key: "pool", label: "Pool" },
+  { key: "spa", label: "Spa" },
+  { key: "restaurant", label: "Restaurant" },
+  { key: "roomService", label: "Room Service" },
+  { key: "workspace", label: "Business Center" },
+  { key: "meetingRoom", label: "Meeting Room" },
+  { key: "familyRoom", label: "Family Room" },
+  { key: "kidsFriendly", label: "Kids Friendly" },
+  { key: "playground", label: "Playground" },
+  { key: "elevator", label: "Elevator" },
+  { key: "airportShuttle", label: "Airport Shuttle" },
+  { key: "evCharging", label: "EV Charging" },
+  { key: "wheelchairAccessible", label: "Wheelchair Accessible" },
+  { key: "coupleRoom", label: "Couple Room" },
+  { key: "romanticView", label: "Romantic View" },
+  { key: "privateBath", label: "Private Bathroom" },
 ];
 
-const SAFETY_OPTIONS: Array<{ key: keyof SafetyFeaturesInput; label: string }> = [
-  { key: "fireSafety",       label: "Fire Safety Equipment" },
-  { key: "securityCameras",  label: "Security Cameras" },
-  { key: "frontDesk24h",     label: "24h Front Desk" },
-  { key: "roomSafe",         label: "In-Room Safe" },
-  { key: "femaleOnlyFloors", label: "Female-Only Floors" },
-  { key: "wellLitParking",   label: "Well-Lit Parking" },
-];
+const SAFETY_OPTIONS: Array<{ key: keyof SafetyFeaturesInput; label: string }> =
+  [
+    { key: "fireSafety", label: "Fire Safety Equipment" },
+    { key: "securityCameras", label: "Security Cameras" },
+    { key: "frontDesk24h", label: "24h Front Desk" },
+    { key: "roomSafe", label: "In-Room Safe" },
+    { key: "femaleOnlyFloors", label: "Female-Only Floors" },
+    { key: "wellLitParking", label: "Well-Lit Parking" },
+  ];
 
 const SUITABLE_FOR_OPTIONS = [
-  "BUSINESS", "ROMANTIC", "FAMILY", "SOLO", "STAYCATION", "EVENT", "MEDICAL", "LONG_TERM",
+  "BUSINESS",
+  "ROMANTIC",
+  "FAMILY",
+  "SOLO",
+  "STAYCATION",
+  "EVENT",
+  "MEDICAL",
+  "LONG_TERM",
 ] as const;
 
 const SUITABLE_LABELS: Record<string, string> = {
-  BUSINESS:   "Business",
-  ROMANTIC:   "Romantic",
-  FAMILY:     "Family",
-  SOLO:       "Solo Travel",
+  BUSINESS: "Business",
+  ROMANTIC: "Romantic",
+  FAMILY: "Family",
+  SOLO: "Solo Travel",
   STAYCATION: "Staycation",
-  EVENT:      "Events",
-  MEDICAL:    "Medical",
-  LONG_TERM:  "Long Term",
+  EVENT: "Events",
+  MEDICAL: "Medical",
+  LONG_TERM: "Long Term",
 };
 
 type Tab = "info" | "amenities" | "policies";
@@ -84,44 +104,46 @@ type Tab = "info" | "amenities" | "policies";
 
 const EditHotelPage: NextPageWithAuth = () => {
   const router = useRouter();
-  const hotelId = typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+  const hotelId =
+    typeof router.query.hotelId === "string" ? router.query.hotelId : "";
 
   const [activeTab, setActiveTab] = useState<Tab>("info");
-  const [saving, setSaving]       = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Info tab
-  const [hotelTitle, setHotelTitle]     = useState("");
-  const [hotelDesc, setHotelDesc]       = useState("");
-  const [starRating, setStarRating]     = useState(3);
-  const [checkInTime, setCheckInTime]   = useState("15:00");
+  const [hotelTitle, setHotelTitle] = useState("");
+  const [hotelDesc, setHotelDesc] = useState("");
+  const [starRating, setStarRating] = useState(3);
+  const [checkInTime, setCheckInTime] = useState("15:00");
   const [checkOutTime, setCheckOutTime] = useState("11:00");
-  const [hotelImages, setHotelImages]   = useState("");
-  const [suitableFor, setSuitableFor]   = useState<string[]>([]);
+  const [hotelImages, setHotelImages] = useState("");
+  const [suitableFor, setSuitableFor] = useState<string[]>([]);
 
   // Amenities tab
-  const [amenities, setAmenities]       = useState<AmenitiesInput>({});
+  const [amenities, setAmenities] = useState<AmenitiesInput>({});
   const [safetyFeatures, setSafetyFeatures] = useState<SafetyFeaturesInput>({});
 
   // Policies tab
-  const [cancellationPolicy, setCancellationPolicy] = useState<CancellationPolicy>("MODERATE");
-  const [petsAllowed, setPetsAllowed]       = useState(false);
-  const [maxPetWeight, setMaxPetWeight]     = useState("");
+  const [cancellationPolicy, setCancellationPolicy] =
+    useState<CancellationPolicy>("MODERATE");
+  const [petsAllowed, setPetsAllowed] = useState(false);
+  const [maxPetWeight, setMaxPetWeight] = useState("");
   const [smokingAllowed, setSmokingAllowed] = useState(false);
-  const [flexCheckInEnabled, setFlexCheckInEnabled]   = useState(false);
-  const [flexCheckInFee, setFlexCheckInFee]           = useState("");
+  const [flexCheckInEnabled, setFlexCheckInEnabled] = useState(false);
+  const [flexCheckInFee, setFlexCheckInFee] = useState("");
   const [flexCheckOutEnabled, setFlexCheckOutEnabled] = useState(false);
-  const [flexCheckOutFee, setFlexCheckOutFee]         = useState("");
+  const [flexCheckOutFee, setFlexCheckOutFee] = useState("");
 
   // Load hotel
-  const { data, loading: loadingHotel } = useQuery<GetHotelQueryData, GetHotelQueryVars>(
-    GET_HOTEL_QUERY,
-    {
-      skip: !hotelId,
-      variables: { hotelId },
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-    },
-  );
+  const { data, loading: loadingHotel } = useQuery<
+    GetHotelQueryData,
+    GetHotelQueryVars
+  >(GET_HOTEL_QUERY, {
+    skip: !hotelId,
+    variables: { hotelId },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
 
   const hotel = data?.getHotel;
 
@@ -137,81 +159,98 @@ const EditHotelPage: NextPageWithAuth = () => {
     setSuitableFor(hotel.suitableFor ?? []);
     if (hotel.amenities) {
       setAmenities({
-        wifi:                hotel.amenities.wifi,
-        parking:             hotel.amenities.parking,
-        breakfast:           hotel.amenities.breakfast,
-        breakfastIncluded:   hotel.amenities.breakfastIncluded,
-        roomService:         hotel.amenities.roomService,
-        gym:                 hotel.amenities.gym,
-        pool:                hotel.amenities.pool,
-        workspace:           hotel.amenities.workspace,
-        familyRoom:          hotel.amenities.familyRoom,
-        kidsFriendly:        hotel.amenities.kidsFriendly,
-        wheelchairAccessible:hotel.amenities.wheelchairAccessible,
-        elevator:            hotel.amenities.elevator,
-        accessibleBathroom:  hotel.amenities.accessibleBathroom,
-        visualAlarms:        hotel.amenities.visualAlarms,
+        wifi: hotel.amenities.wifi,
+        parking: hotel.amenities.parking,
+        breakfast: hotel.amenities.breakfast,
+        breakfastIncluded: hotel.amenities.breakfastIncluded,
+        roomService: hotel.amenities.roomService,
+        gym: hotel.amenities.gym,
+        pool: hotel.amenities.pool,
+        workspace: hotel.amenities.workspace,
+        familyRoom: hotel.amenities.familyRoom,
+        kidsFriendly: hotel.amenities.kidsFriendly,
+        wheelchairAccessible: hotel.amenities.wheelchairAccessible,
+        elevator: hotel.amenities.elevator,
+        accessibleBathroom: hotel.amenities.accessibleBathroom,
+        visualAlarms: hotel.amenities.visualAlarms,
         serviceAnimalsAllowed: hotel.amenities.serviceAnimalsAllowed,
-        airportShuttle:      hotel.amenities.airportShuttle,
-        evCharging:          hotel.amenities.evCharging,
-        playground:          hotel.amenities.playground,
-        meetingRoom:         hotel.amenities.meetingRoom,
-        privateBath:         hotel.amenities.privateBath,
-        restaurant:          hotel.amenities.restaurant,
-        spa:                 hotel.amenities.spa,
-        coupleRoom:          hotel.amenities.coupleRoom,
-        romanticView:        hotel.amenities.romanticView,
+        airportShuttle: hotel.amenities.airportShuttle,
+        evCharging: hotel.amenities.evCharging,
+        playground: hotel.amenities.playground,
+        meetingRoom: hotel.amenities.meetingRoom,
+        privateBath: hotel.amenities.privateBath,
+        restaurant: hotel.amenities.restaurant,
+        spa: hotel.amenities.spa,
+        coupleRoom: hotel.amenities.coupleRoom,
+        romanticView: hotel.amenities.romanticView,
       });
     }
     if (hotel.safetyFeatures) {
       setSafetyFeatures({
-        fireSafety:       hotel.safetyFeatures.fireSafety,
-        securityCameras:  hotel.safetyFeatures.securityCameras,
-        frontDesk24h:     hotel.safetyFeatures.frontDesk24h,
-        roomSafe:         hotel.safetyFeatures.roomSafe,
+        fireSafety: hotel.safetyFeatures.fireSafety,
+        securityCameras: hotel.safetyFeatures.securityCameras,
+        frontDesk24h: hotel.safetyFeatures.frontDesk24h,
+        roomSafe: hotel.safetyFeatures.roomSafe,
         femaleOnlyFloors: hotel.safetyFeatures.femaleOnlyFloors,
-        wellLitParking:   hotel.safetyFeatures.wellLitParking,
+        wellLitParking: hotel.safetyFeatures.wellLitParking,
       });
     }
     setCancellationPolicy(hotel.cancellationPolicy ?? "MODERATE");
     setPetsAllowed(hotel.petsAllowed ?? false);
-    setMaxPetWeight(hotel.maxPetWeight != null ? String(hotel.maxPetWeight) : "");
+    setMaxPetWeight(
+      hotel.maxPetWeight != null ? String(hotel.maxPetWeight) : "",
+    );
     setSmokingAllowed(hotel.smokingAllowed ?? false);
     setFlexCheckInEnabled(hotel.flexibleCheckIn?.enabled ?? false);
-    setFlexCheckInFee(hotel.flexibleCheckIn?.fee != null ? String(hotel.flexibleCheckIn.fee) : "");
+    setFlexCheckInFee(
+      hotel.flexibleCheckIn?.fee != null
+        ? String(hotel.flexibleCheckIn.fee)
+        : "",
+    );
     setFlexCheckOutEnabled(hotel.flexibleCheckOut?.enabled ?? false);
-    setFlexCheckOutFee(hotel.flexibleCheckOut?.fee != null ? String(hotel.flexibleCheckOut.fee) : "");
+    setFlexCheckOutFee(
+      hotel.flexibleCheckOut?.fee != null
+        ? String(hotel.flexibleCheckOut.fee)
+        : "",
+    );
   }, [hotel]);
 
-  const [updateHotel] = useMutation<UpdateHotelMutationData, UpdateHotelMutationVars>(
-    UPDATE_HOTEL_MUTATION,
-  );
+  const [updateHotel] = useMutation<
+    UpdateHotelMutationData,
+    UpdateHotelMutationVars
+  >(UPDATE_HOTEL_MUTATION, {
+    refetchQueries: ["getHotel", "getHotels"],
+  });
 
   const handleSave = async () => {
     if (!hotelId) return;
     setSaving(true);
     try {
-      const imageUrls = hotelImages.split("\n").map((u) => u.trim()).filter(Boolean);
+      const imageUrls = hotelImages
+        .split("\n")
+        .map((u) => u.trim())
+        .filter(Boolean);
       const input: AgentHotelUpdateInput = {
         _id: hotelId,
-        hotelTitle:         hotelTitle.trim() || undefined,
-        hotelDesc:          hotelDesc.trim() || undefined,
+        hotelTitle: hotelTitle.trim() || undefined,
+        hotelDesc: hotelDesc.trim() || undefined,
         starRating,
         checkInTime,
         checkOutTime,
         cancellationPolicy,
         petsAllowed,
-        maxPetWeight:       petsAllowed && maxPetWeight ? Number(maxPetWeight) : undefined,
+        maxPetWeight:
+          petsAllowed && maxPetWeight ? Number(maxPetWeight) : undefined,
         smokingAllowed,
         amenities,
         safetyFeatures,
         suitableFor,
-        hotelImages:        imageUrls,
-        flexibleCheckIn:    {
+        hotelImages: imageUrls,
+        flexibleCheckIn: {
           enabled: flexCheckInEnabled,
           fee: flexCheckInFee ? Number(flexCheckInFee) : 0,
         },
-        flexibleCheckOut:   {
+        flexibleCheckOut: {
           enabled: flexCheckOutEnabled,
           fee: flexCheckOutFee ? Number(flexCheckOutFee) : 0,
         },
@@ -294,7 +333,11 @@ const EditHotelPage: NextPageWithAuth = () => {
             onClick={() => setActiveTab(t)}
             className={TAB_CLASSES(t)}
           >
-            {t === "info" ? "Info" : t === "amenities" ? "Amenities" : "Policies"}
+            {t === "info"
+              ? "Info"
+              : t === "amenities"
+                ? "Amenities"
+                : "Policies"}
           </button>
         ))}
       </div>
@@ -370,7 +413,9 @@ const EditHotelPage: NextPageWithAuth = () => {
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
               Image URLs{" "}
-              <span className="font-normal normal-case text-slate-400">(one per line)</span>
+              <span className="font-normal normal-case text-slate-400">
+                (one per line)
+              </span>
             </span>
             <textarea
               value={hotelImages}
@@ -430,10 +475,18 @@ const EditHotelPage: NextPageWithAuth = () => {
                   >
                     <div
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
-                        active ? "border-sky-500 bg-sky-500" : "border-slate-300"
+                        active
+                          ? "border-sky-500 bg-sky-500"
+                          : "border-slate-300"
                       }`}
                     >
-                      {active && <Check size={10} className="text-white" strokeWidth={3} />}
+                      {active && (
+                        <Check
+                          size={10}
+                          className="text-white"
+                          strokeWidth={3}
+                        />
+                      )}
                     </div>
                     {opt.label}
                   </button>
@@ -462,10 +515,18 @@ const EditHotelPage: NextPageWithAuth = () => {
                   >
                     <div
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
-                        active ? "border-emerald-500 bg-emerald-500" : "border-slate-300"
+                        active
+                          ? "border-emerald-500 bg-emerald-500"
+                          : "border-slate-300"
                       }`}
                     >
-                      {active && <Check size={10} className="text-white" strokeWidth={3} />}
+                      {active && (
+                        <Check
+                          size={10}
+                          className="text-white"
+                          strokeWidth={3}
+                        />
+                      )}
                     </div>
                     {opt.label}
                   </button>
@@ -507,7 +568,9 @@ const EditHotelPage: NextPageWithAuth = () => {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">{opt.label}</p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {opt.label}
+                    </p>
                     <p className="text-xs text-slate-500">{opt.desc}</p>
                   </div>
                 </button>
@@ -520,23 +583,31 @@ const EditHotelPage: NextPageWithAuth = () => {
               type="button"
               onClick={() => setPetsAllowed((v) => !v)}
               className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 transition ${
-                petsAllowed ? "border-sky-300 bg-sky-50" : "border-slate-200 hover:bg-slate-50"
+                petsAllowed
+                  ? "border-sky-300 bg-sky-50"
+                  : "border-slate-200 hover:bg-slate-50"
               }`}
             >
-              <span className="text-sm font-medium text-slate-800">Pets Allowed</span>
+              <span className="text-sm font-medium text-slate-800">
+                Pets Allowed
+              </span>
               <div
                 className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
                   petsAllowed ? "border-sky-500 bg-sky-500" : "border-slate-300"
                 }`}
               >
-                {petsAllowed && <Check size={11} className="text-white" strokeWidth={3} />}
+                {petsAllowed && (
+                  <Check size={11} className="text-white" strokeWidth={3} />
+                )}
               </div>
             </button>
             {petsAllowed && (
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Max Pet Weight (kg){" "}
-                  <span className="font-normal normal-case text-slate-400">(optional)</span>
+                  <span className="font-normal normal-case text-slate-400">
+                    (optional)
+                  </span>
                 </span>
                 <input
                   type="number"
@@ -552,16 +623,24 @@ const EditHotelPage: NextPageWithAuth = () => {
               type="button"
               onClick={() => setSmokingAllowed((v) => !v)}
               className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 transition ${
-                smokingAllowed ? "border-sky-300 bg-sky-50" : "border-slate-200 hover:bg-slate-50"
+                smokingAllowed
+                  ? "border-sky-300 bg-sky-50"
+                  : "border-slate-200 hover:bg-slate-50"
               }`}
             >
-              <span className="text-sm font-medium text-slate-800">Smoking Allowed</span>
+              <span className="text-sm font-medium text-slate-800">
+                Smoking Allowed
+              </span>
               <div
                 className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
-                  smokingAllowed ? "border-sky-500 bg-sky-500" : "border-slate-300"
+                  smokingAllowed
+                    ? "border-sky-500 bg-sky-500"
+                    : "border-slate-300"
                 }`}
               >
-                {smokingAllowed && <Check size={11} className="text-white" strokeWidth={3} />}
+                {smokingAllowed && (
+                  <Check size={11} className="text-white" strokeWidth={3} />
+                )}
               </div>
             </button>
           </div>
@@ -575,22 +654,32 @@ const EditHotelPage: NextPageWithAuth = () => {
               <div className="rounded-xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-800">Flexible Check-in</p>
-                    <p className="text-xs text-slate-400">Allow guests to request early check-in</p>
+                    <p className="text-sm font-medium text-slate-800">
+                      Flexible Check-in
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Allow guests to request early check-in
+                    </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFlexCheckInEnabled((v) => !v)}
                     className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
-                      flexCheckInEnabled ? "border-sky-500 bg-sky-500" : "border-slate-300"
+                      flexCheckInEnabled
+                        ? "border-sky-500 bg-sky-500"
+                        : "border-slate-300"
                     }`}
                   >
-                    {flexCheckInEnabled && <Check size={11} className="text-white" strokeWidth={3} />}
+                    {flexCheckInEnabled && (
+                      <Check size={11} className="text-white" strokeWidth={3} />
+                    )}
                   </button>
                 </div>
                 {flexCheckInEnabled && (
                   <label className="mt-3 block">
-                    <span className="mb-1 block text-xs text-slate-500">Surcharge (₩)</span>
+                    <span className="mb-1 block text-xs text-slate-500">
+                      Surcharge (₩)
+                    </span>
                     <input
                       type="number"
                       value={flexCheckInFee}
@@ -605,22 +694,32 @@ const EditHotelPage: NextPageWithAuth = () => {
               <div className="rounded-xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-800">Flexible Check-out</p>
-                    <p className="text-xs text-slate-400">Allow guests to request late check-out</p>
+                    <p className="text-sm font-medium text-slate-800">
+                      Flexible Check-out
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Allow guests to request late check-out
+                    </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFlexCheckOutEnabled((v) => !v)}
                     className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
-                      flexCheckOutEnabled ? "border-sky-500 bg-sky-500" : "border-slate-300"
+                      flexCheckOutEnabled
+                        ? "border-sky-500 bg-sky-500"
+                        : "border-slate-300"
                     }`}
                   >
-                    {flexCheckOutEnabled && <Check size={11} className="text-white" strokeWidth={3} />}
+                    {flexCheckOutEnabled && (
+                      <Check size={11} className="text-white" strokeWidth={3} />
+                    )}
                   </button>
                 </div>
                 {flexCheckOutEnabled && (
                   <label className="mt-3 block">
-                    <span className="mb-1 block text-xs text-slate-500">Surcharge (₩)</span>
+                    <span className="mb-1 block text-xs text-slate-500">
+                      Surcharge (₩)
+                    </span>
                     <input
                       type="number"
                       value={flexCheckOutFee}

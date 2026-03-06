@@ -31,6 +31,7 @@ export const GET_HOTEL_CONTEXT_QUERY = gql`
   query GetHotelContext($hotelId: String!) {
     getHotel(hotelId: $hotelId) {
       _id
+      memberId
       hotelTitle
       hotelLocation
       hotelType

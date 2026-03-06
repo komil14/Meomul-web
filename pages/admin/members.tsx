@@ -417,6 +417,7 @@ const AdminMembersPage: NextPageWithAuth = () => {
                           <img
                             src={resolveImageUrl(m.memberImage)}
                             alt={m.memberNick}
+                            loading="lazy"
                             className="h-9 w-9 rounded-full object-cover"
                           />
                         ) : (

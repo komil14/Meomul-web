@@ -2,7 +2,14 @@ import { gql } from "@apollo/client";
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import type { Socket } from "socket.io-client";
 import { useToast } from "@/components/ui/toast-provider";
 import {
@@ -16,7 +23,12 @@ import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
-import { confirmAction, confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
+import {
+  confirmAction,
+  confirmDanger,
+  errorAlert,
+  successAlert,
+} from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   ClaimChatMutationData,
@@ -45,10 +57,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import {
-  SUPPORT_CHAT_TITLE,
-  avatarBg,
-} from "@/lib/chat/chat-helpers";
+import { SUPPORT_CHAT_TITLE, avatarBg } from "@/lib/chat/chat-helpers";
 
 // ─── Hotel title query ────────────────────────────────────────────────────────
 
@@ -88,7 +97,8 @@ const API_BASE = env.graphqlUrl.replace(/\/graphql\/?$/i, "");
 /** Turns a relative `uploads/...` path into an absolute API URL. */
 function resolveMediaUrl(url: string | null | undefined): string {
   if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("//") || url.startsWith("blob:")) return url;
+  if (url.startsWith("http") || url.startsWith("//") || url.startsWith("blob:"))
+    return url;
   return `${API_BASE}/${url}`;
 }
 
@@ -176,11 +186,17 @@ function MessageBubble({
     <div className={`relative overflow-hidden ${isOwn ? sentCls : recvCls}`}>
       {/* IMAGE */}
       {message.messageType === "IMAGE" && message.imageUrl && (
-        <a href={resolveMediaUrl(message.imageUrl)} target="_blank" rel="noreferrer" className="block">
+        <a
+          href={resolveMediaUrl(message.imageUrl)}
+          target="_blank"
+          rel="noreferrer"
+          className="block"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={resolveMediaUrl(message.imageUrl)}
             alt="Shared image"
+            loading="lazy"
             className="block max-h-64 w-full object-cover"
           />
         </a>
@@ -266,11 +282,14 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
   const chat = data?.getChat;
 
-  const { data: hotelData } = useQuery<HotelTitleResult>(GET_HOTEL_TITLE_QUERY, {
-    skip: !chat?.hotelId,
-    variables: { hotelId: chat?.hotelId ?? "" },
-    fetchPolicy: "cache-and-network",
-  });
+  const { data: hotelData } = useQuery<HotelTitleResult>(
+    GET_HOTEL_TITLE_QUERY,
+    {
+      skip: !chat?.hotelId,
+      variables: { hotelId: chat?.hotelId ?? "" },
+      fetchPolicy: "cache-and-network",
+    },
+  );
 
   const [sendMessage, { loading: sending }] = useMutation<
     SendMessageMutationData,
@@ -303,7 +322,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
   // Auto mark-as-read
   useEffect(() => {
     if (!chat || unreadForMe === 0) return;
-    const markKey = `${chat._id}:${chat.messages.length}:${unreadForMe}`;
+    const markKey = `${chat._id}:${(chat.messages ?? []).length}:${unreadForMe}`;
     if (lastMarkedKeyRef.current === markKey) return;
     lastMarkedKeyRef.current = markKey;
     void markRead({ variables: { chatId: chat._id } }).catch((e: unknown) => {
@@ -332,12 +351,12 @@ const ChatThreadPage: NextPageWithAuth = () => {
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat?.messages.length]);
+  }, [chat?.messages?.length]);
 
   // Track previous message count for animation
   useEffect(() => {
-    prevMessageCountRef.current = chat?.messages.length ?? 0;
-  }, [chat?.messages.length]);
+    prevMessageCountRef.current = chat?.messages?.length ?? 0;
+  }, [chat?.messages?.length]);
 
   // Socket setup
   useEffect(() => {
@@ -380,14 +399,18 @@ const ChatThreadPage: NextPageWithAuth = () => {
       socket.emit("authenticate", { token }, (authAck?: SocketAck) => {
         if (!authAck?.success) {
           if (!socketJoinFailedRef.current) {
-            toast.info(authAck?.error ?? "Realtime auth failed. Using polling fallback.");
+            toast.info(
+              authAck?.error ?? "Realtime auth failed. Using polling fallback.",
+            );
             socketJoinFailedRef.current = true;
           }
           return;
         }
         socket.emit("joinChat", { chatId }, (joinAck?: SocketAck) => {
           if (!joinAck?.success && !socketJoinFailedRef.current) {
-            toast.info(joinAck?.error ?? "Realtime join failed. Using polling fallback.");
+            toast.info(
+              joinAck?.error ?? "Realtime join failed. Using polling fallback.",
+            );
             socketJoinFailedRef.current = true;
             return;
           }
@@ -481,7 +504,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
   };
 
   const scheduleStopTyping = () => {
-    if (localTypingTimeoutRef.current) window.clearTimeout(localTypingTimeoutRef.current);
+    if (localTypingTimeoutRef.current)
+      window.clearTimeout(localTypingTimeoutRef.current);
     localTypingTimeoutRef.current = window.setTimeout(() => {
       stopTypingSignal();
       localTypingTimeoutRef.current = null;
@@ -528,13 +552,18 @@ const ChatThreadPage: NextPageWithAuth = () => {
     if (!content) return;
     try {
       await sendMessage({
-        variables: { input: { chatId: chat._id, messageType: "TEXT", content } },
+        variables: {
+          input: { chatId: chat._id, messageType: "TEXT", content },
+        },
       });
       stopTypingSignal();
       setMessageInput("");
       if (textareaRef.current) textareaRef.current.style.height = "auto";
     } catch (mutationError) {
-      await errorAlert("Could not send message", getErrorMessage(mutationError));
+      await errorAlert(
+        "Could not send message",
+        getErrorMessage(mutationError),
+      );
     }
   };
 
@@ -545,7 +574,10 @@ const ChatThreadPage: NextPageWithAuth = () => {
     e.target.value = "";
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!allowed.includes(file.type)) {
-      await errorAlert("Unsupported file type", "Please select a JPEG, PNG, WebP, or GIF image.");
+      await errorAlert(
+        "Unsupported file type",
+        "Please select a JPEG, PNG, WebP, or GIF image.",
+      );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -565,7 +597,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       const json = (await res.json()) as { url: string };
       await sendMessage({
-        variables: { input: { chatId: chat._id, messageType: "IMAGE", imageUrl: json.url } },
+        variables: {
+          input: { chatId: chat._id, messageType: "IMAGE", imageUrl: json.url },
+        },
       });
     } catch (uploadError) {
       await errorAlert("Upload failed", getErrorMessage(uploadError));
@@ -615,22 +649,37 @@ const ChatThreadPage: NextPageWithAuth = () => {
     chat && isAgent && !chat.assignedAgentId && chat.chatStatus !== "CLOSED",
   );
   const canSend = Boolean(chat && chat.chatStatus !== "CLOSED");
-  const canClose = Boolean(chat && chat.chatStatus !== "CLOSED" && isOperatorSide);
+  const canClose = Boolean(
+    chat && chat.chatStatus !== "CLOSED" && isOperatorSide,
+  );
 
   const isSupportChat = chat?.chatScope === "SUPPORT";
   const hotelTitle = isSupportChat
     ? SUPPORT_CHAT_TITLE
-    : hotelData?.getHotel.hotelTitle ?? "Hotel Support";
-  const hotelLocation = isSupportChat ? "" : hotelData?.getHotel.hotelLocation ?? "";
+    : (hotelData?.getHotel.hotelTitle ?? "Hotel Support");
+  const hotelLocation = isSupportChat
+    ? ""
+    : (hotelData?.getHotel.hotelLocation ?? "");
   const supportMeta =
     chat?.supportTopic?.trim() ||
     (chat?.sourcePath ? `From ${chat.sourcePath}` : "Platform support");
   const incomingSenderLabel = isSupportChat ? "Support Team" : "Hotel Staff";
   const hotelAvatarColor = avatarBg(chat?.hotelId ?? chat?._id ?? hotelTitle);
 
-  const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-    WAITING: { label: "Waiting for agent", color: "text-amber-600", dot: "bg-amber-400" },
-    ACTIVE: { label: "Active", color: "text-emerald-600", dot: "bg-emerald-400" },
+  const STATUS_CONFIG: Record<
+    string,
+    { label: string; color: string; dot: string }
+  > = {
+    WAITING: {
+      label: "Waiting for agent",
+      color: "text-amber-600",
+      dot: "bg-amber-400",
+    },
+    ACTIVE: {
+      label: "Active",
+      color: "text-emerald-600",
+      dot: "bg-emerald-400",
+    },
     CLOSED: { label: "Closed", color: "text-slate-400", dot: "bg-slate-300" },
   };
 
@@ -645,7 +694,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
     );
   }
 
-  const statusCfg = chat ? (STATUS_CONFIG[chat.chatStatus] ?? STATUS_CONFIG.CLOSED) : null;
+  const statusCfg = chat
+    ? (STATUS_CONFIG[chat.chatStatus] ?? STATUS_CONFIG.CLOSED)
+    : null;
 
   return (
     <>
@@ -701,7 +752,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
                   {hotelTitle}
                 </p>
                 <div className="flex items-center gap-1.5">
-                  <p className={`text-xs ${statusCfg?.color ?? "text-slate-400"}`}>
+                  <p
+                    className={`text-xs ${statusCfg?.color ?? "text-slate-400"}`}
+                  >
                     {statusCfg?.label ?? chat.chatStatus}
                     {isSupportChat
                       ? ` · ${supportMeta}`
@@ -709,7 +762,11 @@ const ChatThreadPage: NextPageWithAuth = () => {
                         ? ` · ${hotelLocation}`
                         : ""}
                   </p>
-                  <span title={socketConnected ? "Live connection" : "Polling fallback"}>
+                  <span
+                    title={
+                      socketConnected ? "Live connection" : "Polling fallback"
+                    }
+                  >
                     {socketConnected ? (
                       <Wifi size={10} className="text-emerald-400" />
                     ) : (
@@ -776,7 +833,10 @@ const ChatThreadPage: NextPageWithAuth = () => {
           {loading && !chat && (
             <div className="flex flex-col gap-4 px-5 py-8">
               {[false, true, false, true, false].map((own, i) => (
-                <div key={i} className={`flex ${own ? "justify-end" : "justify-start"}`}>
+                <div
+                  key={i}
+                  className={`flex ${own ? "justify-end" : "justify-start"}`}
+                >
                   <div
                     className={`h-10 animate-pulse rounded-2xl ${
                       own ? "w-44 bg-blue-100/60" : "w-56 bg-white shadow-sm"
@@ -788,12 +848,14 @@ const ChatThreadPage: NextPageWithAuth = () => {
           )}
 
           {/* Empty state */}
-          {chat && chat.messages.length === 0 && (
+          {chat && (chat.messages ?? []).length === 0 && (
             <div className="flex h-full flex-col items-center justify-center py-24 text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm">
                 <MessageSquare size={22} className="text-slate-300" />
               </div>
-              <p className="text-sm font-semibold text-slate-700">Start the conversation</p>
+              <p className="text-sm font-semibold text-slate-700">
+                Start the conversation
+              </p>
               <p className="mt-1 text-xs text-slate-400">
                 {isSupportChat
                   ? "Your message goes directly to Meomul support"
@@ -803,30 +865,37 @@ const ChatThreadPage: NextPageWithAuth = () => {
           )}
 
           {/* Messages */}
-          {chat && chat.messages.length > 0 && (
+          {chat && (chat.messages ?? []).length > 0 && (
             <div className="space-y-0.5 px-4 py-5">
-              {chat.messages.map((message, index) => {
+              {(chat.messages ?? []).map((message, index) => {
                 const isOwn =
                   (message.senderType === "GUEST" && isUser) ||
                   (message.senderType === "AGENT" && isOperatorSide);
 
-                const prevMessage = index > 0 ? chat.messages[index - 1] : null;
+                const prevMessage =
+                  index > 0 ? (chat.messages ?? [])[index - 1] : null;
                 const nextMessage =
-                  index < chat.messages.length - 1 ? chat.messages[index + 1] : null;
+                  index < (chat.messages ?? []).length - 1
+                    ? (chat.messages ?? [])[index + 1]
+                    : null;
 
                 const showDateSep =
-                  !prevMessage || !isSameDay(prevMessage.timestamp, message.timestamp);
+                  !prevMessage ||
+                  !isSameDay(prevMessage.timestamp, message.timestamp);
                 const isLastInGroup =
                   !nextMessage || nextMessage.senderType !== message.senderType;
                 const isFirstInGroup =
                   !prevMessage || prevMessage.senderType !== message.senderType;
-                const showTime = isLastInGroup || message.messageType !== "TEXT";
+                const showTime =
+                  isLastInGroup || message.messageType !== "TEXT";
 
                 // New messages (arrived after initial load) animate in
                 const isNewMsg = index >= prevMessageCountRef.current;
 
                 return (
-                  <div key={`${message.senderId}-${message.timestamp}-${index}`}>
+                  <div
+                    key={`${message.senderId}-${message.timestamp}-${index}`}
+                  >
                     {/* Date separator */}
                     {showDateSep && (
                       <div className="my-6 flex items-center gap-3">
@@ -906,7 +975,10 @@ const ChatThreadPage: NextPageWithAuth = () => {
               {/* Typing indicator */}
               {typingUserId && (
                 <div style={{ animation: "typingFade 0.2s ease-out both" }}>
-                  <TypingIndicator firstLetter={hotelTitle.charAt(0)} isSupport={isSupportChat} />
+                  <TypingIndicator
+                    firstLetter={hotelTitle.charAt(0)}
+                    isSupport={isSupportChat}
+                  />
                 </div>
               )}
 
@@ -921,24 +993,34 @@ const ChatThreadPage: NextPageWithAuth = () => {
           {!canSend ? (
             <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 py-3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-              <p className="text-sm text-slate-500">This conversation is closed</p>
+              <p className="text-sm text-slate-500">
+                This conversation is closed
+              </p>
             </div>
           ) : (
-            <form onSubmit={(e) => { void onSendMessage(e); }}>
+            <form
+              onSubmit={(e) => {
+                void onSendMessage(e);
+              }}
+            >
               <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm transition focus-within:border-slate-300 focus-within:shadow-md">
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   className="hidden"
-                  onChange={(e) => { void onSelectImage(e); }}
+                  onChange={(e) => {
+                    void onSelectImage(e);
+                  }}
                 />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingImage || sending}
                   className={`mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all ${
-                    uploadingImage ? "text-sky-400 animate-pulse" : "text-slate-300 hover:text-slate-500"
+                    uploadingImage
+                      ? "text-sky-400 animate-pulse"
+                      : "text-slate-300 hover:text-slate-500"
                   }`}
                   aria-label="Upload image"
                 >
@@ -972,7 +1054,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 </button>
               </div>
               {messageInput.trim() && (
-                <p className="mt-1.5 text-right text-[10px] text-slate-400">⌘↩ to send</p>
+                <p className="mt-1.5 text-right text-[10px] text-slate-400">
+                  ⌘↩ to send
+                </p>
               )}
             </form>
           )}

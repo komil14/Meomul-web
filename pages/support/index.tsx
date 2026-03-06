@@ -174,7 +174,6 @@ function StatusDot({ status }: { status: string }) {
   );
 }
 
-
 /* ═══════════════════════════════════════════════════════════════════════════════
    PAGE
    ═══════════════════════════════════════════════════════════════════════════════ */
@@ -663,7 +662,10 @@ const SupportPage: NextPageWithAuth = () => {
                   <tbody className="divide-y divide-slate-50">
                     {supportChats.map((chat) => {
                       const preview =
-                        (chat.messages[0]?.content ?? "").slice(0, 60) || "—";
+                        ((chat.messages ?? [])[0]?.content ?? "").slice(
+                          0,
+                          60,
+                        ) || "—";
                       return (
                         <tr
                           key={chat._id}

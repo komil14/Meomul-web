@@ -131,6 +131,7 @@ function EditHotelDrawer({
               <img
                 src={resolveImageUrl(hotel.hotelImages[0])}
                 alt={hotel.hotelTitle}
+                loading="lazy"
                 className="h-44 w-full object-cover"
               />
             </div>
@@ -461,6 +462,7 @@ const AdminHotelsPage: NextPageWithAuth = () => {
                           <img
                             src={resolveImageUrl(h.hotelImages[0])}
                             alt={h.hotelTitle}
+                            loading="lazy"
                             className="h-10 w-14 rounded-lg object-cover"
                           />
                         ) : (

@@ -37,6 +37,33 @@ const SignupPage: NextPageWithAuth = () => {
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    const nick = memberNick.trim();
+    if (nick.length < 3 || nick.length > 24) {
+      await errorAlert("Validation error", "Nick must be 3-24 characters.");
+      return;
+    }
+    if (!/^[0-9]{10,11}$/.test(memberPhone.replace(/-/g, ""))) {
+      await errorAlert(
+        "Validation error",
+        "Please enter a valid Korean phone number (10-11 digits).",
+      );
+      return;
+    }
+    if (memberPassword.length < 6) {
+      await errorAlert(
+        "Validation error",
+        "Password must be at least 6 characters.",
+      );
+      return;
+    }
+    if (memberPassword.length > 72) {
+      await errorAlert(
+        "Validation error",
+        "Password must not exceed 72 characters.",
+      );
+      return;
+    }
+
     if (memberPassword !== confirmPassword) {
       await errorAlert("Password mismatch", "Passwords do not match.");
       return;
@@ -94,6 +121,8 @@ const SignupPage: NextPageWithAuth = () => {
             onChange={(event) => setMemberNick(event.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-900 transition focus:ring-2"
             autoComplete="username"
+            minLength={3}
+            maxLength={24}
             required
           />
         </label>
@@ -119,6 +148,8 @@ const SignupPage: NextPageWithAuth = () => {
             onChange={(event) => setMemberPhone(event.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-900 transition focus:ring-2"
             autoComplete="tel"
+            placeholder="010-1234-5678"
+            maxLength={13}
             required
           />
         </label>

@@ -223,6 +223,7 @@ export function EditProfileModal({
                 <img
                   src={resolveMediaUrl(imageUrl)}
                   alt={initials}
+                  loading="lazy"
                   className="h-full w-full object-cover"
                 />
               ) : (

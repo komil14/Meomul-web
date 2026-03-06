@@ -2,7 +2,11 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
-import { GET_ALL_CHATS_ADMIN_QUERY, GET_CHAT_QUERY, REASSIGN_CHAT_MUTATION } from "@/graphql/chat.gql";
+import {
+  GET_ALL_CHATS_ADMIN_QUERY,
+  GET_CHAT_QUERY,
+  REASSIGN_CHAT_MUTATION,
+} from "@/graphql/chat.gql";
 import { GET_ALL_MEMBERS_BY_ADMIN_QUERY } from "@/graphql/member.gql";
 import { getErrorMessage } from "@/lib/utils/error";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -80,13 +84,19 @@ function ChatDetailDrawer({
   const toast = useToast();
   const [newAgentId, setNewAgentId] = useState("");
 
-  const { data, loading, refetch } = useQuery<GetChatQueryData, GetChatQueryVars>(
-    GET_CHAT_QUERY,
-    { variables: { chatId }, fetchPolicy: "cache-and-network" },
-  );
+  const { data, loading, refetch } = useQuery<
+    GetChatQueryData,
+    GetChatQueryVars
+  >(GET_CHAT_QUERY, {
+    variables: { chatId },
+    fetchPolicy: "cache-and-network",
+  });
   const chat = data?.getChat;
 
-  const agentsInput = useMemo(() => ({ page: 1, limit: 50, sort: "createdAt", direction: -1 as const }), []);
+  const agentsInput = useMemo(
+    () => ({ page: 1, limit: 50, sort: "createdAt", direction: -1 as const }),
+    [],
+  );
   const { data: agentsData } = useQuery<GetAllMembersByAdminQueryData>(
     GET_ALL_MEMBERS_BY_ADMIN_QUERY,
     { variables: { input: agentsInput }, fetchPolicy: "cache-first" },
@@ -117,7 +127,7 @@ function ChatDetailDrawer({
               Chat Detail
             </p>
             <h2 className="mt-1 text-lg font-semibold text-slate-900 font-[family-name:var(--font-display)]">
-              {chat.chatScope === "SUPPORT" ? "Support Chat" : "Hotel Chat"}
+              {chat?.chatScope === "SUPPORT" ? "Support Chat" : "Hotel Chat"}
             </h2>
           </div>
           <button
@@ -156,8 +166,14 @@ function ChatDetailDrawer({
                   label="Assigned Agent"
                   value={chat.assignedAgentId ?? "None"}
                 />
-                <InfoRow label="Created" value={formatDateTime(chat.createdAt)} />
-                <InfoRow label="Last Message" value={timeAgo(chat.lastMessageAt)} />
+                <InfoRow
+                  label="Created"
+                  value={formatDateTime(chat.createdAt)}
+                />
+                <InfoRow
+                  label="Last Message"
+                  value={timeAgo(chat.lastMessageAt)}
+                />
                 <InfoRow
                   label="Unread (Guest)"
                   value={String(chat.unreadGuestMessages)}
@@ -169,7 +185,8 @@ function ChatDetailDrawer({
               </div>
 
               {/* reassign */}
-              {(chat.chatStatus === "WAITING" || chat.chatStatus === "ACTIVE") && (
+              {(chat.chatStatus === "WAITING" ||
+                chat.chatStatus === "ACTIVE") && (
                 <div className="rounded-xl border border-slate-200 p-4 space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                     Reassign Agent
@@ -182,14 +199,17 @@ function ChatDetailDrawer({
                     <option value="">Select an agent…</option>
                     {agents.map((a) => (
                       <option key={a._id} value={a._id}>
-                        {a.memberNick}{a.memberFullName ? ` (${a.memberFullName})` : ""}
+                        {a.memberNick}
+                        {a.memberFullName ? ` (${a.memberFullName})` : ""}
                       </option>
                     ))}
                   </select>
                   <button
                     type="button"
                     disabled={!newAgentId || reassigning}
-                    onClick={() => void reassignChat({ variables: { chatId, newAgentId } })}
+                    onClick={() =>
+                      void reassignChat({ variables: { chatId, newAgentId } })
+                    }
                     className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {reassigning ? "Reassigning…" : "Reassign"}
@@ -230,6 +250,7 @@ function ChatDetailDrawer({
                           <img
                             src={resolveMediaUrl(msg.imageUrl)}
                             alt="chat image"
+                            loading="lazy"
                             className="mt-2 h-32 w-auto rounded-lg object-cover"
                           />
                         )}
@@ -329,19 +350,36 @@ const AdminChatsPage: NextPageWithAuth = () => {
   }, [chats, searchTerm]);
 
   // Separate count queries per status for platform-wide totals
-  const countInput = useMemo(() => ({ page: 1, limit: 1, sort: "lastMessageAt", direction: -1 as const }), []);
-  const { data: waitingCountData } = useQuery<GetAllChatsAdminQueryData, GetAllChatsAdminQueryVars>(
-    GET_ALL_CHATS_ADMIN_QUERY,
-    { variables: { input: countInput, statusFilter: "WAITING" }, fetchPolicy: "cache-and-network" },
+  const countInput = useMemo(
+    () => ({
+      page: 1,
+      limit: 1,
+      sort: "lastMessageAt",
+      direction: -1 as const,
+    }),
+    [],
   );
-  const { data: activeCountData } = useQuery<GetAllChatsAdminQueryData, GetAllChatsAdminQueryVars>(
-    GET_ALL_CHATS_ADMIN_QUERY,
-    { variables: { input: countInput, statusFilter: "ACTIVE" }, fetchPolicy: "cache-and-network" },
-  );
-  const { data: closedCountData } = useQuery<GetAllChatsAdminQueryData, GetAllChatsAdminQueryVars>(
-    GET_ALL_CHATS_ADMIN_QUERY,
-    { variables: { input: countInput, statusFilter: "CLOSED" }, fetchPolicy: "cache-and-network" },
-  );
+  const { data: waitingCountData } = useQuery<
+    GetAllChatsAdminQueryData,
+    GetAllChatsAdminQueryVars
+  >(GET_ALL_CHATS_ADMIN_QUERY, {
+    variables: { input: countInput, statusFilter: "WAITING" },
+    fetchPolicy: "cache-and-network",
+  });
+  const { data: activeCountData } = useQuery<
+    GetAllChatsAdminQueryData,
+    GetAllChatsAdminQueryVars
+  >(GET_ALL_CHATS_ADMIN_QUERY, {
+    variables: { input: countInput, statusFilter: "ACTIVE" },
+    fetchPolicy: "cache-and-network",
+  });
+  const { data: closedCountData } = useQuery<
+    GetAllChatsAdminQueryData,
+    GetAllChatsAdminQueryVars
+  >(GET_ALL_CHATS_ADMIN_QUERY, {
+    variables: { input: countInput, statusFilter: "CLOSED" },
+    fetchPolicy: "cache-and-network",
+  });
   const statusCounts = {
     WAITING: waitingCountData?.getAllChatsAdmin.metaCounter.total ?? 0,
     ACTIVE: activeCountData?.getAllChatsAdmin.metaCounter.total ?? 0,
@@ -536,9 +574,7 @@ const AdminChatsPage: NextPageWithAuth = () => {
                         </span>
                       </td>
                       {/* Messages count */}
-                      <td className="px-4 py-3.5 text-sm text-slate-400">
-                        —
-                      </td>
+                      <td className="px-4 py-3.5 text-sm text-slate-400">—</td>
                       {/* Unread */}
                       <td className="px-4 py-3.5">
                         {totalUnread > 0 ? (

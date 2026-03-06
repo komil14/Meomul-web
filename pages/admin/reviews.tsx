@@ -152,6 +152,7 @@ function ReviewDetailDrawer({
               <img
                 src={resolveImageUrl(review.reviewerImage)}
                 alt={review.reviewerNick ?? "reviewer"}
+                loading="lazy"
                 className="h-10 w-10 rounded-full object-cover"
               />
             ) : (
@@ -225,6 +226,7 @@ function ReviewDetailDrawer({
                     key={i}
                     src={resolveImageUrl(photo)}
                     alt={`Guest photo ${i + 1}`}
+                    loading="lazy"
                     className="h-20 w-20 rounded-lg object-cover"
                   />
                 ))}
@@ -566,6 +568,7 @@ const AdminReviewsPage: NextPageWithAuth = () => {
                           <img
                             src={resolveImageUrl(r.reviewerImage)}
                             alt={r.reviewerNick ?? "reviewer"}
+                            loading="lazy"
                             className="h-8 w-8 rounded-full object-cover"
                           />
                         ) : (

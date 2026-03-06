@@ -133,7 +133,6 @@ const ICON_CONFIG: Record<
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-
 function resolveLink(notification: NotificationDto): string | null {
   if (notification.link) return notification.link;
 
@@ -267,7 +266,10 @@ const NotificationsPage: NextPageWithAuth = () => {
 
   const [markAsRead] = useMutation<MarkAsReadData>(MARK_AS_READ_MUTATION, {
     refetchQueries: [
-      { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly, limit: 50 } },
+      {
+        query: GET_MY_NOTIFICATIONS_QUERY,
+        variables: { unreadOnly, limit: 50 },
+      },
       { query: GET_UNREAD_COUNT_QUERY },
     ],
   });
@@ -275,7 +277,10 @@ const NotificationsPage: NextPageWithAuth = () => {
   const [markAllAsRead, { loading: markAllLoading }] =
     useMutation<MarkAllAsReadData>(MARK_ALL_AS_READ_MUTATION, {
       refetchQueries: [
-        { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly, limit: 50 } },
+        {
+          query: GET_MY_NOTIFICATIONS_QUERY,
+          variables: { unreadOnly, limit: 50 },
+        },
         { query: GET_UNREAD_COUNT_QUERY },
       ],
     });
@@ -284,7 +289,10 @@ const NotificationsPage: NextPageWithAuth = () => {
     DELETE_NOTIFICATION_MUTATION,
     {
       refetchQueries: [
-        { query: GET_MY_NOTIFICATIONS_QUERY, variables: { unreadOnly, limit: 50 } },
+        {
+          query: GET_MY_NOTIFICATIONS_QUERY,
+          variables: { unreadOnly, limit: 50 },
+        },
         { query: GET_UNREAD_COUNT_QUERY },
       ],
     },
@@ -404,7 +412,7 @@ const NotificationsPage: NextPageWithAuth = () => {
             <Bell size={28} className="text-slate-300" />
           </div>
           <p className="mt-4 text-base font-semibold text-slate-700">
-            You're all caught up
+            You&apos;re all caught up
           </p>
           <p className="mt-1.5 text-sm text-slate-400">
             {tab === "unread"

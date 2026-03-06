@@ -95,6 +95,7 @@ function Bubble({
             <img
               src={message.imageUrl}
               alt="Photo"
+              loading="lazy"
               className="block max-h-48 w-full object-cover"
             />
           </a>
@@ -319,7 +320,10 @@ function ListView({
         {!isUser && (
           <div className="flex flex-col gap-2 px-4 py-5">
             <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-              <MessageSquare size={15} className="flex-shrink-0 text-slate-400" />
+              <MessageSquare
+                size={15}
+                className="flex-shrink-0 text-slate-400"
+              />
               <p className="flex-1 text-sm text-slate-600">
                 {agentUnreadCount > 0 ? (
                   <>
@@ -405,7 +409,7 @@ function ListView({
                   : undefined;
               const hotelName = isSupportChat
                 ? SUPPORT_CHAT_TITLE
-                : hotel?.hotelTitle ?? "Hotel Support";
+                : (hotel?.hotelTitle ?? "Hotel Support");
               const unread = chat.unreadGuestMessages;
               const preview = getLastPreview(chat);
               const time = timeAgo(chat.lastMessageAt);
@@ -560,7 +564,7 @@ function ThreadView({
   // Auto mark-as-read
   useEffect(() => {
     if (!chat || unreadForMe === 0) return;
-    const key = `${chat._id}:${chat.messages.length}:${unreadForMe}`;
+    const key = `${chat._id}:${(chat.messages ?? []).length}:${unreadForMe}`;
     if (lastMarkedRef.current === key) return;
     lastMarkedRef.current = key;
     void markRead({ variables: { chatId: chat._id } }).catch(() => undefined);
@@ -569,7 +573,7 @@ function ThreadView({
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat?.messages.length]);
+  }, [chat?.messages?.length]);
 
   // Fallback polling when socket is disconnected
   useEffect(() => {
@@ -723,22 +727,22 @@ function ThreadView({
           </p>
         )}
 
-        {chat && chat.messages.length === 0 && (
+        {chat && (chat.messages ?? []).length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <span className="mb-2 text-3xl">💬</span>
             <p className="text-xs text-slate-400">No messages yet</p>
           </div>
         )}
 
-        {chat && chat.messages.length > 0 && (
+        {chat && (chat.messages ?? []).length > 0 && (
           <>
-            {chat.messages.map((message, index) => {
+            {(chat.messages ?? []).map((message, index) => {
               const isOwn =
                 (message.senderType === "GUEST" && isUser) ||
                 (message.senderType === "AGENT" && !isUser);
               const nextMessage =
-                index < chat.messages.length - 1
-                  ? chat.messages[index + 1]
+                index < (chat.messages ?? []).length - 1
+                  ? (chat.messages ?? [])[index + 1]
                   : null;
               const isLastInGroup =
                 !nextMessage || nextMessage.senderType !== message.senderType;
@@ -810,7 +814,6 @@ function ThreadView({
             </div>
           </form>
         )}
-
       </div>
     </>
   );

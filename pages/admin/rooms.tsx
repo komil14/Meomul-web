@@ -119,6 +119,7 @@ function EditRoomDrawer({
               <img
                 src={resolveImageUrl(room.roomImages[0])}
                 alt={room.roomName}
+                loading="lazy"
                 className="h-44 w-full object-cover"
               />
             </div>
@@ -416,6 +417,7 @@ const AdminRoomsPage: NextPageWithAuth = () => {
                           <img
                             src={resolveImageUrl(r.roomImages[0])}
                             alt={r.roomName}
+                            loading="lazy"
                             className="h-10 w-14 rounded-lg object-cover"
                           />
                         ) : (
