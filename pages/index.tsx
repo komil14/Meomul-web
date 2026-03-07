@@ -18,6 +18,8 @@ import {
 } from "@/graphql/hotel.gql";
 import { createApolloClient } from "@/lib/apollo/client";
 import { getAccessToken } from "@/lib/auth/session";
+import type { TranslationKey } from "@/lib/i18n/messages";
+import { useI18n } from "@/lib/i18n/provider";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type {
   GetHomeFeedQueryData,
@@ -46,20 +48,11 @@ const TESTIMONIAL_LIMIT = 6;
 const LAST_MINUTE_DEALS_LIMIT = 8;
 const REVIEW_LIMIT = 5;
 
-const GENERIC_RECOMMENDATION_SIGNALS = new Set<string>([
-  "Strong match for your saved travel preferences",
-  "Good match based on your core preferences",
-  "Balanced pick based on your recent browsing behavior",
-  "High-quality fallback aligned with your general taste",
-  "Popular with guests right now",
-  "Strong overall activity and engagement",
-]);
-
 // ─── Utilities ─────────────────────────────────────────────────────────────────
 
-const createFallbackSlide = (index: number): HeroSlide => ({
+const createFallbackSlide = (index: number, title: string): HeroSlide => ({
   _id: `fallback-${index}`,
-  title: "Premium Curated Stay",
+  title,
   location: "SEOUL",
   hotelType: "HOTEL",
   rating: 4.8,
@@ -67,7 +60,7 @@ const createFallbackSlide = (index: number): HeroSlide => ({
   imageUrl: "",
 });
 
-const toHeroSlides = (hotels: HotelListItem[]): HeroSlide[] => {
+const toHeroSlides = (hotels: HotelListItem[], fallbackTitle: string): HeroSlide[] => {
   const slides = hotels.slice(0, HERO_LIMIT).map((hotel) => ({
     _id: hotel._id,
     title: hotel.hotelTitle,
@@ -79,7 +72,7 @@ const toHeroSlides = (hotels: HotelListItem[]): HeroSlide[] => {
   }));
   if (slides.length >= HERO_LIMIT) return slides;
   const fallbacks = Array.from({ length: HERO_LIMIT - slides.length }, (_, i) =>
-    createFallbackSlide(i),
+    createFallbackSlide(i, fallbackTitle),
   );
   return [...slides, ...fallbacks];
 };
@@ -93,19 +86,34 @@ const uniqueHotelsById = (hotels: HotelListItem[]): HotelListItem[] => {
   });
 };
 
-const pickRecommendationSignal = (explanation: RecommendationExplanationDto): string => {
-  const specific = explanation.signals.find((s) => !GENERIC_RECOMMENDATION_SIGNALS.has(s));
-  if (specific) return specific;
-  if (explanation.likedSimilar) return "Similar to hotels you previously liked";
-  if (explanation.matchedLocation) return "Matches your preferred location";
-  if (explanation.matchedPurposes.length > 0)
-    return `Fits your trip purpose: ${explanation.matchedPurposes.slice(0, 2).join(", ")}`;
-  if (explanation.matchedType) return "Matches your preferred hotel type";
-  if (explanation.matchedPrice) return "Within your usual budget range";
-  return (
-    explanation.signals[0] ??
-    "Popular with guests for consistent service quality and strong recent ratings."
+const pickRecommendationSignal = (
+  explanation: RecommendationExplanationDto,
+  translate: (
+    key: TranslationKey,
+    params?: Record<string, string | number>,
+  ) => string,
+): string => {
+  const genericRecommendationSignals = new Set<string>([
+    translate("home_signal_saved_preferences"),
+    translate("home_signal_core_preferences"),
+    translate("home_signal_recent_browsing"),
+    translate("home_signal_aligned_fallback"),
+    translate("home_signal_popular_now"),
+    translate("home_signal_activity_engagement"),
+  ]);
+  const specific = explanation.signals.find(
+    (s) => !genericRecommendationSignals.has(s),
   );
+  if (specific) return specific;
+  if (explanation.likedSimilar) return translate("home_signal_liked_similar");
+  if (explanation.matchedLocation) return translate("home_signal_matched_location");
+  if (explanation.matchedPurposes.length > 0)
+    return translate("home_signal_matched_purpose", {
+      purposes: explanation.matchedPurposes.slice(0, 2).join(", "),
+    });
+  if (explanation.matchedType) return translate("home_signal_matched_type");
+  if (explanation.matchedPrice) return translate("home_signal_matched_price");
+  return explanation.signals[0] ?? translate("home_signal_fallback_quality");
 };
 
 const toIsoLocalDate = (value: Date): string => {
@@ -144,10 +152,28 @@ const buildHotelsFilteredHref = (input: Record<string, string | undefined>): str
   return query ? `/hotels?${query}` : "/hotels";
 };
 
-const formatReviewCountLabel = (count: number): string => {
-  if (!Number.isFinite(count) || count <= 0) return "No reviews yet";
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}k verified reviews`;
-  return `${count.toLocaleString()} verified reviews`;
+const formatReviewCountLabel = (
+  count: number,
+  locale: string,
+  translate: (
+    key: TranslationKey,
+    params?: Record<string, string | number>,
+  ) => string,
+): string => {
+  if (!Number.isFinite(count) || count <= 0) {
+    return translate("home_common_no_reviews");
+  }
+  if (count >= 1000) {
+    return translate("home_common_verified_reviews", {
+      count: `${(count / 1000).toLocaleString(locale, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      })}k`,
+    });
+  }
+  return translate("home_common_verified_reviews", {
+    count: count.toLocaleString(locale),
+  });
 };
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -163,6 +189,7 @@ export default function HomePage({
   serverTodayIso,
   initialLoadError,
 }: HomePageProps) {
+  const { locale, t } = useI18n();
   const [hasAccessToken, setHasAccessToken] = useState(false);
 
   const { data: recommendedData, loading: recommendedLoading } = useQuery<
@@ -181,7 +208,10 @@ export default function HomePage({
 
   // ─── Derived data ────────────────────────────────────────────────────────────
 
-  const heroSlides = useMemo(() => toHeroSlides(initialTopHotels), [initialTopHotels]);
+  const heroSlides = useMemo(
+    () => toHeroSlides(initialTopHotels, t("home_fallback_slide_title")),
+    [initialTopHotels, t],
+  );
 
   const recommendationSignals = useMemo(() => {
     const map = new Map<string, string>();
@@ -189,11 +219,11 @@ export default function HomePage({
       ? (recommendedData?.getRecommendedHotelsV2.explanations ?? [])
       : [];
     explanations.forEach((exp) => {
-      const signal = pickRecommendationSignal(exp);
+      const signal = pickRecommendationSignal(exp, t);
       if (signal) map.set(exp.hotelId, signal);
     });
     return map;
-  }, [hasAccessToken, recommendedData?.getRecommendedHotelsV2.explanations]);
+  }, [hasAccessToken, recommendedData?.getRecommendedHotelsV2.explanations, t]);
 
   const recommendedCards = useMemo<RecommendedCard[]>(() => {
     const personalized = hasAccessToken
@@ -214,7 +244,7 @@ export default function HomePage({
       imageUrl: resolveMediaUrl(hotel.hotelImages[0]),
       signal:
         recommendationSignals.get(hotel._id) ??
-        "Popular with guests for consistent service quality and strong recent ratings.",
+        t("home_signal_fallback_quality"),
     }));
   }, [
     hasAccessToken,
@@ -222,6 +252,7 @@ export default function HomePage({
     initialTrendingHotels,
     recommendedData?.getRecommendedHotelsV2.list,
     recommendationSignals,
+    t,
   ]);
 
   const recommendedRows = useMemo(
@@ -258,35 +289,53 @@ export default function HomePage({
     const meta = hasAccessToken ? recommendedData?.getRecommendedHotelsV2.meta : undefined;
     const personalizationDetail = hasAccessToken
       ? meta
-        ? `${meta.matchedLocationCount} location matches and ${meta.strictStageCount + meta.relaxedStageCount} strict-fit picks in your feed.`
-        : "Profile-aware recommendations are active and adapt to your booking behavior."
-      : "Sign in to unlock profile-aware recommendations based on onboarding + behavior signals.";
+        ? t("home_value_personal_detail_meta", {
+            locations: meta.matchedLocationCount,
+            strict: meta.strictStageCount + meta.relaxedStageCount,
+          })
+        : t("home_value_personal_detail_active")
+      : t("home_value_personal_detail_signed_out");
 
     return [
       {
-        title: "Destination coverage",
+        title: t("home_value_destination_title"),
         metric:
           initialHotelInventoryTotal > 0
-            ? `${initialHotelInventoryTotal.toLocaleString()} hotels`
-            : "Curated inventory",
-        detail: "Active stays across major Korea destinations, ranked daily by quality and guest demand.",
+            ? t("hotels_count_hotels", {
+                count: initialHotelInventoryTotal.toLocaleString(locale),
+                suffix: initialHotelInventoryTotal === 1 ? "" : "s",
+              })
+            : t("home_value_destination_metric_fallback"),
+        detail: t("home_value_destination_detail"),
       },
       {
-        title: "Guest trust layer",
-        metric: reviewCount > 0 ? formatReviewCountLabel(reviewCount) : "Live review scoring",
-        detail: "Review scores and helpful feedback continuously shape ranking, visibility, and recommendations.",
+        title: t("home_value_trust_title"),
+        metric:
+          reviewCount > 0
+            ? formatReviewCountLabel(reviewCount, locale, t)
+            : t("home_value_trust_metric_fallback"),
+        detail: t("home_value_trust_detail"),
       },
       {
-        title: "Demand intelligence",
-        metric: trendingLikes > 0 ? `${trendingLikes.toLocaleString()} demand signals` : "Real-time demand feed",
+        title: t("home_value_demand_title"),
+        metric:
+          trendingLikes > 0
+            ? t("home_value_demand_metric_count", {
+                count: trendingLikes.toLocaleString(locale),
+              })
+            : t("home_value_demand_metric_fallback"),
         detail:
           averageRating > 0
-            ? `Top stays currently average ★ ${averageRating.toFixed(1)} based on recent guest interactions.`
-            : "Trending, likes, and viewing patterns surface high-intent stays before they sell out.",
+            ? t("home_value_demand_detail_with_rating", {
+                rating: averageRating.toFixed(1),
+              })
+            : t("home_value_demand_detail_fallback"),
       },
       {
-        title: "Personalized matching",
-        metric: hasAccessToken ? "Onboarding + behavior" : "Ready when you sign in",
+        title: t("home_value_personal_title"),
+        metric: hasAccessToken
+          ? t("home_value_personal_metric_signed_in")
+          : t("home_value_personal_metric_signed_out"),
         detail: personalizationDetail,
       },
     ];
@@ -297,6 +346,7 @@ export default function HomePage({
     initialHotelInventoryTotal,
     initialTopHotels,
     recommendedData?.getRecommendedHotelsV2.meta,
+    t,
     trendingHotels,
   ]);
 
@@ -317,9 +367,9 @@ export default function HomePage({
     const guides: Omit<EditorialGuideCard, "href" | "imageUrl">[] = [
       {
         id: "guide-jeju-weekend",
-        eyebrow: "Weekend Escape",
-        title: "Best stays for a Jeju weekend",
-        description: "Short recharge plan with resort and pension picks optimized for 2-night stays.",
+        eyebrow: t("home_guide_jeju_eyebrow"),
+        title: t("home_guide_jeju_title"),
+        description: t("home_guide_jeju_desc"),
         location: "JEJU",
         purpose: "STAYCATION",
         checkIn: weekendRange.checkIn,
@@ -329,9 +379,9 @@ export default function HomePage({
       },
       {
         id: "guide-seoul-business",
-        eyebrow: "Business Route",
-        title: "Seoul hotels for business trips",
-        description: "Central hotels with strong workspace amenities and smooth weekday availability.",
+        eyebrow: t("home_guide_seoul_eyebrow"),
+        title: t("home_guide_seoul_title"),
+        description: t("home_guide_seoul_desc"),
         location: "SEOUL",
         purpose: "BUSINESS",
         checkIn: businessRange.checkIn,
@@ -341,9 +391,9 @@ export default function HomePage({
       },
       {
         id: "guide-busan-romantic",
-        eyebrow: "Couple Stay",
-        title: "Busan romantic stay shortlist",
-        description: "Ocean-facing and premium rooms popular for two-person romantic getaways.",
+        eyebrow: t("home_guide_busan_eyebrow"),
+        title: t("home_guide_busan_title"),
+        description: t("home_guide_busan_desc"),
         location: "BUSAN",
         purpose: "ROMANTIC",
         checkIn: weekendRange.checkIn,
@@ -353,9 +403,9 @@ export default function HomePage({
       },
       {
         id: "guide-gangneung-family",
-        eyebrow: "Family Friendly",
-        title: "Gangneung family-ready stays",
-        description: "Larger rooms and practical family setups for easier multi-guest planning.",
+        eyebrow: t("home_guide_gangneung_eyebrow"),
+        title: t("home_guide_gangneung_title"),
+        description: t("home_guide_gangneung_desc"),
         location: "GANGNEUNG",
         purpose: "FAMILY",
         checkIn: weekendRange.checkIn,
@@ -378,19 +428,17 @@ export default function HomePage({
       }),
       imageUrl: pickImage(guide.location, index),
     }));
-  }, [heroSlides, initialTopHotels, serverTodayIso, trendingHotels]);
+  }, [heroSlides, initialTopHotels, serverTodayIso, t, trendingHotels]);
 
   // ─── SEO ─────────────────────────────────────────────────────────────────────
 
   const canonicalBaseUrl =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "http://localhost:3000";
   const canonicalUrl = `${canonicalBaseUrl}/`;
-  const primaryHotel = initialTopHotels[0];
-  const metaTitle = primaryHotel
-    ? `${primaryHotel.hotelTitle} and curated stays across Korea | Meomul`
-    : "Meomul | Book the right stay for every trip";
-  const metaDescription =
-    "Discover verified hotels, real guest reviews, live deals, and personalized recommendations across Korea.";
+  const metaTitle = hasAccessToken
+    ? t("home_meta_title_signed_in")
+    : t("home_meta_title");
+  const metaDescription = t("home_meta_desc");
   const homepageStructuredData = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -427,7 +475,7 @@ export default function HomePage({
 
       <main className={styles.page}>
         <div className={styles.shell}>
-          {initialLoadError && <ErrorNotice message={initialLoadError} />}
+          {initialLoadError && <ErrorNotice message={t("home_error_load")} />}
 
           <HeroSection
             slides={heroSlides}

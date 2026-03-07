@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import { useI18n } from "@/lib/i18n/provider";
 import {
   clearRecentlyViewedHotels,
   readRecentlyViewedHotels,
@@ -12,6 +13,7 @@ import styles from "@/styles/home-landing-ovastin.module.css";
 const MAX_CARDS = 6;
 
 export function RecentlyViewedSection() {
+  const { t } = useI18n();
   const [isMounted, setIsMounted] = useState(false);
   const [hotels, setHotels] = useState<RecentlyViewedHotelEntry[]>([]);
 
@@ -33,15 +35,15 @@ export function RecentlyViewedSection() {
     <section className={styles.trendingSection}>
       <div className={styles.trendingHeader}>
         <div>
-          <p className={styles.trendingEyebrow}>Recently Viewed</p>
-          <h2 className={styles.trendingTitle}>Pick up where you left off</h2>
+          <p className={styles.trendingEyebrow}>{t("home_recent_eyebrow")}</p>
+          <h2 className={styles.trendingTitle}>{t("home_recent_title")}</h2>
         </div>
         <div className="flex items-center gap-2">
           <button type="button" className={styles.trendingLink} onClick={handleClear}>
-            Clear history
+            {t("home_recent_clear")}
           </button>
           <Link href="/hotels" className={styles.trendingLink}>
-            Browse all stays <span aria-hidden>↗</span>
+            {t("home_browse_all_stays")} <span aria-hidden>↗</span>
           </Link>
         </div>
       </div>
@@ -69,7 +71,11 @@ export function RecentlyViewedSection() {
                 </p>
                 <div className={styles.trendingStats}>
                   <span>★ {hotel.hotelRating.toFixed(1)}</span>
-                  <span>{hotel.hotelLikes.toLocaleString()} likes</span>
+                  <span>
+                    {t("home_common_likes", {
+                      count: hotel.hotelLikes.toLocaleString(),
+                    })}
+                  </span>
                 </div>
               </div>
             </Link>

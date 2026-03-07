@@ -1,9 +1,12 @@
-import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
 import {
-  buildHotelsArraySummary,
-  formatHotelDateSummary,
-  formatHotelLocationLabel,
-} from "@/lib/hotels/hotels-ui";
+  formatHotelDateSummaryLocalized,
+  getHotelLocationLabelLocalized,
+  getHotelTypeLabel,
+  getRoomTypeLabel,
+  getStayPurposeLabel,
+} from "@/lib/hotels/hotels-i18n";
+import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
+import { useI18n } from "@/lib/i18n/provider";
 
 interface HotelsActiveFilterChipsProps {
   state: HotelsPageQueryState;
@@ -15,13 +18,17 @@ interface ActiveChip {
   clearPatch: Record<string, string | undefined>;
 }
 
+const summarizeItems = (items: string[]): string =>
+  `${items.slice(0, 2).join(", ")}${items.length > 2 ? ` +${items.length - 2}` : ""}`;
+
 export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps) {
+  const { locale, t } = useI18n();
   const chips: ActiveChip[] = [];
 
   if (state.textInput.trim()) {
     chips.push({
       id: "q",
-      label: `Search: "${state.textInput.trim()}"`,
+      label: `${t("hotels_chip_search")}: "${state.textInput.trim()}"`,
       clearPatch: { q: undefined },
     });
   }
@@ -29,7 +36,10 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedLocation) {
     chips.push({
       id: "location",
-      label: `Location: ${formatHotelLocationLabel(state.selectedLocation)}`,
+      label: `${t("hotels_chip_location")}: ${getHotelLocationLabelLocalized(
+        state.selectedLocation,
+        t,
+      )}`,
       clearPatch: { location: undefined },
     });
   }
@@ -37,7 +47,10 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedPurpose) {
     chips.push({
       id: "purpose",
-      label: `Purpose: ${state.selectedPurpose}`,
+      label: `${t("hotels_chip_purpose")}: ${getStayPurposeLabel(
+        state.selectedPurpose,
+        t,
+      )}`,
       clearPatch: { purpose: undefined },
     });
   }
@@ -45,7 +58,12 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.checkInInput || state.checkOutInput) {
     chips.push({
       id: "stay",
-      label: `Stay: ${formatHotelDateSummary(state.checkInInput, state.checkOutInput)}`,
+      label: `${t("hotels_chip_stay")}: ${formatHotelDateSummaryLocalized(
+        state.checkInInput,
+        state.checkOutInput,
+        locale,
+        t,
+      )}`,
       clearPatch: { checkIn: undefined, checkOut: undefined },
     });
   }
@@ -53,7 +71,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.guestCountInput) {
     chips.push({
       id: "guests",
-      label: `Guests: ${state.guestCountInput}`,
+      label: `${t("hotels_chip_guests")}: ${state.guestCountInput}`,
       clearPatch: { guests: undefined },
     });
   }
@@ -61,7 +79,9 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.minInput || state.maxInput) {
     chips.push({
       id: "price",
-      label: `Price: ₩${state.minInput || "0"} - ₩${state.maxInput || "any"}`,
+      label: `${t("hotels_chip_price")}: ₩${state.minInput || "0"} - ₩${
+        state.maxInput || t("hotels_chip_any")
+      }`,
       clearPatch: { min: undefined, max: undefined },
     });
   }
@@ -69,7 +89,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.minRatingInput) {
     chips.push({
       id: "minRating",
-      label: `Rating: ${state.minRatingInput}+`,
+      label: `${t("hotels_chip_rating")}: ${state.minRatingInput}+`,
       clearPatch: { minRating: undefined },
     });
   }
@@ -77,21 +97,21 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.verifiedOnly) {
     chips.push({
       id: "verified",
-      label: "Verified only",
+      label: t("hotels_flag_verified_only"),
       clearPatch: { verified: undefined },
     });
   }
   if (state.petsAllowed) {
     chips.push({
       id: "pets",
-      label: "Pets allowed",
+      label: t("hotels_flag_pets_allowed"),
       clearPatch: { pets: undefined },
     });
   }
   if (state.wheelchairAccessible) {
     chips.push({
       id: "wheelchair",
-      label: "Wheelchair access",
+      label: t("hotels_flag_wheelchair_accessible"),
       clearPatch: { wheelchair: undefined },
     });
   }
@@ -99,7 +119,9 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedTypes.length > 0) {
     chips.push({
       id: "hotelTypes",
-      label: buildHotelsArraySummary(state.selectedTypes, "Hotel type"),
+      label: `${t("hotels_chip_hotel_type")}: ${summarizeItems(
+        state.selectedTypes.map((type) => getHotelTypeLabel(type, t)),
+      )}`,
       clearPatch: { types: undefined },
     });
   }
@@ -107,7 +129,9 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedRoomTypes.length > 0) {
     chips.push({
       id: "roomTypes",
-      label: buildHotelsArraySummary(state.selectedRoomTypes, "Room type"),
+      label: `${t("hotels_chip_room_type")}: ${summarizeItems(
+        state.selectedRoomTypes.map((type) => getRoomTypeLabel(type, t)),
+      )}`,
       clearPatch: { roomTypes: undefined },
     });
   }
@@ -115,7 +139,9 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedStarRatings.length > 0) {
     chips.push({
       id: "stars",
-      label: buildHotelsArraySummary(state.selectedStarRatings.map(String), "Star"),
+      label: `${t("hotels_chip_star")}: ${summarizeItems(
+        state.selectedStarRatings.map(String),
+      )}`,
       clearPatch: { stars: undefined },
     });
   }
@@ -123,16 +149,28 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
   if (state.selectedAmenities.length > 0) {
     chips.push({
       id: "amenities",
-      label: `${state.selectedAmenities.length} amenities`,
+      label: t("hotels_chip_amenities", {
+        count: state.selectedAmenities.length,
+      }),
       clearPatch: { amenities: undefined },
     });
   }
 
-  if (state.dongInput || state.nearestSubwayInput || state.subwayLinesInput || state.maxWalkingDistanceInput) {
+  if (
+    state.dongInput ||
+    state.nearestSubwayInput ||
+    state.subwayLinesInput ||
+    state.maxWalkingDistanceInput
+  ) {
     chips.push({
       id: "transit",
-      label: "Transit/location details",
-      clearPatch: { dong: undefined, subway: undefined, lines: undefined, walk: undefined },
+      label: t("hotels_chip_transit"),
+      clearPatch: {
+        dong: undefined,
+        subway: undefined,
+        lines: undefined,
+        walk: undefined,
+      },
     });
   }
 
@@ -153,7 +191,9 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
       className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-500"
     >
       <span>{chip.label}</span>
-      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-slate-600">x</span>
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-slate-600">
+        x
+      </span>
     </button>
   );
 
@@ -163,7 +203,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
         {mobileVisibleChips.map((chip) => renderChip(chip))}
         {hiddenChipCount > 0 ? (
           <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">
-            +{hiddenChipCount} more
+            {t("hotels_chip_more", { count: hiddenChipCount })}
           </span>
         ) : null}
       </div>

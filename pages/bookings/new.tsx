@@ -15,7 +15,6 @@ import {
   diffNights,
   type EffectiveRateSource,
   formatTodayDate,
-  getBookingValidationMessage,
   isDateKey,
   parseNonNegativeInt,
   parsePositiveInt,
@@ -23,7 +22,14 @@ import {
   toDateTime,
 } from "@/lib/booking/booking-rules";
 import { getSessionMember } from "@/lib/auth/session";
+import {
+  formatBookingDate,
+  formatNightsLabel,
+  getPaymentMethodLabel,
+  getPaymentStatusLabel,
+} from "@/lib/bookings/booking-i18n";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { useI18n } from "@/lib/i18n/provider";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
@@ -63,6 +69,354 @@ const PAYMENT_METHODS_CONFIG: Array<{
   { value: "TOSS", label: "Toss", emoji: "💙" },
 ];
 
+function getNewBookingCopy(locale: string) {
+  if (locale === "ko") {
+    return {
+      stepLabels: ["날짜 및 인원", "투숙객 정보", "결제"],
+      priceLock: "⚡ 가격 잠금",
+      lastMinute: "🔥 막바지 딜",
+      nightsSuffix: "박",
+      roomsSuffix: "객실",
+      earlyCheckIn: "얼리 체크인",
+      lateCheckOut: "레이트 체크아웃",
+      taxes: "예상 세금 (~10%)",
+      estimatedTotal: "예상 총액",
+      selectDates: "날짜를 선택하면 요금 내역이 표시됩니다",
+      finalAmountNote: "최종 금액에는 세금, 추가 요금 및 적용 가능한 할인이 포함되며 예약 시 확정됩니다.",
+      missingContextTitle: "예약 정보가 없습니다",
+      missingContextBody: "특정 호텔 객실 페이지에서 예약을 시작해 주세요.",
+      browseHotels: "호텔 둘러보기",
+      bookingConfirmed: "예약 완료",
+      allSet: "예약이 완료되었습니다!",
+      reservationCreated: "예약이 성공적으로 생성되었습니다.",
+      bookingCode: "예약 코드",
+      total: "총액",
+      paymentStatus: "결제 상태",
+      viewMyBookings: "내 예약 보기",
+      backToHotel: "호텔로 돌아가기",
+      backToMyHotels: "내 호텔로 돌아가기",
+      agentOwnership: "자신이 소유한 호텔에 대해서만 예약을 생성할 수 있습니다. 이 호텔은 다른 에이전트 소유입니다.",
+      staffBooking: "직원 예약",
+      newBooking: "새 예약",
+      reserveYourStay: "예약하기",
+      estimatedTotalShort: "예상 총액",
+      selectDatesTitle: "날짜 선택",
+      checkIn: "체크인",
+      checkOut: "체크아웃",
+      checkoutAfter: "체크아웃은 체크인 이후여야 합니다",
+      guestsRooms: "투숙객 및 객실",
+      maxGuestsPerRoom: "객실당 최대 {{guests}}명 · 이용 가능 {{rooms}}개 객실",
+      adults: "성인",
+      age18: "만 18세 이상",
+      children: "어린이",
+      under18: "만 18세 미만",
+      rooms: "객실",
+      staffGuestBanner: "직원 예약입니다. 예약할 고객을 검색해 선택하세요",
+      findGuest: "고객 찾기",
+      searchGuest: "닉네임, 이름 또는 전화번호로 검색…",
+      searching: "검색 중…",
+      noMembersFound: "회원이 없습니다. 회원 ID를 직접 입력하세요:",
+      memberId: "회원 ID",
+      guestSelected: "고객이 선택되었습니다",
+      reservationDetails: "예약 세부 정보",
+      reservationName: "예약자 이름",
+      optional: "선택",
+      fullNameOnBooking: "예약에 표시될 이름",
+      specialRequests: "특별 요청",
+      specialRequestsPlaceholder: "늦은 도착, 접근성 요청, 객실 선호 사항…",
+      paymentMethod: "결제 수단",
+      checkOptions: "체크인 / 체크아웃 옵션",
+      beforeTime: "{{time}} 이전 · 객실당 +₩30,000",
+      afterTime: "{{time}} 이후 · 객실당 +₩30,000",
+      confirming: "확인 중…",
+      confirmBooking: "예약 확정",
+      back: "뒤로",
+      next: "다음",
+      noBookingContext: "예약 정보가 없습니다.",
+      bookingContextIncomplete: "예약 정보가 완전하지 않습니다. 새로고침 후 다시 시도해 주세요.",
+      loadingContext: "예약 정보를 불러오는 중...",
+      staffGuestRequired: "직원 예약에는 대상 고객 ID가 필요합니다.",
+      guestRoomPositive: "투숙객 수와 객실 수는 1 이상이어야 합니다.",
+      childNegative: "어린이 수는 음수일 수 없습니다.",
+      roomUnavailable: "현재 이 객실은 예약할 수 없습니다.",
+      onlyRoomsAvailable: "현재 이용 가능한 객실은 {{count}}개뿐입니다.",
+      exceedsCapacity: "총 투숙객 수가 객실 수용 인원을 초과했습니다.",
+      selectDatesValidation: "체크인과 체크아웃 날짜를 선택해 주세요.",
+      checkInPast: "체크인 날짜는 과거일 수 없습니다.",
+    };
+  }
+  if (locale === "ru") {
+    return {
+      stepLabels: ["Даты и гости", "Информация о госте", "Оплата"],
+      priceLock: "⚡ Фиксация цены",
+      lastMinute: "🔥 Горящее предложение",
+      nightsSuffix: "ноч.",
+      roomsSuffix: "комн.",
+      earlyCheckIn: "Ранний заезд",
+      lateCheckOut: "Поздний выезд",
+      taxes: "Оценка налогов (~10%)",
+      estimatedTotal: "Примерная сумма",
+      selectDates: "Выберите даты, чтобы увидеть разбивку цены",
+      finalAmountNote: "Финальная сумма включает налоги, сборы и применимые скидки и подтверждается при бронировании.",
+      missingContextTitle: "Нет данных для бронирования",
+      missingContextBody: "Откройте бронирование со страницы конкретного номера.",
+      browseHotels: "Смотреть отели",
+      bookingConfirmed: "Бронирование подтверждено",
+      allSet: "Все готово!",
+      reservationCreated: "Ваше бронирование успешно создано.",
+      bookingCode: "Код бронирования",
+      total: "Итого",
+      paymentStatus: "Статус оплаты",
+      viewMyBookings: "Мои бронирования",
+      backToHotel: "Назад к отелю",
+      backToMyHotels: "Назад к моим отелям",
+      agentOwnership: "Вы можете создавать бронирования только для своих отелей. Этот отель принадлежит другому агенту.",
+      staffBooking: "Служебное бронирование",
+      newBooking: "Новое бронирование",
+      reserveYourStay: "Забронировать проживание",
+      estimatedTotalShort: "Примерная сумма",
+      selectDatesTitle: "Выберите даты",
+      checkIn: "Заезд",
+      checkOut: "Выезд",
+      checkoutAfter: "Дата выезда должна быть позже даты заезда",
+      guestsRooms: "Гости и номера",
+      maxGuestsPerRoom: "Макс. {{guests}} гост. на номер · доступно {{rooms}} ном.",
+      adults: "Взрослые",
+      age18: "18+",
+      children: "Дети",
+      under18: "До 18 лет",
+      rooms: "Номера",
+      staffGuestBanner: "Служебное бронирование — найдите и выберите гостя",
+      findGuest: "Найти гостя",
+      searchGuest: "Поиск по нику, имени или телефону…",
+      searching: "Поиск…",
+      noMembersFound: "Пользователи не найдены. Введите ID вручную:",
+      memberId: "ID участника",
+      guestSelected: "Гость выбран",
+      reservationDetails: "Детали бронирования",
+      reservationName: "Имя в бронировании",
+      optional: "необязательно",
+      fullNameOnBooking: "Полное имя для бронирования",
+      specialRequests: "Особые пожелания",
+      specialRequestsPlaceholder: "Поздний заезд, доступность, пожелания по номеру…",
+      paymentMethod: "Способ оплаты",
+      checkOptions: "Опции заезда / выезда",
+      beforeTime: "До {{time}} · +₩30,000 за номер",
+      afterTime: "После {{time}} · +₩30,000 за номер",
+      confirming: "Подтверждение…",
+      confirmBooking: "Подтвердить бронирование",
+      back: "Назад",
+      next: "Далее",
+      noBookingContext: "Отсутствуют данные для бронирования.",
+      bookingContextIncomplete: "Данные бронирования неполные. Обновите страницу и попробуйте снова.",
+      loadingContext: "Загрузка данных бронирования...",
+      staffGuestRequired: "Для служебного бронирования требуется guestId.",
+      guestRoomPositive: "Количество гостей и номеров должно быть положительным.",
+      childNegative: "Количество детей не может быть отрицательным.",
+      roomUnavailable: "Этот номер сейчас недоступен для бронирования.",
+      onlyRoomsAvailable: "Сейчас доступно только {{count}} номер(ов).",
+      exceedsCapacity: "Общее количество гостей превышает вместимость номера.",
+      selectDatesValidation: "Выберите даты заезда и выезда.",
+      checkInPast: "Дата заезда не может быть в прошлом.",
+    };
+  }
+  if (locale === "uz") {
+    return {
+      stepLabels: ["Sanalar va mehmonlar", "Mehmon ma'lumoti", "To'lov"],
+      priceLock: "⚡ Narxni qulflash",
+      lastMinute: "🔥 So'nggi daqiqadagi taklif",
+      nightsSuffix: "kecha",
+      roomsSuffix: "xona",
+      earlyCheckIn: "Erta check-in",
+      lateCheckOut: "Kech check-out",
+      taxes: "Taxminiy soliqlar (~10%)",
+      estimatedTotal: "Taxminiy jami",
+      selectDates: "Narx tafsilotini ko'rish uchun sanalarni tanlang",
+      finalAmountNote: "Yakuniy summa soliqlar, ustamalar va tegishli chegirmalarni o'z ichiga oladi va bron paytida tasdiqlanadi.",
+      missingContextTitle: "Bron ma'lumoti yo'q",
+      missingContextBody: "Bronni aniq mehmonxona xonasi sahifasidan boshlang.",
+      browseHotels: "Mehmonxonalarni ko'rish",
+      bookingConfirmed: "Bron tasdiqlandi",
+      allSet: "Hammasi tayyor!",
+      reservationCreated: "Bron muvaffaqiyatli yaratildi.",
+      bookingCode: "Bron kodi",
+      total: "Jami",
+      paymentStatus: "To'lov holati",
+      viewMyBookings: "Bronlarimni ko'rish",
+      backToHotel: "Mehmonxonaga qaytish",
+      backToMyHotels: "Mening mehmonxonalarimga qaytish",
+      agentOwnership: "Siz faqat o'zingizga tegishli mehmonxonalar uchun bron yarata olasiz. Bu mehmonxona boshqa agentga tegishli.",
+      staffBooking: "Xodim broni",
+      newBooking: "Yangi bron",
+      reserveYourStay: "Turar joyni bron qiling",
+      estimatedTotalShort: "Taxminiy jami",
+      selectDatesTitle: "Sanalarni tanlang",
+      checkIn: "Check-in",
+      checkOut: "Check-out",
+      checkoutAfter: "Check-out check-indan keyin bo'lishi kerak",
+      guestsRooms: "Mehmonlar va xonalar",
+      maxGuestsPerRoom: "Har xonaga max {{guests}} mehmon · {{rooms}} xona mavjud",
+      adults: "Kattalar",
+      age18: "18 yoshdan katta",
+      children: "Bolalar",
+      under18: "18 yoshdan kichik",
+      rooms: "Xonalar",
+      staffGuestBanner: "Xodim broni — bron qilinadigan mehmonni tanlang",
+      findGuest: "Mehmonni topish",
+      searchGuest: "Nick, ism yoki telefon bo'yicha qidirish…",
+      searching: "Qidirilmoqda…",
+      noMembersFound: "A'zolar topilmadi. ID ni qo'lda kiriting:",
+      memberId: "A'zo ID",
+      guestSelected: "Mehmon tanlandi",
+      reservationDetails: "Bron tafsilotlari",
+      reservationName: "Bron uchun ism",
+      optional: "ixtiyoriy",
+      fullNameOnBooking: "Bronda ko'rinadigan to'liq ism",
+      specialRequests: "Maxsus so'rovlar",
+      specialRequestsPlaceholder: "Kech kelish, qulaylik ehtiyoji, xona afzalligi…",
+      paymentMethod: "To'lov usuli",
+      checkOptions: "Check-in / Check-out variantlari",
+      beforeTime: "{{time}} dan oldin · har xona uchun +₩30,000",
+      afterTime: "{{time}} dan keyin · har xona uchun +₩30,000",
+      confirming: "Tasdiqlanmoqda…",
+      confirmBooking: "Bronni tasdiqlash",
+      back: "Orqaga",
+      next: "Keyingi",
+      noBookingContext: "Bron konteksti yo'q.",
+      bookingContextIncomplete: "Bron ma'lumoti to'liq emas. Sahifani yangilab qayta urinib ko'ring.",
+      loadingContext: "Bron ma'lumoti yuklanmoqda...",
+      staffGuestRequired: "Xodim broni uchun guestId kerak.",
+      guestRoomPositive: "Mehmon soni va xona soni musbat bo'lishi kerak.",
+      childNegative: "Bolalar soni manfiy bo'lishi mumkin emas.",
+      roomUnavailable: "Bu xona hozir bron qilib bo'lmaydi.",
+      onlyRoomsAvailable: "Hozir faqat {{count}} xona mavjud.",
+      exceedsCapacity: "Jami mehmonlar soni xona sig'imidan oshib ketdi.",
+      selectDatesValidation: "Check-in va check-out sanalarini tanlang.",
+      checkInPast: "Check-in sanasi o'tgan kunda bo'lishi mumkin emas.",
+    };
+  }
+  return {
+    stepLabels: ["Dates & Guests", "Guest Info", "Payment"],
+    priceLock: "⚡ Price Lock",
+    lastMinute: "🔥 Last-minute Deal",
+    nightsSuffix: "night",
+    roomsSuffix: "rooms",
+    earlyCheckIn: "Early check-in",
+    lateCheckOut: "Late check-out",
+    taxes: "Est. taxes (~10%)",
+    estimatedTotal: "Est. Total",
+    selectDates: "Select dates to see price breakdown",
+    finalAmountNote: "Final amount includes taxes, surcharges and any applicable discounts — confirmed on booking.",
+    missingContextTitle: "No booking context",
+    missingContextBody: "Open booking from a specific hotel room page.",
+    browseHotels: "Browse Hotels",
+    bookingConfirmed: "Booking Confirmed",
+    allSet: "You're all set!",
+    reservationCreated: "Your reservation has been created successfully.",
+    bookingCode: "Booking Code",
+    total: "Total",
+    paymentStatus: "Payment status",
+    viewMyBookings: "View my bookings",
+    backToHotel: "Back to hotel",
+    backToMyHotels: "Back to my hotels",
+    agentOwnership: "You can only create bookings for hotels you own. This hotel belongs to another agent.",
+    staffBooking: "Staff Booking",
+    newBooking: "New Booking",
+    reserveYourStay: "Reserve Your Stay",
+    estimatedTotalShort: "Estimated total",
+    selectDatesTitle: "Select your dates",
+    checkIn: "Check-in",
+    checkOut: "Check-out",
+    checkoutAfter: "Check-out must be after check-in",
+    guestsRooms: "Guests & Rooms",
+    maxGuestsPerRoom: "Max {{guests}} guest per room · {{rooms}} rooms available",
+    adults: "Adults",
+    age18: "Age 18+",
+    children: "Children",
+    under18: "Under 18",
+    rooms: "Rooms",
+    staffGuestBanner: "Staff booking — search and select the guest you are booking for",
+    findGuest: "Find Guest",
+    searchGuest: "Search by nick, name, or phone…",
+    searching: "Searching…",
+    noMembersFound: "No members found. Enter member ID directly:",
+    memberId: "Member ID",
+    guestSelected: "Guest selected",
+    reservationDetails: "Reservation Details",
+    reservationName: "Name for reservation",
+    optional: "optional",
+    fullNameOnBooking: "Full name shown on booking",
+    specialRequests: "Special requests",
+    specialRequestsPlaceholder: "Late arrival, accessibility needs, room preference…",
+    paymentMethod: "Payment Method",
+    checkOptions: "Check-in / Check-out Options",
+    beforeTime: "Before {{time}} · +₩30,000 per room",
+    afterTime: "After {{time}} · +₩30,000 per room",
+    confirming: "Confirming…",
+    confirmBooking: "Confirm Booking",
+    back: "Back",
+    next: "Next",
+    noBookingContext: "No booking context.",
+    bookingContextIncomplete: "Booking context is incomplete. Please refresh and try again.",
+    loadingContext: "Loading booking context...",
+    staffGuestRequired: "For staff booking, target guestId is required.",
+    guestRoomPositive: "Guest count and room quantity must be positive integers.",
+    childNegative: "Child count cannot be negative.",
+    roomUnavailable: "Room is not currently available for booking.",
+    onlyRoomsAvailable: "Only {{count}} room(s) currently available.",
+    exceedsCapacity: "Total guests exceed room capacity.",
+    selectDatesValidation: "Please select check-in and check-out dates.",
+    checkInPast: "Check-in date cannot be in the past.",
+  };
+}
+
+function getValidationMessage(params: {
+  locale: string;
+  hotelId: string;
+  roomId: string;
+  canCreateBooking: boolean;
+  isStaffCreator: boolean;
+  targetGuestId: string;
+  hasHotel: boolean;
+  hasRoom: boolean;
+  guestCount: number | null;
+  childCount?: number | null;
+  quantity: number | null;
+  roomStatus?: string;
+  roomMaxOccupancy?: number;
+  roomAvailableRooms?: number;
+  checkInDate: string;
+  checkOutDate: string;
+  todayDate: string;
+  nights: number;
+}) {
+  const copy = getNewBookingCopy(params.locale);
+  if (!params.hotelId || !params.roomId) return copy.noBookingContext;
+  if (!params.canCreateBooking) return null;
+  if (!params.hasHotel || !params.hasRoom) return copy.loadingContext;
+  if (params.isStaffCreator && !params.targetGuestId.trim()) return copy.staffGuestRequired;
+  if (!params.guestCount || !params.quantity) return copy.guestRoomPositive;
+  if (params.childCount != null && params.childCount < 0) return copy.childNegative;
+  if (params.roomStatus !== "AVAILABLE") return copy.roomUnavailable;
+  if (
+    typeof params.roomAvailableRooms === "number" &&
+    params.quantity > params.roomAvailableRooms
+  ) {
+    return copy.onlyRoomsAvailable.replace("{{count}}", String(params.roomAvailableRooms));
+  }
+  const totalGuests = params.guestCount + (params.childCount ?? 0);
+  if (
+    typeof params.roomMaxOccupancy === "number" &&
+    totalGuests > params.roomMaxOccupancy * params.quantity
+  ) {
+    return copy.exceedsCapacity;
+  }
+  if (!params.checkInDate || !params.checkOutDate) return copy.selectDatesValidation;
+  if (params.checkInDate < params.todayDate) return copy.checkInPast;
+  if (params.nights < 1) return copy.checkoutAfter;
+  return null;
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function Stepper({
@@ -72,6 +426,8 @@ function Stepper({
   min,
   max,
   onChange,
+  ariaDecrease,
+  ariaIncrease,
 }: {
   label: string;
   hint?: string;
@@ -79,6 +435,8 @@ function Stepper({
   min: number;
   max: number;
   onChange: (n: number) => void;
+  ariaDecrease: string;
+  ariaIncrease: string;
 }) {
   return (
     <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
@@ -92,7 +450,7 @@ function Stepper({
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
-          aria-label={`Decrease ${label}`}
+          aria-label={ariaDecrease}
         >
           <Minus size={14} />
         </button>
@@ -104,7 +462,7 @@ function Stepper({
           onClick={() => onChange(Math.min(max, value + 1))}
           disabled={value >= max}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
-          aria-label={`Increase ${label}`}
+          aria-label={ariaIncrease}
         >
           <Plus size={14} />
         </button>
@@ -113,12 +471,16 @@ function Stepper({
   );
 }
 
-const STEP_LABELS = ["Dates & Guests", "Guest Info", "Payment"];
-
-function StepProgress({ current }: { current: number }) {
+function StepProgress({
+  current,
+  labels,
+}: {
+  current: number;
+  labels: string[];
+}) {
   return (
     <div className="mb-8 flex items-start">
-      {STEP_LABELS.map((label, i) => {
+      {labels.map((label, i) => {
         const stepNum = i + 1;
         const done = current > stepNum;
         const active = current === stepNum;
@@ -148,7 +510,7 @@ function StepProgress({ current }: { current: number }) {
                 {label}
               </span>
             </div>
-            {i < STEP_LABELS.length - 1 && (
+            {i < labels.length - 1 && (
               <div
                 className={`mt-4 h-px flex-1 transition-colors duration-300 ${
                   done ? "bg-emerald-300" : "bg-slate-200"
@@ -171,6 +533,8 @@ function PriceSummaryPanel({
   priceSource,
   earlyCheckIn,
   lateCheckOut,
+  copy,
+  locale,
 }: {
   hotel: HotelContextItem;
   room: RoomDetailItem;
@@ -180,6 +544,8 @@ function PriceSummaryPanel({
   priceSource: EffectiveRateSource;
   earlyCheckIn: boolean;
   lateCheckOut: boolean;
+  copy: ReturnType<typeof getNewBookingCopy>;
+  locale: string;
 }) {
   const validNights = Math.max(0, nights);
   const subtotal = effectivePrice * quantity * validNights;
@@ -218,9 +584,7 @@ function PriceSummaryPanel({
                 : "bg-amber-50 text-amber-600"
             }`}
           >
-            {priceSource === "PRICE_LOCK"
-              ? "⚡ Price Lock"
-              : "🔥 Last-minute Deal"}
+            {priceSource === "PRICE_LOCK" ? copy.priceLock : copy.lastMinute}
           </span>
         )}
 
@@ -231,7 +595,7 @@ function PriceSummaryPanel({
                 <span>
                   ₩{formatNumber(effectivePrice)} ×{" "}
                   {quantity > 1 ? `${quantity} rooms × ` : ""}
-                  {validNights} night{validNights !== 1 ? "s" : ""}
+                  {formatNightsLabel(locale as never, validNights)}
                 </span>
                 <span className="font-medium text-slate-900">
                   ₩{formatNumber(subtotal)}
@@ -239,23 +603,23 @@ function PriceSummaryPanel({
               </div>
               {earlyCheckIn && (
                 <div className="flex justify-between text-slate-600">
-                  <span>Early check-in</span>
+                  <span>{copy.earlyCheckIn}</span>
                   <span>+₩30,000</span>
                 </div>
               )}
               {lateCheckOut && (
                 <div className="flex justify-between text-slate-600">
-                  <span>Late check-out</span>
+                  <span>{copy.lateCheckOut}</span>
                   <span>+₩30,000</span>
                 </div>
               )}
               <div className="flex justify-between text-slate-500">
-                <span>Est. taxes (~10%)</span>
+                <span>{copy.taxes}</span>
                 <span>₩{formatNumber(estTaxes)}</span>
               </div>
               <div className="flex items-center justify-between border-t border-slate-100 pt-2">
                 <span className="text-sm font-semibold text-slate-900">
-                  Est. Total
+                  {copy.estimatedTotal}
                 </span>
                 <span className="text-base font-bold text-slate-900">
                   ₩{formatNumber(estTotal)}
@@ -264,13 +628,12 @@ function PriceSummaryPanel({
             </>
           ) : (
             <p className="text-xs text-slate-400">
-              Select dates to see price breakdown
+              {copy.selectDates}
             </p>
           )}
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
-          Final amount includes taxes, surcharges and any applicable discounts —
-          confirmed on booking.
+          {copy.finalAmountNote}
         </p>
       </div>
     </div>
@@ -310,6 +673,8 @@ function PaymentCard({
 
 const NewBookingPage: NextPageWithAuth = () => {
   const router = useRouter();
+  const { locale } = useI18n();
+  const copy = getNewBookingCopy(locale);
   const member = useMemo(() => getSessionMember(), []);
   const isPageVisible = usePageVisible();
   const hasVisibilityMountedRef = useRef(false);
@@ -597,7 +962,8 @@ const NewBookingPage: NextPageWithAuth = () => {
   // Full validation (pre-submit)
   const bookingValidationMessage = useMemo(
     () =>
-      getBookingValidationMessage({
+      getValidationMessage({
+        locale,
         hotelId,
         roomId,
         canCreateBooking,
@@ -618,6 +984,7 @@ const NewBookingPage: NextPageWithAuth = () => {
       }),
     [
       adultCount,
+      locale,
       canCreateBooking,
       checkInDate,
       checkOutDate,
@@ -659,9 +1026,7 @@ const NewBookingPage: NextPageWithAuth = () => {
       return;
     }
     if (!hotel || !room) {
-      setSubmitError(
-        "Booking context is incomplete. Please refresh and try again.",
-      );
+      setSubmitError(copy.bookingContextIncomplete);
       return;
     }
     try {
@@ -710,16 +1075,16 @@ const NewBookingPage: NextPageWithAuth = () => {
         <div>
           <p className="text-3xl">🏨</p>
           <p className="mt-3 font-semibold text-slate-800">
-            No booking context
+            {copy.missingContextTitle}
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            Open booking from a specific hotel room page.
+            {copy.missingContextBody}
           </p>
           <Link
             href="/hotels"
             className="mt-5 inline-block rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
           >
-            Browse Hotels
+            {copy.browseHotels}
           </Link>
         </div>
       </main>
@@ -750,34 +1115,34 @@ const NewBookingPage: NextPageWithAuth = () => {
 
           <div className="anim-cfade space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">
-              Booking Confirmed
+              {copy.bookingConfirmed}
             </p>
             <h1 className="text-3xl font-semibold text-slate-900">
-              You&apos;re all set!
+              {copy.allSet}
             </h1>
             <p className="text-sm text-slate-500">
-              Your reservation has been created successfully.
+              {copy.reservationCreated}
             </p>
           </div>
 
           <div className="anim-cfade rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Booking Code
+              {copy.bookingCode}
             </p>
             <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-slate-900">
               {createdBooking.code}
             </p>
             <div className="mt-4 space-y-1.5 border-t border-slate-100 pt-4 text-sm text-slate-600">
               <div className="flex justify-between">
-                <span>Total</span>
+                <span>{copy.total}</span>
                 <span className="font-semibold text-slate-900">
                   ₩{formatNumber(createdBooking.total)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Payment status</span>
-                <span className="font-semibold capitalize text-slate-900">
-                  {createdBooking.paymentStatus.toLowerCase()}
+                <span>{copy.paymentStatus}</span>
+                <span className="font-semibold text-slate-900">
+                  {getPaymentStatusLabel(locale as never, createdBooking.paymentStatus)}
                 </span>
               </div>
             </div>
@@ -788,13 +1153,13 @@ const NewBookingPage: NextPageWithAuth = () => {
               href="/bookings"
               className="rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
             >
-              View my bookings
+              {copy.viewMyBookings}
             </Link>
             <Link
               href={`/hotels/${hotelId}`}
               className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
             >
-              Back to hotel
+              {copy.backToHotel}
             </Link>
           </div>
         </main>
@@ -845,11 +1210,11 @@ const NewBookingPage: NextPageWithAuth = () => {
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800"
         >
           <ArrowLeft size={14} />
-          Back to my hotels
+          {copy.backToMyHotels}
         </Link>
         <ErrorNotice
           tone="warn"
-          message="You can only create bookings for hotels you own. This hotel belongs to another agent."
+          message={copy.agentOwnership}
         />
       </main>
     );
@@ -875,16 +1240,16 @@ const NewBookingPage: NextPageWithAuth = () => {
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800"
         >
           <ArrowLeft size={14} />
-          Back to hotel
+          {copy.backToHotel}
         </Link>
 
         {/* Header */}
         <header>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            {isStaffCreator ? "Staff Booking" : "New Booking"}
+            {isStaffCreator ? copy.staffBooking : copy.newBooking}
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-            {hotel?.hotelTitle ?? "Reserve Your Stay"}
+            {hotel?.hotelTitle ?? copy.reserveYourStay}
           </h1>
         </header>
 
@@ -907,7 +1272,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                 >
                   <div className="text-left">
                     <p className="text-[11px] text-slate-400">
-                      Estimated total
+                      {copy.estimatedTotalShort}
                     </p>
                     <p className="text-base font-bold text-slate-900">
                       ₩{formatNumber(estTotal)}
@@ -931,13 +1296,15 @@ const NewBookingPage: NextPageWithAuth = () => {
                       priceSource={priceSource}
                       earlyCheckIn={earlyCheckIn}
                       lateCheckOut={lateCheckOut}
+                      copy={copy}
+                      locale={locale}
                     />
                   </div>
                 )}
               </div>
 
               {/* Step progress */}
-              <StepProgress current={step} />
+              <StepProgress current={step} labels={copy.stepLabels} />
 
               {/* Step content */}
               <div key={step} className="anim-step">
@@ -946,12 +1313,12 @@ const NewBookingPage: NextPageWithAuth = () => {
                   <div className="space-y-4">
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Select your dates
+                        {copy.selectDatesTitle}
                       </h2>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block">
                           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Check-in
+                            {copy.checkIn}
                           </span>
                           <input
                             type="date"
@@ -970,7 +1337,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                         </label>
                         <label className="block">
                           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Check-out
+                            {copy.checkOut}
                           </span>
                           <input
                             type="date"
@@ -983,51 +1350,56 @@ const NewBookingPage: NextPageWithAuth = () => {
                       </div>
                       {nights >= 1 && (
                         <p className="mt-3 text-center text-sm font-semibold text-sky-600">
-                          {nights} night{nights !== 1 ? "s" : ""}
+                          {formatNightsLabel(locale as never, nights)}
                         </p>
                       )}
                       {checkInDate &&
                         checkOutDate &&
                         checkOutDate <= checkInDate && (
                           <p className="mt-2 text-center text-xs text-rose-500">
-                            Check-out must be after check-in
+                            {copy.checkoutAfter}
                           </p>
                         )}
                     </div>
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Guests &amp; Rooms
+                        {copy.guestsRooms}
                       </h2>
                       <p className="mb-4 text-xs text-slate-400">
-                        Max {roomCapacity} guest
-                        {roomCapacity !== 1 ? "s" : ""} per room ·{" "}
-                        {room.availableRooms} room
-                        {room.availableRooms !== 1 ? "s" : ""} available
+                        {copy.maxGuestsPerRoom
+                          .replace("{{guests}}", String(roomCapacity))
+                          .replace("{{rooms}}", String(room.availableRooms))}
                       </p>
                       <div className="space-y-3">
                         <Stepper
-                          label="Adults"
-                          hint="Age 18+"
+                          label={copy.adults}
+                          hint={copy.age18}
                           value={adultCount}
                           min={1}
                           max={maxAdults}
                           onChange={setAdultCount}
+                          ariaDecrease={`${copy.back} ${copy.adults}`}
+                          ariaIncrease={`${copy.next} ${copy.adults}`}
                         />
                         <Stepper
-                          label="Children"
-                          hint="Under 18"
+                          label={copy.children}
+                          hint={copy.under18}
                           value={childCount}
                           min={0}
                           max={maxChildren}
                           onChange={setChildCount}
+                          ariaDecrease={`${copy.back} ${copy.children}`}
+                          ariaIncrease={`${copy.next} ${copy.children}`}
                         />
                         <Stepper
-                          label="Rooms"
+                          label={copy.rooms}
                           value={quantity}
                           min={1}
                           max={maxQuantity}
                           onChange={setQuantity}
+                          ariaDecrease={`${copy.back} ${copy.rooms}`}
+                          ariaIncrease={`${copy.next} ${copy.rooms}`}
                         />
                       </div>
                     </div>
@@ -1039,15 +1411,14 @@ const NewBookingPage: NextPageWithAuth = () => {
                   <div className="space-y-4">
                     {isStaffCreator && (
                       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-                        Staff booking — search and select the guest you are
-                        booking for
+                        {copy.staffGuestBanner}
                       </div>
                     )}
 
                     {isStaffCreator && (
                       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                          Find Guest
+                          {copy.findGuest}
                         </h2>
                         <input
                           value={guestKeyword}
@@ -1056,11 +1427,11 @@ const NewBookingPage: NextPageWithAuth = () => {
                             if (!e.target.value) setTargetGuestId("");
                           }}
                           className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                          placeholder="Search by nick, name, or phone…"
+                          placeholder={copy.searchGuest}
                         />
                         {guestCandidatesLoading && (
                           <p className="mt-2 text-xs text-slate-400">
-                            Searching…
+                            {copy.searching}
                           </p>
                         )}
                         {guestCandidates.length > 0 && (
@@ -1096,11 +1467,11 @@ const NewBookingPage: NextPageWithAuth = () => {
                           guestCandidates.length === 0 && (
                             <div className="mt-3 space-y-2">
                               <p className="text-xs text-slate-500">
-                                No members found. Enter member ID directly:
+                                {copy.noMembersFound}
                               </p>
                               <input
                                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                                placeholder="Member ID"
+                                placeholder={copy.memberId}
                                 value={targetGuestId}
                                 onChange={(e) =>
                                   setTargetGuestId(e.target.value.trim())
@@ -1110,7 +1481,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                           )}
                         {targetGuestId && (
                           <p className="mt-2 flex items-center gap-1 text-xs font-medium text-emerald-600">
-                            <Check size={12} strokeWidth={3} /> Guest selected
+                            <Check size={12} strokeWidth={3} /> {copy.guestSelected}
                           </p>
                         )}
                       </div>
@@ -1118,28 +1489,28 @@ const NewBookingPage: NextPageWithAuth = () => {
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Reservation Details
+                        {copy.reservationDetails}
                       </h2>
                       <div className="space-y-4">
                         <label className="block">
                           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Name for reservation{" "}
+                            {copy.reservationName}{" "}
                             <span className="font-normal normal-case text-slate-400">
-                              (optional)
+                              ({copy.optional})
                             </span>
                           </span>
                           <input
                             value={guestName}
                             onChange={(e) => setGuestName(e.target.value)}
                             className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                            placeholder="Full name shown on booking"
+                            placeholder={copy.fullNameOnBooking}
                           />
                         </label>
                         <label className="block">
                           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Special requests{" "}
+                            {copy.specialRequests}{" "}
                             <span className="font-normal normal-case text-slate-400">
-                              (optional)
+                              ({copy.optional})
                             </span>
                           </span>
                           <textarea
@@ -1147,7 +1518,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                             onChange={(e) => setSpecialRequests(e.target.value)}
                             rows={3}
                             className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                            placeholder="Late arrival, accessibility needs, room preference…"
+                            placeholder={copy.specialRequestsPlaceholder}
                           />
                         </label>
                       </div>
@@ -1160,14 +1531,14 @@ const NewBookingPage: NextPageWithAuth = () => {
                   <div className="space-y-4">
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Payment Method
+                        {copy.paymentMethod}
                       </h2>
                       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                         {PAYMENT_METHODS_CONFIG.map((m) => (
                           <PaymentCard
                             key={m.value}
                             value={m.value}
-                            label={m.label}
+                            label={getPaymentMethodLabel(locale as never, m.value)}
                             emoji={m.emoji}
                             selected={paymentMethod === m.value}
                             onSelect={() => setPaymentMethod(m.value)}
@@ -1178,7 +1549,7 @@ const NewBookingPage: NextPageWithAuth = () => {
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                        Check-in / Check-out Options
+                        {copy.checkOptions}
                       </h2>
                       <div className="space-y-3">
                         <button
@@ -1192,10 +1563,10 @@ const NewBookingPage: NextPageWithAuth = () => {
                         >
                           <div>
                             <p className="text-sm font-medium text-slate-800">
-                              Early check-in
+                              {copy.earlyCheckIn}
                             </p>
                             <p className="mt-0.5 text-xs text-slate-400">
-                              Before {hotel.checkInTime} · +₩30,000 per room
+                              {copy.beforeTime.replace("{{time}}", hotel.checkInTime)}
                             </p>
                           </div>
                           <div
@@ -1226,10 +1597,10 @@ const NewBookingPage: NextPageWithAuth = () => {
                         >
                           <div>
                             <p className="text-sm font-medium text-slate-800">
-                              Late check-out
+                              {copy.lateCheckOut}
                             </p>
                             <p className="mt-0.5 text-xs text-slate-400">
-                              After {hotel.checkOutTime} · +₩30,000 per room
+                              {copy.afterTime.replace("{{time}}", hotel.checkOutTime)}
                             </p>
                           </div>
                           <div
@@ -1269,7 +1640,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                       disabled={creating || Boolean(bookingValidationMessage)}
                       className="w-full rounded-full bg-sky-500 py-4 text-sm font-bold text-white shadow-md shadow-sky-200 transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {creating ? "Confirming…" : "Confirm Booking"}
+                      {creating ? copy.confirming : copy.confirmBooking}
                     </button>
                   </div>
                 )}
@@ -1284,7 +1655,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                     className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
                   >
                     <ArrowLeft size={14} />
-                    Back
+                    {copy.back}
                   </button>
                 ) : (
                   <div />
@@ -1299,7 +1670,7 @@ const NewBookingPage: NextPageWithAuth = () => {
                     }
                     className="rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Next →
+                    {copy.next} →
                   </button>
                 )}
               </div>
@@ -1317,6 +1688,8 @@ const NewBookingPage: NextPageWithAuth = () => {
                   priceSource={priceSource}
                   earlyCheckIn={earlyCheckIn}
                   lateCheckOut={lateCheckOut}
+                  copy={copy}
+                  locale={locale}
                 />
               </div>
             </aside>

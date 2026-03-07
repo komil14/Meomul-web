@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import { useI18n } from "@/lib/i18n/provider";
 import type { RecommendedCard } from "@/types/homepage";
 import styles from "@/styles/home-landing-ovastin.module.css";
 
@@ -12,6 +13,7 @@ interface RecommendedSectionProps {
 }
 
 export function RecommendedSection({ cards, rows, isPersonalizing }: RecommendedSectionProps) {
+  const { t } = useI18n();
   const [activeCard, setActiveCard] = useState(1);
 
   useEffect(() => {
@@ -27,12 +29,11 @@ export function RecommendedSection({ cards, rows, isPersonalizing }: Recommended
     <section className={styles.signatureSection}>
       <div className={styles.signatureHeader}>
         <p className={styles.signatureEyebrow}>
-          {isPersonalizing ? "Personalizing…" : "Recommended Stays"}
+          {isPersonalizing ? t("home_recommended_personalizing") : t("home_recommended_eyebrow")}
         </p>
-        <h2 className={styles.signatureTitle}>Recommendations</h2>
+        <h2 className={styles.signatureTitle}>{t("home_recommended_title")}</h2>
         <p className={styles.signatureDescription}>
-          Curated from your travel profile, live guest behavior, and top-performing hotels across
-          the platform.
+          {t("home_recommended_desc")}
         </p>
       </div>
 
@@ -71,7 +72,7 @@ export function RecommendedSection({ cards, rows, isPersonalizing }: Recommended
                       </p>
                       <p className={styles.signatureCardSignal}>{hotel.signal}</p>
                       <span className={styles.signatureCardCta}>
-                        View details
+                        {t("home_view_details")}
                         <span aria-hidden>↗</span>
                       </span>
                     </div>

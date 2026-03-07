@@ -4,6 +4,7 @@ import { getRoomPresentation } from "@/components/rooms/detail/room-presenters";
 import { useRoomBookingState } from "@/lib/hooks/use-room-booking-state";
 import { useRoomDetailData } from "@/lib/hooks/use-room-detail-data";
 import { useRoomPriceLock } from "@/lib/hooks/use-room-price-lock";
+import { useI18n } from "@/lib/i18n/provider";
 import { getErrorMessage } from "@/lib/utils/error";
 
 const buildBookingHref = (
@@ -37,6 +38,7 @@ const buildBookingHref = (
 };
 
 export const useRoomDetailPageViewModel = () => {
+  const { t } = useI18n();
   const detail = useRoomDetailData();
   const booking = useRoomBookingState({
     roomId: detail.roomId,
@@ -59,7 +61,7 @@ export const useRoomDetailPageViewModel = () => {
     activeDeal: detail.activeDeal,
   });
 
-  const presentation = useMemo(() => getRoomPresentation(detail.room), [detail.room]);
+  const presentation = useMemo(() => getRoomPresentation(detail.room, t), [detail.room, t]);
   const cheapestDatePrice = booking.cheapestDateKey ? booking.availabilityByDate.get(booking.cheapestDateKey)?.price : undefined;
   const peakDatePrice = booking.peakDateKey ? booking.availabilityByDate.get(booking.peakDateKey)?.price : undefined;
   const continueBookingHref =

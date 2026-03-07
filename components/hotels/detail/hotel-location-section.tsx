@@ -1,4 +1,5 @@
 import { memo, type RefObject } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 import type { HotelDetailItem } from "@/types/hotel";
 
 interface HotelLocationSectionProps {
@@ -16,24 +17,25 @@ export const HotelLocationSection = memo(function HotelLocationSection({
   mapEmbedUrl,
   mapUrl,
 }: HotelLocationSectionProps) {
+  const { t } = useI18n();
   return (
     <section id="location" ref={mapSectionRef} className="space-y-5">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Location
+          {t("hotel_location_eyebrow")}
         </p>
         <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
-          Where you will stay
+          {t("hotel_location_title")}
         </h2>
         <p className="text-sm text-slate-600">
-          Address, transit, and map context from verified listing data.
+          {t("hotel_location_desc")}
         </p>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 hover-lift">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Address
+            {t("hotel_features_address")}
           </p>
           <p className="mt-2 text-sm font-semibold text-slate-900">
             {hotel.detailedLocation?.address || "-"}
@@ -42,7 +44,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
           <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
             <article className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
-                District
+                {t("hotel_location_district")}
               </p>
               <p className="mt-1 font-semibold text-slate-900">
                 {hotel.detailedLocation?.district || "-"}
@@ -50,7 +52,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
             </article>
             <article className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
-                Nearest subway
+                {t("hotel_location_subway")}
               </p>
               <p className="mt-1 font-semibold text-slate-900">
                 {hotel.detailedLocation?.nearestSubway || "-"}
@@ -58,17 +60,17 @@ export const HotelLocationSection = memo(function HotelLocationSection({
             </article>
             <article className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
-                Walking distance
+                {t("hotel_location_walk")}
               </p>
               <p className="mt-1 font-semibold text-slate-900">
                 {hotel.detailedLocation?.walkingDistance != null
-                  ? `${hotel.detailedLocation.walkingDistance} min`
+                  ? t("hotel_location_walk_minutes", { count: hotel.detailedLocation.walkingDistance })
                   : "-"}
               </p>
             </article>
             <article className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
-                City
+                {t("hotel_location_city")}
               </p>
               <p className="mt-1 font-semibold text-slate-900">
                 {hotel.detailedLocation?.city || "-"}
@@ -82,7 +84,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
             rel="noreferrer"
             className="mt-5 inline-flex rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
           >
-            Open in Google Maps
+            {t("hotel_location_open_maps")}
           </a>
         </div>
 
@@ -99,7 +101,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
               />
             ) : (
               <div className="flex h-80 items-center justify-center bg-slate-100 text-sm text-slate-600 lg:h-[22.5rem]">
-                Map loading...
+                {t("hotel_location_loading_map")}
               </div>
             )}
           </div>

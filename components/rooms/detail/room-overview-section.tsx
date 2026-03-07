@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { DetailIcon, type DetailIconName } from "@/components/rooms/detail/detail-icon";
+import { useI18n } from "@/lib/i18n/provider";
 import { formatNumber } from "@/lib/utils/format";
 import type { RoomDetailItem } from "@/types/hotel";
 
@@ -45,6 +46,7 @@ export const RoomOverviewSection = memo(function RoomOverviewSection({
   factCards,
   amenityCards,
 }: RoomOverviewSectionProps) {
+  const { t } = useI18n();
   return (
     <div className="order-2 relative space-y-8 lg:order-1 lg:pr-2">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -55,7 +57,7 @@ export const RoomOverviewSection = memo(function RoomOverviewSection({
         </div>
         {deal?.isActive ? (
           <div className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-right shadow-sm sm:w-auto sm:min-w-[14rem]">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">Last minute deal</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">{t("room_detail_last_minute_deal")}</p>
             <p className="mt-1 text-3xl font-semibold text-slate-900">₩ {formatNumber(deal.dealPrice)}</p>
             <p className="text-xs text-slate-500 line-through">₩ {formatNumber(deal.originalPrice)}</p>
           </div>
@@ -63,21 +65,21 @@ export const RoomOverviewSection = memo(function RoomOverviewSection({
       </div>
 
       <p className="max-w-3xl text-lg leading-8 text-slate-700">
-        {roomDesc || "No room description provided. This room is prepared for practical comfort with distinct atmosphere and clean details."}
+        {roomDesc || t("room_detail_overview_desc_fallback")}
       </p>
 
       {hotelCheckInTime || hotelCheckOutTime || hotelCancellationPolicy ? (
         <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:grid-cols-3">
           <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Check-in</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t("room_detail_checkin")}</p>
             <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCheckInTime || "-"}</p>
           </article>
           <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Check-out</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t("room_detail_checkout")}</p>
             <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCheckOutTime || "-"}</p>
           </article>
           <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Cancellation</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t("room_detail_cancellation")}</p>
             <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCancellationPolicy || "-"}</p>
           </article>
         </div>
@@ -97,8 +99,8 @@ export const RoomOverviewSection = memo(function RoomOverviewSection({
 
       <div className="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">Room Amenities</h3>
-          <p className="mt-1 text-sm text-slate-600">Clear icon-based amenity list so guests quickly understand what this room includes.</p>
+          <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">{t("room_detail_amenities_title")}</h3>
+          <p className="mt-1 text-sm text-slate-600">{t("room_detail_amenities_desc")}</p>
         </div>
         {amenityCards.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -111,7 +113,7 @@ export const RoomOverviewSection = memo(function RoomOverviewSection({
                   <div>
                     <p className="text-sm font-semibold text-slate-900 sm:text-base">{item.label}</p>
                     <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] ${item.styles.badge}`}>
-                      Ready to use
+                      {t("room_detail_ready_to_use")}
                     </span>
                   </div>
                 </div>
@@ -119,7 +121,7 @@ export const RoomOverviewSection = memo(function RoomOverviewSection({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-slate-600">No detailed amenities were provided for this room.</p>
+          <p className="text-sm text-slate-600">{t("room_detail_no_amenities")}</p>
         )}
       </div>
     </div>

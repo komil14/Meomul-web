@@ -3,6 +3,7 @@ import { HotelCard } from "@/components/hotels/hotel-card";
 import { RecommendationReasonPanel } from "@/components/hotels/recommendation-reason-panel";
 import type { HotelCardTrackingContext } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
+import { useI18n } from "@/lib/i18n/provider";
 import type { HotelListItem, RecommendationExplanationDto } from "@/types/hotel";
 
 interface HotelListSectionProps {
@@ -28,12 +29,13 @@ export const HotelListSection = memo(function HotelListSection({
   trackingContext,
   recommendationExplanations,
 }: HotelListSectionProps) {
+  const { t } = useI18n();
   const isHorizontal = layout === "horizontal";
 
   return (
     <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 hover-lift">
       <header className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Discovery</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotel_list_eyebrow")}</p>
         <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>
         <p className="text-sm text-slate-600">{description}</p>
       </header>

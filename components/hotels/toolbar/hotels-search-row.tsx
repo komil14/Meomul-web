@@ -8,6 +8,8 @@ import {
   GET_MY_SEARCH_HISTORY_QUERY,
 } from "@/graphql/search-history.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { getHotelAmenityLabel, getHotelLocationLabelLocalized, getHotelsSortLabel, getHotelTypeLabel, getStayPurposeLabel } from "@/lib/hotels/hotels-i18n";
+import { useI18n } from "@/lib/i18n/provider";
 import {
   HOTELS_SORT_OPTIONS,
   type HotelsSortBy,
@@ -45,31 +47,49 @@ interface HotelsSearchRowProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function summarizeHistoryItem(item: SearchHistoryItem): string {
+function summarizeHistoryItem(
+  item: SearchHistoryItem,
+  locale: string,
+  t: ReturnType<typeof useI18n>["t"],
+): string {
   const parts: string[] = [];
 
   if (item.text) parts.push(`"${item.text}"`);
-  if (item.location) parts.push(item.location);
-  if (item.hotelTypes?.length) parts.push(item.hotelTypes.join(", "));
-  if (item.purpose) parts.push(item.purpose);
+  if (item.location) parts.push(getHotelLocationLabelLocalized(item.location, t));
+  if (item.hotelTypes?.length) {
+    parts.push(item.hotelTypes.map((type) => getHotelTypeLabel(type, t)).join(", "));
+  }
+  if (item.purpose) parts.push(getStayPurposeLabel(item.purpose, t));
   if (item.guestCount)
-    parts.push(`${item.guestCount} guest${item.guestCount > 1 ? "s" : ""}`);
+    parts.push(
+      t("hotels_summary_guests", {
+        count: item.guestCount,
+        suffix: item.guestCount > 1 ? "s" : "",
+      }),
+    );
   if (item.priceMin != null || item.priceMax != null) {
     const min =
       item.priceMin != null ? `₩${item.priceMin.toLocaleString()}` : "";
     const max =
       item.priceMax != null ? `₩${item.priceMax.toLocaleString()}` : "";
     if (min && max) parts.push(`${min}–${max}`);
-    else if (min) parts.push(`from ${min}`);
-    else if (max) parts.push(`up to ${max}`);
+    else if (min) parts.push(t("hotels_summary_from", { date: min }));
+    else if (max) parts.push(t("hotels_summary_until", { date: max }));
   }
   if (item.starRatings?.length) parts.push(`${item.starRatings.join(",")}★`);
-  if (item.amenities?.length) parts.push(item.amenities.slice(0, 2).join(", "));
+  if (item.amenities?.length) {
+    parts.push(
+      item.amenities
+        .slice(0, 2)
+        .map((amenity) => getHotelAmenityLabel(amenity, t))
+        .join(", "),
+    );
+  }
 
-  return parts.length > 0 ? parts.join(" · ") : "All hotels";
+  return parts.length > 0 ? parts.join(" · ") : t("hotels_all_hotels");
 }
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, locale: string): string {
   const diffMs = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diffMs / 60000);
   const h = Math.floor(diffMs / 3600000);
@@ -78,7 +98,7 @@ function timeAgo(dateStr: string): string {
   if (m < 60) return `${m}m`;
   if (h < 24) return `${h}h`;
   if (d < 7) return `${d}d`;
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  return new Date(dateStr).toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
   });
@@ -94,6 +114,7 @@ export function HotelsSearchRow({
   onSortChange,
   onRestoreHistory,
 }: HotelsSearchRowProps) {
+  const { locale, t } = useI18n();
   const member = useRef(getSessionMember());
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -217,14 +238,14 @@ export function HotelsSearchRow({
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <label className="flex-1 rounded-[1.3rem] bg-white px-4 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)]">
           <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Search stays
+            {t("hotels_search_title")}
           </span>
           <input
             value={draftText}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
-            placeholder="Hotel name, district, or landmark"
+            placeholder={t("hotels_search_placeholder")}
             className="mt-1 w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
           />
         </label>
@@ -236,7 +257,7 @@ export function HotelsSearchRow({
               setShowDropdown(false);
               onSearch();
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-[1.3rem] bg-rose-500 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-rose-600 md:min-w-[9.5rem] md:px-5 md:py-4"
+            className="inline-flex items-center justify-center gap-2 rounded-[1.3rem] bg-slate-900 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 md:min-w-[9.5rem] md:px-5 md:py-4"
           >
             <svg
               viewBox="0 0 24 24"
@@ -248,12 +269,12 @@ export function HotelsSearchRow({
               <path d="m21 21-4.35-4.35" />
               <circle cx="11" cy="11" r="6" />
             </svg>
-            Search
+            {t("hotels_search_button")}
           </button>
 
           <label className="flex items-center gap-2 rounded-[1.3rem] bg-white px-3 py-3 text-sm text-slate-600 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)] md:min-w-[13rem] md:px-4">
             <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 md:text-[11px]">
-              Sort
+              {t("hotels_sort_label")}
             </span>
             <select
               value={sortBy}
@@ -264,7 +285,7 @@ export function HotelsSearchRow({
             >
               {HOTELS_SORT_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {getHotelsSortLabel(option.value, t)}
                 </option>
               ))}
             </select>
@@ -286,13 +307,13 @@ export function HotelsSearchRow({
               </div>
             ) : historyItems.length === 0 ? (
               <div className="px-4 py-5 text-center text-sm text-slate-400">
-                No recent searches
+                {t("hotels_no_recent_searches")}
               </div>
             ) : (
               <>
                 <div className="px-3 pb-1 pt-2.5">
                   <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Recent searches
+                    {t("hotels_recent_searches")}
                   </p>
                 </div>
 
@@ -310,11 +331,11 @@ export function HotelsSearchRow({
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-slate-700">
-                          {summarizeHistoryItem(item)}
+                          {summarizeHistoryItem(item, locale, t)}
                         </p>
                       </div>
                       <span className="flex-shrink-0 text-[11px] text-slate-300">
-                        {timeAgo(item.createdAt)}
+                        {timeAgo(item.createdAt, locale)}
                       </span>
                       <button
                         type="button"
@@ -322,7 +343,7 @@ export function HotelsSearchRow({
                           void handleDeleteItem(e, item._id);
                         }}
                         className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
-                        aria-label="Remove search"
+                        aria-label={t("hotels_remove_search")}
                       >
                         <X size={12} />
                       </button>
@@ -338,7 +359,7 @@ export function HotelsSearchRow({
                     }}
                     className="text-xs font-medium text-slate-400 transition hover:text-rose-500"
                   >
-                    Clear all history
+                    {t("hotels_clear_history")}
                   </button>
                 </div>
               </>

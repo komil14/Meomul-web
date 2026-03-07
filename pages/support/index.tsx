@@ -24,6 +24,7 @@ import {
   GET_MY_CHATS_QUERY,
   START_SUPPORT_CHAT_MUTATION,
 } from "@/graphql/chat.gql";
+import { getChatCopy, formatChatTimeAgo } from "@/lib/chat/chat-i18n";
 import type {
   GetMyChatsQueryData,
   GetMyChatsQueryVars,
@@ -31,131 +32,23 @@ import type {
   StartSupportChatMutationVars,
 } from "@/types/chat";
 import { getSessionMember } from "@/lib/auth/session";
+import { useI18n } from "@/lib/i18n/provider";
+import { getSupportCopy } from "@/lib/support/support-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
-import { timeAgo } from "@/lib/utils/format";
 import type { NextPageWithAuth } from "@/types/page";
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    DATA
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-const CATEGORIES = [
-  {
-    id: "bookings",
-    label: "Bookings & Reservations",
-    desc: "Modify dates, check-in info, booking confirmations",
-    icon: CalendarCheck,
-    topic: "Booking Issue",
-  },
-  {
-    id: "payments",
-    label: "Payment & Billing",
-    desc: "Charges, invoices, payment methods",
-    icon: CreditCard,
-    topic: "Payment & Billing",
-  },
-  {
-    id: "cancellations",
-    label: "Cancellation & Refunds",
-    desc: "Cancel bookings, refund status, policies",
-    icon: RotateCcw,
-    topic: "Cancellation & Refund",
-  },
-  {
-    id: "account",
-    label: "Account & Settings",
-    desc: "Profile, password, preferences, subscription",
-    icon: User,
-    topic: "Account & Profile",
-  },
-  {
-    id: "hotel",
-    label: "Hotel Information",
-    desc: "Property details, amenities, contact hotel",
-    icon: Building2,
-    topic: "Hotel Information",
-  },
-  {
-    id: "technical",
-    label: "Technical Support",
-    desc: "App issues, errors, browser compatibility",
-    icon: Monitor,
-    topic: "Technical Problem",
-  },
-] as const;
-
-const FAQ_ITEMS = [
-  {
-    q: "How do I cancel a booking?",
-    a: "Go to My Bookings, find the reservation you want to cancel, and click \"Cancel Booking\". If the booking is within the free-cancellation window you won't be charged. Outside that window the hotel's cancellation policy applies — the details are shown before you confirm.",
-    category: "cancellations",
-  },
-  {
-    q: "Can I change my check-in or check-out date?",
-    a: "Date modifications depend on the hotel's policy and room availability. Open the booking detail page and tap \"Modify Dates\". If the change is possible you'll see updated pricing instantly. For bookings within 48 hours of check-in, contact our support team directly.",
-    category: "bookings",
-  },
-  {
-    q: "How does Price Lock work?",
-    a: "Price Lock freezes a room's current price for up to 30 minutes so you can complete your booking without worrying about rate changes. It activates automatically when you start the checkout flow. Premium subscribers get extended 60-minute locks and priority access during high-demand periods.",
-    category: "bookings",
-  },
-  {
-    q: "When will I be charged for my stay?",
-    a: 'Most bookings are charged at the time of reservation. Some hotels offer "Pay at Hotel" where your card is authorized but not charged until check-in. The payment timing is clearly shown on the booking confirmation page and in your booking details.',
-    category: "payments",
-  },
-  {
-    q: "How do I request a refund?",
-    a: "Refunds for cancelled bookings within the free-cancellation window are processed automatically within 5–10 business days. For other refund requests, open a support conversation and our team will review your case. Please have your booking reference ready.",
-    category: "cancellations",
-  },
-  {
-    q: "How do I contact the hotel directly?",
-    a: 'Each booking has a "Chat with Hotel" button that opens a direct messaging channel with the property\'s front desk team. You can also find hotel contact information on the property detail page under the "Contact" section.',
-    category: "hotel",
-  },
-  {
-    q: "What is Meomul Premium?",
-    a: "Meomul Premium is our subscription plan that unlocks exclusive perks: extended Price Lock windows, priority customer support, members-only rates, early access to flash deals, and AI-powered hotel recommendations tailored to your travel style. You can manage your subscription from your Profile page.",
-    category: "account",
-  },
-  {
-    q: "How do I report a problem with my stay?",
-    a: 'Open the booking in question and tap "Report Issue", or start a support conversation with the topic "Booking Issue". Attach photos if relevant — our team reviews reports within 24 hours and will coordinate with the hotel on your behalf.',
-    category: "bookings",
-  },
-  {
-    q: "How do I change my password?",
-    a: 'Go to Settings → Account Security and click "Change Password". You\'ll need to enter your current password and choose a new one. If you\'ve forgotten your password, use the "Forgot Password" link on the sign-in page.',
-    category: "account",
-  },
-  {
-    q: "Why was my payment declined?",
-    a: "Payment declines can happen for several reasons: insufficient funds, expired card, bank security blocks, or incorrect card details. Try a different payment method or contact your bank. If the problem persists, reach out to our support team.",
-    category: "payments",
-  },
-  {
-    q: "The app is not loading properly. What should I do?",
-    a: "Try clearing your browser cache and cookies, then reload the page. If you're on a mobile device, make sure your browser is up to date. Disable any ad blockers or VPN extensions temporarily. If the issue persists, let us know the browser and device you're using.",
-    category: "technical",
-  },
-  {
-    q: "How can I view my booking confirmation?",
-    a: "Go to My Bookings and select the reservation. Your confirmation details — including the confirmation number, hotel address, dates, and payment summary — are displayed there. You can also find the original confirmation email in your inbox.",
-    category: "bookings",
-  },
-] as const;
-
-const FORM_TOPICS = [
-  "Booking Issue",
-  "Payment & Billing",
-  "Cancellation & Refund",
-  "Account & Profile",
-  "Hotel Information",
-  "Technical Problem",
-  "Other",
-] as const;
+const CATEGORY_ICONS = {
+  bookings: CalendarCheck,
+  payments: CreditCard,
+  cancellations: RotateCcw,
+  account: User,
+  hotel: Building2,
+  technical: Monitor,
+} as const;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    HELPERS
@@ -179,6 +72,9 @@ function StatusDot({ status }: { status: string }) {
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 const SupportPage: NextPageWithAuth = () => {
+  const { locale } = useI18n();
+  const supportCopy = getSupportCopy(locale);
+  const chatCopy = getChatCopy(locale);
   const formRef = useRef<HTMLFormElement>(null);
   const faqRef = useRef<HTMLElement>(null);
 
@@ -192,9 +88,10 @@ const SupportPage: NextPageWithAuth = () => {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const categories = supportCopy.categories;
 
   const filteredFaq = useMemo(() => {
-    let items = FAQ_ITEMS.map((item, i) => ({ ...item, idx: i }));
+    let items = supportCopy.faq.map((item, i) => ({ ...item, idx: i }));
     if (activeCategory) {
       items = items.filter((item) => item.category === activeCategory);
     }
@@ -206,14 +103,22 @@ const SupportPage: NextPageWithAuth = () => {
       );
     }
     return items;
-  }, [search, activeCategory]);
+  }, [search, activeCategory, supportCopy.faq]);
 
   /* ── Contact form ────────────────────────────────────────────────────── */
-  const [topic, setTopic] = useState<string>(FORM_TOPICS[0]);
+  const [topic, setTopic] = useState<string>(supportCopy.formTopics[0]);
   const [bookingRef, setBookingRef] = useState("");
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTopic((current) =>
+      supportCopy.formTopics.includes(current)
+        ? current
+        : supportCopy.formTopics[0],
+    );
+  }, [supportCopy.formTopics]);
 
   /* ── Queries & mutations ─────────────────────────────────────────────── */
   const { data: chatsData, loading: chatsLoading } = useQuery<
@@ -245,7 +150,7 @@ const SupportPage: NextPageWithAuth = () => {
     setFormError(null);
     const trimmed = message.trim();
     if (trimmed.length < 10) {
-      setFormError("Please provide at least 10 characters.");
+      setFormError(supportCopy.minCharacters);
       return;
     }
     try {
@@ -283,10 +188,10 @@ const SupportPage: NextPageWithAuth = () => {
   return (
     <>
       <Head>
-        <title>Help Center — Meomul</title>
+        <title>{supportCopy.metaTitle}</title>
         <meta
           name="description"
-          content="Get help with your Meomul bookings, payments, cancellations, and more."
+          content={supportCopy.metaDescription}
         />
       </Head>
 
@@ -294,10 +199,10 @@ const SupportPage: NextPageWithAuth = () => {
       <section className="-mx-4 -mt-6 mb-0 bg-gradient-to-b from-teal-800 via-teal-700 to-teal-600 px-4 pb-14 pt-16 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 lg:-mx-10 lg:px-10">
         <div className="mx-auto max-w-2xl text-center">
           <h1 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            How can we help?
+            {supportCopy.heroTitle}
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-teal-100/80">
-            Search for answers or browse by topic below
+            {supportCopy.heroDescription}
           </p>
 
           {/* Search bar */}
@@ -313,7 +218,7 @@ const SupportPage: NextPageWithAuth = () => {
                 setSearch(e.target.value);
                 setOpenFaq(null);
               }}
-              placeholder="Describe your issue, e.g. cancel booking, refund status…"
+              placeholder={supportCopy.searchPlaceholder}
               className="h-12 w-full rounded-xl border-0 bg-white pl-11 pr-4 text-sm text-slate-800 shadow-lg outline-none ring-1 ring-white/20 transition placeholder:text-slate-400 focus:ring-2 focus:ring-white/40"
             />
           </div>
@@ -323,8 +228,8 @@ const SupportPage: NextPageWithAuth = () => {
       {/* ── Topic Categories ─────────────────────────────────────────────── */}
       <section className="-mt-7 mb-10">
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-3 px-1 sm:grid-cols-3 lg:grid-cols-6">
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
+          {categories.map((cat) => {
+            const Icon = CATEGORY_ICONS[cat.id];
             const isActive = activeCategory === cat.id;
             return (
               <button
@@ -365,9 +270,9 @@ const SupportPage: NextPageWithAuth = () => {
           <div className="mb-6 flex items-center justify-between">
             <h2 className="font-display text-xl font-bold text-slate-900">
               {activeCategory
-                ? (CATEGORIES.find((c) => c.id === activeCategory)?.label ??
-                  "Help Articles")
-                : "Popular Questions"}
+                ? (categories.find((c) => c.id === activeCategory)?.label ??
+                  supportCopy.helpArticles)
+                : supportCopy.popularQuestions}
             </h2>
             {activeCategory && (
               <button
@@ -378,7 +283,7 @@ const SupportPage: NextPageWithAuth = () => {
                 }}
                 className="text-xs font-medium text-teal-600 transition hover:text-teal-700"
               >
-                View all
+                {supportCopy.viewAll}
               </button>
             )}
           </div>
@@ -387,24 +292,24 @@ const SupportPage: NextPageWithAuth = () => {
             <div className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-14 text-center">
               <HelpCircle size={32} className="mx-auto mb-3 text-slate-200" />
               <p className="text-sm font-medium text-slate-500">
-                No results found
+                {supportCopy.noResultsFound}
               </p>
               <p className="mx-auto mt-1 max-w-xs text-xs text-slate-400">
-                Try a different search term or{" "}
+                {supportCopy.tryDifferentSearch}{" "}
                 {isLoggedIn ? (
                   <button
                     type="button"
                     onClick={scrollToContact}
                     className="font-semibold text-teal-600 hover:underline"
                   >
-                    contact our team
+                    {supportCopy.contactOurTeam}
                   </button>
                 ) : (
                   <Link
                     href="/auth/login"
                     className="font-semibold text-teal-600 hover:underline"
                   >
-                    sign in for help
+                    {supportCopy.signInForHelp}
                   </Link>
                 )}
               </p>
@@ -455,12 +360,12 @@ const SupportPage: NextPageWithAuth = () => {
           {/* Header bar */}
           <div className="rounded-t-xl border border-b-0 border-slate-100 bg-slate-50 px-6 py-5">
             <h2 className="font-display text-lg font-bold text-slate-900">
-              Still need help?
+              {supportCopy.stillNeedHelp}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
               {isLoggedIn
-                ? "Send us a message and our team will get back to you."
-                : "Sign in to contact our support team directly."}
+                ? supportCopy.sendUsMessage
+                : supportCopy.signInDirectly}
             </p>
           </div>
 
@@ -468,14 +373,13 @@ const SupportPage: NextPageWithAuth = () => {
           {!isLoggedIn ? (
             <div className="rounded-b-xl border border-slate-100 bg-white px-6 py-8 text-center">
               <p className="text-sm text-slate-500">
-                Please sign in so we can access your bookings and help you
-                faster.
+                {supportCopy.signInPrompt}
               </p>
               <Link
                 href="/auth/login"
                 className="mt-4 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700"
               >
-                Sign in
+                {supportCopy.signIn}
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -485,18 +389,17 @@ const SupportPage: NextPageWithAuth = () => {
                 <MessageCircle size={20} className="text-teal-600" />
               </div>
               <h3 className="text-base font-semibold text-slate-900">
-                Message sent
+                {supportCopy.messageSent}
               </h3>
               <p className="mx-auto mt-1.5 max-w-sm text-sm text-slate-500">
-                A support agent will respond shortly. You can track this
-                conversation in your chat inbox.
+                {supportCopy.supportRespond}
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Link
                   href={`/chats/${submitted}`}
                   className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700"
                 >
-                  View conversation
+                  {supportCopy.viewConversation}
                   <ArrowRight size={14} />
                 </Link>
                 <button
@@ -505,11 +408,11 @@ const SupportPage: NextPageWithAuth = () => {
                     setSubmitted(null);
                     setMessage("");
                     setBookingRef("");
-                    setTopic(FORM_TOPICS[0]);
+                    setTopic(supportCopy.formTopics[0]);
                   }}
                   className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
                 >
-                  New request
+                  {supportCopy.newRequest}
                 </button>
               </div>
             </div>
@@ -527,7 +430,7 @@ const SupportPage: NextPageWithAuth = () => {
                     htmlFor="s-topic"
                     className="mb-1.5 block text-xs font-medium text-slate-500"
                   >
-                    Topic
+                    {supportCopy.topicLabel}
                   </label>
                   <select
                     id="s-topic"
@@ -535,7 +438,7 @@ const SupportPage: NextPageWithAuth = () => {
                     onChange={(e) => setTopic(e.target.value)}
                     className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                   >
-                    {FORM_TOPICS.map((t) => (
+                    {supportCopy.formTopics.map((t) => (
                       <option key={t} value={t}>
                         {t}
                       </option>
@@ -547,15 +450,15 @@ const SupportPage: NextPageWithAuth = () => {
                     htmlFor="s-ref"
                     className="mb-1.5 block text-xs font-medium text-slate-500"
                   >
-                    Booking Reference{" "}
-                    <span className="text-slate-400">(optional)</span>
+                    {supportCopy.bookingReference}{" "}
+                    <span className="text-slate-400">({supportCopy.optional})</span>
                   </label>
                   <input
                     id="s-ref"
                     type="text"
                     value={bookingRef}
                     onChange={(e) => setBookingRef(e.target.value)}
-                    placeholder="e.g. BK-2025-XXXX"
+                    placeholder={supportCopy.bookingReferencePlaceholder}
                     className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                   />
                 </div>
@@ -566,7 +469,7 @@ const SupportPage: NextPageWithAuth = () => {
                   htmlFor="s-msg"
                   className="mb-1.5 block text-xs font-medium text-slate-500"
                 >
-                  How can we help?
+                  {supportCopy.helpPrompt}
                 </label>
                 <textarea
                   id="s-msg"
@@ -576,7 +479,7 @@ const SupportPage: NextPageWithAuth = () => {
                     setMessage(e.target.value);
                     if (formError) setFormError(null);
                   }}
-                  placeholder="Describe your issue in detail…"
+                  placeholder={supportCopy.messagePlaceholder}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                 />
                 {formError && (
@@ -587,7 +490,7 @@ const SupportPage: NextPageWithAuth = () => {
               <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
                 <span className="mr-auto text-xs text-slate-400">
                   {message.trim().length > 0 &&
-                    `${message.trim().length} character${message.trim().length !== 1 ? "s" : ""}`}
+                    `${message.trim().length} ${supportCopy.characters}${message.trim().length !== 1 && locale === "en" ? "s" : ""}`}
                 </span>
                 <button
                   type="submit"
@@ -597,12 +500,12 @@ const SupportPage: NextPageWithAuth = () => {
                   {sending ? (
                     <>
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      Sending…
+                      {supportCopy.sending}
                     </>
                   ) : (
                     <>
                       <Send size={14} />
-                      Send message
+                      {supportCopy.sendMessage}
                     </>
                   )}
                 </button>
@@ -617,7 +520,7 @@ const SupportPage: NextPageWithAuth = () => {
         <section className="mt-14">
           <div className="mx-auto max-w-3xl">
             <h2 className="font-display mb-5 text-lg font-bold text-slate-900">
-              Your Requests
+              {supportCopy.yourRequests}
             </h2>
 
             {chatsLoading && supportChats.length === 0 ? (
@@ -639,7 +542,7 @@ const SupportPage: NextPageWithAuth = () => {
               <div className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center">
                 <Inbox size={24} className="mx-auto mb-2 text-slate-200" />
                 <p className="text-sm text-slate-400">
-                  No support requests yet
+                  {supportCopy.noSupportRequests}
                 </p>
               </div>
             ) : (
@@ -648,13 +551,13 @@ const SupportPage: NextPageWithAuth = () => {
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/60">
                       <th className="px-5 py-3 text-xs font-medium text-slate-400">
-                        Status
+                        {supportCopy.status}
                       </th>
                       <th className="px-5 py-3 text-xs font-medium text-slate-400">
-                        Topic
+                        {supportCopy.topicHeader}
                       </th>
                       <th className="hidden px-5 py-3 text-xs font-medium text-slate-400 sm:table-cell">
-                        Last Update
+                        {supportCopy.lastUpdate}
                       </th>
                       <th className="px-5 py-3" />
                     </tr>
@@ -675,27 +578,34 @@ const SupportPage: NextPageWithAuth = () => {
                             <span className="flex items-center gap-2">
                               <StatusDot status={chat.chatStatus} />
                               <span className="text-xs capitalize text-slate-500">
-                                {chat.chatStatus.toLowerCase()}
+                                {chat.chatStatus === "WAITING"
+                                  ? chatCopy.waiting
+                                  : chat.chatStatus === "ACTIVE"
+                                    ? chatCopy.active
+                                    : chatCopy.closed}
                               </span>
                             </span>
                           </td>
                           <td className="px-5 py-3.5">
                             <p className="font-medium text-slate-800">
-                              {chat.supportTopic ?? "General"}
+                              {chat.supportTopic ?? supportCopy.general}
                             </p>
                             <p className="mt-0.5 truncate text-xs text-slate-400 max-w-[200px]">
                               {preview}
                             </p>
                           </td>
                           <td className="hidden px-5 py-3.5 text-xs text-slate-400 sm:table-cell">
-                            {timeAgo(chat.lastMessageAt || chat.createdAt)}
+                            {formatChatTimeAgo(
+                              locale,
+                              chat.lastMessageAt || chat.createdAt,
+                            )}
                           </td>
                           <td className="px-5 py-3.5 text-right">
                             <Link
                               href={`/chats/${chat._id}`}
                               className="inline-flex items-center gap-1 text-xs font-medium text-teal-600 opacity-0 transition group-hover:opacity-100"
                             >
-                              Open
+                              {supportCopy.open}
                               <ChevronRight size={14} />
                             </Link>
                           </td>

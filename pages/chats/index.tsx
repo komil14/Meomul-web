@@ -12,12 +12,17 @@ import { GET_AGENT_HOTELS_QUERY, GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
 import { usePaginationQueryState } from "@/lib/hooks/use-pagination-query-state";
 import { getSessionMember } from "@/lib/auth/session";
+import { formatBookingDate, getBookingStatusLabel } from "@/lib/bookings/booking-i18n";
 import {
-  SUPPORT_CHAT_TITLE,
+  formatChatTimeAgo,
+  getChatCopy,
+  getChatStatusLabel,
+  getLastPreviewLabel,
+} from "@/lib/chat/chat-i18n";
+import {
   avatarBg,
-  getLastPreview,
-  timeAgo,
 } from "@/lib/chat/chat-helpers";
+import { useI18n } from "@/lib/i18n/provider";
 import { errorAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -80,35 +85,20 @@ const PAGE_LIMIT = 20;
 const HOTEL_LIST_LIMIT = 100;
 const CHAT_STATUSES: ChatStatus[] = ["WAITING", "ACTIVE", "CLOSED"];
 
-const STATUS_CONFIG: Record<
-  ChatStatus,
-  { label: string; dot: string; text: string }
-> = {
-  WAITING: { label: "Waiting", dot: "bg-amber-400", text: "text-amber-600" },
-  ACTIVE: { label: "Active", dot: "bg-emerald-400", text: "text-emerald-600" },
-  CLOSED: { label: "Closed", dot: "bg-slate-300", text: "text-slate-400" },
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getChatTitle(
   chat: ChatDto,
   hotelsMap: Map<string, HotelListItem>,
+  supportTitle: string,
 ): string {
-  if (chat.chatScope === "SUPPORT") return SUPPORT_CHAT_TITLE;
-  if (!chat.hotelId) return "Hotel Support";
-  return hotelsMap.get(chat.hotelId)?.hotelTitle ?? "Hotel Support";
+  if (chat.chatScope === "SUPPORT") return supportTitle;
+  if (!chat.hotelId) return supportTitle;
+  return hotelsMap.get(chat.hotelId)?.hotelTitle ?? supportTitle;
 }
 
 function getChatAvatarSeed(chat: ChatDto): string {
   return chat.hotelId ?? chat._id;
-}
-
-function fmtDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 // ─── Hotel Avatar ─────────────────────────────────────────────────────────────
@@ -173,6 +163,8 @@ function NewChatOverlay({
   onClose: () => void;
   onSuccess: (chatId: string) => void;
 }) {
+  const { locale } = useI18n();
+  const copy = getChatCopy(locale);
   const [step, setStep] = useState<"select" | "compose">("select");
   const [intent, setIntent] = useState<"hotel" | "support">(initialIntent);
   const [selectedHotel, setSelectedHotel] = useState<HotelListItem | null>(
@@ -352,9 +344,9 @@ function NewChatOverlay({
             ) : intent === "support" ? (
               <>
                 <p className="truncate font-semibold text-slate-900">
-                  {SUPPORT_CHAT_TITLE}
+                    {copy.supportTitle}
                 </p>
-                <p className="text-xs text-slate-400">Platform support team</p>
+                <p className="text-xs text-slate-400">{copy.platformSupport}</p>
               </>
             ) : (
               <>
@@ -399,7 +391,7 @@ function NewChatOverlay({
                         : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
-                    Hotel chat
+                    {copy.hotelChat}
                   </button>
                   <button
                     type="button"
@@ -414,7 +406,7 @@ function NewChatOverlay({
                         : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
-                    Support
+                    {copy.supportTab}
                   </button>
                 </div>
               </div>
@@ -429,16 +421,16 @@ function NewChatOverlay({
                     </span>
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
-                        Contact Meomul Support
+                        {copy.contactSupportTitle}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Account, payment, booking, and technical issues
+                        {copy.contactSupportDesc}
                       </p>
                     </div>
                   </div>
                   {supportSourcePath && (
                     <p className="mt-3 rounded-lg bg-white px-3 py-2 text-[11px] text-slate-500">
-                      Context from page:{" "}
+                      {copy.contextFromPage}:{" "}
                       <span className="font-medium text-slate-700">
                         {supportSourcePath}
                       </span>
@@ -449,7 +441,7 @@ function NewChatOverlay({
                     onClick={() => setStep("compose")}
                     className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
                   >
-                    Continue to message
+                    {copy.continueToMessage}
                     <ArrowLeft size={14} className="rotate-180" />
                   </button>
                 </div>
@@ -466,7 +458,7 @@ function NewChatOverlay({
                       ref={searchRef}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search hotels by name or city…"
+                      placeholder={copy.searchHotelsPlaceholder}
                       className="flex-1 bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none"
                     />
                     {searchQuery && (
@@ -486,7 +478,7 @@ function NewChatOverlay({
                   {!searchQuery && bookedHotels.length > 0 && (
                     <div className="mb-2">
                       <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                        From your bookings
+                        {copy.fromBookings}
                       </p>
                       {bookedHotels.map(({ booking, hotel }) => (
                         <button
@@ -511,8 +503,8 @@ function NewChatOverlay({
                               />
                               <p className="truncate text-xs text-slate-400">
                                 #{booking.bookingCode} ·{" "}
-                                {fmtDate(booking.checkInDate)} –{" "}
-                                {fmtDate(booking.checkOutDate)}
+                                {formatBookingDate(locale, booking.checkInDate)} –{" "}
+                                {formatBookingDate(locale, booking.checkOutDate)}
                               </p>
                             </div>
                           </div>
@@ -526,7 +518,7 @@ function NewChatOverlay({
                                   : "bg-slate-100 text-slate-500"
                             }`}
                           >
-                            {booking.bookingStatus}
+                            {getBookingStatusLabel(locale, booking.bookingStatus)}
                           </span>
                         </button>
                       ))}
@@ -538,14 +530,14 @@ function NewChatOverlay({
                   <div>
                     <p className="px-5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                       {searchQuery
-                        ? `Results (${filteredHotels.length})`
-                        : "All hotels"}
+                        ? `${copy.results} (${filteredHotels.length})`
+                        : copy.allHotels}
                     </p>
                     {filteredHotels.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-10 text-center">
                         <Building2 size={24} className="mb-2 text-slate-200" />
                         <p className="text-sm text-slate-400">
-                          No hotels found
+                          {copy.noHotelsFound}
                         </p>
                       </div>
                     ) : (
@@ -593,14 +585,14 @@ function NewChatOverlay({
                     <MessageSquare size={24} />
                   </span>
                   <p className="mt-4 text-base font-bold text-slate-900">
-                    {SUPPORT_CHAT_TITLE}
+                    {copy.supportTitle}
                   </p>
                   <p className="mt-0.5 text-sm text-slate-500">
-                    Our team usually replies quickly during active hours
+                    {copy.repliesQuickly}
                   </p>
                   {supportSourcePath && (
                     <p className="mt-4 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
-                      Sent from page:{" "}
+                      {copy.sentFromPage}:{" "}
                       <span className="font-medium text-slate-700">
                         {supportSourcePath}
                       </span>
@@ -624,13 +616,13 @@ function NewChatOverlay({
                     <div className="mt-4 flex items-center gap-1.5 rounded-xl bg-sky-50 px-3.5 py-2 text-xs text-sky-700">
                       <CalendarCheck size={12} />
                       <span>
-                        Booking{" "}
+                        {copy.bookingPrefix}{" "}
                         <span className="font-semibold">
                           #{selectedBooking.bookingCode}
                         </span>
                         {" · "}
-                        {fmtDate(selectedBooking.checkInDate)} –{" "}
-                        {fmtDate(selectedBooking.checkOutDate)}
+                        {formatBookingDate(locale, selectedBooking.checkInDate)} –{" "}
+                        {formatBookingDate(locale, selectedBooking.checkOutDate)}
                       </span>
                       <button
                         type="button"
@@ -645,8 +637,8 @@ function NewChatOverlay({
               )}
               <p className="mt-5 max-w-[260px] text-xs text-slate-400">
                 {intent === "support"
-                  ? "Messages are private between you and Meomul support."
-                  : "Messages are private between you and the hotel team."}
+                  ? copy.privateSupport
+                  : copy.privateHotel}
               </p>
             </div>
 
@@ -668,7 +660,7 @@ function NewChatOverlay({
                       void handleSend();
                     }
                   }}
-                  placeholder="Write your message…"
+                  placeholder={copy.writeMessagePlaceholder}
                   rows={1}
                   className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
                   style={{ minHeight: "36px", maxHeight: "140px" }}
@@ -704,6 +696,8 @@ function NewChatOverlay({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const ChatsPage: NextPageWithAuth = () => {
+  const { locale } = useI18n();
+  const copy = getChatCopy(locale);
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
   const memberType = member?.memberType;
@@ -934,20 +928,20 @@ const ChatsPage: NextPageWithAuth = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Inbox
+                {copy.inbox}
               </p>
               <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-                Messages
+                {copy.messages}
               </h1>
             </div>
             <button
               type="button"
               onClick={() => setShowNewChat(true)}
               className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:shadow"
-              aria-label="New conversation"
+              aria-label={copy.newConversation}
             >
               <SquarePen size={15} className="text-slate-500" />
-              New message
+              {copy.newMessage}
             </button>
           </div>
 
@@ -982,10 +976,10 @@ const ChatsPage: NextPageWithAuth = () => {
                 <MessageSquare size={22} className="text-slate-400" />
               </div>
               <p className="font-semibold text-slate-800">
-                No conversations yet
+                {copy.noConversations}
               </p>
               <p className="mt-1.5 max-w-[220px] text-sm text-slate-400">
-                Start a support conversation or message any hotel
+                {copy.supportPageDesc}
               </p>
               <button
                 type="button"
@@ -993,7 +987,7 @@ const ChatsPage: NextPageWithAuth = () => {
                 className="mt-6 flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 active:scale-95"
               >
                 <SquarePen size={14} />
-                New conversation
+                {copy.newConversation}
               </button>
             </div>
           )}
@@ -1015,10 +1009,10 @@ const ChatsPage: NextPageWithAuth = () => {
                   }`}
                 >
                   {tab === "ALL"
-                    ? "All"
+                    ? copy.all
                     : tab === "HOTELS"
-                      ? "Hotels"
-                      : "Support"}
+                      ? copy.hotels
+                      : copy.support}
                 </button>
               ))}
             </div>
@@ -1029,13 +1023,13 @@ const ChatsPage: NextPageWithAuth = () => {
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               {filteredChats.map((chat, i) => {
                 const isSupportChat = chat.chatScope === "SUPPORT";
-                const hotelName = getChatTitle(chat, hotelsMap);
+                const hotelName = getChatTitle(chat, hotelsMap, copy.supportTitle);
                 const unread = unreadForMe(chat);
-                const preview = getLastPreview(chat);
-                const time = timeAgo(chat.lastMessageAt);
+                const preview = getLastPreviewLabel(locale, chat);
+                const time = formatChatTimeAgo(locale, chat.lastMessageAt);
                 const lastMsg = (chat.messages ?? []).at(-1);
                 const isLastMsgFromMe = lastMsg?.senderType === "GUEST";
-                const statusCfg = STATUS_CONFIG[chat.chatStatus];
+                const statusLabel = getChatStatusLabel(locale, chat.chatStatus);
 
                 return (
                   <button
@@ -1115,14 +1109,24 @@ const ChatsPage: NextPageWithAuth = () => {
                           className={`h-1.5 w-1.5 rounded-full ${
                             chat.chatStatus === "ACTIVE"
                               ? "animate-pulse bg-emerald-400"
-                              : statusCfg.dot
+                              : chat.chatStatus === "WAITING"
+                                ? "bg-amber-400"
+                                : "bg-slate-300"
                           }`}
                         />
-                        <span className={`text-[10px] ${statusCfg.text}`}>
-                          {statusCfg.label}
+                        <span
+                          className={`text-[10px] ${
+                            chat.chatStatus === "WAITING"
+                              ? "text-amber-600"
+                              : chat.chatStatus === "ACTIVE"
+                                ? "text-emerald-600"
+                                : "text-slate-400"
+                          }`}
+                        >
+                          {statusLabel}
                         </span>
                         <span className="text-[10px] text-slate-400">
-                          · {isSupportChat ? "Support" : "Hotel"}
+                          · {isSupportChat ? copy.support : copy.hotel}
                         </span>
                       </div>
                     </div>
@@ -1136,8 +1140,8 @@ const ChatsPage: NextPageWithAuth = () => {
           {total > PAGE_LIMIT && chatTypeFilter === "ALL" && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-slate-500">
-                Page{" "}
-                <span className="font-semibold text-slate-800">{page}</span> of{" "}
+                {copy.page}{" "}
+                <span className="font-semibold text-slate-800">{page}</span> {copy.of}{" "}
                 <span className="font-semibold text-slate-800">
                   {totalPages}
                 </span>

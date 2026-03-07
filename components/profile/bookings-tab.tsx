@@ -6,6 +6,14 @@ import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
 import { GET_HOTEL_CARD_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import {
+  formatBookingDate,
+  formatNightsLabel,
+  getBookingCopy,
+  getBookingStatusLabel,
+  getPaymentStatusLabel,
+} from "@/lib/bookings/booking-i18n";
+import { useI18n } from "@/lib/i18n/provider";
 import { getErrorMessage } from "@/lib/utils/error";
 import {
   CalendarDays,
@@ -64,14 +72,6 @@ const STATUS_BADGE: Record<string, string> = {
   CANCELLED: "border-rose-200 bg-rose-50 text-rose-600",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Pending",
-  CONFIRMED: "Confirmed",
-  CHECKED_IN: "Checked in",
-  CHECKED_OUT: "Checked out",
-  CANCELLED: "Cancelled",
-};
-
 const PAYMENT_BADGE: Record<string, string> = {
   PENDING: "border-amber-200 bg-amber-50 text-amber-700",
   PARTIAL: "border-violet-200 bg-violet-50 text-violet-700",
@@ -79,23 +79,6 @@ const PAYMENT_BADGE: Record<string, string> = {
   FAILED: "border-rose-200 bg-rose-50 text-rose-600",
   REFUNDED: "border-slate-200 bg-slate-50 text-slate-600",
 };
-
-const PAYMENT_LABEL: Record<string, string> = {
-  PENDING: "Unpaid",
-  PARTIAL: "Partial",
-  PAID: "Paid",
-  FAILED: "Failed",
-  REFUNDED: "Refunded",
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function diffNights(checkIn: string, checkOut: string): number {
   const msPerDay = 86_400_000;
@@ -110,6 +93,7 @@ function diffNights(checkIn: string, checkOut: string): number {
 // ─── BookingRow ───────────────────────────────────────────────────────────────
 
 function BookingRow({ booking }: { booking: BookingListItem }) {
+  const { locale } = useI18n();
   const { data } = useQuery<GetHotelCardData>(GET_HOTEL_CARD_QUERY, {
     variables: { hotelId: booking.hotelId },
     fetchPolicy: "cache-first",
@@ -120,13 +104,14 @@ function BookingRow({ booking }: { booking: BookingListItem }) {
   const statusClass =
     STATUS_BADGE[booking.bookingStatus] ??
     "border-slate-200 bg-slate-50 text-slate-600";
-  const statusLabel =
-    STATUS_LABEL[booking.bookingStatus] ?? booking.bookingStatus;
+  const statusLabel = getBookingStatusLabel(
+    locale,
+    booking.bookingStatus as never,
+  );
   const paymentClass =
     PAYMENT_BADGE[booking.paymentStatus] ??
     "border-slate-200 bg-slate-50 text-slate-600";
-  const paymentLabel =
-    PAYMENT_LABEL[booking.paymentStatus] ?? booking.paymentStatus;
+  const paymentLabel = getPaymentStatusLabel(locale, booking.paymentStatus);
   const nights = diffNights(booking.checkInDate, booking.checkOutDate);
 
   return (
@@ -175,12 +160,12 @@ function BookingRow({ booking }: { booking: BookingListItem }) {
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
           <span className="flex items-center gap-1">
             <CalendarDays size={10} className="text-slate-400" />
-            {formatDate(booking.checkInDate)} –{" "}
-            {formatDate(booking.checkOutDate)}
+            {formatBookingDate(locale, booking.checkInDate)} –{" "}
+            {formatBookingDate(locale, booking.checkOutDate)}
           </span>
           <span className="flex items-center gap-1">
             <Moon size={10} className="text-slate-400" />
-            {nights}n
+            {formatNightsLabel(locale, nights)}
           </span>
           <span
             className={`rounded-full border px-1.5 py-px text-[9px] font-semibold uppercase tracking-[0.04em] ${paymentClass}`}
@@ -212,6 +197,32 @@ function BookingRow({ booking }: { booking: BookingListItem }) {
 const LIMIT = 10;
 
 export function BookingsTab() {
+  const { locale } = useI18n();
+  const copy = getBookingCopy(locale);
+  const listCopy =
+    locale === "ko"
+      ? {
+          viewAll: "전체 보기",
+          loadMore: "더 보기",
+          totalBookings: "총 {{count}}건",
+        }
+      : locale === "ru"
+        ? {
+            viewAll: "Смотреть все",
+            loadMore: "Показать еще",
+            totalBookings: "Всего {{count}}",
+          }
+        : locale === "uz"
+          ? {
+              viewAll: "Barchasini ko'rish",
+              loadMore: "Yana ko'rsatish",
+              totalBookings: "Jami {{count}} ta",
+            }
+          : {
+              viewAll: "View all",
+              loadMore: "Load more",
+              totalBookings: "{{count}} total",
+            };
   const member = useMemo(() => getSessionMember(), []);
   const [extraBookings, setExtraBookings] = useState<BookingListItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -279,16 +290,16 @@ export function BookingsTab() {
             <Search size={20} className="text-slate-400" />
           </div>
           <p className="mt-4 font-[family-name:var(--font-display)] text-base font-semibold text-slate-800">
-            No bookings yet
+            {copy.noBookingsYet}
           </p>
           <p className="mt-1 text-sm text-slate-400">
-            Your stays will appear here once you book a hotel.
+            {copy.noBookingsDescription}
           </p>
           <Link
             href="/hotels"
             className="mt-5 rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
           >
-            Browse hotels
+            {copy.browseHotels}
           </Link>
         </div>
       )}
@@ -298,13 +309,13 @@ export function BookingsTab() {
         <>
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-slate-400">
-              {total} booking{total !== 1 ? "s" : ""} total
+              {listCopy.totalBookings.replace("{{count}}", total.toLocaleString(locale))}
             </p>
             <Link
               href="/bookings"
               className="text-xs font-semibold text-slate-500 underline underline-offset-2 transition hover:text-slate-700"
             >
-              View all
+              {listCopy.viewAll}
             </Link>
           </div>
           <div className="space-y-3">
@@ -321,7 +332,7 @@ export function BookingsTab() {
               disabled={loadingMore}
               className="w-full rounded-xl border border-slate-200 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-50"
             >
-              {loadingMore ? "Loading..." : "Load more"}
+              {loadingMore ? copy.next + "..." : listCopy.loadMore}
             </button>
           )}
         </>

@@ -2,6 +2,11 @@ import { useMemo } from "react";
 import { Crown, MapPin, Pencil, Star } from "lucide-react";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { getSessionMember } from "@/lib/auth/session";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatProfileDate,
+  getProfileCopy,
+} from "@/lib/profile/profile-i18n";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -59,6 +64,8 @@ function Stat({ label, value }: { label: string; value: string }) {
 // ─── ProfileHeader ────────────────────────────────────────────────────────────
 
 export function ProfileHeader({ member, loading, onEdit }: ProfileHeaderProps) {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const sessionMember = useMemo(() => getSessionMember(), []);
 
   const memberType = member?.memberType ?? sessionMember?.memberType ?? "USER";
@@ -68,10 +75,7 @@ export function ProfileHeader({ member, loading, onEdit }: ProfileHeaderProps) {
   const tier = member?.subscriptionTier ?? "FREE";
   const tierLabel = TIER_LABEL[tier] ?? tier;
   const memberSince = member
-    ? new Date(member.createdAt).toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      })
+    ? formatProfileDate(locale, member.createdAt, "monthYear")
     : "";
 
   // ── Loading skeleton ──────────────────────────────────────────────────
@@ -122,7 +126,7 @@ export function ProfileHeader({ member, loading, onEdit }: ProfileHeaderProps) {
         <div className="min-w-0 flex-1">
           {memberSince && (
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              Member since {memberSince}
+              {copy.memberSince} {memberSince}
             </p>
           )}
           <h1 className="mt-0.5 font-display text-2xl font-bold tracking-tight text-slate-900">
@@ -164,23 +168,23 @@ export function ProfileHeader({ member, loading, onEdit }: ProfileHeaderProps) {
           className="flex flex-shrink-0 items-center gap-2 self-start rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
         >
           <Pencil size={14} />
-          Edit profile
+          {copy.editProfile}
         </button>
       </div>
 
       {/* Stats bar */}
       {member && (
         <div className="flex items-center justify-around border-t border-slate-100 px-6 py-4">
-          <Stat value={member.memberPoints.toLocaleString()} label="Points" />
+          <Stat value={member.memberPoints.toLocaleString(locale)} label={copy.points} />
           <div className="h-6 w-px bg-slate-100" />
           <Stat
-            value={member.memberFollowers.toLocaleString()}
-            label="Followers"
+            value={member.memberFollowers.toLocaleString(locale)}
+            label={copy.followers}
           />
           <div className="h-6 w-px bg-slate-100" />
           <Stat
-            value={member.memberFollowings.toLocaleString()}
-            label="Following"
+            value={member.memberFollowings.toLocaleString(locale)}
+            label={copy.following}
           />
         </div>
       )}

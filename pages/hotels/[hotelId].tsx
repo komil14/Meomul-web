@@ -20,6 +20,8 @@ import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_CHATS_QUERY, START_CHAT_MUTATION } from "@/graphql/chat.gql";
 import { GET_HOTEL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { useHotelDetailPageData } from "@/lib/hooks/use-hotel-detail-page-data";
+import { useI18n } from "@/lib/i18n/provider";
+import { getHotelLocationLabelLocalized, getHotelTypeLabel } from "@/lib/hotels/hotels-i18n";
 import { ROOM_PAGE_SIZE } from "@/lib/hotels/detail-page-helpers";
 import { pushRecentlyViewedHotel } from "@/lib/hotels/recently-viewed";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -42,17 +44,23 @@ interface HotelDetailPageProps {
   initialRooms: RoomListItem[];
 }
 
+function HotelListSectionLoader() {
+  const { t } = useI18n();
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+      {t("hotel_detail_loading_recommendations")}
+    </section>
+  );
+}
+
 const HotelListSection = dynamic(
   () =>
     import("@/components/hotels/detail/hotel-list-section").then(
       (mod) => mod.HotelListSection,
     ),
   {
-    loading: () => (
-      <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-        Loading recommendations...
-      </section>
-    ),
+    loading: () => <HotelListSectionLoader />,
   },
 );
 
@@ -62,6 +70,7 @@ export default function HotelDetailPage({
   initialHotel,
   initialRooms,
 }: HotelDetailPageProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const toast = useToast();
   const [member, setMember] =
@@ -164,8 +173,8 @@ export default function HotelDetailPage({
 
   if (!hotelId) {
     return (
-      <main className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-        Loading hotel route...
+        <main className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+        {t("hotel_detail_loading_route")}
       </main>
     );
   }
@@ -178,11 +187,11 @@ export default function HotelDetailPage({
             href="/hotels"
             className="text-sm text-slate-600 underline underline-offset-4"
           >
-            Back to hotels
+            {t("hotel_detail_back")}
           </Link>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-          Loading hotel...
+          {t("hotel_detail_loading_hotel")}
         </section>
       </main>
     );
@@ -196,11 +205,11 @@ export default function HotelDetailPage({
             href="/hotels"
             className="text-sm text-slate-600 underline underline-offset-4"
           >
-            Back to hotels
+            {t("hotel_detail_back")}
           </Link>
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-          Hotel is not available right now.
+          {t("hotel_detail_unavailable")}
         </section>
       </main>
     );
@@ -211,7 +220,12 @@ export default function HotelDetailPage({
   const pageTitle = `${hotel.hotelTitle} — ${hotel.hotelLocation} | Meomul`;
   const pageDescription =
     shortDescription ||
-    `Book ${hotel.hotelTitle} in ${hotel.hotelLocation}. ${hotel.hotelType} rated ${hotel.hotelRating?.toFixed(1) ?? "N/A"}/5. Best prices on Meomul.`;
+    t("hotel_detail_page_description_fallback", {
+      hotelTitle: hotel.hotelTitle,
+      hotelLocation: getHotelLocationLabelLocalized(hotel.hotelLocation, t),
+      hotelType: getHotelTypeLabel(hotel.hotelType, t),
+      rating: hotel.hotelRating?.toFixed(1) ?? "N/A",
+    });
   const ogImage = heroImage
     ? resolveMediaUrl(heroImage)
     : `${siteUrl}/og-default.png`;
@@ -292,11 +306,11 @@ export default function HotelDetailPage({
             href="/hotels"
             className="text-sm text-slate-600 underline underline-offset-4"
           >
-            Back to hotels
+            {t("hotel_detail_back")}
           </Link>
           <div className="flex items-center gap-2">
             <p className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
-              {hotel.hotelLocation} · {hotel.hotelType}
+              {getHotelLocationLabelLocalized(hotel.hotelLocation, t)} · {getHotelTypeLabel(hotel.hotelType, t)}
             </p>
           </div>
         </div>
@@ -394,11 +408,11 @@ export default function HotelDetailPage({
               <>
                 <ScrollReveal delayMs={40}>
                   <HotelListSection
-                    title="Similar Hotels"
-                    description="Properties with matching location, type, and demand profile."
+                    title={t("hotel_detail_similar_title")}
+                    description={t("hotel_detail_similar_desc")}
                     hotels={similarHotels}
                     loading={similarLoading}
-                    loadingText="Loading similar hotels..."
+                    loadingText={t("hotel_detail_similar_loading")}
                     errorMessage={similarErrorMessage}
                     layout="horizontal"
                     trackingContext={{
@@ -410,11 +424,13 @@ export default function HotelDetailPage({
 
                 <ScrollReveal delayMs={60}>
                   <HotelListSection
-                    title={`Trending in ${hotel.hotelLocation}`}
-                    description="Most active hotels in this location right now."
+                    title={t("hotel_detail_trending_title", {
+                      location: getHotelLocationLabelLocalized(hotel.hotelLocation, t),
+                    })}
+                    description={t("hotel_detail_trending_desc")}
                     hotels={trendingHotels}
                     loading={trendingLoading}
-                    loadingText="Loading location trends..."
+                    loadingText={t("hotel_detail_trending_loading")}
                     errorMessage={trendingErrorMessage}
                     layout="horizontal"
                     trackingContext={{
@@ -427,11 +443,11 @@ export default function HotelDetailPage({
                 {canUseRecommendedQuery ? (
                   <ScrollReveal delayMs={80}>
                     <HotelListSection
-                      title="Recommended for You"
-                      description="Personalized suggestions based on your activity."
+                      title={t("hotel_detail_recommended_title")}
+                      description={t("hotel_detail_recommended_desc")}
                       hotels={recommendedHotels}
                       loading={recommendedLoading}
-                      loadingText="Loading personalized recommendations..."
+                      loadingText={t("hotel_detail_recommended_loading")}
                       errorMessage={recommendedErrorMessage}
                       layout="horizontal"
                       recommendationExplanations={recommendedExplanationMap}
@@ -449,10 +465,10 @@ export default function HotelDetailPage({
             ) : (
               <div className="rounded-2xl border border-slate-200 bg-white p-5">
                 <p className="text-sm font-semibold text-slate-900">
-                  Preparing recommendations...
+                  {t("hotel_detail_preparing_recommendations")}
                 </p>
                 <p className="mt-1 text-xs text-slate-600">
-                  Discovery sections will load as you scroll.
+                  {t("hotel_detail_discovery_loading")}
                 </p>
                 <div className="mt-4 flex gap-3 overflow-hidden">
                   <div className="h-44 min-w-[16rem] flex-1 animate-pulse rounded-xl bg-slate-100" />
@@ -483,9 +499,11 @@ export default function HotelDetailPage({
             try {
               const { data } = await startChat({
                 variables: {
-                  input: {
-                    hotelId,
-                    initialMessage: `Hi, I’m interested in ${hotel?.hotelTitle ?? "your hotel"}. Could you help me?`,
+                    input: {
+                      hotelId,
+                    initialMessage: t("hotel_detail_chat_initial_message", {
+                      hotelTitle: hotel?.hotelTitle ?? t("hotel_type_hotel"),
+                    }),
                   },
                 },
               });
@@ -493,7 +511,7 @@ export default function HotelDetailPage({
                 void router.push(`/chats/${data.startChat._id}`);
               }
             } catch {
-              toast.error("Could not start chat. Please try again.");
+              toast.error(t("hotel_detail_chat_error"));
               setStartingChat(false);
             }
           }}
@@ -505,7 +523,7 @@ export default function HotelDetailPage({
             <MessageSquare size={18} />
           )}
           <span className="hidden sm:inline">
-            {startingChat ? "Starting chat…" : "Chat with hotel"}
+            {startingChat ? t("hotel_detail_chat_starting") : t("hotel_detail_chat_cta")}
           </span>
         </button>
       )}

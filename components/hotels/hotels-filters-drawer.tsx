@@ -11,7 +11,8 @@ import {
   STAY_PURPOSE_OPTIONS,
 } from "@/lib/hotels/hotels-filter-config";
 import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
-import { formatStayCountLabel } from "@/lib/hotels/hotels-ui";
+import { formatStayCountLabelLocalized } from "@/lib/hotels/hotels-i18n";
+import { useI18n } from "@/lib/i18n/provider";
 import type {
   GetHotelsCountQueryData,
   GetHotelsCountQueryVars,
@@ -127,6 +128,7 @@ const buildApplyPatch = (draft: DraftQuery): Record<string, string | undefined> 
 };
 
 export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: HotelsFiltersDrawerProps) {
+  const { t } = useI18n();
   const sourceDraft = useMemo(
     () => ({
       q: state.textInput.trim() || undefined,
@@ -437,10 +439,12 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
   const hasDraftValidationError = hasPriceRangeError || hasDateRangeError;
   const showMatchesSummary = !hasDraftValidationError;
   const primaryButtonLabel = hasDraftValidationError
-    ? "Fix filters to continue"
+    ? t("hotels_drawer_fix_filters")
     : previewLoading
-      ? "Updating stays..."
-      : `Show ${formatStayCountLabel(previewTotal)}`;
+      ? t("hotels_drawer_updating")
+      : t("hotels_drawer_show", {
+          count: formatStayCountLabelLocalized(previewTotal, "stay", t),
+        });
 
   if (!isOpen) {
     return null;
@@ -450,7 +454,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
     <div className="fixed inset-0 z-[80]">
       <button
         type="button"
-        aria-label="Close filters"
+        aria-label={t("hotels_drawer_close_filters")}
         onClick={onClose}
         className="absolute inset-0 bg-slate-900/45 transition duration-300"
       />
@@ -464,9 +468,9 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
             <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 md:hidden" />
             <div className="mt-3 flex items-start justify-between gap-3 md:mt-0">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</p>
-                <h2 className="mt-1 text-2xl font-semibold text-slate-900">Refine your stay</h2>
-                <p className="mt-1 text-sm text-slate-600">Choose your trip details, then apply once.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotels_drawer_filters")}</p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-900">{t("hotels_drawer_title")}</h2>
+                <p className="mt-1 text-sm text-slate-600">{t("hotels_drawer_desc")}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -474,13 +478,13 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
                   onClick={clearDraftQuery}
                   className="rounded-full px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
                 >
-                  Clear
+                  {t("hotels_drawer_clear")}
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-                  aria-label="Close"
+                  aria-label={t("hotels_drawer_close")}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
                     <path d="M18 6L6 18M6 6l12 12" />
@@ -497,16 +501,22 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
           <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
             <p className="mb-3 text-sm text-slate-600">
               {showMatchesSummary
-                ? `${previewLoading ? "Checking" : formatStayCountLabel(previewTotal)} match these filters${
-                    previewTotal !== appliedTotal ? ` • currently showing ${formatStayCountLabel(appliedTotal)}` : ""
+                ? `${previewLoading ? t("hotels_drawer_checking") : t("hotels_drawer_matches", {
+                    count: formatStayCountLabelLocalized(previewTotal, "stay", t),
+                  })}${
+                    previewTotal !== appliedTotal
+                      ? ` • ${t("hotels_drawer_currently_showing", {
+                          count: formatStayCountLabelLocalized(appliedTotal, "stay", t),
+                        })}`
+                      : ""
                   }`
-                : "Fix the highlighted filters to preview matching stays."}
+                : t("hotels_drawer_fix_highlighted")}
             </p>
             <button
               type="button"
               onClick={applyDraftFilters}
               disabled={hasDraftValidationError}
-              className="w-full rounded-full bg-rose-500 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-full bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {primaryButtonLabel}
             </button>

@@ -7,11 +7,12 @@ import { HotelsQuickFiltersRow } from "@/components/hotels/toolbar/hotels-quick-
 import { HotelsSearchRow } from "@/components/hotels/toolbar/hotels-search-row";
 import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
 import {
-  formatCompactHotelDate,
-  formatHotelDateSummary,
-  formatHotelGuestSummary,
-  formatHotelLocationLabel,
-} from "@/lib/hotels/hotels-ui";
+  formatCompactHotelDateLocalized,
+  formatHotelDateSummaryLocalized,
+  formatHotelGuestSummaryLocalized,
+  getHotelLocationLabelLocalized,
+} from "@/lib/hotels/hotels-i18n";
+import { useI18n } from "@/lib/i18n/provider";
 import type { HotelLocation } from "@/types/hotel";
 
 interface HotelsDiscoveryToolbarProps {
@@ -27,22 +28,6 @@ interface CalendarCell {
   date: Date | null;
   key: string;
 }
-
-const MONTH_LABELS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 const isIsoDateInput = (value: string): boolean =>
   /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -129,9 +114,6 @@ const buildMonthCells = (monthStart: Date): CalendarCell[] => {
   return cells;
 };
 
-const formatMonthTitle = (monthStart: Date): string =>
-  `${MONTH_LABELS[monthStart.getUTCMonth()] ?? ""} ${monthStart.getUTCFullYear()}`;
-
 const getNightCount = (checkIn: Date | null, checkOut: Date | null): number => {
   if (!checkIn || !checkOut) {
     return 0;
@@ -148,6 +130,7 @@ export function HotelsDiscoveryToolbar({
   loading,
   onOpenFilters,
 }: HotelsDiscoveryToolbarProps) {
+  const { locale, t } = useI18n();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const desktopPanelRef = useRef<HTMLDivElement | null>(null);
   const mobilePanelRef = useRef<HTMLDivElement | null>(null);
@@ -257,16 +240,28 @@ export function HotelsDiscoveryToolbar({
   );
 
   const locationSummary = state.selectedLocation
-    ? formatHotelLocationLabel(state.selectedLocation)
-    : "Anywhere";
-  const dateSummary = formatHotelDateSummary(
+    ? getHotelLocationLabelLocalized(state.selectedLocation, t)
+    : t("hotels_summary_anywhere");
+  const dateSummary = formatHotelDateSummaryLocalized(
     state.checkInInput,
     state.checkOutInput,
+    locale,
+    t,
   );
-  const guestSummary = formatHotelGuestSummary(state.guestCountInput);
+  const guestSummary = formatHotelGuestSummaryLocalized(state.guestCountInput, t);
   const stayNightCount = getNightCount(
     selectedCheckInDate,
     selectedCheckOutDate,
+  );
+  const weekdayLabels = useMemo(
+    () =>
+      Array.from({ length: 7 }).map((_, index) =>
+        new Intl.DateTimeFormat(locale, {
+          weekday: "short",
+          timeZone: "UTC",
+        }).format(createUtcDate(2026, 1, index + 1)),
+      ),
+    [locale],
   );
 
   const applySearch = (
@@ -422,6 +417,11 @@ export function HotelsDiscoveryToolbar({
 
   const renderCalendarMonth = (monthStart: Date) => {
     const cells = buildMonthCells(monthStart);
+    const monthTitle = new Intl.DateTimeFormat(locale, {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(monthStart);
 
     return (
       <div
@@ -430,15 +430,15 @@ export function HotelsDiscoveryToolbar({
       >
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-900">
-            {formatMonthTitle(monthStart)}
+            {monthTitle}
           </p>
           <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-            Exact dates
+            {t("hotels_date_exact_dates")}
           </p>
         </div>
 
         <div className="grid grid-cols-7 gap-0.5 text-center text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-          {WEEKDAY_LABELS.map((label) => (
+          {weekdayLabels.map((label) => (
             <span
               key={`${monthStart.toISOString()}-${label}`}
               className="py-0.5"
@@ -508,13 +508,18 @@ export function HotelsDiscoveryToolbar({
 
   const selectedDateSummary = selectedCheckInDate
     ? selectedCheckOutDate
-      ? `${formatCompactHotelDate(draftCheckIn)} - ${formatCompactHotelDate(draftCheckOut)}`
-      : `${formatCompactHotelDate(draftCheckIn)} check-in`
-    : "No exact dates selected";
+      ? `${formatCompactHotelDateLocalized(draftCheckIn, locale)} - ${formatCompactHotelDateLocalized(draftCheckOut, locale)}`
+      : t("hotels_date_checkin_only", {
+          date: formatCompactHotelDateLocalized(draftCheckIn, locale),
+        })
+    : t("hotels_date_none_selected");
   const selectedDateHint =
     stayNightCount > 0
-      ? `${stayNightCount} night${stayNightCount === 1 ? "" : "s"}`
-      : "Pick a start date, then an end date, then apply the range.";
+      ? t("hotels_date_nights", {
+          count: stayNightCount,
+          suffix: stayNightCount === 1 ? "" : "s",
+        })
+      : t("hotels_date_hint");
 
   const panelContent =
     openPanel === "location" ? (
@@ -572,21 +577,21 @@ export function HotelsDiscoveryToolbar({
 
   const mobilePanelTitle =
     openPanel === "location"
-      ? "Choose location"
+      ? t("hotels_quick_location_title")
       : openPanel === "dates"
-        ? "Choose dates"
-        : "Choose guests";
+        ? t("hotels_quick_dates_title")
+        : t("hotels_quick_guests_title");
 
   const mobileQuickFilterLayer =
     openPanel && typeof document !== "undefined"
       ? createPortal(
           <div className="fixed inset-0 z-[90] flex items-end md:hidden">
-            <button
-              type="button"
-              aria-label="Close quick filters"
-              onClick={() => {
-                setOpenPanel(null);
-              }}
+              <button
+                type="button"
+                aria-label={t("hotels_drawer_close_filters")}
+                onClick={() => {
+                  setOpenPanel(null);
+                }}
               className="absolute inset-0 bg-slate-900/35"
             />
 
@@ -599,7 +604,7 @@ export function HotelsDiscoveryToolbar({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Quick filter
+                      {t("hotels_quick_filter_label")}
                     </p>
                     <p className="mt-1 text-base font-semibold text-slate-900">
                       {mobilePanelTitle}
@@ -611,7 +616,7 @@ export function HotelsDiscoveryToolbar({
                       setOpenPanel(null);
                     }}
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-                    aria-label="Close panel"
+                    aria-label={t("hotels_drawer_close")}
                   >
                     <svg
                       viewBox="0 0 24 24"

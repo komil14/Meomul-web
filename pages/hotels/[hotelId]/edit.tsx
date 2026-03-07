@@ -3,6 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { GET_HOTEL_QUERY, UPDATE_HOTEL_MUTATION } from "@/graphql/hotel.gql";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  getHotelAmenityLabel,
+  getStayPurposeLabel,
+} from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import { successAlert, errorAlert } from "@/lib/ui/alerts";
 import type {
@@ -87,25 +92,168 @@ const SUITABLE_FOR_OPTIONS = [
   "LONG_TERM",
 ] as const;
 
-const SUITABLE_LABELS: Record<string, string> = {
-  BUSINESS: "Business",
-  ROMANTIC: "Romantic",
-  FAMILY: "Family",
-  SOLO: "Solo Travel",
-  STAYCATION: "Staycation",
-  EVENT: "Events",
-  MEDICAL: "Medical",
-  LONG_TERM: "Long Term",
-};
-
 type Tab = "info" | "amenities" | "policies";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const EditHotelPage: NextPageWithAuth = () => {
   const router = useRouter();
+  const { locale, t } = useI18n();
   const hotelId =
     typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+  const copy =
+    locale === "ko"
+      ? {
+          myHotels: "내 호텔",
+          hotelSettings: "호텔 설정",
+          editHotel: "호텔 수정",
+          saveChanges: "변경 사항 저장",
+          saving: "저장 중…",
+          info: "정보",
+          amenities: "편의시설",
+          policies: "정책",
+          hotelName: "호텔 이름",
+          description: "설명",
+          descriptionPlaceholder: "숙소 특징과 주변 명소를 설명해 주세요…",
+          starRating: "성급",
+          starLabel: "성",
+          checkInTime: "체크인 시간",
+          checkOutTime: "체크아웃 시간",
+          imageUrls: "이미지 URL",
+          onePerLine: "한 줄에 하나",
+          suitableFor: "적합한 여행 목적",
+          facilities: "시설",
+          safetyFeatures: "안전 기능",
+          cancellationPolicy: "취소 정책",
+          petsAllowed: "반려동물 허용",
+          maxPetWeight: "최대 반려동물 무게(kg)",
+          optional: "선택",
+          smokingAllowed: "흡연 허용",
+          flexibleTimingOptions: "유연 시간 옵션",
+          flexibleCheckIn: "유연 체크인",
+          flexibleCheckOut: "유연 체크아웃",
+          allowEarlyCheckIn: "얼리 체크인 요청 허용",
+          allowLateCheckOut: "레이트 체크아웃 요청 허용",
+          surcharge: "추가 요금 (₩)",
+          manageRooms: "객실 관리",
+          reviews: "리뷰",
+          hotelUpdated: "호텔 정보가 업데이트되었습니다.",
+        }
+      : locale === "ru"
+        ? {
+            myHotels: "Мои отели",
+            hotelSettings: "Настройки отеля",
+            editHotel: "Редактировать отель",
+            saveChanges: "Сохранить",
+            saving: "Сохранение…",
+            info: "Инфо",
+            amenities: "Удобства",
+            policies: "Политики",
+            hotelName: "Название отеля",
+            description: "Описание",
+            descriptionPlaceholder:
+              "Опишите особенности объекта и места рядом…",
+            starRating: "Звездность",
+            starLabel: "звезды",
+            checkInTime: "Время заезда",
+            checkOutTime: "Время выезда",
+            imageUrls: "URL изображений",
+            onePerLine: "по одному в строке",
+            suitableFor: "Подходит для",
+            facilities: "Удобства",
+            safetyFeatures: "Безопасность",
+            cancellationPolicy: "Политика отмены",
+            petsAllowed: "Можно с животными",
+            maxPetWeight: "Макс. вес питомца (кг)",
+            optional: "необязательно",
+            smokingAllowed: "Разрешено курение",
+            flexibleTimingOptions: "Гибкие временные опции",
+            flexibleCheckIn: "Гибкий заезд",
+            flexibleCheckOut: "Гибкий выезд",
+            allowEarlyCheckIn: "Разрешить ранний заезд",
+            allowLateCheckOut: "Разрешить поздний выезд",
+            surcharge: "Доплата (₩)",
+            manageRooms: "Управление номерами",
+            reviews: "Отзывы",
+            hotelUpdated: "Отель успешно обновлен.",
+          }
+        : locale === "uz"
+          ? {
+              myHotels: "Mening mehmonxonalarim",
+              hotelSettings: "Mehmonxona sozlamalari",
+              editHotel: "Mehmonxonani tahrirlash",
+              saveChanges: "O'zgarishlarni saqlash",
+              saving: "Saqlanmoqda…",
+              info: "Ma'lumot",
+              amenities: "Qulayliklar",
+              policies: "Qoidalar",
+              hotelName: "Mehmonxona nomi",
+              description: "Tavsif",
+              descriptionPlaceholder:
+                "Obyektning xususiyatlari va yaqin joylar haqida yozing…",
+              starRating: "Yulduz darajasi",
+              starLabel: "yulduz",
+              checkInTime: "Check-in vaqti",
+              checkOutTime: "Check-out vaqti",
+              imageUrls: "Rasm URL lari",
+              onePerLine: "har qatorda bitta",
+              suitableFor: "Mos keladi",
+              facilities: "Qulayliklar",
+              safetyFeatures: "Xavfsizlik",
+              cancellationPolicy: "Bekor qilish siyosati",
+              petsAllowed: "Uy hayvonlari mumkin",
+              maxPetWeight: "Hayvon vazni limiti (kg)",
+              optional: "ixtiyoriy",
+              smokingAllowed: "Chekish mumkin",
+              flexibleTimingOptions: "Moslashuvchan vaqt variantlari",
+              flexibleCheckIn: "Moslashuvchan check-in",
+              flexibleCheckOut: "Moslashuvchan check-out",
+              allowEarlyCheckIn: "Erta check-in so'roviga ruxsat berish",
+              allowLateCheckOut: "Kech check-out so'roviga ruxsat berish",
+              surcharge: "Qo'shimcha to'lov (₩)",
+              manageRooms: "Xonalarni boshqarish",
+              reviews: "Sharhlar",
+              hotelUpdated: "Mehmonxona yangilandi.",
+            }
+          : {
+              myHotels: "My Hotels",
+              hotelSettings: "Hotel Settings",
+              editHotel: "Edit Hotel",
+              saveChanges: "Save Changes",
+              saving: "Saving…",
+              info: "Info",
+              amenities: "Amenities",
+              policies: "Policies",
+              hotelName: "Hotel Name",
+              description: "Description",
+              descriptionPlaceholder:
+                "Describe your property, unique features, nearby attractions…",
+              starRating: "Star Rating",
+              starLabel: "Star",
+              checkInTime: "Check-in Time",
+              checkOutTime: "Check-out Time",
+              imageUrls: "Image URLs",
+              onePerLine: "one per line",
+              suitableFor: "Suitable For",
+              facilities: "Facilities",
+              safetyFeatures: "Safety Features",
+              cancellationPolicy: "Cancellation Policy",
+              petsAllowed: "Pets Allowed",
+              maxPetWeight: "Max Pet Weight (kg)",
+              optional: "optional",
+              smokingAllowed: "Smoking Allowed",
+              flexibleTimingOptions: "Flexible Timing Options",
+              flexibleCheckIn: "Flexible Check-In",
+              flexibleCheckOut: "Flexible Check-Out",
+              allowEarlyCheckIn: "Allow guests to request early check-in",
+              allowLateCheckOut: "Allow guests to request late check-out",
+              surcharge: "Surcharge (₩)",
+              manageRooms: "Manage Rooms",
+              reviews: "Reviews",
+              hotelUpdated: "Hotel updated successfully.",
+            };
+
+  const cancellationOptions = getCancellationOptions(locale);
 
   const [activeTab, setActiveTab] = useState<Tab>("info");
   const [saving, setSaving] = useState(false);
@@ -256,7 +404,7 @@ const EditHotelPage: NextPageWithAuth = () => {
         },
       };
       await updateHotel({ variables: { input } });
-      successAlert("Hotel updated successfully.");
+      successAlert(copy.hotelUpdated);
     } catch (err) {
       errorAlert(getErrorMessage(err));
     } finally {
@@ -301,16 +449,16 @@ const EditHotelPage: NextPageWithAuth = () => {
         className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800"
       >
         <ArrowLeft size={14} />
-        My Hotels
+        {copy.myHotels}
       </Link>
 
       <div className="flex items-start justify-between gap-4">
         <header>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Hotel Settings
+            {copy.hotelSettings}
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-            {hotel?.hotelTitle ?? "Edit Hotel"}
+            {hotel?.hotelTitle ?? copy.editHotel}
           </h1>
         </header>
         <button
@@ -320,7 +468,7 @@ const EditHotelPage: NextPageWithAuth = () => {
           className="flex flex-shrink-0 items-center gap-2 rounded-full bg-sky-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-sky-200 transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Save size={14} />
-          {saving ? "Saving…" : "Save Changes"}
+          {saving ? copy.saving : copy.saveChanges}
         </button>
       </div>
 
@@ -334,10 +482,10 @@ const EditHotelPage: NextPageWithAuth = () => {
             className={TAB_CLASSES(t)}
           >
             {t === "info"
-              ? "Info"
+              ? copy.info
               : t === "amenities"
-                ? "Amenities"
-                : "Policies"}
+                ? copy.amenities
+                : copy.policies}
           </button>
         ))}
       </div>
@@ -347,7 +495,7 @@ const EditHotelPage: NextPageWithAuth = () => {
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Hotel Name
+              {copy.hotelName}
             </span>
             <input
               value={hotelTitle}
@@ -358,21 +506,21 @@ const EditHotelPage: NextPageWithAuth = () => {
 
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Description
+              {copy.description}
             </span>
             <textarea
               value={hotelDesc}
               onChange={(e) => setHotelDesc(e.target.value)}
               rows={4}
               className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-              placeholder="Describe your property, unique features, nearby attractions…"
+              placeholder={copy.descriptionPlaceholder}
             />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Star Rating
+                {copy.starRating}
               </span>
               <select
                 value={starRating}
@@ -381,14 +529,14 @@ const EditHotelPage: NextPageWithAuth = () => {
               >
                 {[1, 2, 3, 4, 5].map((n) => (
                   <option key={n} value={n}>
-                    {"★".repeat(n)} {n}-Star
+                    {"★".repeat(n)} {n} {copy.starLabel}
                   </option>
                 ))}
               </select>
             </label>
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Check-in Time
+                {copy.checkInTime}
               </span>
               <input
                 type="time"
@@ -399,7 +547,7 @@ const EditHotelPage: NextPageWithAuth = () => {
             </label>
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Check-out Time
+                {copy.checkOutTime}
               </span>
               <input
                 type="time"
@@ -412,9 +560,9 @@ const EditHotelPage: NextPageWithAuth = () => {
 
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Image URLs{" "}
+              {copy.imageUrls}{" "}
               <span className="font-normal normal-case text-slate-400">
-                (one per line)
+                ({copy.onePerLine})
               </span>
             </span>
             <textarea
@@ -427,7 +575,7 @@ const EditHotelPage: NextPageWithAuth = () => {
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Suitable For
+              {copy.suitableFor}
             </p>
             <div className="flex flex-wrap gap-2">
               {SUITABLE_FOR_OPTIONS.map((val) => {
@@ -443,7 +591,7 @@ const EditHotelPage: NextPageWithAuth = () => {
                         : "border-slate-200 text-slate-600 hover:border-slate-300"
                     }`}
                   >
-                    {SUITABLE_LABELS[val] ?? val}
+                    {getStayPurposeLabel(val, t)}
                   </button>
                 );
               })}
@@ -457,7 +605,7 @@ const EditHotelPage: NextPageWithAuth = () => {
         <div className="space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Facilities
+              {copy.facilities}
             </h3>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {AMENITY_OPTIONS.map((opt) => {
@@ -488,7 +636,7 @@ const EditHotelPage: NextPageWithAuth = () => {
                         />
                       )}
                     </div>
-                    {opt.label}
+                    {getHotelAmenityLabel(opt.key, t)}
                   </button>
                 );
               })}
@@ -497,7 +645,7 @@ const EditHotelPage: NextPageWithAuth = () => {
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-              Safety Features
+              {copy.safetyFeatures}
             </h3>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {SAFETY_OPTIONS.map((opt) => {
@@ -528,7 +676,7 @@ const EditHotelPage: NextPageWithAuth = () => {
                         />
                       )}
                     </div>
-                    {opt.label}
+                    {getSafetyFeatureLabel(opt.key, locale)}
                   </button>
                 );
               })}
@@ -542,10 +690,10 @@ const EditHotelPage: NextPageWithAuth = () => {
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Cancellation Policy
+              {copy.cancellationPolicy}
             </p>
             <div className="space-y-2">
-              {CANCELLATION_OPTIONS.map((opt) => (
+              {cancellationOptions.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
@@ -589,7 +737,7 @@ const EditHotelPage: NextPageWithAuth = () => {
               }`}
             >
               <span className="text-sm font-medium text-slate-800">
-                Pets Allowed
+                {copy.petsAllowed}
               </span>
               <div
                 className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
@@ -604,9 +752,9 @@ const EditHotelPage: NextPageWithAuth = () => {
             {petsAllowed && (
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Max Pet Weight (kg){" "}
+                  {copy.maxPetWeight}{" "}
                   <span className="font-normal normal-case text-slate-400">
-                    (optional)
+                    ({copy.optional})
                   </span>
                 </span>
                 <input
@@ -629,7 +777,7 @@ const EditHotelPage: NextPageWithAuth = () => {
               }`}
             >
               <span className="text-sm font-medium text-slate-800">
-                Smoking Allowed
+                {copy.smokingAllowed}
               </span>
               <div
                 className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
@@ -648,17 +796,17 @@ const EditHotelPage: NextPageWithAuth = () => {
           {/* Flexible timing */}
           <div className="space-y-3 border-t border-slate-100 pt-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Flexible Timing Options
+              {copy.flexibleTimingOptions}
             </p>
             <div className="space-y-2">
               <div className="rounded-xl border border-slate-200 p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-800">
-                      Flexible Check-in
+                      {copy.flexibleCheckIn}
                     </p>
                     <p className="text-xs text-slate-400">
-                      Allow guests to request early check-in
+                      {copy.allowEarlyCheckIn}
                     </p>
                   </div>
                   <button
@@ -678,7 +826,7 @@ const EditHotelPage: NextPageWithAuth = () => {
                 {flexCheckInEnabled && (
                   <label className="mt-3 block">
                     <span className="mb-1 block text-xs text-slate-500">
-                      Surcharge (₩)
+                      {copy.surcharge}
                     </span>
                     <input
                       type="number"
@@ -695,10 +843,10 @@ const EditHotelPage: NextPageWithAuth = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-800">
-                      Flexible Check-out
+                      {copy.flexibleCheckOut}
                     </p>
                     <p className="text-xs text-slate-400">
-                      Allow guests to request late check-out
+                      {copy.allowLateCheckOut}
                     </p>
                   </div>
                   <button
@@ -718,7 +866,7 @@ const EditHotelPage: NextPageWithAuth = () => {
                 {flexCheckOutEnabled && (
                   <label className="mt-3 block">
                     <span className="mb-1 block text-xs text-slate-500">
-                      Surcharge (₩)
+                      {copy.surcharge}
                     </span>
                     <input
                       type="number"
@@ -742,13 +890,13 @@ const EditHotelPage: NextPageWithAuth = () => {
             href={`/hotels/${hotelId}/rooms`}
             className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
           >
-            Manage Rooms →
+            {copy.manageRooms} →
           </Link>
           <Link
             href={`/hotels/${hotelId}/reviews`}
             className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
           >
-            Reviews →
+            {copy.reviews} →
           </Link>
         </div>
         <button
@@ -758,7 +906,7 @@ const EditHotelPage: NextPageWithAuth = () => {
           className="flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sky-600 disabled:opacity-50"
         >
           <Save size={14} />
-          {saving ? "Saving…" : "Save Changes"}
+          {saving ? copy.saving : copy.saveChanges}
         </button>
       </div>
     </main>
@@ -770,3 +918,118 @@ EditHotelPage.auth = {
 };
 
 export default EditHotelPage;
+
+function getCancellationOptions(locale: string): typeof CANCELLATION_OPTIONS {
+  if (locale === "ko") {
+    return [
+      {
+        value: "FLEXIBLE",
+        label: "유연함",
+        desc: "체크인 24시간 전까지 무료 취소",
+      },
+      {
+        value: "MODERATE",
+        label: "보통",
+        desc: "체크인 5일 전까지 무료 취소",
+      },
+      {
+        value: "STRICT",
+        label: "엄격",
+        desc: "체크인 7일 전까지 50% 환불",
+      },
+    ];
+  }
+
+  if (locale === "ru") {
+    return [
+      {
+        value: "FLEXIBLE",
+        label: "Гибкая",
+        desc: "Бесплатная отмена за 24 часа до заезда",
+      },
+      {
+        value: "MODERATE",
+        label: "Умеренная",
+        desc: "Бесплатная отмена за 5 дней до заезда",
+      },
+      {
+        value: "STRICT",
+        label: "Строгая",
+        desc: "50% возврат за 7 дней до заезда",
+      },
+    ];
+  }
+
+  if (locale === "uz") {
+    return [
+      {
+        value: "FLEXIBLE",
+        label: "Moslashuvchan",
+        desc: "Check-indan 24 soat oldin bepul bekor qilish",
+      },
+      {
+        value: "MODERATE",
+        label: "O'rtacha",
+        desc: "Check-indan 5 kun oldin bepul bekor qilish",
+      },
+      {
+        value: "STRICT",
+        label: "Qattiq",
+        desc: "Check-indan 7 kun oldin 50% qaytariladi",
+      },
+    ];
+  }
+
+  return CANCELLATION_OPTIONS;
+}
+
+function getSafetyFeatureLabel(
+  key: keyof SafetyFeaturesInput,
+  locale: string,
+): string {
+  const labels = {
+    fireSafety: {
+      en: "Fire Safety Equipment",
+      ko: "화재 안전 장비",
+      ru: "Противопожарное оборудование",
+      uz: "Yong'in xavfsizligi jihozlari",
+    },
+    securityCameras: {
+      en: "Security Cameras",
+      ko: "보안 카메라",
+      ru: "Камеры безопасности",
+      uz: "Xavfsizlik kameralari",
+    },
+    frontDesk24h: {
+      en: "24h Front Desk",
+      ko: "24시간 프런트",
+      ru: "Стойка регистрации 24/7",
+      uz: "24 soat resepshn",
+    },
+    roomSafe: {
+      en: "In-Room Safe",
+      ko: "객실 금고",
+      ru: "Сейф в номере",
+      uz: "Xonadagi сейф",
+    },
+    femaleOnlyFloors: {
+      en: "Female-Only Floors",
+      ko: "여성 전용 층",
+      ru: "Этажи только для женщин",
+      uz: "Faqat ayollar uchun qavatlar",
+    },
+    wellLitParking: {
+      en: "Well-Lit Parking",
+      ko: "조명 좋은 주차장",
+      ru: "Хорошо освещенная парковка",
+      uz: "Yaxshi yoritilgan avtoturargoh",
+    },
+  } satisfies Record<
+    keyof SafetyFeaturesInput,
+    Record<"en" | "ko" | "ru" | "uz", string>
+  >;
+
+  const localeKey =
+    locale === "ko" || locale === "ru" || locale === "uz" ? locale : "en";
+  return labels[key][localeKey];
+}

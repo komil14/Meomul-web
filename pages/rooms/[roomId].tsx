@@ -7,16 +7,28 @@ import { RoomOverviewSection } from "@/components/rooms/detail/room-overview-sec
 import { LiveInterestFabContainer } from "@/components/rooms/live-interest-fab-container";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useRoomDetailPageViewModel } from "@/lib/hooks/use-room-detail-page-view-model";
+import { useI18n } from "@/lib/i18n/provider";
 import { formatEnumLabel } from "@/lib/rooms/booking";
+
+function RoomBookingSidebarLoader() {
+  const { t } = useI18n();
+
+  return (
+    <aside className="order-1 self-start rounded-2xl border border-slate-200 bg-white/90 p-3.5 text-sm text-slate-500 sm:rounded-3xl sm:p-4 lg:order-2">
+      {t("room_detail_loading_panel")}
+    </aside>
+  );
+}
 
 const RoomBookingSidebar = dynamic(
   () => import("@/components/rooms/detail/room-booking-sidebar").then((mod) => mod.RoomBookingSidebar),
-  { loading: () => <aside className="order-1 self-start rounded-2xl border border-slate-200 bg-white/90 p-3.5 text-sm text-slate-500 sm:rounded-3xl sm:p-4 lg:order-2">Loading booking panel...</aside> },
+  { loading: () => <RoomBookingSidebarLoader /> },
 );
 
 const ROOM_DETAIL_MOTION_INTENSITY_CLASS = "motion-intensity-bold";
 
 export default function RoomDetailPage() {
+  const { t } = useI18n();
   const liveInterestWidgetClass =
     "bottom-[calc(env(safe-area-inset-bottom)+15.5rem)] sm:bottom-[16rem]";
 
@@ -85,7 +97,7 @@ export default function RoomDetailPage() {
     >
       <div className="flex flex-wrap items-center justify-between gap-3 motion-fade-up motion-delay-1">
         <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
-          Back to hotels
+          {t("room_detail_back")}
         </Link>
       </div>
 
@@ -96,13 +108,13 @@ export default function RoomDetailPage() {
 
       {!isHydrated || roomLoading ? (
         <section className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-600 motion-fade-up motion-delay-2">
-          Loading room...
+          {t("room_detail_loading_room")}
         </section>
       ) : null}
 
       {isHydrated && !roomLoading && !room ? (
         <section className="rounded-2xl border border-slate-200 bg-white px-5 py-8 text-sm text-slate-600 motion-fade-up motion-delay-2">
-          Room not found.
+          {t("room_detail_not_found")}
         </section>
       ) : null}
 

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type { ReviewDto } from "@/types/hotel";
 import type { TestimonialReviewEntry } from "@/types/homepage";
@@ -20,17 +21,20 @@ const toReviewerDisplayName = (review: ReviewDto, index: number): string => {
   return `guest${suffix}`;
 };
 
-const toTestimonialQuote = (review: ReviewDto): string => {
+const toTestimonialQuote = (review: ReviewDto, fallbackText: string): string => {
   const source =
-    review.reviewText?.trim() || review.reviewTitle?.trim() || "Great stay experience.";
+    review.reviewText?.trim() || review.reviewTitle?.trim() || fallbackText;
   if (source.length <= 160) return source;
   return `${source.slice(0, 157).trimEnd()}...`;
 };
 
-const toStayPeriodLabel = (review: ReviewDto): string => {
+const toStayPeriodLabel = (
+  review: ReviewDto,
+  translate: (key: "home_testimonial_verified_stay" | "home_testimonial_stayed_on", params?: Record<string, string | number>) => string,
+): string => {
   const date = review.stayDate?.slice(0, 10);
-  if (!date) return "Verified stay";
-  return `Stayed ${date}`;
+  if (!date) return translate("home_testimonial_verified_stay");
+  return translate("home_testimonial_stayed_on", { date });
 };
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -40,6 +44,7 @@ interface TestimonialsSectionProps {
 }
 
 export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) {
+  const { t } = useI18n();
   const [activeCard, setActiveCard] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -78,14 +83,11 @@ export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) 
     <section className={styles.testimonialsSection}>
       <div className={styles.testimonialsHeader}>
         <div className={styles.testimonialsTopRow}>
-          <p className={styles.testimonialsEyebrow}>
-            <span>Testimonials</span>
-          </p>
+          <p className={styles.testimonialsEyebrow}>{t("home_testimonials_eyebrow")}</p>
         </div>
-        <h2 className={styles.testimonialsTitle}>Trusted by guests booking through Meomul</h2>
+        <h2 className={styles.testimonialsTitle}>{t("home_testimonials_title")}</h2>
         <p className={styles.testimonialsDescription}>
-          Real verified stays from our live booking flow, with review quality reflected directly in
-          hotel ranking.
+          {t("home_testimonials_desc")}
         </p>
       </div>
 
@@ -133,7 +135,7 @@ export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) 
                   <div className={styles.testimonialReviewer}>
                     <h3>{reviewerName}</h3>
                     <p>
-                      {toStayPeriodLabel(review)} · {hotelTitle}
+                      {toStayPeriodLabel(review, t)} · {hotelTitle}
                     </p>
                   </div>
                 </header>
@@ -158,7 +160,9 @@ export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) 
                   ))}
                 </div>
 
-                <p className={styles.testimonialQuote}>&ldquo;{toTestimonialQuote(review)}&rdquo;</p>
+                <p className={styles.testimonialQuote}>
+                  &ldquo;{toTestimonialQuote(review, t("home_testimonial_default_quote"))}&rdquo;
+                </p>
               </article>
             );
           })}

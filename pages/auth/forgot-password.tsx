@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Mail } from "lucide-react";
+import { useI18n } from "@/lib/i18n/provider";
 import type { NextPageWithAuth } from "@/types/page";
 
 const ForgotPasswordPage: NextPageWithAuth = () => {
+  const { t } = useI18n();
   return (
     <main className="mx-auto flex w-full max-w-md flex-col justify-center">
-      <h1 className="text-3xl font-semibold text-slate-900">Forgot Password</h1>
+      <h1 className="text-3xl font-semibold text-slate-900">{t("auth_forgot_title")}</h1>
       <p className="mt-2 text-sm text-slate-500">
-        Password reset via email is not yet available on this platform.
+        {t("auth_forgot_desc")}
       </p>
 
       <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
@@ -16,15 +18,13 @@ const ForgotPasswordPage: NextPageWithAuth = () => {
             <Mail size={18} className="text-sky-500" />
           </div>
           <div>
-            <p className="font-medium text-slate-900">Contact support</p>
+            <p className="font-medium text-slate-900">{t("auth_forgot_card_title")}</p>
             <p className="mt-1 text-sm text-slate-500">
-              To reset your password, please reach out to our support team from
-              the{" "}
+              {t("auth_forgot_card_body_before_link")}{" "}
               <Link href="/support" className="text-sky-600 underline underline-offset-4 hover:text-sky-700">
-                support page
+                {t("nav_support").toLowerCase()}
               </Link>
-              . Include your registered phone number and we will assist you
-              promptly.
+              . {t("auth_forgot_card_body_after_link")}
             </p>
           </div>
         </div>
@@ -32,7 +32,7 @@ const ForgotPasswordPage: NextPageWithAuth = () => {
 
       <div className="mt-6 text-sm text-slate-600">
         <Link href="/auth/login" className="underline underline-offset-4">
-          Back to login
+          {t("auth_back_to_login")}
         </Link>
       </div>
     </main>

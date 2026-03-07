@@ -1,3 +1,5 @@
+import { useI18n } from "@/lib/i18n/provider";
+
 interface HotelsQuickFiltersRowProps {
   activePanel: "location" | "dates" | "guests" | null;
   locationSummary: string;
@@ -25,6 +27,7 @@ export function HotelsQuickFiltersRow({
   onOpenGuests,
   onOpenFilters,
 }: HotelsQuickFiltersRowProps) {
+  const { t } = useI18n();
   return (
     <div className="relative z-20 mt-3">
       <div className="rounded-[1.7rem] border border-slate-200 bg-slate-50/90 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
@@ -36,7 +39,7 @@ export function HotelsQuickFiltersRow({
               activePanel === "location" ? "bg-white shadow-sm" : "hover:bg-white/80"
             }`}
           >
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Location</span>
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotels_quick_location")}</span>
             <span className="mt-1 block text-sm font-medium text-slate-900">{locationSummary}</span>
           </button>
 
@@ -47,7 +50,7 @@ export function HotelsQuickFiltersRow({
               activePanel === "dates" ? "bg-white shadow-sm" : "hover:bg-white/80"
             }`}
           >
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">When</span>
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotels_quick_when")}</span>
             <span className="mt-1 block text-sm font-medium text-slate-900">{dateSummary}</span>
           </button>
 
@@ -58,7 +61,7 @@ export function HotelsQuickFiltersRow({
               activePanel === "guests" ? "bg-white shadow-sm" : "hover:bg-white/80"
             }`}
           >
-            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Guests</span>
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotels_quick_guests")}</span>
             <span className="mt-1 block text-sm font-medium text-slate-900">{guestSummary}</span>
           </button>
 
@@ -70,7 +73,7 @@ export function HotelsQuickFiltersRow({
                 ? "border-slate-300 px-3 shadow-sm hover:border-slate-400 md:min-w-[6.25rem] md:gap-2"
                 : "border-slate-200 hover:border-slate-300 md:w-14"
             }`}
-            aria-label="Open more filters"
+            aria-label={t("hotels_drawer_filters")}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 shrink-0">
               <path d="M4 7h16" />
@@ -79,7 +82,7 @@ export function HotelsQuickFiltersRow({
             </svg>
             {hiddenFilterCount > 0 ? (
               <span className="hidden md:flex md:flex-col md:items-start md:leading-none">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Stays</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("hotels_quick_stays")}</span>
                 <span className="mt-1 text-sm font-semibold text-slate-900">{loading ? "..." : total.toLocaleString()}</span>
               </span>
             ) : null}

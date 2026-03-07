@@ -3,6 +3,12 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { CREATE_HOTEL_MUTATION } from "@/graphql/hotel.gql";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  getHotelAmenityLabel,
+  getHotelLocationLabelLocalized,
+  getHotelTypeLabel,
+} from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import { successAlert } from "@/lib/ui/alerts";
 import type {
@@ -18,25 +24,25 @@ import { ArrowLeft, Check, ChevronDown } from "lucide-react";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const HOTEL_TYPES: Array<{ value: HotelType; label: string }> = [
-  { value: "HOTEL", label: "Hotel" },
-  { value: "MOTEL", label: "Motel" },
-  { value: "RESORT", label: "Resort" },
-  { value: "GUESTHOUSE", label: "Guesthouse" },
-  { value: "HANOK", label: "Hanok (Traditional)" },
-  { value: "PENSION", label: "Pension" },
+const HOTEL_TYPES: HotelType[] = [
+  "HOTEL",
+  "MOTEL",
+  "RESORT",
+  "GUESTHOUSE",
+  "HANOK",
+  "PENSION",
 ];
 
-const LOCATIONS: Array<{ value: HotelLocation; label: string }> = [
-  { value: "SEOUL", label: "Seoul" },
-  { value: "BUSAN", label: "Busan" },
-  { value: "INCHEON", label: "Incheon" },
-  { value: "DAEGU", label: "Daegu" },
-  { value: "DAEJON", label: "Daejeon" },
-  { value: "GWANGJU", label: "Gwangju" },
-  { value: "JEJU", label: "Jeju" },
-  { value: "GYEONGJU", label: "Gyeongju" },
-  { value: "GANGNEUNG", label: "Gangneung" },
+const LOCATIONS: HotelLocation[] = [
+  "SEOUL",
+  "BUSAN",
+  "INCHEON",
+  "DAEGU",
+  "DAEJON",
+  "GWANGJU",
+  "JEJU",
+  "GYEONGJU",
+  "GANGNEUNG",
 ];
 
 const CANCELLATION_OPTIONS: Array<{
@@ -89,6 +95,272 @@ const AMENITY_OPTIONS: Array<{ key: keyof AmenitiesInput; label: string }> = [
 
 const CreateHotelPage: NextPageWithAuth = () => {
   const router = useRouter();
+  const { locale, t } = useI18n();
+  const copy =
+    locale === "ko"
+      ? {
+          myHotels: "내 호텔",
+          propertyRegistration: "숙소 등록",
+          registerHotelTitle: "호텔 등록",
+          hotelNameRequired: "호텔 이름은 필수입니다.",
+          addressRequired: "주소는 필수입니다.",
+          gpsRequired: "올바른 GPS 좌표(위도/경도)가 필요합니다.",
+          registeredSuccess: "호텔이 등록되었습니다. 관리자 검토 후 공개됩니다.",
+          hotelRegistered: "호텔 등록 완료",
+          underReview:
+            "현재 호텔은 관리자 검토 중입니다. 승인되면 공개되며, 그 전까지는 객실을 추가할 수 있습니다.",
+          addRooms: "객실 추가",
+          basicInformation: "기본 정보",
+          policies: "정책",
+          amenities: "편의시설",
+          hotelName: "호텔 이름",
+          type: "유형",
+          city: "도시",
+          address: "주소",
+          latitude: "위도",
+          longitude: "경도",
+          coordinatesHelp:
+            "좌표는 maps.google.com에서 위치를 우클릭해 확인할 수 있습니다.",
+          description: "설명",
+          optional: "선택",
+          descriptionPlaceholder:
+            "숙소 특징, 주변 명소, 차별점 등을 설명해 주세요…",
+          starRating: "성급",
+          checkInTime: "체크인 시간",
+          checkOutTime: "체크아웃 시간",
+          imageUrls: "이미지 URL",
+          onePerLineOptional: "한 줄에 하나, 선택",
+          nextPolicies: "다음: 정책 →",
+          cancellationPolicy: "취소 정책",
+          petsAllowed: "반려동물 허용",
+          smokingAllowed: "흡연 허용",
+          back: "← 뒤로",
+          nextAmenities: "다음: 편의시설 →",
+          registering: "등록 중…",
+          registerHotel: "호텔 등록",
+          fullStreetAddress: "전체 주소",
+          hotelNamePlaceholder: "예: 그랜드 서울 호텔",
+          findCoordinatesAt: "maps.google.com에서 좌표 찾기",
+          rightClickLocation: "위치를 우클릭해 확인",
+          starLabel: "성",
+          noSmoking: "금연",
+          allowSmoking: "흡연 허용",
+          noPets: "반려동물 불가",
+          allowPets: "반려동물 허용",
+        }
+      : locale === "ru"
+        ? {
+            myHotels: "Мои отели",
+            propertyRegistration: "Регистрация объекта",
+            registerHotelTitle: "Добавить отель",
+            hotelNameRequired: "Название отеля обязательно.",
+            addressRequired: "Адрес обязателен.",
+            gpsRequired:
+              "Нужны корректные GPS-координаты (широта и долгота).",
+            registeredSuccess:
+              "Отель зарегистрирован. После проверки администратором он станет публичным.",
+            hotelRegistered: "Отель зарегистрирован",
+            underReview:
+              "Сейчас отель находится на проверке администратора. После одобрения он станет доступен, а пока вы можете добавить номера.",
+            addRooms: "Добавить номера",
+            basicInformation: "Основная информация",
+            policies: "Политики",
+            amenities: "Удобства",
+            hotelName: "Название отеля",
+            type: "Тип",
+            city: "Город",
+            address: "Адрес",
+            latitude: "Широта",
+            longitude: "Долгота",
+            coordinatesHelp:
+              "Координаты можно найти на maps.google.com, нажав правой кнопкой по месту.",
+            description: "Описание",
+            optional: "необязательно",
+            descriptionPlaceholder:
+              "Опишите объект, его особенности и достопримечательности рядом…",
+            starRating: "Звездность",
+            checkInTime: "Время заезда",
+            checkOutTime: "Время выезда",
+            imageUrls: "URL изображений",
+            onePerLineOptional: "по одному в строке, необязательно",
+            nextPolicies: "Далее: политики →",
+            cancellationPolicy: "Политика отмены",
+            petsAllowed: "Можно с животными",
+            smokingAllowed: "Разрешено курение",
+            back: "← Назад",
+            nextAmenities: "Далее: удобства →",
+            registering: "Регистрация…",
+            registerHotel: "Зарегистрировать отель",
+            fullStreetAddress: "Полный адрес",
+            hotelNamePlaceholder: "напр. Grand Seoul Hotel",
+            findCoordinatesAt: "Найти координаты на maps.google.com",
+            rightClickLocation: "нажмите правой кнопкой по месту",
+            starLabel: "звезды",
+            noSmoking: "Не курить",
+            allowSmoking: "Курение разрешено",
+            noPets: "Без животных",
+            allowPets: "Можно с животными",
+          }
+        : locale === "uz"
+          ? {
+              myHotels: "Mening mehmonxonalarim",
+              propertyRegistration: "Obyekt ro'yxatdan o'tkazish",
+              registerHotelTitle: "Mehmonxona qo'shish",
+              hotelNameRequired: "Mehmonxona nomi majburiy.",
+              addressRequired: "Manzil majburiy.",
+              gpsRequired: "To'g'ri GPS koordinatalari (lat/lng) kerak.",
+              registeredSuccess:
+                "Mehmonxona ro'yxatdan o'tdi. Admin tekshiruvdan so'ng ommaga chiqadi.",
+              hotelRegistered: "Mehmonxona ro'yxatdan o'tdi",
+              underReview:
+                "Mehmonxona admin tekshiruvida. Tasdiqlanguncha xonalarni qo'shishingiz mumkin.",
+              addRooms: "Xonalar qo'shish",
+              basicInformation: "Asosiy ma'lumotlar",
+              policies: "Qoidalar",
+              amenities: "Qulayliklar",
+              hotelName: "Mehmonxona nomi",
+              type: "Turi",
+              city: "Shahar",
+              address: "Manzil",
+              latitude: "Kenglik",
+              longitude: "Uzunlik",
+              coordinatesHelp:
+                "Koordinatalarni maps.google.com saytida joyni o'ng bosib topish mumkin.",
+              description: "Tavsif",
+              optional: "ixtiyoriy",
+              descriptionPlaceholder:
+                "Obyekt, o'ziga xos tomonlari va yaqin joylar haqida yozing…",
+              starRating: "Yulduz darajasi",
+              checkInTime: "Check-in vaqti",
+              checkOutTime: "Check-out vaqti",
+              imageUrls: "Rasm URL lari",
+              onePerLineOptional: "har qatorda bitta, ixtiyoriy",
+              nextPolicies: "Keyingi: qoidalar →",
+              cancellationPolicy: "Bekor qilish siyosati",
+              petsAllowed: "Uy hayvonlari mumkin",
+              smokingAllowed: "Chekish mumkin",
+              back: "← Orqaga",
+              nextAmenities: "Keyingi: qulayliklar →",
+              registering: "Ro'yxatdan o'tkazilmoqda…",
+              registerHotel: "Mehmonxonani qo'shish",
+              fullStreetAddress: "To'liq manzil",
+              hotelNamePlaceholder: "masalan, Grand Seoul Hotel",
+              findCoordinatesAt: "Koordinatalarni maps.google.com da toping",
+              rightClickLocation: "joyni o'ng tugma bilan bosing",
+              starLabel: "yulduz",
+              noSmoking: "Chekish yo'q",
+              allowSmoking: "Chekish mumkin",
+              noPets: "Uy hayvonlari yo'q",
+              allowPets: "Uy hayvonlari mumkin",
+            }
+          : {
+              myHotels: "My Hotels",
+              propertyRegistration: "Property Registration",
+              registerHotelTitle: "Register a Hotel",
+              hotelNameRequired: "Hotel name is required.",
+              addressRequired: "Address is required.",
+              gpsRequired: "Valid GPS coordinates (Lat and Lng) are required.",
+              registeredSuccess:
+                "Hotel registered! It will be reviewed by an admin before going live.",
+              hotelRegistered: "Hotel Registered",
+              underReview:
+                "Your hotel is currently under admin review. It will go live once approved. In the meantime, you can add rooms.",
+              addRooms: "Add Rooms",
+              basicInformation: "Basic Information",
+              policies: "Policies",
+              amenities: "Amenities",
+              hotelName: "Hotel Name",
+              type: "Type",
+              city: "City",
+              address: "Address",
+              latitude: "Latitude",
+              longitude: "Longitude",
+              coordinatesHelp:
+                "Find coordinates at maps.google.com and right-click your location.",
+              description: "Description",
+              optional: "optional",
+              descriptionPlaceholder:
+                "Describe your property, unique features, nearby attractions…",
+              starRating: "Star Rating",
+              checkInTime: "Check-in Time",
+              checkOutTime: "Check-out Time",
+              imageUrls: "Image URLs",
+              onePerLineOptional: "one per line, optional",
+              nextPolicies: "Next: Policies →",
+              cancellationPolicy: "Cancellation Policy",
+              petsAllowed: "Pets Allowed",
+              smokingAllowed: "Smoking Allowed",
+              back: "← Back",
+              nextAmenities: "Next: Amenities →",
+              registering: "Registering…",
+              registerHotel: "Register Hotel",
+              fullStreetAddress: "Full street address",
+              hotelNamePlaceholder: "e.g. Grand Seoul Hotel",
+              findCoordinatesAt: "Find coordinates at maps.google.com",
+              rightClickLocation: "right-click your location",
+              starLabel: "Star",
+              noSmoking: "No smoking",
+              allowSmoking: "Smoking allowed",
+              noPets: "No pets",
+              allowPets: "Pets allowed",
+            };
+
+  const cancellationOptions =
+    locale === "ko"
+      ? [
+          {
+            value: "FLEXIBLE" as const,
+            label: "유연함",
+            desc: "체크인 24시간 전까지 무료 취소",
+          },
+          {
+            value: "MODERATE" as const,
+            label: "보통",
+            desc: "체크인 5일 전까지 무료 취소",
+          },
+          {
+            value: "STRICT" as const,
+            label: "엄격",
+            desc: "체크인 7일 전까지 50% 환불",
+          },
+        ]
+      : locale === "ru"
+        ? [
+            {
+              value: "FLEXIBLE" as const,
+              label: "Гибкая",
+              desc: "Бесплатная отмена за 24 часа до заезда",
+            },
+            {
+              value: "MODERATE" as const,
+              label: "Умеренная",
+              desc: "Бесплатная отмена за 5 дней до заезда",
+            },
+            {
+              value: "STRICT" as const,
+              label: "Строгая",
+              desc: "50% возврат за 7 дней до заезда",
+            },
+          ]
+        : locale === "uz"
+          ? [
+              {
+                value: "FLEXIBLE" as const,
+                label: "Moslashuvchan",
+                desc: "Check-indan 24 soat oldin bepul bekor qilish",
+              },
+              {
+                value: "MODERATE" as const,
+                label: "O'rtacha",
+                desc: "Check-indan 5 kun oldin bepul bekor qilish",
+              },
+              {
+                value: "STRICT" as const,
+                label: "Qattiq",
+                desc: "Check-indan 7 kun oldin 50% qaytariladi",
+              },
+            ]
+          : CANCELLATION_OPTIONS;
 
   // Basic info
   const [hotelTitle, setHotelTitle] = useState("");
@@ -133,17 +405,17 @@ const CreateHotelPage: NextPageWithAuth = () => {
   const handleSubmit = async () => {
     setFormError(null);
     if (!hotelTitle.trim()) {
-      setFormError("Hotel name is required.");
+      setFormError(copy.hotelNameRequired);
       return;
     }
     if (!address.trim()) {
-      setFormError("Address is required.");
+      setFormError(copy.addressRequired);
       return;
     }
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
     if (isNaN(latNum) || isNaN(lngNum)) {
-      setFormError("Valid GPS coordinates (Lat and Lng) are required.");
+      setFormError(copy.gpsRequired);
       return;
     }
 
@@ -181,9 +453,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
       const hotel = result.data?.createHotel;
       if (hotel) {
         setCreated({ id: hotel._id, title: hotel.hotelTitle });
-        successAlert(
-          "Hotel registered! It will be reviewed by an admin before going live.",
-        );
+        successAlert(copy.registeredSuccess);
       }
     } catch (err) {
       setFormError(getErrorMessage(err));
@@ -213,28 +483,27 @@ const CreateHotelPage: NextPageWithAuth = () => {
           </div>
           <div className="anim-cfade space-y-2">
             <p className="text-xs font-semibold uppercase tracking-widest text-emerald-600">
-              Hotel Registered
+              {copy.hotelRegistered}
             </p>
             <h1 className="text-2xl font-semibold text-slate-900">
               {created.title}
             </h1>
           </div>
           <div className="anim-cfade rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-            Your hotel is currently <strong>under admin review</strong>. It will
-            go live once approved. In the meantime, you can add rooms.
+            {copy.underReview}
           </div>
           <div className="anim-cfade flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Link
               href={`/hotels/${created.id}/rooms`}
               className="rounded-full bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
             >
-              Add Rooms →
+              {copy.addRooms} →
             </Link>
             <Link
               href="/hotels/manage"
               className="rounded-full border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400"
             >
-              My Hotels
+              {copy.myHotels}
             </Link>
           </div>
         </main>
@@ -295,15 +564,15 @@ const CreateHotelPage: NextPageWithAuth = () => {
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition hover:text-slate-800"
         >
           <ArrowLeft size={14} />
-          My Hotels
+          {copy.myHotels}
         </Link>
 
         <header>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-            Property Registration
+            {copy.propertyRegistration}
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-            Register a Hotel
+            {copy.registerHotelTitle}
           </h1>
         </header>
 
@@ -318,27 +587,27 @@ const CreateHotelPage: NextPageWithAuth = () => {
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <SectionHeader
               num={1}
-              label="Basic Information"
+              label={copy.basicInformation}
               isOpen={openSection === 1}
             />
             {openSection === 1 && (
               <div className="section-body space-y-4 border-t border-slate-100 px-5 pb-5 pt-4">
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Hotel Name <span className="text-rose-500">*</span>
+                    {copy.hotelName} <span className="text-rose-500">*</span>
                   </span>
                   <input
                     value={hotelTitle}
                     onChange={(e) => setHotelTitle(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                    placeholder="e.g. Grand Seoul Hotel"
+                    placeholder={copy.hotelNamePlaceholder}
                   />
                 </label>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Type
+                      {copy.type}
                     </span>
                     <select
                       value={hotelType}
@@ -347,9 +616,9 @@ const CreateHotelPage: NextPageWithAuth = () => {
                       }
                       className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     >
-                      {HOTEL_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
+                      {HOTEL_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {getHotelTypeLabel(type, t)}
                         </option>
                       ))}
                     </select>
@@ -357,7 +626,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
 
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      City
+                      {copy.city}
                     </span>
                     <select
                       value={hotelLocation}
@@ -366,9 +635,9 @@ const CreateHotelPage: NextPageWithAuth = () => {
                       }
                       className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     >
-                      {LOCATIONS.map((l) => (
-                        <option key={l.value} value={l.value}>
-                          {l.label}
+                      {LOCATIONS.map((location) => (
+                        <option key={location} value={location}>
+                          {getHotelLocationLabelLocalized(location, t)}
                         </option>
                       ))}
                     </select>
@@ -377,20 +646,20 @@ const CreateHotelPage: NextPageWithAuth = () => {
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Address <span className="text-rose-500">*</span>
+                    {copy.address} <span className="text-rose-500">*</span>
                   </span>
                   <input
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                    placeholder="Full street address"
+                    placeholder={copy.fullStreetAddress}
                   />
                 </label>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Latitude <span className="text-rose-500">*</span>
+                      {copy.latitude} <span className="text-rose-500">*</span>
                     </span>
                     <input
                       type="number"
@@ -403,7 +672,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Longitude <span className="text-rose-500">*</span>
+                      {copy.longitude} <span className="text-rose-500">*</span>
                     </span>
                     <input
                       type="number"
@@ -416,16 +685,16 @@ const CreateHotelPage: NextPageWithAuth = () => {
                   </label>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Find coordinates at{" "}
-                  <span className="font-medium">maps.google.com</span> →
-                  right-click on your location.
+                  {copy.findCoordinatesAt}{" "}
+                  <span className="font-medium">maps.google.com</span> →{" "}
+                  {copy.rightClickLocation}.
                 </p>
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Description{" "}
+                    {copy.description}{" "}
                     <span className="font-normal normal-case text-slate-400">
-                      (optional)
+                      ({copy.optional})
                     </span>
                   </span>
                   <textarea
@@ -433,14 +702,14 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     onChange={(e) => setHotelDesc(e.target.value)}
                     rows={3}
                     className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                    placeholder="Describe your property, unique features, nearby attractions…"
+                    placeholder={copy.descriptionPlaceholder}
                   />
                 </label>
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Star Rating
+                      {copy.starRating}
                     </span>
                     <select
                       value={starRating}
@@ -449,14 +718,14 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     >
                       {[1, 2, 3, 4, 5].map((n) => (
                         <option key={n} value={n}>
-                          {"★".repeat(n)} {n}-Star
+                          {"★".repeat(n)} {n} {copy.starLabel}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Check-in Time
+                      {copy.checkInTime}
                     </span>
                     <input
                       type="time"
@@ -467,7 +736,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Check-out Time
+                      {copy.checkOutTime}
                     </span>
                     <input
                       type="time"
@@ -480,9 +749,9 @@ const CreateHotelPage: NextPageWithAuth = () => {
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Image URLs{" "}
+                    {copy.imageUrls}{" "}
                     <span className="font-normal normal-case text-slate-400">
-                      (one per line, optional)
+                      ({copy.onePerLineOptional})
                     </span>
                   </span>
                   <textarea
@@ -500,7 +769,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     onClick={() => setOpenSection(2)}
                     className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
                   >
-                    Next: Policies →
+                    {copy.nextPolicies}
                   </button>
                 </div>
               </div>
@@ -511,17 +780,17 @@ const CreateHotelPage: NextPageWithAuth = () => {
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <SectionHeader
               num={2}
-              label="Policies"
+              label={copy.policies}
               isOpen={openSection === 2}
             />
             {openSection === 2 && (
               <div className="section-body space-y-5 border-t border-slate-100 px-5 pb-5 pt-4">
                 <div>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Cancellation Policy
+                    {copy.cancellationPolicy}
                   </p>
                   <div className="space-y-2">
-                    {CANCELLATION_OPTIONS.map((opt) => (
+                    {cancellationOptions.map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
@@ -565,7 +834,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     }`}
                   >
                     <span className="text-sm font-medium text-slate-800">
-                      Pets Allowed
+                      {petsAllowed ? copy.allowPets : copy.noPets}
                     </span>
                     <div
                       className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
@@ -594,7 +863,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     }`}
                   >
                     <span className="text-sm font-medium text-slate-800">
-                      Smoking Allowed
+                      {smokingAllowed ? copy.allowSmoking : copy.noSmoking}
                     </span>
                     <div
                       className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition ${
@@ -620,14 +889,14 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     onClick={() => setOpenSection(1)}
                     className="rounded-full border border-slate-200 px-5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
                   >
-                    ← Back
+                    {copy.back}
                   </button>
                   <button
                     type="button"
                     onClick={() => setOpenSection(3)}
                     className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
                   >
-                    Next: Amenities →
+                    {copy.nextAmenities}
                   </button>
                 </div>
               </div>
@@ -638,7 +907,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <SectionHeader
               num={3}
-              label="Amenities"
+              label={copy.amenities}
               isOpen={openSection === 3}
             />
             {openSection === 3 && (
@@ -673,7 +942,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
                           )}
                         </div>
                         <span className="text-xs font-medium leading-tight">
-                          {opt.label}
+                          {getHotelAmenityLabel(opt.key, t)}
                         </span>
                       </button>
                     );
@@ -686,7 +955,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     onClick={() => setOpenSection(2)}
                     className="rounded-full border border-slate-200 px-5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
                   >
-                    ← Back
+                    {copy.back}
                   </button>
                   <button
                     type="button"
@@ -694,7 +963,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     disabled={loading}
                     className="rounded-full bg-sky-500 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-sky-200 transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {loading ? "Registering…" : "Register Hotel"}
+                    {loading ? copy.registering : copy.registerHotel}
                   </button>
                 </div>
               </div>

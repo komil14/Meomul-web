@@ -4,6 +4,11 @@ import { useMemo, useEffect, useRef } from "react";
 import { GET_AGENT_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  getHotelLocationLabelLocalized,
+  getHotelTypeLabel,
+} from "@/lib/hotels/hotels-i18n";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type {
   GetAgentHotelsQueryData,
@@ -31,56 +36,119 @@ const PAGINATION: PaginationInput = {
   direction: -1,
 };
 
-const STATUS_CONFIG: Record<HotelStatus, { label: string; className: string }> =
-  {
+const STATUS_CONFIG: Record<HotelStatus, { key: string; className: string }> = {
     PENDING: {
-      label: "Pending Review",
+      key: "pendingReview",
       className: "bg-amber-50 text-amber-700 border border-amber-200",
     },
     ACTIVE: {
-      label: "Active",
+      key: "active",
       className: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     },
     INACTIVE: {
-      label: "Inactive",
+      key: "inactive",
       className: "bg-slate-100 text-slate-500 border border-slate-200",
     },
     SUSPENDED: {
-      label: "Suspended",
+      key: "suspended",
       className: "bg-rose-50 text-rose-600 border border-rose-200",
     },
     DELETE: {
-      label: "Deleted",
+      key: "deleted",
       className: "bg-slate-100 text-slate-400 border border-slate-200",
     },
   };
 
-const TYPE_LABELS: Record<HotelType, string> = {
-  HOTEL: "Hotel",
-  MOTEL: "Motel",
-  RESORT: "Resort",
-  GUESTHOUSE: "Guesthouse",
-  HANOK: "Hanok",
-  PENSION: "Pension",
-};
-
-const LOCATION_LABELS: Record<string, string> = {
-  SEOUL: "Seoul",
-  BUSAN: "Busan",
-  INCHEON: "Incheon",
-  DAEGU: "Daegu",
-  DAEJON: "Daejeon",
-  GWANGJU: "Gwangju",
-  JEJU: "Jeju",
-  GYEONGJU: "Gyeongju",
-  GANGNEUNG: "Gangneung",
-};
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const HotelsManagePage: NextPageWithAuth = () => {
+  const { locale, t } = useI18n();
   const member = useMemo(() => getSessionMember(), []);
   const isPageVisible = usePageVisible();
+  const copy =
+    locale === "ko"
+      ? {
+          eyebrow: "숙소 관리",
+          title: "내 호텔",
+          register: "호텔 등록",
+          emptyTitle: "아직 등록된 호텔이 없습니다",
+          emptyBody: "첫 숙소를 등록하고 예약을 받아보세요.",
+          reviewNotice: "관리자 검토 중입니다. 승인되면 호텔이 공개됩니다.",
+          rooms: "객실",
+          reviews: "후기",
+          edit: "수정",
+          publicPage: "공개 페이지 보기",
+          registered: "등록됨",
+          status: {
+            pendingReview: "검토 대기",
+            active: "운영 중",
+            inactive: "비활성",
+            suspended: "중지됨",
+            deleted: "삭제됨",
+          },
+        }
+      : locale === "ru"
+        ? {
+            eyebrow: "Управление объектами",
+            title: "Мои отели",
+            register: "Добавить отель",
+            emptyTitle: "Отелей пока нет",
+            emptyBody: "Добавьте первый объект и начните принимать бронирования.",
+            reviewNotice: "Объект на проверке администратора и станет доступен после одобрения.",
+            rooms: "Номера",
+            reviews: "Отзывы",
+            edit: "Изменить",
+            publicPage: "Открыть публичную страницу",
+            registered: "зарегистрировано",
+            status: {
+              pendingReview: "На проверке",
+              active: "Активен",
+              inactive: "Неактивен",
+              suspended: "Приостановлен",
+              deleted: "Удален",
+            },
+          }
+        : locale === "uz"
+          ? {
+              eyebrow: "Obyekt boshqaruvi",
+              title: "Mening mehmonxonalarim",
+              register: "Mehmonxona qo'shish",
+              emptyTitle: "Hali mehmonxonalar yo'q",
+              emptyBody: "Birinchi obyektni qo'shing va bronlarni qabul qilishni boshlang.",
+              reviewNotice: "Obyekt admin tekshiruvida. Tasdiqlangach ochiladi.",
+              rooms: "Xonalar",
+              reviews: "Sharhlar",
+              edit: "Tahrirlash",
+              publicPage: "Ochiq sahifani ko'rish",
+              registered: "ta ro'yxatdan o'tgan",
+              status: {
+                pendingReview: "Tekshiruvda",
+                active: "Faol",
+                inactive: "Nofaol",
+                suspended: "To'xtatilgan",
+                deleted: "O'chirilgan",
+              },
+            }
+          : {
+              eyebrow: "Property Management",
+              title: "My Hotels",
+              register: "Register Hotel",
+              emptyTitle: "No hotels yet",
+              emptyBody: "Register your first property to start accepting bookings.",
+              reviewNotice: "Under admin review — your hotel will go live once approved.",
+              rooms: "Rooms",
+              reviews: "Reviews",
+              edit: "Edit",
+              publicPage: "View public page",
+              registered: "registered",
+              status: {
+                pendingReview: "Pending Review",
+                active: "Active",
+                inactive: "Inactive",
+                suspended: "Suspended",
+                deleted: "Deleted",
+              },
+            };
 
   const { data, loading, error, refetch } = useQuery<
     GetAgentHotelsQueryData,
@@ -125,10 +193,10 @@ const HotelsManagePage: NextPageWithAuth = () => {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              Property Management
+              {copy.eyebrow}
             </p>
             <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-              My Hotels
+              {copy.title}
             </h1>
           </div>
           <Link
@@ -136,7 +204,7 @@ const HotelsManagePage: NextPageWithAuth = () => {
             className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
           >
             <Plus size={15} />
-            Register Hotel
+            {copy.register}
           </Link>
         </div>
 
@@ -170,16 +238,16 @@ const HotelsManagePage: NextPageWithAuth = () => {
         {!loading && hotels.length === 0 && (
           <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white text-center">
             <Building2 size={40} className="text-slate-300" />
-            <p className="mt-4 font-semibold text-slate-700">No hotels yet</p>
+            <p className="mt-4 font-semibold text-slate-700">{copy.emptyTitle}</p>
             <p className="mt-1 text-sm text-slate-500">
-              Register your first property to start accepting bookings.
+              {copy.emptyBody}
             </p>
             <Link
               href="/hotels/create"
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
             >
               <Plus size={14} />
-              Register Hotel
+              {copy.register}
             </Link>
           </div>
         )}
@@ -219,7 +287,7 @@ const HotelsManagePage: NextPageWithAuth = () => {
                       <span
                         className={`absolute right-2.5 top-2.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusCfg.className}`}
                       >
-                        {statusCfg.label}
+                        {copy.status[statusCfg.key as keyof typeof copy.status]}
                       </span>
                     )}
                   </div>
@@ -232,9 +300,8 @@ const HotelsManagePage: NextPageWithAuth = () => {
                           {hotel.hotelTitle}
                         </p>
                         <p className="mt-0.5 text-xs text-slate-500">
-                          {TYPE_LABELS[hotel.hotelType]} ·{" "}
-                          {LOCATION_LABELS[hotel.hotelLocation] ??
-                            hotel.hotelLocation}
+                          {getHotelTypeLabel(hotel.hotelType as HotelType, t)} ·{" "}
+                          {getHotelLocationLabelLocalized(hotel.hotelLocation, t)}
                         </p>
                       </div>
                       {hotel.hotelRating > 0 && (
@@ -251,8 +318,7 @@ const HotelsManagePage: NextPageWithAuth = () => {
                     {/* Pending notice for agents */}
                     {isAgent && status === "PENDING" && (
                       <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-600">
-                        Under admin review — your hotel will go live once
-                        approved.
+                        {copy.reviewNotice}
                       </p>
                     )}
 
@@ -263,26 +329,26 @@ const HotelsManagePage: NextPageWithAuth = () => {
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                       >
                         <DoorOpen size={13} />
-                        Rooms
+                        {copy.rooms}
                       </Link>
                       <Link
                         href={`/hotels/${hotel._id}/reviews`}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                       >
                         <Star size={13} />
-                        Reviews
+                        {copy.reviews}
                       </Link>
                       <Link
                         href={`/hotels/${hotel._id}/edit`}
                         className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                       >
                         <PenLine size={13} />
-                        Edit
+                        {copy.edit}
                       </Link>
                       <Link
                         href={`/hotels/${hotel._id}`}
                         className="flex items-center justify-center rounded-xl border border-slate-200 px-3 py-2 text-slate-500 transition hover:border-slate-400 hover:bg-slate-50"
-                        title="View public page"
+                        title={copy.publicPage}
                       >
                         <ChevronRight size={14} />
                       </Link>
@@ -297,7 +363,7 @@ const HotelsManagePage: NextPageWithAuth = () => {
         {/* Stats bar */}
         {hotels.length > 0 && (
           <p className="text-center text-xs text-slate-400">
-            {hotels.length} hotel{hotels.length !== 1 ? "s" : ""} registered
+            {hotels.length.toLocaleString(locale)} {copy.registered}
           </p>
         )}
       </main>

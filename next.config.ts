@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  i18n: {
+    locales: ["en", "ko", "ru", "uz"],
+    defaultLocale: "en",
+    localeDetection: false,
+  },
 
   // Tree-shake barrel exports for large icon/UI libraries
   experimental: {

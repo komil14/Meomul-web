@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import Image from "next/image";
+import { useI18n } from "@/lib/i18n/provider";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 
 interface HotelGallerySectionProps {
@@ -20,6 +21,7 @@ const clampIndex = (index: number, total: number): number => {
 };
 
 export const HotelGallerySection = memo(function HotelGallerySection({ images }: HotelGallerySectionProps) {
+  const { t } = useI18n();
   const galleryImages = useMemo(
     () => images.map((image) => resolveMediaUrl(image)).filter((image) => image.length > 0),
     [images],
@@ -53,11 +55,11 @@ export const HotelGallerySection = memo(function HotelGallerySection({ images }:
   return (
     <section id="gallery" className="space-y-4">
       <header className="space-y-1.5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Gallery</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotel_gallery_eyebrow")}</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">Photo Overview</h2>
-            <p className="text-sm text-slate-600">Simple inline gallery with quick scene switching.</p>
+            <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">{t("hotel_gallery_title")}</h2>
+            <p className="text-sm text-slate-600">{t("hotel_gallery_desc")}</p>
           </div>
         </div>
       </header>
@@ -88,14 +90,14 @@ export const HotelGallerySection = memo(function HotelGallerySection({ images }:
                     onClick={handlePrev}
                     className="rounded-full border border-white/30 bg-black/45 px-3 py-1 text-xs font-semibold text-white transition hover:bg-black/60"
                   >
-                    Prev
+                    {t("hotel_gallery_prev")}
                   </button>
                   <button
                     type="button"
                     onClick={handleNext}
                     className="rounded-full border border-white/30 bg-black/45 px-3 py-1 text-xs font-semibold text-white transition hover:bg-black/60"
                   >
-                    Next
+                    {t("hotel_gallery_next")}
                   </button>
                 </div>
               ) : null}
@@ -132,7 +134,7 @@ export const HotelGallerySection = memo(function HotelGallerySection({ images }:
         </div>
       ) : (
         <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-          No gallery images available yet.
+          {t("hotel_gallery_empty")}
         </section>
       )}
     </section>

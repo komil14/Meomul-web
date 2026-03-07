@@ -11,13 +11,16 @@ import {
 } from "@/graphql/chat.gql";
 import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
+import {
+  formatChatTime,
+  formatChatTimeAgo,
+  getChatCopy,
+  getLastPreviewLabel,
+} from "@/lib/chat/chat-i18n";
+import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import {
-  SUPPORT_CHAT_TITLE,
   avatarBg,
-  fmtTime,
-  getLastPreview,
-  timeAgo,
 } from "@/lib/chat/chat-helpers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
@@ -56,10 +59,12 @@ function Bubble({
   message,
   isOwn,
   isLast,
+  locale,
 }: {
   message: MessageDto;
   isOwn: boolean;
   isLast: boolean;
+  locale: "en" | "ko" | "ru" | "uz";
 }) {
   const sent = "bg-[#d4e5f7] text-slate-900 rounded-xl";
   const recv =
@@ -73,7 +78,7 @@ function Bubble({
       {isOwn && isLast && (
         <div className="flex flex-shrink-0 flex-col items-end gap-0.5 pb-0.5">
           <span className="text-[9px] leading-none text-slate-400">
-            {fmtTime(message.timestamp)}
+            {formatChatTime(locale, message.timestamp)}
           </span>
           {message.read ? (
             <CheckCheck size={9} className="text-blue-400" />
@@ -121,7 +126,7 @@ function Bubble({
       {/* Received: time to the RIGHT of bubble */}
       {!isOwn && isLast && (
         <span className="flex-shrink-0 pb-0.5 text-[9px] leading-none text-slate-400">
-          {fmtTime(message.timestamp)}
+          {formatChatTime(locale, message.timestamp)}
         </span>
       )}
     </div>
@@ -141,6 +146,8 @@ export function ChatDrawer({
   onClose,
   unreadCount: _unreadCount,
 }: ChatDrawerProps) {
+  const { locale } = useI18n();
+  const copy = getChatCopy(locale);
   const member = useMemo(() => getSessionMember(), []);
   const isUser = member?.memberType === "USER";
   void _unreadCount;
@@ -148,7 +155,7 @@ export function ChatDrawer({
   const [view, setView] = useState<"list" | "thread">("list");
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeChatHotelName, setActiveChatHotelName] =
-    useState<string>("Hotel Support");
+    useState<string>(copy.hotelSupport);
 
   // Mount/unmount with exit animation support
   const [isVisible, setIsVisible] = useState(false);
@@ -189,6 +196,8 @@ export function ChatDrawer({
             isUser={isUser}
             isOpen={isOpen}
             onClose={onClose}
+            locale={locale}
+            copy={copy}
             onSelectChat={(id, hotelName) => {
               setActiveChatId(id);
               setActiveChatHotelName(hotelName);
@@ -201,6 +210,8 @@ export function ChatDrawer({
             hotelName={activeChatHotelName}
             isUser={isUser}
             isOpen={isOpen}
+            locale={locale}
+            copy={copy}
             onBack={() => setView("list")}
             onClose={onClose}
           />
@@ -217,11 +228,15 @@ function ListView({
   isOpen,
   onClose,
   onSelectChat,
+  locale,
+  copy,
 }: {
   isUser: boolean;
   isOpen: boolean;
   onClose: () => void;
   onSelectChat: (chatId: string, hotelName: string) => void;
+  locale: "en" | "ko" | "ru" | "uz";
+  copy: ReturnType<typeof getChatCopy>;
 }) {
   const listInput = useMemo<PaginationInput>(
     () => ({ page: 1, limit: 15, sort: "lastMessageAt", direction: -1 }),
@@ -282,14 +297,14 @@ function ListView({
     <>
       {/* Header */}
       <div className="flex flex-none items-center justify-between border-b border-slate-100 px-4 py-3.5">
-        <p className="text-base font-bold text-slate-900">Messages</p>
+        <p className="text-base font-bold text-slate-900">{copy.messages}</p>
         <div className="flex items-center gap-1">
           <Link
             href="/chats"
             onClick={onClose}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-sky-500 transition hover:bg-sky-50"
           >
-            View all
+            {copy.viewAll}
             <ExternalLink size={11} />
           </Link>
           {isUser && (
@@ -297,8 +312,8 @@ function ListView({
               href="/chats?openNew=1"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100"
-              title="New conversation"
-              aria-label="New conversation"
+              title={copy.newConversation}
+              aria-label={copy.newConversation}
             >
               <SquarePen size={15} />
             </Link>
@@ -307,7 +322,7 @@ function ListView({
             type="button"
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100"
-            aria-label="Close"
+            aria-label={copy.close}
           >
             <X size={16} />
           </button>
@@ -330,11 +345,12 @@ function ListView({
                     <span className="font-bold text-slate-900">
                       {agentUnreadCount}
                     </span>{" "}
-                    unread conversation
-                    {agentUnreadCount !== 1 ? "s" : ""}
+                    {copy.unreadConversations
+                      .replace("{{count}}", agentUnreadCount.toString())
+                      .replace("{{suffix}}", agentUnreadCount !== 1 ? "s" : "")}
                   </>
                 ) : (
-                  "No unread conversations"
+                  copy.noUnreadConversations
                 )}
               </p>
               {agentUnreadCount > 0 && (
@@ -349,7 +365,7 @@ function ListView({
               className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
             >
               <ExternalLink size={13} />
-              Open chat management
+              {copy.openChatManagement}
             </Link>
           </div>
         )}
@@ -373,9 +389,9 @@ function ListView({
         {isUser && !chatsLoading && chats.length === 0 && (
           <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
             <MessageSquare size={28} className="mb-3 text-slate-200" />
-            <p className="font-semibold text-slate-700">No conversations yet</p>
+            <p className="font-semibold text-slate-700">{copy.noConversations}</p>
             <p className="mt-1.5 text-sm text-slate-400">
-              Message a hotel directly or reach our support team
+              {copy.noConversationsDesc}
             </p>
             <div className="mt-5 flex w-full flex-col gap-2">
               <Link
@@ -384,7 +400,7 @@ function ListView({
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
               >
                 <SquarePen size={13} />
-                New message
+                {copy.newMessage}
               </Link>
               <Link
                 href="/chats?openNew=1&openSupport=1"
@@ -392,7 +408,7 @@ function ListView({
                 className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 <Headset size={13} />
-                Contact support
+                {copy.contactSupport}
               </Link>
             </div>
           </div>
@@ -408,11 +424,11 @@ function ListView({
                   ? hotelsMap.get(chat.hotelId)
                   : undefined;
               const hotelName = isSupportChat
-                ? SUPPORT_CHAT_TITLE
-                : (hotel?.hotelTitle ?? "Hotel Support");
+                ? copy.supportTitle
+                : (hotel?.hotelTitle ?? copy.hotelSupport);
               const unread = chat.unreadGuestMessages;
-              const preview = getLastPreview(chat);
-              const time = timeAgo(chat.lastMessageAt);
+              const preview = getLastPreviewLabel(locale, chat);
+              const time = formatChatTimeAgo(locale, chat.lastMessageAt);
               const color = avatarBg(chat.hotelId ?? chat._id);
 
               return (
@@ -496,10 +512,10 @@ function ListView({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-800">
-                  Contact Support
+                  {copy.contactSupport}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-slate-400">
-                  Meomul platform support
+                  {copy.platformSupport}
                 </p>
               </div>
             </Link>
@@ -517,6 +533,8 @@ function ThreadView({
   hotelName,
   isUser,
   isOpen,
+  locale,
+  copy,
   onBack,
   onClose,
 }: {
@@ -524,6 +542,8 @@ function ThreadView({
   hotelName: string;
   isUser: boolean;
   isOpen: boolean;
+  locale: "en" | "ko" | "ru" | "uz";
+  copy: ReturnType<typeof getChatCopy>;
   onBack: () => void;
   onClose: () => void;
 }) {
@@ -652,17 +672,17 @@ function ThreadView({
           type="button"
           onClick={onBack}
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sky-500 transition hover:bg-sky-50"
-          aria-label="Back to list"
+          aria-label={copy.backToChats}
         >
           <ArrowLeft size={18} />
         </button>
 
         <div
           className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase text-white ${
-            hotelName === SUPPORT_CHAT_TITLE ? "bg-teal-500" : hotelColor
+            hotelName === copy.supportTitle ? "bg-teal-500" : hotelColor
           }`}
         >
-          {hotelName === SUPPORT_CHAT_TITLE ? (
+          {hotelName === copy.supportTitle ? (
             <Headset size={14} />
           ) : (
             hotelName.charAt(0)
@@ -671,15 +691,15 @@ function ThreadView({
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-slate-900">
-            {chat?.chatStatus === "CLOSED" ? "Closed chat" : hotelName}
+            {chat?.chatStatus === "CLOSED" ? copy.closed : hotelName}
           </p>
           {chat && (
             <p className="text-[10px] text-slate-400">
               {chat.chatStatus === "ACTIVE"
-                ? "Active"
+                ? copy.active
                 : chat.chatStatus === "WAITING"
-                  ? "Waiting for agent"
-                  : "Closed"}
+                  ? copy.waiting
+                  : copy.closed}
             </p>
           )}
         </div>
@@ -688,7 +708,7 @@ function ThreadView({
           href={`/chats/${chatId}`}
           onClick={onClose}
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100"
-          title="Open full chat"
+          title={copy.openFullPage}
         >
           <ExternalLink size={15} />
         </Link>
@@ -696,7 +716,7 @@ function ThreadView({
           type="button"
           onClick={onClose}
           className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100"
-          aria-label="Close"
+          aria-label={copy.close}
         >
           <X size={16} />
         </button>
@@ -723,14 +743,14 @@ function ThreadView({
 
         {error && (
           <p className="text-center text-xs text-rose-500">
-            Could not load chat: {getErrorMessage(error)}
+            {getErrorMessage(error)}
           </p>
         )}
 
         {chat && (chat.messages ?? []).length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <span className="mb-2 text-3xl">💬</span>
-            <p className="text-xs text-slate-400">No messages yet</p>
+            <p className="text-xs text-slate-400">{copy.noConversations}</p>
           </div>
         )}
 
@@ -753,6 +773,7 @@ function ThreadView({
                   message={message}
                   isOwn={isOwn}
                   isLast={isLastInGroup}
+                  locale={locale}
                 />
               );
             })}
@@ -766,13 +787,13 @@ function ThreadView({
       <div className="flex-none border-t border-slate-200 bg-white px-3 py-2.5">
         {!canSend ? (
           <div className="rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-center text-xs text-slate-500">
-            Conversation closed ·{" "}
+            {copy.closedNotice}{" "}
             <Link
               href={`/chats/${chatId}`}
               onClick={onClose}
               className="text-sky-500"
             >
-              View full chat
+              {copy.viewAll}
             </Link>
           </div>
         ) : (
@@ -793,7 +814,7 @@ function ThreadView({
                     e.currentTarget.closest("form")?.requestSubmit();
                   }
                 }}
-                placeholder="Write a message…"
+                placeholder={copy.sendMessagePlaceholder}
                 rows={1}
                 disabled={sending}
                 className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
@@ -807,7 +828,7 @@ function ThreadView({
                     ? "bg-sky-500 text-white hover:bg-sky-600 active:scale-95"
                     : "text-slate-300"
                 }`}
-                aria-label="Send message"
+                aria-label={copy.sendMessage}
               >
                 <Send size={13} />
               </button>

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import { useI18n } from "@/lib/i18n/provider";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type { ReviewDto, ReviewRatingsSummaryDto } from "@/types/hotel";
 import type { HeroSlide } from "@/types/homepage";
@@ -17,14 +18,24 @@ const formatRatingStars = (rating: number): string => {
   return `${"★".repeat(safeRating)}${"☆".repeat(5 - safeRating)}`;
 };
 
-const formatReviewCountLabel = (count: number): string => {
+const formatReviewCountLabel = (
+  count: number,
+  translate: (
+    key: "home_common_no_reviews" | "home_common_verified_reviews",
+    params?: Record<string, string | number>,
+  ) => string,
+): string => {
   if (!Number.isFinite(count) || count <= 0) {
-    return "No reviews yet";
+    return translate("home_common_no_reviews");
   }
   if (count >= 1000) {
-    return `${(count / 1000).toFixed(1)}k verified reviews`;
+    return translate("home_common_verified_reviews", {
+      count: `${(count / 1000).toFixed(1)}k`,
+    });
   }
-  return `${count.toLocaleString()} verified reviews`;
+  return translate("home_common_verified_reviews", {
+    count: count.toLocaleString(),
+  });
 };
 
 const toReviewerInitial = (review: ReviewDto, index: number): string => {
@@ -42,6 +53,7 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSectionProps) {
+  const { t } = useI18n();
   const [activeSlide, setActiveSlide] = useState(0);
   const [isSliderPaused, setIsSliderPaused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -84,19 +96,19 @@ export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSec
     <section className={styles.hero}>
       <div className={styles.heroLeft}>
         <div className={styles.subtitle}>
-          <span>Smart Hotel Stays Start Here</span>
+          <span>{t("home_hero_subtitle")}</span>
         </div>
 
-        <h1 className={styles.title}>Book the Right Stay for Every Trip</h1>
+        <h1 className={styles.title}>{t("home_hero_title")}</h1>
 
         <div className={styles.primaryRow}>
           <Link href="/hotels" className={styles.serviceButton}>
-            <span>Explore Hotels</span>
+            <span>{t("home_hero_cta")}</span>
             <span className={styles.serviceButtonArrow}>↗</span>
           </Link>
 
           <div className={styles.reviewWrap}>
-            <div className={styles.reviewLabel}>★ Guest Reviews</div>
+            <div className={styles.reviewLabel}>★ {t("home_common_guest_reviews")}</div>
             <div className={styles.reviewBottom}>
               <div className={styles.avatarStack}>
                 {featuredReviews.length > 0
@@ -107,7 +119,7 @@ export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSec
                           {reviewerImageUrl ? (
                             <Image
                               src={reviewerImageUrl}
-                              alt={review.reviewerNick ?? "Guest reviewer"}
+                              alt={review.reviewerNick ?? t("home_common_guest_reviews")}
                               fill
                               sizes="22px"
                               className={styles.avatarImage}
@@ -141,7 +153,7 @@ export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSec
               </div>
               <div className={styles.reviewMeta}>
                 <div className={styles.stars}>{reviewStars}</div>
-                <div>{formatReviewCountLabel(reviewCount)}</div>
+                <div>{formatReviewCountLabel(reviewCount, t)}</div>
               </div>
             </div>
           </div>
@@ -149,8 +161,7 @@ export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSec
 
         <div className={styles.bottomRow}>
           <p className={styles.description}>
-            Compare real ratings, room types, and date-based availability to book with confidence on
-            Meomul.
+            {t("home_hero_description")}
           </p>
           <Link href={activeSlideHref} className={styles.watchBubble}>
             {activeSlideData?.imageUrl ? (
@@ -165,7 +176,7 @@ export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSec
               <div className={styles.watchFallback} />
             )}
             <div className={styles.watchOverlay}>
-              <span>Preview</span>
+              <span>{t("home_common_preview")}</span>
               <span>▶</span>
             </div>
           </Link>
@@ -212,7 +223,10 @@ export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSec
                   </div>
                   <h3>{slide.title}</h3>
                   <p>
-                    ⭐ {slide.rating.toFixed(1)} · {slide.likes.toLocaleString()} likes
+                    ⭐ {slide.rating.toFixed(1)} ·{" "}
+                    {t("home_common_likes", {
+                      count: slide.likes.toLocaleString(),
+                    })}
                   </p>
                 </div>
               </Link>
@@ -227,7 +241,7 @@ export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSec
               type="button"
               className={`${styles.dot} ${index === activeSlide ? styles.dotActive : ""}`}
               onClick={() => setActiveSlide(index)}
-              aria-label={`Show slide ${index + 1}`}
+              aria-label={t("home_hero_slide_aria", { index: index + 1 })}
             />
           ))}
         </div>

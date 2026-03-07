@@ -1,4 +1,5 @@
 import type { ValuePillar } from "@/types/homepage";
+import { useI18n } from "@/lib/i18n/provider";
 import styles from "@/styles/home-landing-ovastin.module.css";
 
 interface ValuePillarsSectionProps {
@@ -6,13 +7,14 @@ interface ValuePillarsSectionProps {
 }
 
 export function ValuePillarsSection({ pillars }: ValuePillarsSectionProps) {
+  const { t } = useI18n();
   if (pillars.length === 0) return null;
 
   return (
     <section className={styles.valueSection}>
       <div className={styles.valueHeader}>
-        <p className={styles.valueEyebrow}>Why guests choose Meomul</p>
-        <h2 className={styles.valueTitle}>Built for decision speed and booking confidence</h2>
+        <p className={styles.valueEyebrow}>{t("home_value_eyebrow")}</p>
+        <h2 className={styles.valueTitle}>{t("home_value_title")}</h2>
       </div>
 
       <div className={styles.valueGrid}>

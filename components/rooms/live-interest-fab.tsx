@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 
 interface LiveInterestFabProps {
   viewerCount: number;
@@ -17,14 +18,19 @@ type LiveTone = {
   label: string;
 };
 
-const getLiveTone = (viewerCount: number, connected: boolean, availableRooms: number): LiveTone => {
+const getLiveTone = (
+  viewerCount: number,
+  connected: boolean,
+  availableRooms: number,
+  t: (key: any, params?: Record<string, string | number>) => string,
+): LiveTone => {
   if (!connected) {
     return {
       buttonClass: "border-slate-400 bg-slate-700 text-white",
       pingClass: "bg-slate-400/50",
       dotClass: "bg-slate-300",
       badgeClass: "border-slate-300 bg-slate-50 text-slate-700",
-      label: "Reconnecting",
+      label: t("live_interest_reconnecting"),
     };
   }
 
@@ -34,7 +40,7 @@ const getLiveTone = (viewerCount: number, connected: boolean, availableRooms: nu
       pingClass: "bg-rose-400/40",
       dotClass: "bg-rose-500",
       badgeClass: "border-rose-300 bg-rose-50 text-rose-700",
-      label: "High demand",
+      label: t("live_interest_high_demand"),
     };
   }
 
@@ -44,7 +50,7 @@ const getLiveTone = (viewerCount: number, connected: boolean, availableRooms: nu
       pingClass: "bg-amber-300/45",
       dotClass: "bg-amber-500",
       badgeClass: "border-amber-300 bg-amber-50 text-amber-700",
-      label: "Active now",
+      label: t("live_interest_active_now"),
     };
   }
 
@@ -53,7 +59,7 @@ const getLiveTone = (viewerCount: number, connected: boolean, availableRooms: nu
     pingClass: "bg-sky-300/45",
     dotClass: "bg-sky-500",
     badgeClass: "border-sky-300 bg-sky-50 text-sky-700",
-    label: "Live",
+    label: t("live_interest_live"),
   };
 };
 
@@ -63,11 +69,12 @@ export const LiveInterestFab = memo(function LiveInterestFab({
   availableRooms,
   containerClassName,
 }: LiveInterestFabProps) {
+  const { t } = useI18n();
   const [isTouchUi, setIsTouchUi] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const safeCount = Math.max(0, Math.trunc(viewerCount));
   const displayCount = safeCount > 99 ? "99+" : String(safeCount);
-  const tone = useMemo(() => getLiveTone(safeCount, connected, availableRooms), [availableRooms, connected, safeCount]);
+  const tone = useMemo(() => getLiveTone(safeCount, connected, availableRooms, t), [availableRooms, connected, safeCount, t]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -108,16 +115,16 @@ export const LiveInterestFab = memo(function LiveInterestFab({
 
   const explanation = useMemo(() => {
     if (!connected) {
-      return "Live signal reconnecting. Viewer count updates automatically once the socket is back.";
+      return t("live_interest_expl_reconnecting");
     }
     if (safeCount === 0) {
-      return "No active viewers right now. Demand can rise quickly when dates are attractive.";
+      return t("live_interest_expl_none");
     }
     if (safeCount === 1) {
-      return "1 guest is currently viewing this room. This count updates in real time.";
+      return t("live_interest_expl_single");
     }
-    return `${safeCount} guests are currently viewing this room. Interest can convert to bookings quickly.`;
-  }, [connected, safeCount]);
+    return t("live_interest_expl_many", { count: safeCount });
+  }, [connected, safeCount, t]);
 
   const panelVisibilityClass = isTouchUi
     ? isPanelOpen
@@ -142,11 +149,11 @@ export const LiveInterestFab = memo(function LiveInterestFab({
           type="button"
           onClick={handleTogglePanel}
           className={`relative inline-flex h-14 w-14 flex-col items-center justify-center rounded-full border shadow-2xl transition duration-300 group-hover:scale-105 ${tone.buttonClass}`}
-          aria-label={`Live interest: ${safeCount} viewer${safeCount === 1 ? "" : "s"}`}
+          aria-label={t("live_interest_aria", { count: safeCount })}
           aria-expanded={isTouchUi ? isPanelOpen : undefined}
           aria-controls={isTouchUi ? "live-interest-panel" : undefined}
         >
-          <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">Live</span>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">{t("live_interest_live")}</span>
           <span className="text-base font-semibold leading-none">{displayCount}</span>
           <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-white ${tone.dotClass} animate-pulse`} />
         </button>
@@ -157,21 +164,21 @@ export const LiveInterestFab = memo(function LiveInterestFab({
         className={`absolute right-[4.1rem] top-1/2 w-56 -translate-y-1/2 rounded-xl border border-slate-200 bg-white/95 p-3 text-left shadow-xl transition duration-200 sm:right-[4.25rem] sm:w-64 ${panelVisibilityClass}`}
       >
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">Live Interest</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">{t("live_interest_panel_title")}</p>
           {isTouchUi ? (
             <button
               type="button"
               onClick={handleClosePanel}
               className="inline-flex items-center rounded-full border border-slate-300 px-2 py-0.5 text-[10px] font-semibold text-slate-700"
             >
-              Close
+              {t("live_interest_close")}
             </button>
           ) : (
             <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone.badgeClass}`}>{tone.label}</span>
           )}
         </div>
         <p className="mt-1 text-sm font-semibold text-slate-900">
-          {safeCount} viewer{safeCount === 1 ? "" : "s"} on this room now
+          {t("live_interest_viewers_now", { count: safeCount })}
         </p>
         <p className="mt-1 text-xs leading-5 text-slate-600">{explanation}</p>
       </div>

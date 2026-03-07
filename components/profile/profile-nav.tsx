@@ -1,16 +1,20 @@
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import { getSessionMember } from "@/lib/auth/session";
+import { useI18n } from "@/lib/i18n/provider";
+import { getProfileCopy } from "@/lib/profile/profile-i18n";
 
 const TABS = [
-  { id: "profile", label: "Overview", access: "all" },
-  { id: "reviews", label: "Reviews", access: "user+agent" },
-  { id: "likes", label: "Saved Hotels", access: "user+agent" },
-  { id: "bookings", label: "Bookings", access: "user+agent" },
-  { id: "subscription", label: "Subscription", access: "user" },
+  { id: "profile", labelKey: "overview", access: "all" },
+  { id: "reviews", labelKey: "reviews", access: "user+agent" },
+  { id: "likes", labelKey: "savedHotels", access: "user+agent" },
+  { id: "bookings", labelKey: "bookings", access: "user+agent" },
+  { id: "subscription", labelKey: "subscription", access: "user" },
 ] as const;
 
 export function ProfileNav() {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
   const activeTab = (router.query.tab as string) ?? "profile";
@@ -32,7 +36,7 @@ export function ProfileNav() {
 
   return (
     <nav
-      aria-label="Profile sections"
+      aria-label={copy.profile}
       className="flex gap-0.5 overflow-x-auto border-b border-slate-200"
     >
       {tabs.map((tab) => {
@@ -48,7 +52,7 @@ export function ProfileNav() {
                 : "border-transparent text-slate-400 hover:text-slate-600"
             }`}
           >
-            {tab.label}
+            {copy[tab.labelKey]}
           </button>
         );
       })}

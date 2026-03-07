@@ -1,4 +1,5 @@
 import { DayButton as DefaultDayButton, type DayButtonProps } from "react-day-picker";
+import { useI18n } from "@/lib/i18n/provider";
 import { formatCompactKrw, formatDateInput, isCalendarDayBookable } from "@/lib/rooms/booking";
 import type { DayPriceDto } from "@/types/hotel";
 
@@ -8,9 +9,10 @@ interface PriceDayButtonProps extends DayButtonProps {
 }
 
 export function PriceDayButton({ day, modifiers, price, onHover, ...buttonProps }: PriceDayButtonProps) {
+  const { t } = useI18n();
   const dateKey = formatDateInput(day.date);
   const isUnavailable = Boolean(price) && !isCalendarDayBookable(price);
-  const priceLabel = !price ? "n/a" : isUnavailable ? "sold" : `₩${formatCompactKrw(price.price)}`;
+  const priceLabel = !price ? t("price_day_na") : isUnavailable ? t("price_day_sold") : `₩${formatCompactKrw(price.price)}`;
   const isSelected = Boolean(modifiers.selected);
   const isRangeStart = Boolean(modifiers.range_start);
   const isRangeEnd = Boolean(modifiers.range_end);

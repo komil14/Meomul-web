@@ -11,7 +11,6 @@ import {
 } from "@/graphql/notification.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { getErrorMessage } from "@/lib/utils/error";
-import { timeAgo } from "@/lib/utils/format";
 import type { NextPageWithAuth } from "@/types/page";
 import {
   AlertTriangle,
@@ -27,6 +26,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/provider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -157,6 +157,32 @@ function resolveLink(notification: NotificationDto): string | null {
   }
 }
 
+function formatNotificationTimeAgo(locale: string, value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "";
+
+  const diffMs = date.getTime() - Date.now();
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+
+  if (Math.abs(diffMs) < hour) {
+    return rtf.format(Math.round(diffMs / minute), "minute");
+  }
+  if (Math.abs(diffMs) < day) {
+    return rtf.format(Math.round(diffMs / hour), "hour");
+  }
+  if (Math.abs(diffMs) < 7 * day) {
+    return rtf.format(Math.round(diffMs / day), "day");
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
 // ─── Notification item ────────────────────────────────────────────────────────
 
 function NotificationItem({
@@ -168,6 +194,15 @@ function NotificationItem({
   onRead: (id: string, link: string | null) => void;
   onDelete: (id: string) => void;
 }) {
+  const { locale } = useI18n();
+  const copy =
+    locale === "ko"
+      ? { delete: "알림 삭제" }
+      : locale === "ru"
+        ? { delete: "Удалить уведомление" }
+        : locale === "uz"
+          ? { delete: "Bildirishnomani o'chirish" }
+          : { delete: "Delete notification" };
   const cfg = ICON_CONFIG[notification.type] ?? ICON_CONFIG.NEW_HOTEL;
   const Icon = cfg.icon;
   const link = resolveLink(notification);
@@ -209,7 +244,7 @@ function NotificationItem({
             {notification.title}
           </p>
           <span className="flex-shrink-0 text-[11px] text-slate-400">
-            {timeAgo(notification.createdAt)}
+            {formatNotificationTimeAgo(locale, notification.createdAt)}
           </span>
         </div>
         <p className="mt-0.5 text-[13px] leading-relaxed text-slate-500 line-clamp-2">
@@ -229,7 +264,7 @@ function NotificationItem({
             onDelete(notification._id);
           }}
           className="flex h-7 w-7 items-center justify-center rounded-full text-slate-300 opacity-0 transition hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100"
-          aria-label="Delete notification"
+          aria-label={copy.delete}
         >
           <Trash2 size={14} />
         </button>
@@ -241,6 +276,47 @@ function NotificationItem({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const NotificationsPage: NextPageWithAuth = () => {
+  const { locale } = useI18n();
+  const copy =
+    locale === "ko"
+      ? {
+          title: "알림",
+          unread: "읽지 않음",
+          markAll: "모두 읽음 처리",
+          all: "전체",
+          caughtUp: "모든 알림을 확인했습니다",
+          noUnread: "지금은 읽지 않은 알림이 없습니다.",
+          empty: "알림을 받으면 여기에 표시됩니다.",
+        }
+      : locale === "ru"
+        ? {
+            title: "Уведомления",
+            unread: "непрочитано",
+            markAll: "Прочитать все",
+            all: "Все",
+            caughtUp: "У вас нет новых уведомлений",
+            noUnread: "Сейчас нет непрочитанных уведомлений.",
+            empty: "Когда вы получите уведомления, они появятся здесь.",
+          }
+        : locale === "uz"
+          ? {
+              title: "Bildirishnomalar",
+              unread: "o'qilmagan",
+              markAll: "Hammasini o'qilgan deb belgilash",
+              all: "Barchasi",
+              caughtUp: "Siz barcha bildirishnomalarni ko'rdingiz",
+              noUnread: "Hozir o'qilmagan bildirishnomalar yo'q.",
+              empty: "Bildirishnoma olganingizda ular shu yerda ko'rinadi.",
+            }
+          : {
+              title: "Notifications",
+              unread: "unread",
+              markAll: "Mark all read",
+              all: "All",
+              caughtUp: "You're all caught up",
+              noUnread: "No unread notifications right now.",
+              empty: "When you receive notifications, they’ll show up here.",
+            };
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
   const [tab, setTab] = useState<"all" | "unread">("all");
@@ -344,10 +420,10 @@ const NotificationsPage: NextPageWithAuth = () => {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Notifications</h1>
+          <h1 className="text-xl font-bold text-slate-900">{copy.title}</h1>
           {unreadTotal > 0 && (
             <p className="mt-0.5 text-sm text-slate-500">
-              {unreadTotal} unread
+              {unreadTotal} {copy.unread}
             </p>
           )}
         </div>
@@ -361,7 +437,7 @@ const NotificationsPage: NextPageWithAuth = () => {
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-sky-500 transition hover:bg-sky-50 disabled:opacity-50"
           >
             <CheckCheck size={15} />
-            Mark all read
+            {copy.markAll}
           </button>
         )}
       </div>
@@ -379,7 +455,7 @@ const NotificationsPage: NextPageWithAuth = () => {
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
           >
-            {t === "all" ? "All" : "Unread"}
+            {t === "all" ? copy.all : copy.unread}
           </button>
         ))}
       </div>
@@ -412,12 +488,12 @@ const NotificationsPage: NextPageWithAuth = () => {
             <Bell size={28} className="text-slate-300" />
           </div>
           <p className="mt-4 text-base font-semibold text-slate-700">
-            You&apos;re all caught up
+            {copy.caughtUp}
           </p>
           <p className="mt-1.5 text-sm text-slate-400">
             {tab === "unread"
-              ? "No unread notifications right now."
-              : "When you receive notifications, they\u2019ll show up here."}
+              ? copy.noUnread
+              : copy.empty}
           </p>
         </div>
       )}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { SIGNUP_MEMBER_MUTATION } from "@/graphql/auth.gql";
+import { useI18n } from "@/lib/i18n/provider";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { saveAuthSession } from "@/lib/auth/session";
 import { errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
@@ -15,6 +16,7 @@ interface SignupMemberMutationData {
 }
 
 const SignupPage: NextPageWithAuth = () => {
+  const { t } = useI18n();
   const router = useRouter();
   const [memberNick, setMemberNick] = useState("");
   const [memberFullName, setMemberFullName] = useState("");
@@ -39,33 +41,24 @@ const SignupPage: NextPageWithAuth = () => {
 
     const nick = memberNick.trim();
     if (nick.length < 3 || nick.length > 24) {
-      await errorAlert("Validation error", "Nick must be 3-24 characters.");
+      await errorAlert(t("auth_validation_title"), t("auth_validation_nick"));
       return;
     }
     if (!/^[0-9]{10,11}$/.test(memberPhone.replace(/-/g, ""))) {
-      await errorAlert(
-        "Validation error",
-        "Please enter a valid Korean phone number (10-11 digits).",
-      );
+      await errorAlert(t("auth_validation_title"), t("auth_validation_phone"));
       return;
     }
     if (memberPassword.length < 6) {
-      await errorAlert(
-        "Validation error",
-        "Password must be at least 6 characters.",
-      );
+      await errorAlert(t("auth_validation_title"), t("auth_validation_password_min"));
       return;
     }
     if (memberPassword.length > 72) {
-      await errorAlert(
-        "Validation error",
-        "Password must not exceed 72 characters.",
-      );
+      await errorAlert(t("auth_validation_title"), t("auth_validation_password_max"));
       return;
     }
 
     if (memberPassword !== confirmPassword) {
-      await errorAlert("Password mismatch", "Passwords do not match.");
+      await errorAlert(t("auth_validation_password_mismatch_title"), t("auth_validation_password_mismatch_body"));
       return;
     }
 
@@ -85,7 +78,7 @@ const SignupPage: NextPageWithAuth = () => {
 
       const authMember = response.data?.signupMember;
       if (!authMember) {
-        await infoAlert("Signup response missing", "Signup response is empty.");
+        await infoAlert(t("auth_signup_response_missing_title"), t("auth_signup_response_missing_body"));
         return;
       }
 
@@ -94,18 +87,18 @@ const SignupPage: NextPageWithAuth = () => {
         authMember,
         redirectTarget,
       );
-      await successAlert("Account created", "Signup complete. Redirecting...");
+      await successAlert(t("auth_signup_success_title"), t("auth_signup_success_body"));
       await router.push(nextRoute);
     } catch (error) {
-      await errorAlert("Signup failed", getErrorMessage(error));
+      await errorAlert(t("auth_signup_failed_title"), getErrorMessage(error));
     }
   };
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col justify-center">
-      <h1 className="text-3xl font-semibold text-slate-900">Create Account</h1>
+      <h1 className="text-3xl font-semibold text-slate-900">{t("auth_signup_title")}</h1>
       <p className="mt-2 text-sm text-slate-600">
-        New registrations are created with USER role and EMAIL auth.
+        {t("auth_signup_desc")}
       </p>
 
       <form
@@ -114,7 +107,7 @@ const SignupPage: NextPageWithAuth = () => {
       >
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
-            Member Nick
+            {t("auth_member_nick")}
           </span>
           <input
             value={memberNick}
@@ -129,7 +122,7 @@ const SignupPage: NextPageWithAuth = () => {
 
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
-            Full Name (Optional)
+            {t("auth_full_name_optional")}
           </span>
           <input
             value={memberFullName}
@@ -141,14 +134,14 @@ const SignupPage: NextPageWithAuth = () => {
 
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
-            Phone
+            {t("auth_phone")}
           </span>
           <input
             value={memberPhone}
             onChange={(event) => setMemberPhone(event.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-900 transition focus:ring-2"
             autoComplete="tel"
-            placeholder="010-1234-5678"
+            placeholder={t("auth_phone_placeholder")}
             maxLength={13}
             required
           />
@@ -156,7 +149,7 @@ const SignupPage: NextPageWithAuth = () => {
 
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
-            Password
+            {t("auth_password")}
           </span>
           <input
             type="password"
@@ -170,7 +163,7 @@ const SignupPage: NextPageWithAuth = () => {
 
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
-            Confirm Password
+            {t("auth_confirm_password")}
           </span>
           <input
             type="password"
@@ -187,13 +180,13 @@ const SignupPage: NextPageWithAuth = () => {
           disabled={loading}
           className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Creating account..." : "Signup"}
+          {loading ? t("auth_signup_loading") : t("auth_signup_submit")}
         </button>
       </form>
 
       <div className="mt-6 text-sm text-slate-600">
         <Link href="/auth/login" className="underline underline-offset-4">
-          Already have an account? Login
+          {t("auth_have_account")}
         </Link>
       </div>
     </main>

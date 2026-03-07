@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { LOGIN_MEMBER_MUTATION } from "@/graphql/auth.gql";
+import { useI18n } from "@/lib/i18n/provider";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
 import { saveAuthSession } from "@/lib/auth/session";
 import { errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
@@ -15,6 +16,7 @@ interface LoginMemberMutationData {
 }
 
 const LoginPage: NextPageWithAuth = () => {
+  const { t } = useI18n();
   const router = useRouter();
   const [memberNick, setMemberNick] = useState("");
   const [memberPassword, setMemberPassword] = useState("");
@@ -37,11 +39,11 @@ const LoginPage: NextPageWithAuth = () => {
 
     const nick = memberNick.trim();
     if (nick.length < 3 || nick.length > 24) {
-      await errorAlert("Validation error", "Nick must be 3-24 characters.");
+      await errorAlert(t("auth_validation_title"), t("auth_validation_nick"));
       return;
     }
     if (memberPassword.length < 6 || memberPassword.length > 72) {
-      await errorAlert("Validation error", "Password must be 6-72 characters.");
+      await errorAlert(t("auth_validation_title"), t("auth_validation_password_range"));
       return;
     }
 
@@ -57,7 +59,7 @@ const LoginPage: NextPageWithAuth = () => {
 
       const authMember = response.data?.loginMember;
       if (!authMember) {
-        await infoAlert("Login response missing", "Login response is empty.");
+        await infoAlert(t("auth_login_response_missing_title"), t("auth_login_response_missing_body"));
         return;
       }
 
@@ -66,18 +68,18 @@ const LoginPage: NextPageWithAuth = () => {
         authMember,
         redirectTarget,
       );
-      await successAlert("Login successful", "You are now signed in.");
+      await successAlert(t("auth_login_success_title"), t("auth_login_success_body"));
       await router.push(nextRoute);
     } catch (error) {
-      await errorAlert("Login failed", getErrorMessage(error));
+      await errorAlert(t("auth_login_failed_title"), getErrorMessage(error));
     }
   };
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col justify-center">
-      <h1 className="text-3xl font-semibold text-slate-900">Login</h1>
+      <h1 className="text-3xl font-semibold text-slate-900">{t("auth_login_title")}</h1>
       <p className="mt-2 text-sm text-slate-600">
-        Use your member nick and password to continue.
+        {t("auth_login_desc")}
       </p>
 
       <form
@@ -86,7 +88,7 @@ const LoginPage: NextPageWithAuth = () => {
       >
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
-            Member Nick
+            {t("auth_member_nick")}
           </span>
           <input
             value={memberNick}
@@ -101,7 +103,7 @@ const LoginPage: NextPageWithAuth = () => {
 
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
-            Password
+            {t("auth_password")}
           </span>
           <input
             type="password"
@@ -120,19 +122,19 @@ const LoginPage: NextPageWithAuth = () => {
           disabled={loading}
           className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? t("auth_login_loading") : t("auth_login_submit")}
         </button>
       </form>
 
       <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-600">
         <Link href="/auth/signup" className="underline underline-offset-4">
-          Create account
+          {t("auth_create_account")}
         </Link>
         <Link
           href="/auth/forgot-password"
           className="underline underline-offset-4"
         >
-          Forgot password
+          {t("auth_forgot_password")}
         </Link>
       </div>
     </main>

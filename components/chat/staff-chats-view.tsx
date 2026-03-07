@@ -14,10 +14,14 @@ import {
   GET_MY_CHATS_QUERY,
 } from "@/graphql/chat.gql";
 import {
-  SUPPORT_CHAT_TITLE,
+  formatChatTimeAgo,
+  getChatCopy,
+  getChatStatusLabel,
+  getLastPreviewLabel,
+} from "@/lib/chat/chat-i18n";
+import { useI18n } from "@/lib/i18n/provider";
+import {
   avatarBg,
-  getLastPreview,
-  timeAgo,
 } from "@/lib/chat/chat-helpers";
 import type {
   ChatDto,
@@ -34,12 +38,6 @@ import type { HotelListItem } from "@/types/hotel";
 const PAGE_LIMIT = 20;
 const CHAT_STATUSES: ChatStatus[] = ["WAITING", "ACTIVE", "CLOSED"];
 
-const STATUS_CONFIG: Record<ChatStatus, { label: string; dot: string }> = {
-  WAITING: { label: "Waiting", dot: "bg-amber-400" },
-  ACTIVE:  { label: "Active",  dot: "bg-emerald-400" },
-  CLOSED:  { label: "Closed",  dot: "bg-slate-300" },
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function guestLabel(chat: ChatDto): string {
@@ -49,6 +47,7 @@ function guestLabel(chat: ChatDto): string {
 // ─── StatusBadge ──────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: ChatStatus }) {
+  const { locale } = useI18n();
   return (
     <span
       className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -59,7 +58,7 @@ function StatusBadge({ status }: { status: ChatStatus }) {
             : "bg-slate-100 text-slate-400"
       }`}
     >
-      {STATUS_CONFIG[status].label}
+      {getChatStatusLabel(locale, status)}
     </span>
   );
 }
@@ -162,6 +161,8 @@ export function StaffChatsView({
   onSelectChat,
   onNewChat,
 }: StaffChatsViewProps) {
+  const { locale } = useI18n();
+  const copy = getChatCopy(locale);
   const isAdmin = memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 
   const [activeTab, setActiveTab] = useState<"hotels" | "support">("hotels");
@@ -274,7 +275,7 @@ export function StaffChatsView({
               <input
                 value={hotelSearchQuery}
                 onChange={(e) => setHotelSearchQuery(e.target.value)}
-                placeholder="Search hotels…"
+                placeholder={copy.searchHotelsPlaceholder}
                 className="flex-1 bg-transparent text-xs text-slate-900 placeholder-slate-400 outline-none"
               />
               {hotelSearchQuery && (
@@ -302,7 +303,7 @@ export function StaffChatsView({
               ))}
             </>
           ) : filteredHotels.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-slate-400">No hotels found</p>
+            <p className="px-3 py-2 text-xs text-slate-400">{copy.noHotelsFound}</p>
           ) : (
             filteredHotels.map((hotel) => (
               <HotelSidebarRow
@@ -340,7 +341,7 @@ export function StaffChatsView({
               size={14}
               className={`lg:hidden ${activeTab === "support" ? "text-white" : "text-teal-500"}`}
             />
-            <span className="text-sm font-medium">Support</span>
+            <span className="text-sm font-medium">{copy.support}</span>
           </button>
         </div>
       </aside>
@@ -353,8 +354,8 @@ export function StaffChatsView({
           <div className="min-w-0 flex-1">
             <h2 className="truncate font-semibold text-slate-900">
               {activeTab === "support"
-                ? SUPPORT_CHAT_TITLE
-                : (selectedHotel?.hotelTitle ?? "Select a hotel")}
+                ? copy.supportTitle
+                : (selectedHotel?.hotelTitle ?? copy.allHotels)}
             </h2>
             {activeTab === "hotels" && selectedHotel && (
               <p className="truncate text-xs text-slate-400">
@@ -363,7 +364,7 @@ export function StaffChatsView({
             )}
             {activeTab === "support" && (
               <p className="text-xs text-slate-400">
-                Your support conversations with platform admin
+                {copy.platformSupport}
               </p>
             )}
           </div>
@@ -372,7 +373,7 @@ export function StaffChatsView({
             onClick={onNewChat}
             className="flex-shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
-            {activeTab === "support" ? "Contact Admin" : "New chat"}
+            {activeTab === "support" ? copy.contactSupport : copy.newConversation}
           </button>
         </div>
 
@@ -381,7 +382,17 @@ export function StaffChatsView({
           <div className="flex flex-none items-center gap-1.5 overflow-x-auto border-b border-slate-100 bg-white px-5 py-3">
             {(["ALL", ...CHAT_STATUSES] as const).map((s) => {
               const isSelected = statusFilter === s;
-              const cfg = s !== "ALL" ? STATUS_CONFIG[s as ChatStatus] : null;
+              const cfg =
+                s !== "ALL"
+                  ? {
+                      dot:
+                        s === "WAITING"
+                          ? "bg-amber-400"
+                          : s === "ACTIVE"
+                            ? "bg-emerald-400"
+                            : "bg-slate-300",
+                    }
+                  : null;
               return (
                 <button
                   key={s}
@@ -400,7 +411,7 @@ export function StaffChatsView({
                       }`}
                     />
                   )}
-                  {s === "ALL" ? "All" : cfg?.label}
+                  {s === "ALL" ? copy.all : getChatStatusLabel(locale, s as ChatStatus)}
                 </button>
               );
             })}
@@ -438,13 +449,13 @@ export function StaffChatsView({
                   <MessageSquare size={20} className="text-slate-400" />
                 )}
               </div>
-              <p className="font-semibold text-slate-700">No conversations</p>
+              <p className="font-semibold text-slate-700">{copy.noConversations}</p>
               <p className="mt-1 max-w-[200px] text-sm text-slate-400">
                 {activeTab === "support"
-                  ? "No support conversations yet"
+                  ? copy.noConversationsDesc
                   : statusFilter !== "ALL"
-                    ? `No ${STATUS_CONFIG[statusFilter as ChatStatus]?.label.toLowerCase()} chats`
-                    : "No guest conversations yet"}
+                    ? copy.noConversationsDesc
+                    : copy.noConversationsDesc}
               </p>
             </div>
           )}
@@ -453,12 +464,12 @@ export function StaffChatsView({
           {displayChats.length > 0 && (
             <div className="divide-y divide-slate-50 bg-white">
               {displayChats.map((chat, i) => {
-                const preview = getLastPreview(chat);
-                const time = timeAgo(chat.lastMessageAt);
+                const preview = getLastPreviewLabel(locale, chat);
+                const time = formatChatTimeAgo(locale, chat.lastMessageAt);
                 const unread = chat.unreadAgentMessages;
                 const title =
                   activeTab === "support"
-                    ? SUPPORT_CHAT_TITLE
+                    ? copy.supportTitle
                     : guestLabel(chat);
 
                 return (
@@ -536,10 +547,10 @@ export function StaffChatsView({
               className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-30"
             >
               <ChevronLeft size={13} />
-              Prev
+              {copy.previous}
             </button>
             <span className="text-xs text-slate-500">
-              Page {page} of {totalPages}
+              {copy.page} {page} {copy.of} {totalPages}
             </span>
             <button
               type="button"
@@ -547,7 +558,7 @@ export function StaffChatsView({
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-30"
             >
-              Next
+              {copy.next}
               <ChevronRight size={13} />
             </button>
           </div>

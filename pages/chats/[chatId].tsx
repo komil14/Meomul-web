@@ -20,7 +20,14 @@ import {
   SEND_MESSAGE_MUTATION,
 } from "@/graphql/chat.gql";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
+import {
+  formatChatDateSeparator,
+  formatChatTime,
+  getChatCopy,
+  getChatStatusLabel,
+} from "@/lib/chat/chat-i18n";
 import { env } from "@/lib/config/env";
+import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import {
@@ -57,7 +64,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { SUPPORT_CHAT_TITLE, avatarBg } from "@/lib/chat/chat-helpers";
+import { avatarBg } from "@/lib/chat/chat-helpers";
 
 // ─── Hotel title query ────────────────────────────────────────────────────────
 
@@ -108,29 +115,6 @@ const logBackgroundChatError = (context: string, error: unknown): void => {
   }
 };
 
-function formatMessageTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Seoul",
-  });
-}
-
-function formatDateSeparator(dateStr: string): string {
-  const date = new Date(dateStr);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return "Today";
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
 function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
@@ -173,10 +157,14 @@ function MessageBubble({
   message,
   isOwn,
   isLastInGroup,
+  locale,
+  copy,
 }: {
   message: MessageDto;
   isOwn: boolean;
   isLastInGroup: boolean;
+  locale: "en" | "ko" | "ru" | "uz";
+  copy: ReturnType<typeof getChatCopy>;
 }) {
   // Light blue for sent (matches iMessage/KakaoTalk soft palette), white for received
   const sentCls = `bg-[#d4e5f7] text-slate-900 ${isLastInGroup ? "rounded-2xl rounded-br-sm" : "rounded-2xl"}`;
@@ -216,9 +204,9 @@ function MessageBubble({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-slate-800">
-              {message.fileUrl.split("/").pop() ?? "Download file"}
+              {message.fileUrl.split("/").pop() ?? copy.attachment}
             </p>
-            <p className="text-xs text-slate-500">Attachment</p>
+            <p className="text-xs text-slate-500">{copy.attachment}</p>
           </div>
           <Download size={13} className="text-slate-400" />
         </a>
@@ -237,6 +225,8 @@ function MessageBubble({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const ChatThreadPage: NextPageWithAuth = () => {
+  const { locale } = useI18n();
+  const copy = getChatCopy(locale);
   const router = useRouter();
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
@@ -400,7 +390,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
         if (!authAck?.success) {
           if (!socketJoinFailedRef.current) {
             toast.info(
-              authAck?.error ?? "Realtime auth failed. Using polling fallback.",
+              authAck?.error ?? copy.pollingFallback,
             );
             socketJoinFailedRef.current = true;
           }
@@ -409,7 +399,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
         socket.emit("joinChat", { chatId }, (joinAck?: SocketAck) => {
           if (!joinAck?.success && !socketJoinFailedRef.current) {
             toast.info(
-              joinAck?.error ?? "Realtime join failed. Using polling fallback.",
+              joinAck?.error ?? copy.pollingFallback,
             );
             socketJoinFailedRef.current = true;
             return;
@@ -561,7 +551,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       if (textareaRef.current) textareaRef.current.style.height = "auto";
     } catch (mutationError) {
       await errorAlert(
-        "Could not send message",
+        copy.sendMessage,
         getErrorMessage(mutationError),
       );
     }
@@ -575,13 +565,13 @@ const ChatThreadPage: NextPageWithAuth = () => {
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!allowed.includes(file.type)) {
       await errorAlert(
-        "Unsupported file type",
+        copy.uploadImage,
         "Please select a JPEG, PNG, WebP, or GIF image.",
       );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      await errorAlert("File too large", "Images must be under 10 MB.");
+      await errorAlert(copy.uploadImage, "Images must be under 10 MB.");
       return;
     }
     setUploadingImage(true);
@@ -602,7 +592,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
         },
       });
     } catch (uploadError) {
-      await errorAlert("Upload failed", getErrorMessage(uploadError));
+      await errorAlert(copy.uploadImage, getErrorMessage(uploadError));
     } finally {
       setUploadingImage(false);
     }
@@ -612,34 +602,34 @@ const ChatThreadPage: NextPageWithAuth = () => {
     if (!chat) return;
     const confirmed = await confirmAction({
       title: "Claim this chat?",
-      text: "You will be assigned as the active agent.",
-      confirmText: "Claim",
+      text: copy.claim,
+      confirmText: copy.claim,
     });
     if (!confirmed) return;
     try {
       await claimChat({ variables: { input: { chatId: chat._id } } });
       await refetch();
-      await successAlert("Chat claimed");
+      await successAlert(copy.claim);
     } catch (mutationError) {
-      await errorAlert("Could not claim chat", getErrorMessage(mutationError));
+      await errorAlert(copy.claim, getErrorMessage(mutationError));
     }
   };
 
   const onCloseChat = async () => {
     if (!chat) return;
     const confirmed = await confirmDanger({
-      title: "Close this chat?",
-      text: "This conversation will be marked as closed.",
-      warningText: "Closed chats cannot receive new messages.",
-      confirmText: "Close chat",
+      title: copy.closeChat,
+      text: copy.closedNotice,
+      warningText: copy.closedNotice,
+      confirmText: copy.closeAction,
     });
     if (!confirmed) return;
     try {
       await closeChat({ variables: { chatId: chat._id } });
       await refetch();
-      await successAlert("Chat closed");
+      await successAlert(copy.closed);
     } catch (mutationError) {
-      await errorAlert("Could not close chat", getErrorMessage(mutationError));
+      await errorAlert(copy.closeChat, getErrorMessage(mutationError));
     }
   };
 
@@ -655,15 +645,15 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
   const isSupportChat = chat?.chatScope === "SUPPORT";
   const hotelTitle = isSupportChat
-    ? SUPPORT_CHAT_TITLE
-    : (hotelData?.getHotel.hotelTitle ?? "Hotel Support");
+    ? copy.supportTitle
+    : (hotelData?.getHotel.hotelTitle ?? copy.hotelSupport);
   const hotelLocation = isSupportChat
     ? ""
     : (hotelData?.getHotel.hotelLocation ?? "");
   const supportMeta =
     chat?.supportTopic?.trim() ||
-    (chat?.sourcePath ? `From ${chat.sourcePath}` : "Platform support");
-  const incomingSenderLabel = isSupportChat ? "Support Team" : "Hotel Staff";
+    (chat?.sourcePath ? `${copy.contextFromPage}: ${chat.sourcePath}` : copy.platformSupport);
+  const incomingSenderLabel = isSupportChat ? copy.supportTeam : copy.hotelStaff;
   const hotelAvatarColor = avatarBg(chat?.hotelId ?? chat?._id ?? hotelTitle);
 
   const STATUS_CONFIG: Record<
@@ -672,6 +662,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
   > = {
     WAITING: {
       label: "Waiting for agent",
+      
       color: "text-amber-600",
       dot: "bg-amber-400",
     },
@@ -686,9 +677,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
   if (!chatId) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <p className="text-slate-500">Missing chat ID.</p>
+        <p className="text-slate-500">{copy.missingChatId}</p>
         <Link href="/chats" className="mt-3 text-sm text-sky-500 underline">
-          Back to chats
+          {copy.backToChats}
         </Link>
       </div>
     );
@@ -755,7 +746,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                   <p
                     className={`text-xs ${statusCfg?.color ?? "text-slate-400"}`}
                   >
-                    {statusCfg?.label ?? chat.chatStatus}
+                    {getChatStatusLabel(locale, chat.chatStatus)}
                     {isSupportChat
                       ? ` · ${supportMeta}`
                       : hotelLocation
@@ -764,7 +755,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                   </p>
                   <span
                     title={
-                      socketConnected ? "Live connection" : "Polling fallback"
+                      socketConnected ? copy.liveConnection : copy.pollingFallback
                     }
                   >
                     {socketConnected ? (
@@ -794,7 +785,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 disabled={claiming}
                 className="rounded-full bg-sky-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-600 disabled:opacity-60 active:scale-95"
               >
-                {claiming ? "Claiming…" : "Claim"}
+                {claiming ? copy.claiming : copy.claim}
               </button>
             )}
             {canClose && (
@@ -806,7 +797,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 disabled={closing}
                 className="rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100 disabled:opacity-60 active:scale-95"
               >
-                {closing ? "Closing…" : "Close"}
+                {closing ? copy.closing : copy.closeAction}
               </button>
             )}
           </div>
@@ -815,7 +806,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
         {/* ── Error banner ── */}
         {error && (
           <div className="flex-none border-b border-rose-100 bg-rose-50 px-5 py-2 text-xs font-medium text-rose-700">
-            Failed to load: {getErrorMessage(error)}
+            {getErrorMessage(error)}
           </div>
         )}
 
@@ -823,7 +814,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
         {!socketConnected && (
           <div className="flex flex-none items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2 text-xs text-amber-700">
             <WifiOff size={12} className="flex-shrink-0" />
-            Reconnecting… Messages will be delivered when connection restores.
+            {copy.connectionIssue}
           </div>
         )}
 
@@ -854,12 +845,12 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 <MessageSquare size={22} className="text-slate-300" />
               </div>
               <p className="text-sm font-semibold text-slate-700">
-                Start the conversation
+                {copy.startConversation}
               </p>
               <p className="mt-1 text-xs text-slate-400">
                 {isSupportChat
-                  ? "Your message goes directly to Meomul support"
-                  : "Your message goes directly to the hotel team"}
+                  ? copy.messageDirectSupport
+                  : copy.messageDirectHotel}
               </p>
             </div>
           )}
@@ -901,7 +892,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                       <div className="my-6 flex items-center gap-3">
                         <div className="h-px flex-1 bg-slate-200/70" />
                         <span className="rounded-full border border-slate-200 bg-white px-3 py-0.5 text-[10px] font-semibold tracking-wide text-slate-400 shadow-sm">
-                          {formatDateSeparator(message.timestamp)}
+                          {formatChatDateSeparator(locale, message.timestamp)}
                         </span>
                         <div className="h-px flex-1 bg-slate-200/70" />
                       </div>
@@ -937,7 +928,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                       {isOwn && showTime && (
                         <div className="flex flex-shrink-0 flex-col items-end gap-0.5 pb-0.5">
                           <span className="text-[10px] leading-none text-slate-400">
-                            {formatMessageTime(message.timestamp)}
+                            {formatChatTime(locale, message.timestamp)}
                           </span>
                           {message.read ? (
                             <CheckCheck size={10} className="text-blue-400" />
@@ -954,17 +945,19 @@ const ChatThreadPage: NextPageWithAuth = () => {
                             {incomingSenderLabel}
                           </p>
                         )}
-                        <MessageBubble
-                          message={message}
-                          isOwn={isOwn}
-                          isLastInGroup={isLastInGroup}
-                        />
+                          <MessageBubble
+                            message={message}
+                            isOwn={isOwn}
+                            isLastInGroup={isLastInGroup}
+                            locale={locale}
+                            copy={copy}
+                          />
                       </div>
 
                       {/* Received: time shown to the RIGHT of bubble */}
                       {!isOwn && showTime && (
                         <span className="flex-shrink-0 pb-0.5 text-[10px] leading-none text-slate-400">
-                          {formatMessageTime(message.timestamp)}
+                          {formatChatTime(locale, message.timestamp)}
                         </span>
                       )}
                     </div>
@@ -994,7 +987,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
             <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 py-3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
               <p className="text-sm text-slate-500">
-                This conversation is closed
+                {copy.closedNotice}
               </p>
             </div>
           ) : (
@@ -1022,7 +1015,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                       ? "text-sky-400 animate-pulse"
                       : "text-slate-300 hover:text-slate-500"
                   }`}
-                  aria-label="Upload image"
+                  aria-label={copy.uploadImage}
                 >
                   <ImagePlus size={16} />
                 </button>
@@ -1035,7 +1028,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                     stopTypingSignal();
                   }}
                   rows={1}
-                  placeholder="Write a message…"
+                  placeholder={copy.sendMessagePlaceholder}
                   disabled={sending}
                   className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
                   style={{ minHeight: "32px", maxHeight: "160px" }}
@@ -1048,7 +1041,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                       ? "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
                       : "text-slate-300"
                   }`}
-                  aria-label="Send message"
+                  aria-label={copy.sendMessage}
                 >
                   <Send size={15} />
                 </button>

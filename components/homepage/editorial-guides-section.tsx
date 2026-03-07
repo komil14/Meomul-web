@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import { useI18n } from "@/lib/i18n/provider";
 import type { EditorialGuideCard } from "@/types/homepage";
 import styles from "@/styles/home-landing-ovastin.module.css";
 
@@ -9,15 +10,16 @@ interface EditorialGuidesSectionProps {
 }
 
 export function EditorialGuidesSection({ cards }: EditorialGuidesSectionProps) {
+  const { t } = useI18n();
   if (cards.length === 0) return null;
 
   return (
     <section className={styles.guidesSection}>
       <div className={styles.guidesHeader}>
-        <p className={styles.guidesEyebrow}>Editorial Guides</p>
-        <h2 className={styles.guidesTitle}>Start with a trip plan, not a blank search</h2>
+        <p className={styles.guidesEyebrow}>{t("home_guides_eyebrow")}</p>
+        <h2 className={styles.guidesTitle}>{t("home_guides_title")}</h2>
         <p className={styles.guidesDescription}>
-          Curated routes into pre-filtered results so guests can move from idea to booking faster.
+          {t("home_guides_desc")}
         </p>
       </div>
 
@@ -43,10 +45,14 @@ export function EditorialGuidesSection({ cards }: EditorialGuidesSectionProps) {
                 <p className={styles.guideCardDescription}>{guide.description}</p>
                 <p className={styles.guideCardMeta}>
                   {formatHotelLocationLabel(guide.location)} · {guide.checkIn} - {guide.checkOut}{" "}
-                  · {guide.guests} guest{guide.guests === "1" ? "" : "s"}
+                  ·{" "}
+                  {t("home_common_guest_count", {
+                    count: guide.guests,
+                    suffix: guide.guests === "1" ? "" : "s",
+                  })}
                 </p>
                 <span className={styles.guideCardCta}>
-                  Open plan <span aria-hidden>↗</span>
+                  {t("home_guides_open_plan")} <span aria-hidden>↗</span>
                 </span>
               </div>
             </Link>

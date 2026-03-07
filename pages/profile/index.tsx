@@ -11,6 +11,11 @@ import { BookingsTab } from "@/components/profile/bookings-tab";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_MEMBER_QUERY } from "@/graphql/member.gql";
 import { getSessionMember, updateSessionMember } from "@/lib/auth/session";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatProfileDate,
+  getProfileCopy,
+} from "@/lib/profile/profile-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import { Calendar, MapPin, Phone } from "lucide-react";
 import type { NextPageWithAuth } from "@/types/page";
@@ -42,16 +47,18 @@ interface GetMemberData {
 // ─── Profile overview ─────────────────────────────────────────────────────────
 
 function ProfileOverview({ member }: { member: MemberDto }) {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {/* About */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:col-span-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-          About
+          {copy.about}
         </p>
         <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
           {member.memberDesc ||
-            "No bio yet \u2014 edit your profile to share a bit about yourself."}
+            copy.noBio}
         </p>
       </div>
 
@@ -64,7 +71,7 @@ function ProfileOverview({ member }: { member: MemberDto }) {
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                Location
+                {copy.location}
               </p>
               <p className="text-sm font-medium text-slate-700">
                 {member.memberAddress}
@@ -82,7 +89,7 @@ function ProfileOverview({ member }: { member: MemberDto }) {
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                Phone
+                {copy.phone}
               </p>
               <p className="text-sm font-medium text-slate-700">
                 {member.memberPhone}
@@ -99,14 +106,10 @@ function ProfileOverview({ member }: { member: MemberDto }) {
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-              Joined
+              {copy.joined}
             </p>
             <p className="text-sm font-medium text-slate-700">
-              {new Date(member.createdAt).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatProfileDate(locale, member.createdAt)}
             </p>
           </div>
         </div>
@@ -146,6 +149,8 @@ function ProfileOverviewSkeleton() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const ProfilePage: NextPageWithAuth = () => {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const router = useRouter();
   const sessionMember = useMemo(() => getSessionMember(), []);
   const activeTab = (router.query.tab as string) ?? "profile";
@@ -196,7 +201,7 @@ const ProfilePage: NextPageWithAuth = () => {
       {/* Eyebrow */}
       <div className="motion-fade-up">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Profile
+          {copy.profile}
         </p>
       </div>
 

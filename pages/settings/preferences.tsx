@@ -9,9 +9,10 @@ import { trackAnalyticsEvent } from "@/lib/analytics/events";
 import { setOnboardingCompletionCachedValue } from "@/lib/auth/onboarding-status";
 import { getSessionMember } from "@/lib/auth/session";
 import {
-  AMENITY_OPTIONS,
-  BUDGET_OPTIONS,
-  DESTINATION_OPTIONS,
+  getAmenityOptions,
+  getBudgetOptions,
+  getDestinationOptions,
+  getTravelStyleOptions,
   mapBudgetLevelFromProfile,
   mapPurposesToTravelStyles,
   MAX_AMENITIES,
@@ -20,8 +21,8 @@ import {
   toggleWithLimit,
   toValidAmenityList,
   toValidDestinationList,
-  TRAVEL_STYLE_OPTIONS,
 } from "@/lib/recommendation/onboarding-options";
+import { useI18n } from "@/lib/i18n/provider";
 import { errorAlert, infoAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import type { HotelLocation } from "@/types/hotel";
@@ -35,6 +36,7 @@ import type {
 } from "@/types/recommendation";
 
 const PreferencesPage: NextPageWithAuth = () => {
+  const { t } = useI18n();
   const [travelStyles, setTravelStyles] = useState<TravelStyle[]>([]);
   const [preferredDestinations, setPreferredDestinations] = useState<HotelLocation[]>([]);
   const [preferredAmenities, setPreferredAmenities] = useState<string[]>([]);
@@ -42,6 +44,11 @@ const PreferencesPage: NextPageWithAuth = () => {
   const [errorText, setErrorText] = useState<string | null>(null);
   const [isPrefillApplied, setIsPrefillApplied] = useState(false);
   const [hasTrackedViewEvent, setHasTrackedViewEvent] = useState(false);
+
+  const travelStyleOptions = useMemo(() => getTravelStyleOptions(t), [t]);
+  const destinationOptions = useMemo(() => getDestinationOptions(t), [t]);
+  const amenityOptions = useMemo(() => getAmenityOptions(t), [t]);
+  const budgetOptions = useMemo(() => getBudgetOptions(t), [t]);
 
   const { data, loading, error, refetch } = useQuery<GetMyRecommendationProfileQueryData>(GET_MY_RECOMMENDATION_PROFILE_QUERY, {
     fetchPolicy: "cache-and-network",
@@ -80,20 +87,20 @@ const PreferencesPage: NextPageWithAuth = () => {
 
   const validationMessage = useMemo(() => {
     if (travelStyles.length === 0) {
-      return "Select at least 1 travel style.";
+      return t("onboarding_validation_travel");
     }
     if (preferredDestinations.length === 0) {
-      return "Select at least 1 destination.";
+      return t("onboarding_validation_destination");
     }
     return null;
-  }, [preferredDestinations.length, travelStyles.length]);
+  }, [preferredDestinations.length, t, travelStyles.length]);
 
   const handleSave = async () => {
     setErrorText(null);
 
     if (validationMessage) {
       setErrorText(validationMessage);
-      await infoAlert("Validation required", validationMessage);
+      await infoAlert(t("settings_preferences_validation_title"), validationMessage);
       return;
     }
 
@@ -109,7 +116,7 @@ const PreferencesPage: NextPageWithAuth = () => {
         },
       });
 
-      const successMessage = response.data?.saveOnboardingPreferences.message ?? "Preferences saved.";
+      const successMessage = response.data?.saveOnboardingPreferences.message ?? t("settings_preferences_saved_body");
       trackAnalyticsEvent("preferences_saved", {
         travelStylesCount: travelStyles.length,
         destinationsCount: preferredDestinations.length,
@@ -123,30 +130,30 @@ const PreferencesPage: NextPageWithAuth = () => {
       }
 
       await refetch();
-      await successAlert("Preferences saved", successMessage);
+      await successAlert(t("settings_preferences_saved_title"), successMessage);
     } catch (saveError) {
       trackAnalyticsEvent("preferences_save_failed", {
         error: getErrorMessage(saveError),
       });
       const message = getErrorMessage(saveError);
       setErrorText(message);
-      await errorAlert("Save failed", message);
+      await errorAlert(t("settings_preferences_failed_title"), message);
     }
   };
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6">
       <header className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Settings</p>
-        <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">Recommendation Preferences</h1>
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{t("settings_preferences_eyebrow")}</p>
+        <h1 className="text-3xl font-semibold text-slate-900 sm:text-4xl">{t("settings_preferences_title")}</h1>
         <p className="max-w-3xl text-sm text-slate-600 sm:text-base">
-          Update your travel profile to improve homepage hotel recommendations.
+          {t("settings_preferences_desc")}
         </p>
       </header>
 
       {loading && !isPrefillApplied ? (
         <section className="rounded-2xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-600">
-          Loading your preference profile...
+          {t("settings_preferences_loading")}
         </section>
       ) : null}
       {error ? <ErrorNotice message={getErrorMessage(error)} /> : null}
@@ -154,13 +161,13 @@ const PreferencesPage: NextPageWithAuth = () => {
       <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-slate-900">Travel style</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t("onboarding_step_travel")}</h2>
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
               {travelStyles.length}/{MAX_TRAVEL_STYLES}
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {TRAVEL_STYLE_OPTIONS.map((option) => {
+            {travelStyleOptions.map((option) => {
               const selected = travelStyles.includes(option.value);
               return (
                 <button
@@ -181,13 +188,13 @@ const PreferencesPage: NextPageWithAuth = () => {
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-slate-900">Preferred destinations</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t("onboarding_step_destinations")}</h2>
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
               {preferredDestinations.length}/{MAX_DESTINATIONS}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {DESTINATION_OPTIONS.map((option) => {
+            {destinationOptions.map((option) => {
               const selected = preferredDestinations.includes(option.value);
               return (
                 <button
@@ -209,13 +216,13 @@ const PreferencesPage: NextPageWithAuth = () => {
 
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-slate-900">Priority amenities</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t("onboarding_step_amenities")}</h2>
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
               {preferredAmenities.length}/{MAX_AMENITIES}
             </span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {AMENITY_OPTIONS.map((option) => {
+            {amenityOptions.map((option) => {
               const selected = preferredAmenities.includes(option.value);
               return (
                 <button
@@ -234,9 +241,9 @@ const PreferencesPage: NextPageWithAuth = () => {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-slate-900">Budget level (optional)</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t("onboarding_budget_title")}</h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            {BUDGET_OPTIONS.map((option) => {
+            {budgetOptions.map((option) => {
               const selected = budgetLevel === option.value;
               return (
                 <button
@@ -265,7 +272,7 @@ const PreferencesPage: NextPageWithAuth = () => {
             }}
             className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save preferences"}
+            {saving ? t("onboarding_saving") : t("settings_preferences_save")}
           </button>
         </footer>
       </section>

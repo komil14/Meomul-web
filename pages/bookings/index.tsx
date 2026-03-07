@@ -4,6 +4,14 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatBookingDate,
+  formatNightsLabel,
+  getBookingCopy,
+  getBookingStatusLabel,
+  getPaymentStatusLabel,
+} from "@/lib/bookings/booking-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import {
   CalendarDays,
@@ -54,15 +62,6 @@ const STATUS_BADGE: Record<BookingStatus, string> = {
   NO_SHOW: "border-zinc-200 bg-zinc-50 text-zinc-600",
 };
 
-const STATUS_LABEL: Record<BookingStatus, string> = {
-  PENDING: "Pending",
-  CONFIRMED: "Confirmed",
-  CHECKED_IN: "Checked in",
-  CHECKED_OUT: "Checked out",
-  CANCELLED: "Cancelled",
-  NO_SHOW: "No show",
-};
-
 const PAYMENT_BADGE: Record<string, string> = {
   PENDING: "border-amber-200 bg-amber-50 text-amber-700",
   PARTIAL: "border-violet-200 bg-violet-50 text-violet-700",
@@ -70,31 +69,6 @@ const PAYMENT_BADGE: Record<string, string> = {
   FAILED: "border-rose-200 bg-rose-50 text-rose-600",
   REFUNDED: "border-slate-200 bg-slate-50 text-slate-600",
 };
-
-const PAYMENT_LABEL: Record<string, string> = {
-  PENDING: "Unpaid",
-  PARTIAL: "Partial",
-  PAID: "Paid",
-  FAILED: "Failed",
-  REFUNDED: "Refunded",
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateFull(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 function diffNights(checkIn: string, checkOut: string): number {
   const msPerDay = 86_400_000;
@@ -111,21 +85,21 @@ function diffNights(checkIn: string, checkOut: string): number {
 function BookingCard({
   booking,
   index,
+  locale,
 }: {
   booking: BookingListItem;
   index: number;
+  locale: "en" | "ko" | "ru" | "uz";
 }) {
   const cover = booking.hotelImages?.[0];
   const statusClass =
     STATUS_BADGE[booking.bookingStatus] ??
     "border-slate-200 bg-slate-50 text-slate-600";
-  const statusLabel =
-    STATUS_LABEL[booking.bookingStatus] ?? booking.bookingStatus;
+  const statusLabel = getBookingStatusLabel(locale, booking.bookingStatus);
   const paymentClass =
     PAYMENT_BADGE[booking.paymentStatus] ??
     "border-slate-200 bg-slate-50 text-slate-600";
-  const paymentLabel =
-    PAYMENT_LABEL[booking.paymentStatus] ?? booking.paymentStatus;
+  const paymentLabel = getPaymentStatusLabel(locale, booking.paymentStatus);
   const nights = diffNights(booking.checkInDate, booking.checkOutDate);
 
   const stagger = Math.min(index, 5);
@@ -180,12 +154,12 @@ function BookingCard({
         <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
           <span className="flex items-center gap-1">
             <CalendarDays size={11} className="text-slate-400" />
-            {formatDate(booking.checkInDate)} –{" "}
-            {formatDate(booking.checkOutDate)}
+            {formatBookingDate(locale, booking.checkInDate)} –{" "}
+            {formatBookingDate(locale, booking.checkOutDate)}
           </span>
           <span className="flex items-center gap-1">
             <Moon size={11} className="text-slate-400" />
-            {nights} night{nights !== 1 ? "s" : ""}
+            {formatNightsLabel(locale, nights)}
           </span>
           <span className="flex items-center gap-1">
             <CreditCard size={11} className="text-slate-400" />
@@ -245,6 +219,8 @@ function SummaryStat({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const MyBookingsPage: NextPageWithAuth = () => {
+  const { locale } = useI18n();
+  const copy = getBookingCopy(locale);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">(
     "ALL",
@@ -310,20 +286,20 @@ const MyBookingsPage: NextPageWithAuth = () => {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Reservations
+            {copy.reservationsEyebrow}
           </p>
           <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-semibold text-slate-900">
-            My Bookings
+            {copy.myBookingsTitle}
           </h1>
           <p className="mt-1.5 text-sm text-slate-500">
-            Track and manage all your hotel reservations in one place.
+            {copy.myBookingsDescription}
           </p>
         </div>
         <Link
           href="/hotels"
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
         >
-          Browse hotels
+          {copy.browseHotels}
         </Link>
       </header>
 
@@ -332,11 +308,11 @@ const MyBookingsPage: NextPageWithAuth = () => {
       {/* ── Summary strip ──────────────────────────────────────────────── */}
       {!loading && bookings.length > 0 && (
         <div className="motion-fade-up flex flex-wrap gap-6 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)] sm:gap-10">
-          <SummaryStat label="Total" value={total} />
+          <SummaryStat label={copy.total} value={total} />
           <div className="w-px self-stretch bg-slate-100" />
-          <SummaryStat label="Upcoming" value={upcoming} dot="bg-sky-500" />
-          <SummaryStat label="Active" value={active} dot="bg-emerald-500" />
-          <SummaryStat label="Completed" value={completed} dot="bg-slate-400" />
+          <SummaryStat label={copy.upcoming} value={upcoming} dot="bg-sky-500" />
+          <SummaryStat label={copy.active} value={active} dot="bg-emerald-500" />
+          <SummaryStat label={copy.completed} value={completed} dot="bg-slate-400" />
         </div>
       )}
 
@@ -358,7 +334,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
                 className={`h-1.5 w-1.5 rounded-full ${statusFilter === s ? "bg-white/60" : STATUS_DOT[s]}`}
               />
             )}
-            {s === "ALL" ? "All" : (STATUS_LABEL[s] ?? s)}
+            {s === "ALL" ? copy.all : getBookingStatusLabel(locale, s)}
           </button>
         ))}
       </div>
@@ -390,20 +366,20 @@ const MyBookingsPage: NextPageWithAuth = () => {
           </div>
           <p className="mt-5 font-[family-name:var(--font-display)] text-lg font-semibold text-slate-800">
             {statusFilter === "ALL"
-              ? "No bookings yet"
-              : `No ${STATUS_LABEL[statusFilter as BookingStatus].toLowerCase()} bookings`}
+              ? copy.noBookingsYet
+              : copy.noFilteredBookings}
           </p>
           <p className="mt-1.5 max-w-xs text-sm text-slate-400">
             {statusFilter === "ALL"
-              ? "Your reservations will appear here once you book a hotel."
-              : "Try a different filter or check back later."}
+              ? copy.noBookingsDescription
+              : copy.tryAnotherFilter}
           </p>
           {statusFilter === "ALL" && (
             <Link
               href="/hotels"
               className="mt-6 rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
             >
-              Browse hotels
+              {copy.browseHotels}
             </Link>
           )}
         </div>
@@ -414,8 +390,9 @@ const MyBookingsPage: NextPageWithAuth = () => {
         <>
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium text-slate-400">
-              Showing {bookings.length} of {total} booking
-              {total !== 1 ? "s" : ""}
+              {copy.showing} {bookings.length} {copy.ofBookings
+                .replace("{{count}}", total.toString())
+                .replace("{{suffix}}", total !== 1 ? "s" : "")}
             </p>
             {statusFilter !== "ALL" && (
               <button
@@ -423,14 +400,14 @@ const MyBookingsPage: NextPageWithAuth = () => {
                 onClick={() => handleStatusChange("ALL")}
                 className="text-xs font-medium text-slate-500 underline underline-offset-2 transition hover:text-slate-700"
               >
-                Clear filter
+                {copy.clearFilter}
               </button>
             )}
           </div>
 
           <div className="space-y-3">
             {bookings.map((b, i) => (
-              <BookingCard key={b._id} booking={b} index={i} />
+              <BookingCard key={b._id} booking={b} index={i} locale={locale} />
             ))}
           </div>
 
@@ -438,7 +415,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-3.5">
               <p className="text-sm text-slate-500">
-                Page{" "}
+                {copy.page}{" "}
                 <span className="font-semibold text-slate-700">{page}</span> of{" "}
                 <span className="font-semibold text-slate-700">
                   {totalPages}
@@ -452,7 +429,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
                   className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:opacity-40"
                 >
                   <ChevronLeft size={12} />
-                  Previous
+                  {copy.previous}
                 </button>
                 <button
                   type="button"
@@ -460,7 +437,7 @@ const MyBookingsPage: NextPageWithAuth = () => {
                   disabled={page >= totalPages || loading}
                   className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:opacity-40"
                 >
-                  Next
+                  {copy.next}
                   <ChevronRight size={12} />
                 </button>
               </div>

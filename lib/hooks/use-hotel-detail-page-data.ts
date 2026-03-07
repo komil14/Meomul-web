@@ -8,20 +8,20 @@ import {
 } from "@/graphql/hotel.gql";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import {
-  amenityLabels,
   asPercent,
   canUseMemberActions,
   canUsePersonalizedRecommendations,
   getMapEmbedLink,
   getMapLink,
-  getPolicyText,
   REVIEW_PAGE_SIZE,
   ROOM_PAGE_SIZE,
   shortenText,
 } from "@/lib/hotels/detail-page-helpers";
+import { getHotelAmenityLabel } from "@/lib/hotels/hotels-i18n";
 import { useHotelDetailActions } from "@/lib/hooks/use-hotel-detail-actions";
 import { useHotelDetailDiscovery } from "@/lib/hooks/use-hotel-detail-discovery";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { useI18n } from "@/lib/i18n/provider";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -45,6 +45,7 @@ export const useHotelDetailPageData = ({
   initialHotel,
   initialRooms,
 }: UseHotelDetailPageDataInput) => {
+  const { t } = useI18n();
   const router = useRouter();
   const isPageVisible = usePageVisible();
 
@@ -402,21 +403,25 @@ export const useHotelDetailPageData = ({
 
     return Object.entries(hotel.amenities)
       .filter(([, enabled]) => enabled === true)
-      .map(
-        ([key]) =>
-          amenityLabels[key as keyof HotelDetailItem["amenities"]] ?? key,
+      .map(([key]) =>
+        getHotelAmenityLabel(key, t)
+          .replace(/([a-z])([A-Z])/g, "$1 $2")
+          .replace(/[_-]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .replace(/\b\w/g, (char) => char.toUpperCase()),
       );
-  }, [hotel]);
+  }, [hotel, t]);
 
   const shortDescription = useMemo(
     () =>
       hotel
         ? shortenText(
-            hotel.hotelDesc || "No hotel description provided yet.",
+            hotel.hotelDesc || t("hotel_detail_desc_fallback"),
             190,
           )
         : "",
-    [hotel],
+    [hotel, t],
   );
 
   const reviewCountText = useMemo(
@@ -494,8 +499,12 @@ export const useHotelDetailPageData = ({
     recommendedLoading,
     recommendedErrorMessage,
     cancellationPolicyText: hotel
-      ? getPolicyText(hotel.cancellationPolicy)
-      : "Moderate cancellation",
+      ? hotel.cancellationPolicy === "FLEXIBLE"
+        ? t("hotel_policy_flexible")
+        : hotel.cancellationPolicy === "STRICT"
+          ? t("hotel_policy_strict")
+          : t("hotel_policy_moderate")
+      : t("hotel_policy_moderate"),
     reviewsSectionRef,
   };
 };

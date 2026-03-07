@@ -1,6 +1,8 @@
 import type { RoomHeroHighlight } from "@/components/rooms/detail/room-hero-section";
 import type { RoomAmenityCard, RoomFactCard } from "@/components/rooms/detail/room-overview-section";
-import { formatAmenityLabel, formatEnumLabel, formatIsoDate } from "@/lib/rooms/booking";
+import { getBedTypeLabel, getRoomStatusLabel, getRoomTypeLabel, getViewTypeLabel } from "@/lib/hotels/hotels-i18n";
+import type { TranslationKey } from "@/lib/i18n/messages";
+import { formatAmenityLabel, formatIsoDate } from "@/lib/rooms/booking";
 import { formatNumber } from "@/lib/utils/format";
 import type { RoomDetailItem } from "@/types/hotel";
 
@@ -69,7 +71,15 @@ export interface RoomPresentationData {
   roomAmenityCards: RoomAmenityCard[];
 }
 
-export const getRoomPresentation = (room: RoomDetailItem | undefined): RoomPresentationData => {
+type Translator = (
+  key: TranslationKey,
+  params?: Record<string, string | number>,
+) => string;
+
+export const getRoomPresentation = (
+  room: RoomDetailItem | undefined,
+  t: Translator,
+): RoomPresentationData => {
   if (!room) {
     return {
       roomTypeLabel: "",
@@ -81,26 +91,26 @@ export const getRoomPresentation = (room: RoomDetailItem | undefined): RoomPrese
     };
   }
 
-  const roomTypeLabel = formatEnumLabel(room.roomType);
-  const viewTypeLabel = formatEnumLabel(room.viewType);
+  const roomTypeLabel = getRoomTypeLabel(room.roomType, t);
+  const viewTypeLabel = getViewTypeLabel(room.viewType, t);
   const roomTypeLine = `${roomTypeLabel}${room.roomNumber ? ` · #${room.roomNumber}` : ""}`;
 
   const roomFactCards: RoomFactCard[] = [
-    { label: "View Option", value: `${viewTypeLabel} View`, icon: "view" },
-    { label: "Status", value: formatEnumLabel(room.roomStatus), icon: "status" },
-    { label: "Capacity", value: `${room.maxOccupancy} guests`, icon: "capacity" },
-    { label: "Bed Setup", value: `${room.bedCount} x ${formatEnumLabel(room.bedType)}`, icon: "bed" },
-    { label: "Room Size", value: `${room.roomSize} m²`, icon: "size" },
-    { label: "Inventory", value: `${room.totalRooms} total · date-based`, icon: "inventory" },
-    { label: "Weekend Add-on", value: `₩ ${formatNumber(room.weekendSurcharge)}`, icon: "surcharge" },
-    { label: "Updated", value: formatIsoDate(room.updatedAt), icon: "clock" },
+    { label: t("room_fact_view"), value: t("room_detail_view_suffix", { view: viewTypeLabel }), icon: "view" },
+    { label: t("room_fact_status"), value: getRoomStatusLabel(room.roomStatus, t), icon: "status" },
+    { label: t("room_fact_capacity"), value: t("room_fact_guests_value", { count: room.maxOccupancy }), icon: "capacity" },
+    { label: t("room_fact_bed_setup"), value: t("room_fact_bed_value", { count: room.bedCount, bedType: getBedTypeLabel(room.bedType, t) }), icon: "bed" },
+    { label: t("room_fact_size"), value: `${room.roomSize} m²`, icon: "size" },
+    { label: t("room_fact_inventory"), value: t("room_fact_inventory_value", { count: room.totalRooms, mode: t("room_fact_inventory_date_based") }), icon: "inventory" },
+    { label: t("room_fact_weekend_addon"), value: `₩ ${formatNumber(room.weekendSurcharge)}`, icon: "surcharge" },
+    { label: t("room_fact_updated"), value: formatIsoDate(room.updatedAt), icon: "clock" },
   ];
 
   const roomHeroHighlights: RoomHeroHighlight[] = [
-    { label: "Guests", value: `${room.maxOccupancy}`, icon: "capacity" },
-    { label: "Size", value: `${room.roomSize}m²`, icon: "size" },
-    { label: "Beds", value: `${room.bedCount}`, icon: "bed" },
-    { label: "Units", value: `${room.totalRooms}`, icon: "inventory" },
+    { label: t("room_highlight_guests"), value: `${room.maxOccupancy}`, icon: "capacity" },
+    { label: t("room_highlight_size"), value: `${room.roomSize}m²`, icon: "size" },
+    { label: t("room_highlight_beds"), value: `${room.bedCount}`, icon: "bed" },
+    { label: t("room_highlight_units"), value: `${room.totalRooms}`, icon: "inventory" },
   ];
 
   const roomAmenityCards: RoomAmenityCard[] = (room.roomAmenities ?? []).map((amenity) => {

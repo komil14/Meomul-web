@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import { GET_HOTEL_QUERY, GET_HOTEL_REVIEWS_QUERY } from "@/graphql/hotel.gql";
 import { RESPOND_TO_REVIEW_MUTATION } from "@/graphql/review.gql";
+import { useI18n } from "@/lib/i18n/provider";
 import { getErrorMessage } from "@/lib/utils/error";
 import { successAlert, errorAlert } from "@/lib/ui/alerts";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -44,7 +45,7 @@ const getInitials = (nick?: string | null) =>
 
 const formatDate = (iso: string) => {
   try {
-    return new Date(iso).toLocaleDateString("en-US", {
+    return new Date(iso).toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -81,6 +82,7 @@ interface ReviewCardProps {
   onCancel: () => void;
   onChangeText: (text: string) => void;
   onSubmit: () => void;
+  copy: ReturnType<typeof getHotelReviewsCopy>;
 }
 
 const ReviewCard = ({
@@ -92,6 +94,7 @@ const ReviewCard = ({
   onCancel,
   onChangeText,
   onSubmit,
+  copy,
 }: ReviewCardProps) => {
   const isResponding = respondingId === review._id;
 
@@ -105,10 +108,10 @@ const ReviewCard = ({
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">
-              {review.reviewerNick ?? "Guest"}
+              {review.reviewerNick ?? copy.guest}
               {review.verifiedStay && (
                 <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                  Verified Stay
+                  {copy.verifiedStay}
                 </span>
               )}
             </p>
@@ -154,10 +157,10 @@ const ReviewCard = ({
       {/* Sub-ratings */}
       <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
         {[
-          { label: "Cleanliness", val: review.cleanlinessRating },
-          { label: "Location", val: review.locationRating },
-          { label: "Service", val: review.serviceRating },
-          { label: "Value", val: review.valueRating },
+          { label: copy.cleanliness, val: review.cleanlinessRating },
+          { label: copy.location, val: review.locationRating },
+          { label: copy.service, val: review.serviceRating },
+          { label: copy.value, val: review.valueRating },
         ].map(({ label, val }) => (
           <span key={label}>
             {label}{" "}
@@ -175,7 +178,7 @@ const ReviewCard = ({
       {review.hotelResponse ? (
         <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3">
           <p className="text-xs font-semibold text-slate-500">
-            Hotel response ·{" "}
+            {copy.hotelResponse} ·{" "}
             {review.hotelResponse.respondedAt
               ? formatDate(review.hotelResponse.respondedAt)
               : ""}
@@ -192,7 +195,7 @@ const ReviewCard = ({
               className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-slate-900"
             >
               <MessageSquare size={13} />
-              Respond to review
+              {copy.respondToReview}
             </button>
           ) : (
             <div className="space-y-2">
@@ -200,7 +203,7 @@ const ReviewCard = ({
                 rows={3}
                 value={responseText}
                 onChange={(e) => onChangeText(e.target.value)}
-                placeholder="Write a professional response to this guest review..."
+                placeholder={copy.responsePlaceholder}
                 className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                 autoFocus
               />
@@ -209,14 +212,14 @@ const ReviewCard = ({
                   onClick={onCancel}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
-                  Cancel
+                  {copy.cancel}
                 </button>
                 <button
                   onClick={onSubmit}
                   disabled={submitting || !responseText.trim()}
                   className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50"
                 >
-                  {submitting ? "Sending..." : "Send Response"}
+                  {submitting ? copy.sending : copy.sendResponse}
                 </button>
               </div>
             </div>
@@ -230,6 +233,8 @@ const ReviewCard = ({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const HotelReviewsPage: NextPageWithAuth = () => {
+  const { locale } = useI18n();
+  const copy = getHotelReviewsCopy(locale);
   const router = useRouter();
   const hotelId =
     typeof router.query.hotelId === "string" ? router.query.hotelId : "";
@@ -303,7 +308,7 @@ const HotelReviewsPage: NextPageWithAuth = () => {
           responseText: responseText.trim(),
         },
       });
-      void successAlert("Response posted successfully.");
+      void successAlert(copy.responsePosted);
       closeRespond();
       void refetchReviews();
     } catch (err) {
@@ -331,18 +336,18 @@ const HotelReviewsPage: NextPageWithAuth = () => {
             className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition"
           >
             <ArrowLeft size={15} />
-            Edit hotel
+            {copy.editHotel}
           </Link>
           <span className="text-slate-300">/</span>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              Review Management
+              {copy.reviewManagement}
             </p>
             <h1 className="mt-0.5 text-2xl font-semibold text-slate-900">
-              {hotel?.hotelTitle ?? "Hotel"}{" "}
+              {hotel?.hotelTitle ?? copy.hotel}{" "}
               {total > 0 && (
                 <span className="text-lg font-normal text-slate-400">
-                  — {total} review{total !== 1 ? "s" : ""}
+                  — {total.toLocaleString(locale)} {copy.reviewsCount(total)}
                 </span>
               )}
             </h1>
@@ -366,7 +371,7 @@ const HotelReviewsPage: NextPageWithAuth = () => {
                 </p>
                 <StarRow rating={summary.overallRating} />
                 <p className="mt-1 text-xs text-slate-500">
-                  {summary.totalReviews} reviews
+                  {summary.totalReviews.toLocaleString(locale)} {copy.reviewsCount(summary.totalReviews)}
                 </p>
               </div>
               <div className="flex-1 space-y-2">
@@ -424,9 +429,9 @@ const HotelReviewsPage: NextPageWithAuth = () => {
         {!reviewsLoading && reviews.length === 0 && (
           <div className="flex min-h-[30vh] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white text-center">
             <Star size={36} className="text-slate-300" />
-            <p className="mt-4 font-semibold text-slate-700">No reviews yet</p>
+            <p className="mt-4 font-semibold text-slate-700">{copy.noReviewsYet}</p>
             <p className="mt-1 text-sm text-slate-500">
-              Guest reviews will appear here after their stay.
+              {copy.noReviewsBody}
             </p>
           </div>
         )}
@@ -449,6 +454,7 @@ const HotelReviewsPage: NextPageWithAuth = () => {
                   onCancel={closeRespond}
                   onChangeText={setResponseText}
                   onSubmit={() => void handleSubmitResponse()}
+                  copy={copy}
                 />
               </div>
             ))}
@@ -463,17 +469,17 @@ const HotelReviewsPage: NextPageWithAuth = () => {
               disabled={page === 1}
               className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
             >
-              ← Prev
+              ← {copy.prev}
             </button>
             <span className="text-sm text-slate-500">
-              Page {page} of {totalPages}
+              {copy.page} {page} {copy.of} {totalPages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
             >
-              Next →
+              {copy.next} →
             </button>
           </div>
         )}
@@ -487,3 +493,123 @@ HotelReviewsPage.auth = {
 };
 
 export default HotelReviewsPage;
+
+function getHotelReviewsCopy(locale: string) {
+  const make = (count: number, one: string, many: string) =>
+    count === 1 ? one : many;
+
+  if (locale === "ko") {
+    return {
+      overall: "종합",
+      cleanliness: "청결",
+      location: "위치",
+      service: "서비스",
+      amenities: "편의시설",
+      value: "가성비",
+      guest: "투숙객",
+      verifiedStay: "인증된 투숙",
+      hotelResponse: "호텔 답변",
+      respondToReview: "후기에 답변하기",
+      responsePlaceholder: "이 후기에 대한 전문적인 답변을 작성해 주세요...",
+      cancel: "취소",
+      sending: "전송 중...",
+      sendResponse: "답변 보내기",
+      responsePosted: "답변이 등록되었습니다.",
+      editHotel: "호텔 수정",
+      reviewManagement: "후기 관리",
+      hotel: "호텔",
+      noReviewsYet: "아직 후기가 없습니다",
+      noReviewsBody: "투숙 후 작성된 후기가 여기에 표시됩니다.",
+      prev: "이전",
+      next: "다음",
+      page: "페이지",
+      of: "/",
+      reviewsCount: (count: number) => `${make(count, "후기", "후기")} ${count === 1 ? "1건" : `${count}건`}`,
+    };
+  }
+  if (locale === "ru") {
+    return {
+      overall: "Общая",
+      cleanliness: "Чистота",
+      location: "Расположение",
+      service: "Сервис",
+      amenities: "Удобства",
+      value: "Цена/качество",
+      guest: "Гость",
+      verifiedStay: "Подтвержденное проживание",
+      hotelResponse: "Ответ отеля",
+      respondToReview: "Ответить на отзыв",
+      responsePlaceholder: "Напишите профессиональный ответ на отзыв гостя...",
+      cancel: "Отмена",
+      sending: "Отправка...",
+      sendResponse: "Отправить ответ",
+      responsePosted: "Ответ успешно опубликован.",
+      editHotel: "Редактировать отель",
+      reviewManagement: "Управление отзывами",
+      hotel: "Отель",
+      noReviewsYet: "Отзывов пока нет",
+      noReviewsBody: "Отзывы гостей появятся здесь после проживания.",
+      prev: "Назад",
+      next: "Далее",
+      page: "Страница",
+      of: "из",
+      reviewsCount: (count: number) => `${count} ${make(count, "отзыв", "отзывов")}`,
+    };
+  }
+  if (locale === "uz") {
+    return {
+      overall: "Umumiy",
+      cleanliness: "Tozalik",
+      location: "Joylashuv",
+      service: "Xizmat",
+      amenities: "Qulayliklar",
+      value: "Qiymat",
+      guest: "Mehmon",
+      verifiedStay: "Tasdiqlangan turar joy",
+      hotelResponse: "Mehmonxona javobi",
+      respondToReview: "Sharhga javob berish",
+      responsePlaceholder: "Mehmon sharhiga professional javob yozing...",
+      cancel: "Bekor qilish",
+      sending: "Yuborilmoqda...",
+      sendResponse: "Javob yuborish",
+      responsePosted: "Javob muvaffaqiyatli yuborildi.",
+      editHotel: "Mehmonxonani tahrirlash",
+      reviewManagement: "Sharhlarni boshqarish",
+      hotel: "Mehmonxona",
+      noReviewsYet: "Hali sharhlar yo'q",
+      noReviewsBody: "Mehmon sharhlari turar joydan so'ng shu yerda paydo bo'ladi.",
+      prev: "Oldingi",
+      next: "Keyingi",
+      page: "Sahifa",
+      of: "/",
+      reviewsCount: (count: number) => `${count} ta sharh`,
+    };
+  }
+  return {
+    overall: "Overall",
+    cleanliness: "Cleanliness",
+    location: "Location",
+    service: "Service",
+    amenities: "Amenities",
+    value: "Value",
+    guest: "Guest",
+    verifiedStay: "Verified Stay",
+    hotelResponse: "Hotel response",
+    respondToReview: "Respond to review",
+    responsePlaceholder: "Write a professional response to this guest review...",
+    cancel: "Cancel",
+    sending: "Sending...",
+    sendResponse: "Send Response",
+    responsePosted: "Response posted successfully.",
+    editHotel: "Edit hotel",
+    reviewManagement: "Review Management",
+    hotel: "Hotel",
+    noReviewsYet: "No reviews yet",
+    noReviewsBody: "Guest reviews will appear here after their stay.",
+    prev: "Prev",
+    next: "Next",
+    page: "Page",
+    of: "of",
+    reviewsCount: (count: number) => `${count} ${make(count, "review", "reviews")}`,
+  };
+}

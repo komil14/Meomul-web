@@ -9,6 +9,13 @@ import {
   UPDATE_ROOM_MUTATION,
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  getBedTypeLabel,
+  getRoomStatusLabel,
+  getRoomTypeLabel,
+  getViewTypeLabel,
+} from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import { successAlert, errorAlert } from "@/lib/ui/alerts";
 import { formatCurrencyKrw } from "@/lib/utils/format";
@@ -50,31 +57,6 @@ const ROOM_PAGINATION: PaginationInput = {
   limit: 100,
   sort: "createdAt",
   direction: -1,
-};
-
-const ROOM_TYPE_LABELS: Record<RoomType, string> = {
-  STANDARD: "Standard",
-  DELUXE: "Deluxe",
-  PREMIUM: "Premium",
-  SUITE: "Suite",
-  FAMILY: "Family",
-  PENTHOUSE: "Penthouse",
-};
-
-const BED_TYPE_LABELS: Record<BedType, string> = {
-  SINGLE: "Single",
-  DOUBLE: "Double",
-  QUEEN: "Queen",
-  KING: "King",
-  TWIN: "Twin",
-};
-
-const VIEW_TYPE_LABELS: Record<ViewType, string> = {
-  NONE: "No view",
-  CITY: "City view",
-  OCEAN: "Ocean view",
-  MOUNTAIN: "Mountain view",
-  GARDEN: "Garden view",
 };
 
 const ROOM_STATUS_CONFIG: Record<
@@ -166,8 +148,214 @@ const DEFAULT_FORM: RoomFormState = {
 
 const HotelRoomsPage: NextPageWithAuth = () => {
   const router = useRouter();
+  const { locale, t } = useI18n();
   const hotelId =
     typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+  const copy =
+    locale === "ko"
+      ? {
+          editHotel: "호텔 수정",
+          reviews: "리뷰",
+          roomManagement: "객실 관리",
+          roomLabel: "객실",
+          addRoom: "객실 추가",
+          noRoomsYet: "아직 등록된 객실이 없습니다",
+          addFirstRoom: "예약을 받으려면 첫 객실 유형을 추가하세요.",
+          room: "객실",
+          type: "유형",
+          pricePerNight: "1박 요금",
+          status: "상태",
+          maxGuests: "최대",
+          guests: "명",
+          weekend: "주말",
+          registered: "등록됨",
+          addNewRoom: "새 객실 추가",
+          editRoom: "객실 수정",
+          basicInfo: "기본 정보",
+          roomName: "객실 이름",
+          roomNameRequired: "객실 이름은 필수입니다.",
+          roomNamePlaceholder: "예: 디럭스 오션 뷰",
+          roomType: "객실 유형",
+          roomNumber: "객실 번호",
+          roomNumberPlaceholder: "예: 301 (선택)",
+          description: "설명",
+          roomDescriptionPlaceholder: "객실의 강점을 설명해 주세요…",
+          capacityAndBed: "수용 인원 및 침대",
+          maxOccupancy: "최대 투숙 인원",
+          totalRooms: "총 객실 수",
+          bedType: "침대 유형",
+          bedCount: "침대 수",
+          pricing: "요금",
+          basePrice: "기본 요금 (₩)",
+          basePriceRequired: "기본 요금은 0보다 커야 합니다.",
+          weekendSurcharge: "주말 추가요금 (₩)",
+          roomDetails: "객실 상세",
+          roomSize: "객실 크기 (m²)",
+          roomSizePlaceholder: "예: 28",
+          viewType: "전망 유형",
+          roomAmenities: "객실 편의시설",
+          roomImages: "객실 이미지",
+          imageUrlsPerLine: "이미지 URL (한 줄에 하나)",
+          cancel: "취소",
+          saving: "저장 중...",
+          saveChanges: "변경 사항 저장",
+          roomAdded: "객실이 추가되었습니다.",
+          roomUpdated: "객실이 업데이트되었습니다.",
+          maxOccupancyRequired: "최대 인원은 1명 이상이어야 합니다.",
+        }
+      : locale === "ru"
+        ? {
+            editHotel: "Редактировать отель",
+            reviews: "Отзывы",
+            roomManagement: "Управление номерами",
+            roomLabel: "номер",
+            addRoom: "Добавить номер",
+            noRoomsYet: "Номеров пока нет",
+            addFirstRoom: "Добавьте первый тип номера, чтобы начать бронирования.",
+            room: "Номер",
+            type: "Тип",
+            pricePerNight: "Цена / ночь",
+            status: "Статус",
+            maxGuests: "до",
+            guests: "гостей",
+            weekend: "выходные",
+            registered: "зарегистрировано",
+            addNewRoom: "Добавить новый номер",
+            editRoom: "Редактировать номер",
+            basicInfo: "Основная информация",
+            roomName: "Название номера",
+            roomNameRequired: "Название номера обязательно.",
+            roomNamePlaceholder: "напр. Deluxe Ocean View",
+            roomType: "Тип номера",
+            roomNumber: "Номер комнаты",
+            roomNumberPlaceholder: "напр. 301 (необязательно)",
+            description: "Описание",
+            roomDescriptionPlaceholder: "Опишите преимущества номера…",
+            capacityAndBed: "Вместимость и кровать",
+            maxOccupancy: "Макс. вместимость",
+            totalRooms: "Всего номеров",
+            bedType: "Тип кровати",
+            bedCount: "Количество кроватей",
+            pricing: "Цена",
+            basePrice: "Базовая цена (₩)",
+            basePriceRequired: "Базовая цена должна быть больше 0.",
+            weekendSurcharge: "Доплата за выходные (₩)",
+            roomDetails: "Детали номера",
+            roomSize: "Размер номера (m²)",
+            roomSizePlaceholder: "напр. 28",
+            viewType: "Тип вида",
+            roomAmenities: "Удобства номера",
+            roomImages: "Изображения номера",
+            imageUrlsPerLine: "URL изображений (по одному в строке)",
+            cancel: "Отмена",
+            saving: "Сохранение...",
+            saveChanges: "Сохранить",
+            roomAdded: "Номер добавлен.",
+            roomUpdated: "Номер обновлен.",
+            maxOccupancyRequired: "Вместимость должна быть не меньше 1.",
+          }
+        : locale === "uz"
+          ? {
+              editHotel: "Mehmonxonani tahrirlash",
+              reviews: "Sharhlar",
+              roomManagement: "Xonalarni boshqarish",
+              roomLabel: "xona",
+              addRoom: "Xona qo'shish",
+              noRoomsYet: "Hali xonalar yo'q",
+              addFirstRoom:
+                "Bronlarni boshlash uchun birinchi xona turini qo'shing.",
+              room: "Xona",
+              type: "Turi",
+              pricePerNight: "1 kecha narxi",
+              status: "Holat",
+              maxGuests: "maks.",
+              guests: "mehmon",
+              weekend: "dam olish kuni",
+              registered: "ro'yxatdan o'tgan",
+              addNewRoom: "Yangi xona qo'shish",
+              editRoom: "Xonani tahrirlash",
+              basicInfo: "Asosiy ma'lumot",
+              roomName: "Xona nomi",
+              roomNameRequired: "Xona nomi majburiy.",
+              roomNamePlaceholder: "masalan, Deluxe Ocean View",
+              roomType: "Xona turi",
+              roomNumber: "Xona raqami",
+              roomNumberPlaceholder: "masalan, 301 (ixtiyoriy)",
+              description: "Tavsif",
+              roomDescriptionPlaceholder: "Xonaning afzalliklarini yozing…",
+              capacityAndBed: "Sig'im va karavot",
+              maxOccupancy: "Maks. sig'im",
+              totalRooms: "Jami xonalar",
+              bedType: "Karavot turi",
+              bedCount: "Karavot soni",
+              pricing: "Narx",
+              basePrice: "Asosiy narx (₩)",
+              basePriceRequired: "Asosiy narx 0 dan katta bo'lishi kerak.",
+              weekendSurcharge: "Dam olish kuni qo'shimchasi (₩)",
+              roomDetails: "Xona tafsilotlari",
+              roomSize: "Xona hajmi (m²)",
+              roomSizePlaceholder: "masalan, 28",
+              viewType: "Ko'rinish turi",
+              roomAmenities: "Xona qulayliklari",
+              roomImages: "Xona rasmlari",
+              imageUrlsPerLine: "Rasm URL lari (har qatorda bitta)",
+              cancel: "Bekor qilish",
+              saving: "Saqlanmoqda...",
+              saveChanges: "Saqlash",
+              roomAdded: "Xona qo'shildi.",
+              roomUpdated: "Xona yangilandi.",
+              maxOccupancyRequired: "Sig'im kamida 1 bo'lishi kerak.",
+            }
+          : {
+              editHotel: "Edit Hotel",
+              reviews: "Reviews",
+              roomManagement: "Room Management",
+              roomLabel: "room",
+              addRoom: "Add Room",
+              noRoomsYet: "No rooms yet",
+              addFirstRoom: "Add your first room type to start accepting bookings.",
+              room: "Room",
+              type: "Type",
+              pricePerNight: "Price / night",
+              status: "Status",
+              maxGuests: "max",
+              guests: "guests",
+              weekend: "wknd",
+              registered: "registered",
+              addNewRoom: "Add New Room",
+              editRoom: "Edit Room",
+              basicInfo: "Basic Info",
+              roomName: "Room Name",
+              roomNameRequired: "Room name is required.",
+              roomNamePlaceholder: "e.g. Deluxe Ocean View",
+              roomType: "Room Type",
+              roomNumber: "Room Number",
+              roomNumberPlaceholder: "e.g. 301 (optional)",
+              description: "Description",
+              roomDescriptionPlaceholder: "Describe the room's highlights...",
+              capacityAndBed: "Capacity & Bed",
+              maxOccupancy: "Max Occupancy",
+              totalRooms: "Total Rooms",
+              bedType: "Bed Type",
+              bedCount: "Bed Count",
+              pricing: "Pricing",
+              basePrice: "Base Price (₩)",
+              basePriceRequired: "Base price must be greater than 0.",
+              weekendSurcharge: "Weekend Surcharge (₩)",
+              roomDetails: "Room Details",
+              roomSize: "Room Size (m²)",
+              roomSizePlaceholder: "e.g. 28",
+              viewType: "View Type",
+              roomAmenities: "Room Amenities",
+              roomImages: "Room Images",
+              imageUrlsPerLine: "Image URLs (one per line)",
+              cancel: "Cancel",
+              saving: "Saving...",
+              saveChanges: "Save Changes",
+              roomAdded: "Room added successfully.",
+              roomUpdated: "Room updated successfully.",
+              maxOccupancyRequired: "Max occupancy must be at least 1.",
+            };
 
   const [panelMode, setPanelMode] = useState<PanelMode>("closed");
   const [editingRoom, setEditingRoom] = useState<AgentRoomListItem | null>(
@@ -274,15 +462,15 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
   const handleSubmit = async () => {
     if (!form.roomName.trim()) {
-      void errorAlert("Room name is required.");
+      void errorAlert(copy.roomNameRequired);
       return;
     }
     if (form.basePrice <= 0) {
-      void errorAlert("Base price must be greater than 0.");
+      void errorAlert(copy.basePriceRequired);
       return;
     }
     if (form.maxOccupancy < 1) {
-      void errorAlert("Max occupancy must be at least 1.");
+      void errorAlert(copy.maxOccupancyRequired);
       return;
     }
 
@@ -313,7 +501,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           ...(imagesList.length > 0 && { roomImages: imagesList }),
         };
         await createRoom({ variables: { input } });
-        void successAlert("Room added successfully.");
+        void successAlert(copy.roomAdded);
       } else if (panelMode === "edit" && editingRoom) {
         const input: AgentRoomUpdateInput = {
           _id: editingRoom._id,
@@ -328,7 +516,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           roomImages: imagesList,
         };
         await updateRoom({ variables: { input } });
-        void successAlert("Room updated successfully.");
+        void successAlert(copy.roomUpdated);
       }
       closePanel();
       void refetchRooms();
@@ -387,25 +575,26 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition"
             >
               <ArrowLeft size={15} />
-              Edit hotel
+              {copy.editHotel}
             </Link>
             <Link
               href={`/hotels/${hotelId}/reviews`}
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition"
             >
               <Star size={15} />
-              Reviews
+              {copy.reviews}
             </Link>
             <span className="text-slate-300">/</span>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                Room Management
+                {copy.roomManagement}
               </p>
               <h1 className="mt-0.5 text-2xl font-semibold text-slate-900">
                 {hotel?.hotelTitle ?? "Hotel"}{" "}
                 {rooms.length > 0 && (
                   <span className="text-lg font-normal text-slate-400">
-                    — {rooms.length} room{rooms.length !== 1 ? "s" : ""}
+                    — {rooms.length} {copy.roomLabel}
+                    {rooms.length !== 1 ? "s" : ""}
                   </span>
                 )}
               </h1>
@@ -416,7 +605,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
             className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
           >
             <Plus size={15} />
-            Add Room
+            {copy.addRoom}
           </button>
         </div>
 
@@ -450,16 +639,18 @@ const HotelRoomsPage: NextPageWithAuth = () => {
         {!roomsLoading && rooms.length === 0 && (
           <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white text-center">
             <DoorOpen size={40} className="text-slate-300" />
-            <p className="mt-4 font-semibold text-slate-700">No rooms yet</p>
+            <p className="mt-4 font-semibold text-slate-700">
+              {copy.noRoomsYet}
+            </p>
             <p className="mt-1 text-sm text-slate-500">
-              Add your first room type to start accepting bookings.
+              {copy.addFirstRoom}
             </p>
             <button
               onClick={openCreate}
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
             >
               <Plus size={14} />
-              Add Room
+              {copy.addRoom}
             </button>
           </div>
         )}
@@ -469,10 +660,10 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {/* Table header */}
             <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              <span>Room</span>
-              <span>Type</span>
-              <span>Price / night</span>
-              <span>Status</span>
+              <span>{copy.room}</span>
+              <span>{copy.type}</span>
+              <span>{copy.pricePerNight}</span>
+              <span>{copy.status}</span>
               <span />
             </div>
 
@@ -509,8 +700,8 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                         {room.roomName}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {BED_TYPE_LABELS[room.bedType]} × {room.bedCount} · max{" "}
-                        {room.maxOccupancy} guests
+                        {getBedTypeLabel(room.bedType, t)} × {room.bedCount} ·{" "}
+                        {copy.maxGuests} {room.maxOccupancy} {copy.guests}
                       </p>
                       {room.roomNumber && (
                         <p className="mt-0.5 text-xs text-slate-400">
@@ -522,7 +713,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
                   {/* Type */}
                   <span className="text-sm text-slate-600">
-                    {ROOM_TYPE_LABELS[room.roomType]}
+                    {getRoomTypeLabel(room.roomType, t)}
                   </span>
 
                   {/* Price */}
@@ -530,7 +721,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                     {formatCurrencyKrw(room.basePrice)}
                     {room.weekendSurcharge > 0 && (
                       <span className="ml-1 text-xs font-normal text-slate-400">
-                        (+{formatCurrencyKrw(room.weekendSurcharge)} wknd)
+                        (+{formatCurrencyKrw(room.weekendSurcharge)} {copy.weekend})
                       </span>
                     )}
                   </span>
@@ -549,7 +740,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass}`}
                       />
-                      {statusCfg.label}
+                      {getRoomStatusLabel(room.roomStatus, t)}
                       <ChevronDown size={10} />
                     </button>
 
@@ -572,7 +763,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                               <span
                                 className={`h-2 w-2 rounded-full ${cfg.dotClass}`}
                               />
-                              {cfg.label}
+                              {getRoomStatusLabel(s, t)}
                             </button>
                           );
                         })}
@@ -585,7 +776,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                     onClick={() => openEdit(room)}
                     className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                   >
-                    Edit
+                    {copy.editRoom}
                   </button>
                 </div>
               );
@@ -596,7 +787,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
         {/* Stats */}
         {rooms.length > 0 && (
           <p className="text-center text-xs text-slate-400">
-            {rooms.length} room type{rooms.length !== 1 ? "s" : ""} registered
+            {rooms.length} {copy.roomLabel} {copy.registered}
           </p>
         )}
       </main>
@@ -615,7 +806,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
             {/* Panel header */}
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <h2 className="font-semibold text-slate-900">
-                {panelMode === "create" ? "Add New Room" : "Edit Room"}
+                {panelMode === "create" ? copy.addNewRoom : copy.editRoom}
               </h2>
               <button
                 onClick={closePanel}
@@ -630,13 +821,13 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               {/* Basic Info */}
               <section className="space-y-4">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                  Basic Info
+                  {copy.basicInfo}
                 </h3>
 
                 {/* Room name */}
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Room Name *
+                    {copy.roomName} *
                   </label>
                   <input
                     type="text"
@@ -644,7 +835,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                     onChange={(e) =>
                       setForm((p) => ({ ...p, roomName: e.target.value }))
                     }
-                    placeholder="e.g. Deluxe Ocean View"
+                    placeholder={copy.roomNamePlaceholder}
                     className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                   />
                 </div>
@@ -653,7 +844,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Room Type
+                      {copy.roomType}
                     </label>
                     <select
                       value={form.roomType}
@@ -665,10 +856,12 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                       }
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     >
-                      {(Object.keys(ROOM_TYPE_LABELS) as RoomType[]).map(
-                        (t) => (
-                          <option key={t} value={t}>
-                            {ROOM_TYPE_LABELS[t]}
+                      {(
+                        ["STANDARD", "DELUXE", "PREMIUM", "SUITE", "FAMILY", "PENTHOUSE"] as RoomType[]
+                      ).map(
+                        (roomType) => (
+                          <option key={roomType} value={roomType}>
+                            {getRoomTypeLabel(roomType, t)}
                           </option>
                         ),
                       )}
@@ -676,7 +869,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Room Number
+                      {copy.roomNumber}
                     </label>
                     <input
                       type="text"
@@ -684,7 +877,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                       onChange={(e) =>
                         setForm((p) => ({ ...p, roomNumber: e.target.value }))
                       }
-                      placeholder="e.g. 301 (optional)"
+                      placeholder={copy.roomNumberPlaceholder}
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
                   </div>
@@ -693,7 +886,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                 {/* Description */}
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Description
+                    {copy.description}
                   </label>
                   <textarea
                     rows={3}
@@ -701,7 +894,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                     onChange={(e) =>
                       setForm((p) => ({ ...p, roomDesc: e.target.value }))
                     }
-                    placeholder="Describe the room's highlights..."
+                    placeholder={copy.roomDescriptionPlaceholder}
                     className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                   />
                 </div>
@@ -710,14 +903,14 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               {/* Capacity & Bed */}
               <section className="space-y-4">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                  Capacity & Bed
+                  {copy.capacityAndBed}
                 </h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   {/* Max occupancy */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Max Occupancy *
+                      {copy.maxOccupancy} *
                     </label>
                     <div className="flex items-center gap-2">
                       <button
@@ -753,7 +946,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                   {/* Total rooms */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Total Rooms *
+                      {copy.totalRooms} *
                     </label>
                     <div className="flex items-center gap-2">
                       <button
@@ -791,7 +984,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                   {/* Bed type */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Bed Type
+                      {copy.bedType}
                     </label>
                     <select
                       value={form.bedType}
@@ -803,9 +996,9 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                       }
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     >
-                      {(Object.keys(BED_TYPE_LABELS) as BedType[]).map((t) => (
-                        <option key={t} value={t}>
-                          {BED_TYPE_LABELS[t]}
+                      {(["SINGLE", "DOUBLE", "QUEEN", "KING", "TWIN"] as BedType[]).map((bedType) => (
+                        <option key={bedType} value={bedType}>
+                          {getBedTypeLabel(bedType, t)}
                         </option>
                       ))}
                     </select>
@@ -814,7 +1007,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                   {/* Bed count */}
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Bed Count
+                      {copy.bedCount}
                     </label>
                     <div className="flex items-center gap-2">
                       <button
@@ -849,13 +1042,13 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               {/* Pricing */}
               <section className="space-y-4">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                  Pricing
+                  {copy.pricing}
                 </h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Base Price (₩) *
+                      {copy.basePrice} *
                     </label>
                     <input
                       type="number"
@@ -873,7 +1066,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Weekend Surcharge (₩)
+                      {copy.weekendSurcharge}
                     </label>
                     <input
                       type="number"
@@ -895,13 +1088,13 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               {/* Room details */}
               <section className="space-y-4">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                  Room Details
+                  {copy.roomDetails}
                 </h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Room Size (m²)
+                      {copy.roomSize}
                     </label>
                     <input
                       type="number"
@@ -913,13 +1106,13 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                           roomSize: Number(e.target.value),
                         }))
                       }
-                      placeholder="e.g. 28"
+                      placeholder={copy.roomSizePlaceholder}
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     />
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      View Type
+                      {copy.viewType}
                     </label>
                     <select
                       value={form.viewType}
@@ -931,10 +1124,10 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                       }
                       className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
                     >
-                      {(Object.keys(VIEW_TYPE_LABELS) as ViewType[]).map(
-                        (v) => (
-                          <option key={v} value={v}>
-                            {VIEW_TYPE_LABELS[v]}
+                      {(["NONE", "CITY", "OCEAN", "MOUNTAIN", "GARDEN"] as ViewType[]).map(
+                        (viewType) => (
+                          <option key={viewType} value={viewType}>
+                            {getViewTypeLabel(viewType, t)}
                           </option>
                         ),
                       )}
@@ -946,7 +1139,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               {/* Room amenities */}
               <section className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                  Room Amenities
+                  {copy.roomAmenities}
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
                   {ROOM_AMENITY_OPTIONS.map(({ key, label }) => {
@@ -962,7 +1155,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                             : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
                         }`}
                       >
-                        {label}
+                        {getRoomAmenityLabel(key, locale) ?? label}
                       </button>
                     );
                   })}
@@ -972,11 +1165,11 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               {/* Room images */}
               <section className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                  Room Images
+                  {copy.roomImages}
                 </h3>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    Image URLs (one per line)
+                    {copy.imageUrlsPerLine}
                   </label>
                   <textarea
                     rows={3}
@@ -997,7 +1190,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                 onClick={closePanel}
                 className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                Cancel
+                {copy.cancel}
               </button>
               <button
                 onClick={() => void handleSubmit()}
@@ -1005,10 +1198,10 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                 className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50"
               >
                 {creating || updating
-                  ? "Saving..."
+                  ? copy.saving
                   : panelMode === "create"
-                    ? "Add Room"
-                    : "Save Changes"}
+                    ? copy.addRoom
+                    : copy.saveChanges}
               </button>
             </div>
           </div>
@@ -1023,3 +1216,88 @@ HotelRoomsPage.auth = {
 };
 
 export default HotelRoomsPage;
+
+function getRoomAmenityLabel(key: string, locale: string): string | null {
+  const labels = {
+    AC: {
+      en: "Air Conditioning",
+      ko: "에어컨",
+      ru: "Кондиционер",
+      uz: "Konditsioner",
+    },
+    TV: {
+      en: "TV",
+      ko: "TV",
+      ru: "ТВ",
+      uz: "TV",
+    },
+    minibar: {
+      en: "Minibar",
+      ko: "미니바",
+      ru: "Мини-бар",
+      uz: "Minibar",
+    },
+    coffeemaker: {
+      en: "Coffee Maker",
+      ko: "커피메이커",
+      ru: "Кофемашина",
+      uz: "Qahva mashinasi",
+    },
+    hairdryer: {
+      en: "Hair Dryer",
+      ko: "헤어드라이어",
+      ru: "Фен",
+      uz: "Soch quritgich",
+    },
+    safe: {
+      en: "In-room Safe",
+      ko: "객실 금고",
+      ru: "Сейф в номере",
+      uz: "Xonadagi сейф",
+    },
+    bathtub: {
+      en: "Bathtub",
+      ko: "욕조",
+      ru: "Ванна",
+      uz: "Vanna",
+    },
+    balcony: {
+      en: "Balcony",
+      ko: "발코니",
+      ru: "Балкон",
+      uz: "Balkon",
+    },
+    workspace: {
+      en: "Work Desk",
+      ko: "업무용 책상",
+      ru: "Рабочий стол",
+      uz: "Ish stoli",
+    },
+    sofa: {
+      en: "Sofa",
+      ko: "소파",
+      ru: "Диван",
+      uz: "Divan",
+    },
+    kitchenette: {
+      en: "Kitchenette",
+      ko: "간이 주방",
+      ru: "Мини-кухня",
+      uz: "Kichik oshxona",
+    },
+    washer: {
+      en: "Washer",
+      ko: "세탁기",
+      ru: "Стиральная машина",
+      uz: "Kir yuvish mashinasi",
+    },
+  } as const;
+
+  if (!(key in labels)) {
+    return null;
+  }
+
+  const localeKey =
+    locale === "ko" || locale === "ru" || locale === "uz" ? locale : "en";
+  return labels[key as keyof typeof labels][localeKey];
+}

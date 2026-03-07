@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PropsWithChildren } from "react";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { Footer } from "@/components/layout/footer";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { PriceLockFab } from "@/components/layout/price-lock-fab";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_UNREAD_CHAT_COUNT_QUERY } from "@/graphql/chat.gql";
@@ -21,9 +22,16 @@ import {
   getTokenRemainingMs,
   isAuthenticated,
   logoutSession,
+  registerSessionChangeListener,
   silentRefreshAccessToken,
+  unregisterSessionChangeListener,
 } from "@/lib/auth/session";
-import { resolveMediaUrl } from "@/lib/utils/media-url";
+import {
+  PROFILE_FALLBACK_IMAGE,
+  resolveProfileImageUrl,
+} from "@/lib/utils/media-url";
+import { useI18n } from "@/lib/i18n/provider";
+import type { TranslationKey } from "@/lib/i18n/messages";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { createNotificationSocket } from "@/lib/socket/notification";
 import type { SessionMember } from "@/types/auth";
@@ -54,44 +62,52 @@ const NOTIFICATION_POLL_INTERVAL_MS = 60000;
 
 const NAV_LINKS = {
   guest: [
-    { href: "/", label: "Home" },
-    { href: "/hotels", label: "Hotels" },
-    { href: "/about", label: "About" },
-    { href: "/support", label: "Support" },
+    { href: "/", labelKey: "nav_home" },
+    { href: "/hotels", labelKey: "nav_hotels" },
+    { href: "/about", labelKey: "nav_about" },
+    { href: "/support", labelKey: "nav_support" },
   ],
   user: [
-    { href: "/", label: "Home" },
-    { href: "/hotels", label: "Hotels" },
-    { href: "/bookings", label: "My Bookings" },
-    { href: "/about", label: "About" },
-    { href: "/support", label: "Support" },
+    { href: "/", labelKey: "nav_home" },
+    { href: "/hotels", labelKey: "nav_hotels" },
+    { href: "/bookings", labelKey: "nav_my_bookings" },
+    { href: "/about", labelKey: "nav_about" },
+    { href: "/support", labelKey: "nav_support" },
   ],
   staff: [
-    { href: "/", label: "Home" },
-    { href: "/hotels", label: "Hotels" },
-    { href: "/hotels/manage", label: "My Hotels" },
-    { href: "/bookings/manage", label: "Bookings" },
-    { href: "/chats", label: "Chats" },
-    { href: "/dashboard", label: "Dashboard" },
+    { href: "/", labelKey: "nav_home" },
+    { href: "/hotels", labelKey: "nav_hotels" },
+    { href: "/hotels/manage", labelKey: "nav_my_hotels" },
+    { href: "/bookings/manage", labelKey: "nav_bookings" },
+    { href: "/chats", labelKey: "nav_chats" },
+    { href: "/dashboard", labelKey: "nav_dashboard" },
   ],
   admin: [
-    { href: "/", label: "Home" },
-    { href: "/hotels", label: "Hotels" },
-    { href: "/hotels/manage", label: "My Hotels" },
-    { href: "/bookings/manage", label: "Bookings" },
-    { href: "/chats", label: "Chats" },
-    { href: "/dashboard", label: "Dashboard" },
+    { href: "/", labelKey: "nav_home" },
+    { href: "/hotels", labelKey: "nav_hotels" },
+    { href: "/hotels/manage", labelKey: "nav_my_hotels" },
+    { href: "/bookings/manage", labelKey: "nav_bookings" },
+    { href: "/chats", labelKey: "nav_chats" },
+    { href: "/dashboard", labelKey: "nav_dashboard" },
   ],
 } as const;
 
 const ADMIN_PAGES = [
-  { href: "/admin/members", label: "Members", icon: Users },
-  { href: "/admin/hotels", label: "Hotels", icon: Building2 },
-  { href: "/admin/rooms", label: "Rooms", icon: DoorOpen },
-  { href: "/admin/reviews", label: "Reviews", icon: Star },
-  { href: "/admin/chats", label: "Chats", icon: MessageSquare },
-  { href: "/admin/notifications", label: "Notifications", icon: BellRing },
-  { href: "/admin/subscriptions", label: "Subscriptions", icon: Crown },
+  { href: "/admin/members", labelKey: "nav_admin_members", icon: Users },
+  { href: "/admin/hotels", labelKey: "nav_admin_hotels", icon: Building2 },
+  { href: "/admin/rooms", labelKey: "nav_admin_rooms", icon: DoorOpen },
+  { href: "/admin/reviews", labelKey: "nav_admin_reviews", icon: Star },
+  { href: "/admin/chats", labelKey: "nav_chats", icon: MessageSquare },
+  {
+    href: "/admin/notifications",
+    labelKey: "nav_admin_notifications",
+    icon: BellRing,
+  },
+  {
+    href: "/admin/subscriptions",
+    labelKey: "nav_admin_subscriptions",
+    icon: Crown,
+  },
 ] as const;
 
 function getNavLinks(member: SessionMember | null) {
@@ -124,9 +140,15 @@ function memberAvatar(member: SessionMember) {
       <div className={`h-full w-full overflow-hidden rounded-full ${bg}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={resolveMediaUrl(member.memberImage)}
+          src={resolveProfileImageUrl(member.memberImage)}
           alt={initials}
           className="h-full w-full object-cover"
+          onError={(event) => {
+            const image = event.currentTarget;
+            if (!image.src.endsWith(PROFILE_FALLBACK_IMAGE)) {
+              image.src = PROFILE_FALLBACK_IMAGE;
+            }
+          }}
         />
       </div>
     );
@@ -139,9 +161,11 @@ function memberAvatar(member: SessionMember) {
 function UserAvatarMenu({
   member,
   onLogout,
+  t,
 }: {
   member: SessionMember;
   onLogout: () => void;
+  t: (key: TranslationKey) => string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -156,7 +180,10 @@ function UserAvatarMenu({
   }, []);
 
   const bg = ROLE_COLOR[member.memberType] ?? "bg-slate-500";
-  const roleLabel = member.memberType.replace("_", " ").toLowerCase();
+  const roleLabel =
+    member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR"
+      ? t("label_role_admin")
+      : member.memberType.replace("_", " ").toLowerCase();
 
   return (
     <div ref={ref} className="relative">
@@ -185,7 +212,7 @@ function UserAvatarMenu({
               className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
             >
               <User size={14} className="text-slate-400" />
-              Profile
+              {t("action_profile")}
             </Link>
             <Link
               href="/settings/preferences"
@@ -193,7 +220,7 @@ function UserAvatarMenu({
               className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
             >
               <Settings size={14} className="text-slate-400" />
-              Settings
+              {t("action_settings")}
             </Link>
             <button
               type="button"
@@ -204,7 +231,7 @@ function UserAvatarMenu({
               className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-rose-500 transition hover:bg-rose-50"
             >
               <LogOut size={14} />
-              Sign out
+              {t("action_sign_out")}
             </button>
           </div>
         </div>
@@ -215,7 +242,13 @@ function UserAvatarMenu({
 
 // ─── Admin dropdown menu ──────────────────────────────────────────────────────
 
-function AdminDropdown({ pathname }: { pathname: string }) {
+function AdminDropdown({
+  pathname,
+  t,
+}: {
+  pathname: string;
+  t: (key: TranslationKey) => string;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -244,7 +277,7 @@ function AdminDropdown({ pathname }: { pathname: string }) {
         aria-haspopup="true"
       >
         <ShieldCheck size={14} />
-        Admin
+        {t("nav_admin")}
         <ChevronDown
           size={13}
           className={`transition-transform ${open ? "rotate-180" : ""}`}
@@ -271,7 +304,7 @@ function AdminDropdown({ pathname }: { pathname: string }) {
                   size={14}
                   className={active ? "text-sky-500" : "text-slate-400"}
                 />
-                {page.label}
+                {t(page.labelKey)}
               </Link>
             );
           })}
@@ -600,6 +633,7 @@ function SupportFab({
 export function SiteFrame({ children }: PropsWithChildren) {
   const router = useRouter();
   const toast = useToast();
+  const { t } = useI18n();
   const isHomeRoute = router.pathname === "/";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
@@ -609,6 +643,17 @@ export function SiteFrame({ children }: PropsWithChildren) {
   useEffect(() => {
     setMember(getSessionMember());
   }, [router.asPath]);
+
+  useEffect(() => {
+    const syncMember = (): void => {
+      setMember(getSessionMember());
+    };
+
+    registerSessionChangeListener(syncMember);
+    return () => {
+      unregisterSessionChangeListener();
+    };
+  }, []);
 
   // ── Proactive token refresh ──
   // When the access token is about to expire (≤ 2 min remaining), silently
@@ -877,18 +922,19 @@ export function SiteFrame({ children }: PropsWithChildren) {
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   }`}
                 >
-                  {link.label}
+                  {t(link.labelKey)}
                 </Link>
               );
             })}
             {(member?.memberType === "ADMIN" ||
               member?.memberType === "ADMIN_OPERATOR") && (
-              <AdminDropdown pathname={router.pathname} />
+              <AdminDropdown pathname={router.pathname} t={t} />
             )}
           </nav>
 
           {/* Divider + right-side actions */}
           <div className="ml-2 flex items-center gap-2 border-l border-slate-200 pl-2">
+            <LanguageSwitcher />
             {member ? (
               <>
                 {notifBellButton}
@@ -896,6 +942,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
                 <UserAvatarMenu
                   member={memberWithLiveImage ?? member}
                   onLogout={handleLogout}
+                  t={t}
                 />
               </>
             ) : (
@@ -904,13 +951,13 @@ export function SiteFrame({ children }: PropsWithChildren) {
                   href="/auth/login"
                   className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
                 >
-                  Log in
+                  {t("action_log_in")}
                 </Link>
                 <Link
                   href="/auth/signup"
                   className="rounded-full bg-sky-500 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600"
                 >
-                  Sign up
+                  {t("action_sign_up")}
                 </Link>
               </>
             )}
@@ -987,13 +1034,13 @@ export function SiteFrame({ children }: PropsWithChildren) {
                   <Link
                     key={`mobile-${link.href}`}
                     href={link.href}
-                    className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                  className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                       active
                         ? "bg-slate-900 text-white"
                         : "text-slate-700 hover:bg-slate-100"
                     }`}
                   >
-                    {link.label}
+                    {t(link.labelKey)}
                   </Link>
                 );
               })}
@@ -1004,7 +1051,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
               member?.memberType === "ADMIN_OPERATOR") && (
               <div className="mt-3 border-t border-slate-100 pt-3">
                 <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
-                  Admin
+                  {t("label_admin_section")}
                 </p>
                 <nav className="flex flex-col gap-0.5">
                   {ADMIN_PAGES.map((page) => {
@@ -1024,7 +1071,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
                           size={15}
                           className={active ? "text-white" : "text-slate-400"}
                         />
-                        {page.label}
+                        {t(page.labelKey)}
                       </Link>
                     );
                   })}
@@ -1041,37 +1088,43 @@ export function SiteFrame({ children }: PropsWithChildren) {
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
                   >
                     <User size={15} className="text-slate-400" />
-                    Profile
+                    {t("action_profile")}
                   </Link>
                   <Link
                     href="/settings/preferences"
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
                   >
                     <Settings size={15} className="text-slate-400" />
-                    Settings
+                    {t("action_settings")}
                   </Link>
+                  <div className="px-3 py-2">
+                    <LanguageSwitcher mobile />
+                  </div>
                   <button
                     type="button"
                     onClick={handleLogout}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-rose-500 transition hover:bg-rose-50"
                   >
                     <LogOut size={15} />
-                    Sign out
+                    {t("action_sign_out")}
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
+                  <div className="px-1">
+                    <LanguageSwitcher mobile />
+                  </div>
                   <Link
                     href="/auth/login"
                     className="rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   >
-                    Log in
+                    {t("action_log_in")}
                   </Link>
                   <Link
                     href="/auth/signup"
                     className="rounded-xl bg-sky-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600"
                   >
-                    Sign up
+                    {t("action_sign_up")}
                   </Link>
                 </div>
               )}

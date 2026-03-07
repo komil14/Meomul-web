@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import { useI18n } from "@/lib/i18n/provider";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type { HotelListItem } from "@/types/hotel";
 import styles from "@/styles/home-landing-ovastin.module.css";
@@ -10,17 +11,18 @@ interface TrendingSectionProps {
 }
 
 export function TrendingSection({ hotels }: TrendingSectionProps) {
+  const { t } = useI18n();
   if (hotels.length === 0) return null;
 
   return (
     <section className={styles.trendingSection}>
       <div className={styles.trendingHeader}>
         <div>
-          <p className={styles.trendingEyebrow}>Trending Now</p>
-          <h2 className={styles.trendingTitle}>Stays guests are booking right now</h2>
+          <p className={styles.trendingEyebrow}>{t("home_trending_eyebrow")}</p>
+          <h2 className={styles.trendingTitle}>{t("home_trending_title")}</h2>
         </div>
         <Link href="/hotels" className={styles.trendingLink}>
-          Browse all stays <span aria-hidden>↗</span>
+          {t("home_browse_all_stays")} <span aria-hidden>↗</span>
         </Link>
       </div>
 
@@ -47,7 +49,11 @@ export function TrendingSection({ hotels }: TrendingSectionProps) {
                 </p>
                 <div className={styles.trendingStats}>
                   <span>★ {hotel.hotelRating.toFixed(1)}</span>
-                  <span>{hotel.hotelLikes.toLocaleString()} likes</span>
+                  <span>
+                    {t("home_common_likes", {
+                      count: hotel.hotelLikes.toLocaleString(),
+                    })}
+                  </span>
                 </div>
               </div>
             </Link>

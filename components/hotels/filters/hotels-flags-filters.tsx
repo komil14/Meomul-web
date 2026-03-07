@@ -1,10 +1,12 @@
 import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
+import { useI18n } from "@/lib/i18n/provider";
 
 interface HotelsFlagsFiltersProps {
   state: HotelsPageQueryState;
 }
 
 export function HotelsFlagsFilters({ state }: HotelsFlagsFiltersProps) {
+  const { t } = useI18n();
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
@@ -16,7 +18,7 @@ export function HotelsFlagsFilters({ state }: HotelsFlagsFiltersProps) {
           }}
           className="h-4 w-4"
         />
-        Verified only
+        {t("hotels_flag_verified_only")}
       </label>
       <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
         <input
@@ -27,7 +29,7 @@ export function HotelsFlagsFilters({ state }: HotelsFlagsFiltersProps) {
           }}
           className="h-4 w-4"
         />
-        Pets allowed
+        {t("hotels_flag_pets_allowed")}
       </label>
       <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm">
         <input
@@ -38,7 +40,7 @@ export function HotelsFlagsFilters({ state }: HotelsFlagsFiltersProps) {
           }}
           className="h-4 w-4"
         />
-        Wheelchair accessible
+        {t("hotels_flag_wheelchair_accessible")}
       </label>
     </div>
   );

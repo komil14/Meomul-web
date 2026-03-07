@@ -2,71 +2,95 @@ import Link from "next/link";
 import { Check, Crown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getSessionMember } from "@/lib/auth/session";
+import { useI18n } from "@/lib/i18n/provider";
 
 // ─── Tier definitions ──────────────────────────────────────────────────────────
 
 interface Tier {
   id: string;
-  label: string;
+  labelKey:
+    | "home_tier_free_label"
+    | "home_tier_basic_label"
+    | "home_tier_premium_label"
+    | "home_tier_elite_label";
   price: string;
-  period: string;
+  periodKey: "home_tier_period_forever" | "home_tier_period_month";
   popular: boolean;
-  features: string[];
+  featureKeys: Array<
+    | "home_tier_feature_browse_hotels"
+    | "home_tier_feature_make_bookings"
+    | "home_tier_feature_basic_filters"
+    | "home_tier_feature_chat_hotels"
+    | "home_tier_feature_everything_free"
+    | "home_tier_feature_price_drop_alerts"
+    | "home_tier_feature_search_history"
+    | "home_tier_feature_priority_support"
+    | "home_tier_feature_everything_basic"
+    | "home_tier_feature_personalized_recommendations"
+    | "home_tier_feature_early_deals"
+    | "home_tier_feature_price_lock"
+    | "home_tier_feature_advanced_room_filters"
+    | "home_tier_feature_everything_premium"
+    | "home_tier_feature_concierge"
+    | "home_tier_feature_exclusive_rates"
+    | "home_tier_feature_highest_priority"
+    | "home_tier_feature_cancellation_flexibility"
+  >;
 }
 
 const TIERS: Tier[] = [
   {
     id: "FREE",
-    label: "Free",
+    labelKey: "home_tier_free_label",
     price: "₩0",
-    period: "forever",
+    periodKey: "home_tier_period_forever",
     popular: false,
-    features: [
-      "Browse all hotels",
-      "Make bookings",
-      "Basic search filters",
-      "Chat with hotels",
+    featureKeys: [
+      "home_tier_feature_browse_hotels",
+      "home_tier_feature_make_bookings",
+      "home_tier_feature_basic_filters",
+      "home_tier_feature_chat_hotels",
     ],
   },
   {
     id: "BASIC",
-    label: "Basic",
+    labelKey: "home_tier_basic_label",
     price: "₩9,900",
-    period: "/month",
+    periodKey: "home_tier_period_month",
     popular: false,
-    features: [
-      "Everything in Free",
-      "Price drop alerts",
-      "Extended search history",
-      "Priority chat support",
+    featureKeys: [
+      "home_tier_feature_everything_free",
+      "home_tier_feature_price_drop_alerts",
+      "home_tier_feature_search_history",
+      "home_tier_feature_priority_support",
     ],
   },
   {
     id: "PREMIUM",
-    label: "Premium",
+    labelKey: "home_tier_premium_label",
     price: "₩19,900",
-    period: "/month",
+    periodKey: "home_tier_period_month",
     popular: true,
-    features: [
-      "Everything in Basic",
-      "Personalized recommendations",
-      "Early access to deals",
-      "Price lock (30 min holds)",
-      "Advanced room filters",
+    featureKeys: [
+      "home_tier_feature_everything_basic",
+      "home_tier_feature_personalized_recommendations",
+      "home_tier_feature_early_deals",
+      "home_tier_feature_price_lock",
+      "home_tier_feature_advanced_room_filters",
     ],
   },
   {
     id: "ELITE",
-    label: "Elite",
+    labelKey: "home_tier_elite_label",
     price: "₩39,900",
-    period: "/month",
+    periodKey: "home_tier_period_month",
     popular: false,
-    features: [
-      "Everything in Premium",
-      "Concierge support 24/7",
-      "Exclusive member-only rates",
-      "Highest recommendation priority",
-      "Special cancellation flexibility",
+    featureKeys: [
+      "home_tier_feature_everything_premium",
+      "home_tier_feature_concierge",
+      "home_tier_feature_exclusive_rates",
+      "home_tier_feature_highest_priority",
+      "home_tier_feature_cancellation_flexibility",
     ],
   },
 ];
@@ -74,6 +98,7 @@ const TIERS: Tier[] = [
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export function SubscriptionPlansSection() {
+  const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -81,7 +106,9 @@ export function SubscriptionPlansSection() {
   }, []);
 
   const ctaHref = isLoggedIn ? "/profile?tab=subscription" : "/auth/signup";
-  const ctaLabel = isLoggedIn ? "View plans" : "Get started free";
+  const ctaLabel = isLoggedIn
+    ? t("home_subscriptions_view_plans")
+    : t("home_subscriptions_get_started");
 
   return (
     <section className="border-t border-slate-100 py-16">
@@ -89,13 +116,13 @@ export function SubscriptionPlansSection() {
       <div className="mb-10 text-center">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
           <Crown size={11} />
-          Membership Plans
+          {t("home_subscriptions_badge")}
         </span>
         <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
-          Simple, transparent pricing
+          {t("home_subscriptions_title")}
         </h2>
         <p className="mt-2 text-sm text-slate-500">
-          Browse free. Upgrade when you&apos;re ready.
+          {t("home_subscriptions_desc")}
         </p>
       </div>
 
@@ -112,7 +139,7 @@ export function SubscriptionPlansSection() {
           >
             {tier.popular && (
               <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-slate-900 px-3 py-0.5 text-[11px] font-semibold text-white">
-                Most popular
+                {t("home_subscriptions_popular")}
               </span>
             )}
 
@@ -121,18 +148,20 @@ export function SubscriptionPlansSection() {
               className={tier.popular ? "text-slate-900" : "text-slate-300"}
             />
 
-            <p className="mt-3 text-base font-bold text-slate-900">{tier.label}</p>
+            <p className="mt-3 text-base font-bold text-slate-900">
+              {t(tier.labelKey)}
+            </p>
 
             <p className="mt-1 flex items-baseline gap-1">
               <span className="text-2xl font-bold text-slate-900">{tier.price}</span>
-              <span className="text-xs text-slate-400">{tier.period}</span>
+              <span className="text-xs text-slate-400">{t(tier.periodKey)}</span>
             </p>
 
             <ul className="mt-5 flex-1 space-y-2">
-              {tier.features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2 text-sm text-slate-600">
+              {tier.featureKeys.map((featureKey) => (
+                <li key={featureKey} className="flex items-start gap-2 text-sm text-slate-600">
                   <Check size={13} className="mt-0.5 flex-shrink-0 text-emerald-500" />
-                  {feature}
+                  {t(featureKey)}
                 </li>
               ))}
             </ul>
@@ -153,7 +182,7 @@ export function SubscriptionPlansSection() {
 
       {/* Footnote */}
       <p className="mt-6 text-center text-xs text-slate-400">
-        Paid plans require admin approval &middot; No automatic charges
+        {t("home_subscriptions_footnote")}
       </p>
     </section>
   );

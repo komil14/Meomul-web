@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
+import { useI18n } from "@/lib/i18n/provider";
 import type { LastMinuteDealCard } from "@/types/homepage";
 import styles from "@/styles/home-landing-ovastin.module.css";
 
@@ -9,10 +10,16 @@ const MONTH_LABELS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ] as const;
 
-const formatDealExpiryLabel = (validUntil: string): string => {
+const formatDealExpiryLabel = (
+  validUntil: string,
+  translate: (key: "home_deals_ends_soon" | "home_deals_ends_on", params?: Record<string, string | number>) => string,
+): string => {
   const expiresAt = new Date(validUntil);
-  if (Number.isNaN(expiresAt.getTime())) return "Ends soon";
-  return `Ends ${MONTH_LABELS[expiresAt.getUTCMonth()]} ${expiresAt.getUTCDate()}`;
+  if (Number.isNaN(expiresAt.getTime())) return translate("home_deals_ends_soon");
+  return translate("home_deals_ends_on", {
+    month: MONTH_LABELS[expiresAt.getUTCMonth()],
+    day: expiresAt.getUTCDate(),
+  });
 };
 
 interface LastMinuteDealsSectionProps {
@@ -20,17 +27,18 @@ interface LastMinuteDealsSectionProps {
 }
 
 export function LastMinuteDealsSection({ deals }: LastMinuteDealsSectionProps) {
+  const { t } = useI18n();
   if (deals.length === 0) return null;
 
   return (
     <section className={styles.dealsSection}>
       <div className={styles.dealsHeader}>
         <div>
-          <p className={styles.dealsEyebrow}>Last Minute Deals</p>
-          <h2 className={styles.dealsTitle}>Rooms with active limited-time pricing</h2>
+          <p className={styles.dealsEyebrow}>{t("home_deals_eyebrow")}</p>
+          <h2 className={styles.dealsTitle}>{t("home_deals_title")}</h2>
         </div>
         <Link href="/hotels" className={styles.dealsLink}>
-          Browse all stays <span aria-hidden>↗</span>
+          {t("home_browse_all_stays")} <span aria-hidden>↗</span>
         </Link>
       </div>
 
@@ -61,7 +69,7 @@ export function LastMinuteDealsSection({ deals }: LastMinuteDealsSectionProps) {
                   <span className={styles.dealPrice}>₩ {deal.dealPrice.toLocaleString()}</span>
                   <span className={styles.dealOriginalPrice}>₩ {deal.basePrice.toLocaleString()}</span>
                 </div>
-                <p className={styles.dealExpiry}>{formatDealExpiryLabel(deal.validUntil)}</p>
+                <p className={styles.dealExpiry}>{formatDealExpiryLabel(deal.validUntil, t)}</p>
               </div>
             </Link>
           </article>

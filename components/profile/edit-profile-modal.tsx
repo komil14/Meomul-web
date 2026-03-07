@@ -10,6 +10,8 @@ import {
   updateSessionMember,
 } from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
+import { useI18n } from "@/lib/i18n/provider";
+import { getProfileCopy } from "@/lib/profile/profile-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 
@@ -61,6 +63,8 @@ export function EditProfileModal({
   onClose,
   member,
 }: EditProfileModalProps) {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -108,12 +112,14 @@ export function EditProfileModal({
     if (!file) return;
 
     if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-      toast.error("Please select a JPEG, PNG, WebP, or GIF image.");
+      toast.error(copy.imageTypeError);
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      toast.error(`Image must be smaller than ${MAX_IMAGE_SIZE_MB} MB.`);
+      toast.error(
+        copy.imageSizeError.replace("{{size}}", String(MAX_IMAGE_SIZE_MB)),
+      );
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
@@ -132,7 +138,7 @@ export function EditProfileModal({
       const json = (await res.json()) as { url: string };
       setImageUrl(json.url);
     } catch (err) {
-      toast.error("Image upload failed. Please try again.");
+      toast.error(copy.imageUploadFailed);
       console.error(err);
     } finally {
       setUploading(false);
@@ -144,7 +150,7 @@ export function EditProfileModal({
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!nick.trim() || nick.trim().length < 3) {
-      toast.error("Display name must be at least 3 characters.");
+      toast.error(copy.displayNameError);
       return;
     }
 
@@ -168,7 +174,7 @@ export function EditProfileModal({
           },
         },
       });
-      toast.success("Profile updated.");
+      toast.success(copy.profileUpdated);
       onClose();
     } catch (err) {
       // Rollback optimistic session update
@@ -198,7 +204,7 @@ export function EditProfileModal({
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-slate-900">
-            Edit Profile
+            {copy.editProfile}
           </h2>
           <button
             type="button"
@@ -246,13 +252,13 @@ export function EditProfileModal({
             />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-700">Profile photo</p>
+            <p className="text-sm font-medium text-slate-700">{copy.profilePhoto}</p>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               className="text-xs font-medium text-brand transition hover:text-brand/80"
             >
-              {uploading ? "Uploading…" : "Change photo"}
+              {uploading ? copy.uploading : copy.changePhoto}
             </button>
           </div>
         </div>
@@ -262,7 +268,7 @@ export function EditProfileModal({
           {/* Display name */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Display name <span className="text-rose-500">*</span>
+              {copy.displayName} <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -278,7 +284,7 @@ export function EditProfileModal({
           {/* Full name */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Full name
+              {copy.fullName}
             </label>
             <input
               type="text"
@@ -293,7 +299,7 @@ export function EditProfileModal({
           {member.memberPhone && (
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                Phone
+                {copy.phone}
               </label>
               <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-500">
                 <span className="flex-1">{member.memberPhone}</span>
@@ -305,14 +311,14 @@ export function EditProfileModal({
           {/* Location */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Location
+              {copy.location}
             </label>
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               maxLength={200}
-              placeholder="City, District…"
+              placeholder={copy.cityDistrict}
               className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
             />
           </div>
@@ -320,14 +326,14 @@ export function EditProfileModal({
           {/* Bio */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Bio
+              {copy.bio}
             </label>
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               maxLength={300}
               rows={3}
-              placeholder="Tell us a bit about yourself…"
+              placeholder={copy.tellAboutYourself}
               className="w-full resize-none rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/10"
             />
             <p className="mt-1 text-right text-xs text-slate-400">
@@ -342,14 +348,14 @@ export function EditProfileModal({
               onClick={onClose}
               className="rounded-xl px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             >
-              Cancel
+              {copy.cancel}
             </button>
             <button
               type="submit"
               disabled={saving || uploading}
               className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Save changes"}
+              {saving ? copy.saving : copy.saveChanges}
             </button>
           </div>
         </form>

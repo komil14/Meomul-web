@@ -1,5 +1,7 @@
 import { memo } from "react";
 import Image from "next/image";
+import { getHotelLocationLabelLocalized, getHotelTypeLabel } from "@/lib/hotels/hotels-i18n";
+import { useI18n } from "@/lib/i18n/provider";
 import { formatNumber } from "@/lib/utils/format";
 import type { HotelDetailItem } from "@/types/hotel";
 
@@ -32,13 +34,16 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
   togglingLike,
   onToggleLike,
 }: HotelOverviewHeroProps) {
+  const { t } = useI18n();
   const verificationLabel =
     hotel.verificationStatus === "VERIFIED"
-      ? "Verified property"
-      : "Verification pending";
+      ? t("hotel_detail_badge_verified")
+      : t("hotel_detail_badge_pending");
   const badgeLabel =
     hotel.badgeLevel && hotel.badgeLevel !== "NONE"
-      ? `${hotel.badgeLevel.toLowerCase()} host`
+      ? t("hotel_detail_badge_host", {
+          level: hotel.badgeLevel.toLowerCase(),
+        })
       : null;
 
   return (
@@ -65,10 +70,10 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
             <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] transition hover:bg-white/20">
-                  {hotel.hotelLocation}
+                  {getHotelLocationLabelLocalized(hotel.hotelLocation, t)}
                 </span>
                 <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] transition hover:bg-white/20">
-                  {hotel.hotelType}
+                  {getHotelTypeLabel(hotel.hotelType, t)}
                 </span>
                 <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.08em] transition hover:bg-white/20">
                   {verificationLabel}
@@ -89,14 +94,14 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
 
               <div className="flex flex-wrap gap-2.5">
                 <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-sm">
-                  {hotel.starRating} star class
+                  {t("hotel_detail_star_class", { count: hotel.starRating })}
                 </span>
                 <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 text-sm">
                   {cancellationPolicyText}
                 </span>
                 {hotel.safeStayCertified ? (
                   <span className="rounded-full border border-emerald-200/40 bg-emerald-200/20 px-3 py-1 text-sm text-emerald-100">
-                    Safe stay certified
+                    {t("hotel_detail_safe_stay")}
                   </span>
                 ) : null}
                 {(hotel.suitableFor ?? []).slice(0, 2).map((tag) => (
@@ -118,27 +123,27 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
                     className="rounded-full border border-white/40 bg-white/15 px-4 py-1.5 text-sm font-semibold transition hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {togglingLike
-                      ? "Saving..."
+                      ? t("hotel_detail_saving")
                       : hotelLiked
-                        ? "Saved"
-                        : "Save hotel"}
+                        ? t("hotel_detail_saved")
+                        : t("hotel_detail_save_hotel")}
                   </button>
                 ) : (
                   <span className="rounded-full border border-white/30 bg-white/5 px-4 py-1.5 text-sm text-slate-200/90">
-                    Login to save
+                    {t("hotel_detail_login_to_save")}
                   </span>
                 )}
                 <a
                   href="#rooms"
                   className="rounded-full border border-white/35 bg-black/20 px-4 py-1.5 text-sm font-semibold transition hover:bg-black/30"
                 >
-                  See rooms
+                  {t("hotel_detail_see_rooms")}
                 </a>
                 <a
                   href="#reviews"
                   className="rounded-full border border-white/35 bg-black/20 px-4 py-1.5 text-sm font-semibold transition hover:bg-black/30"
                 >
-                  Guest reviews
+                  {t("hotel_detail_guest_reviews_cta")}
                 </a>
               </div>
             </div>
@@ -146,39 +151,39 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
             <div className="grid gap-3 sm:grid-cols-4">
               <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm hover-lift">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">
-                  Guest rating
+                  {t("hotel_detail_guest_rating")}
                 </p>
                 <p className="mt-2 text-4xl font-semibold leading-none">
                   {(hotel.hotelRating ?? 0).toFixed(1)}
                 </p>
-                <p className="mt-2 text-xs text-slate-200">out of 5.0</p>
+                <p className="mt-2 text-xs text-slate-200">{t("hotel_detail_out_of_five")}</p>
               </article>
               <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm hover-lift">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">
-                  Reviews
+                  {t("hotel_detail_reviews_metric")}
                 </p>
                 <p className="mt-2 text-4xl font-semibold leading-none">
                   {reviewCountText}
                 </p>
-                <p className="mt-2 text-xs text-slate-200">verified stays</p>
+                <p className="mt-2 text-xs text-slate-200">{t("hotel_detail_verified_stays")}</p>
               </article>
               <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm hover-lift">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">
-                  Satisfaction
+                  {t("hotel_detail_satisfaction")}
                 </p>
                 <p className="mt-2 text-4xl font-semibold leading-none">
                   {satisfactionText}
                 </p>
-                <p className="mt-2 text-xs text-slate-200">average score</p>
+                <p className="mt-2 text-xs text-slate-200">{t("hotel_detail_average_score")}</p>
               </article>
               <article className="rounded-2xl border border-white/30 bg-white/15 px-4 py-4 backdrop-blur-sm hover-lift">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-200">
-                  Saved by guests
+                  {t("hotel_detail_saved_by_guests")}
                 </p>
                 <p className="mt-2 text-4xl font-semibold leading-none">
                   {formatNumber(hotelLikeCount)}
                 </p>
-                <p className="mt-2 text-xs text-slate-200">total likes</p>
+                <p className="mt-2 text-xs text-slate-200">{t("hotel_detail_total_likes")}</p>
               </article>
             </div>
           </div>
@@ -196,26 +201,26 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
             ) : null}
             <div className="space-y-2.5 text-sm">
               <p className="rounded-xl border border-white/25 bg-white/10 px-3 py-2.5">
-                Check-in: {hotel.checkInTime ?? "—"}
+                {t("hotel_detail_checkin")}: {hotel.checkInTime ?? "—"}
               </p>
               <p className="rounded-xl border border-white/25 bg-white/10 px-3 py-2.5">
-                Check-out: {hotel.checkOutTime ?? "—"}
+                {t("hotel_detail_checkout")}: {hotel.checkOutTime ?? "—"}
               </p>
               <p className="rounded-xl border border-white/25 bg-white/10 px-3 py-2.5">
-                {hotel.petsAllowed ? "Pets allowed" : "No pets"} ·{" "}
-                {hotel.smokingAllowed ? "Smoking allowed" : "Non-smoking"}
+                {hotel.petsAllowed ? t("hotel_features_pets_yes") : t("hotel_features_pets_no")} ·{" "}
+                {hotel.smokingAllowed ? t("hotel_features_smoking_yes") : t("hotel_features_smoking_no")}
               </p>
               <p className="rounded-xl border border-white/25 bg-white/10 px-3 py-2.5">
-                {hotel.detailedLocation?.district || hotel.hotelLocation} ·{" "}
+                {hotel.detailedLocation?.district || getHotelLocationLabelLocalized(hotel.hotelLocation, t)} ·{" "}
                 {hotel.detailedLocation?.nearestSubway ||
-                  "Transit info pending"}
+                  t("hotel_detail_transit_pending")}
               </p>
             </div>
             <a
               href="#location"
               className="inline-flex w-full justify-center rounded-xl border border-white/50 bg-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/30"
             >
-              Explore location
+              {t("hotel_detail_explore_location")}
             </a>
           </aside>
         </div>

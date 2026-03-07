@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SiteFrame } from "@/components/layout/site-frame";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { I18nProvider, useI18n } from "@/lib/i18n/provider";
 import { persistApolloCache } from "@/lib/apollo/cache-storage";
 import { createApolloClient } from "@/lib/apollo/client";
 import { resolveGuardRedirect } from "@/lib/auth/route-guard";
@@ -40,8 +41,9 @@ interface GuardState {
 
 const APOLLO_CACHE_PERSIST_INTERVAL_MS = 60_000;
 
-export default function App({ Component, pageProps }: AppPropsWithAuth) {
+function AppInner({ Component, pageProps }: AppPropsWithAuth) {
   const router = useRouter();
+  const { locale, t } = useI18n();
   const [client] = useState(() => createApolloClient());
 
   const guestOnly = Boolean(Component.auth?.guestOnly);
@@ -167,6 +169,11 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
   // ─── Session expiry watcher ──────────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return;
+    document.documentElement.lang = locale;
+  }, [locale]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
     const SESSION_CHECK_INTERVAL = 60_000; // check every minute
     const WARNING_THRESHOLD = 5 * 60_000; // warn at 5 minutes remaining
@@ -184,8 +191,8 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
         // Token already expired — clear and redirect
         clearAuthSession();
         await infoAlert(
-          "Session expired",
-          "Your session has expired. Please log in again.",
+          t("shell_session_expired_title"),
+          t("shell_session_expired_body"),
         );
         void router.push(
           `/auth/login?next=${encodeURIComponent(router.asPath)}`,
@@ -198,8 +205,11 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
         warned = true;
         const mins = Math.ceil(remaining / 60_000);
         await infoAlert(
-          "Session expiring soon",
-          `Your session will expire in ~${mins} minute${mins !== 1 ? "s" : ""}. Please save your work.`,
+          t("shell_session_expiring_title"),
+          t("shell_session_expiring_body", {
+            minutes: mins,
+            suffix: mins !== 1 ? "s" : "",
+          }),
         );
       }
     };
@@ -211,7 +221,7 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
     );
 
     return () => window.clearInterval(id);
-  }, [router]);
+  }, [router, t]);
 
   const isGuardReady = guardState.key === guardKey && guardState.ready;
   const showGuardLoading = requiresGuard && !isGuardReady;
@@ -225,7 +235,7 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
               {showGuardLoading ? (
                 <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-slate-200 bg-white/80">
                   <p className="text-sm font-medium text-slate-600">
-                    Checking access...
+                    {t("shell_checking_access")}
                   </p>
                 </div>
               ) : (
@@ -236,5 +246,15 @@ export default function App({ Component, pageProps }: AppPropsWithAuth) {
         </ToastProvider>
       </ApolloProvider>
     </ErrorBoundary>
+  );
+}
+
+export default function App(props: AppPropsWithAuth) {
+  const locale = props.pageProps?.locale ?? props.router.locale ?? "en";
+
+  return (
+    <I18nProvider locale={locale}>
+      <AppInner {...props} />
+    </I18nProvider>
   );
 }

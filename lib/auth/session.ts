@@ -56,6 +56,7 @@ export const saveAuthSession = (authMember: AuthMember): void => {
   const { accessToken, ...member } = authMember;
   window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   window.localStorage.setItem(MEMBER_KEY, JSON.stringify(member));
+  _onSessionChange?.();
 };
 
 export const clearAuthSession = (): void => {
@@ -67,6 +68,7 @@ export const clearAuthSession = (): void => {
   clearOnboardingCompletionCache();
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(MEMBER_KEY);
+  _onSessionChange?.();
 };
 
 export const updateSessionMember = (

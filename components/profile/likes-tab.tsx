@@ -10,6 +10,11 @@ import {
   TOGGLE_LIKE_MUTATION,
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatProfileTimeAgo,
+  getProfileCopy,
+} from "@/lib/profile/profile-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import { Heart } from "lucide-react";
 import type { HotelListItem } from "@/types/hotel";
@@ -36,18 +41,6 @@ interface GetHotelCardData {
 const formatLocation = (loc: string) =>
   loc ? loc.charAt(0).toUpperCase() + loc.slice(1).toLowerCase() : "";
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const d = Math.floor(diff / 86400000);
-  if (d === 0) return "today";
-  if (d === 1) return "yesterday";
-  if (d < 7) return `${d} days ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 // ─── LikedHotelItem ───────────────────────────────────────────────────────────
 
 function LikedHotelItem({
@@ -59,6 +52,8 @@ function LikedHotelItem({
   likedAt: string;
   onUnliked: (hotelId: string) => void;
 }) {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const toast = useToast();
   const { data, loading } = useQuery<GetHotelCardData>(GET_HOTEL_CARD_QUERY, {
     variables: { hotelId },
@@ -109,7 +104,7 @@ function LikedHotelItem({
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-200 via-slate-100 to-white text-xs font-medium uppercase tracking-[0.15em] text-slate-500">
-              curated stay
+              {copy.curatedStay}
             </div>
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/10 to-transparent" />
@@ -137,10 +132,12 @@ function LikedHotelItem({
               {hotel.hotelRating.toFixed(1)}
             </span>
             <span>·</span>
-            <span>{hotel.hotelLikes.toLocaleString()} likes</span>
+            <span>
+              {hotel.hotelLikes.toLocaleString(locale)} {copy.likes}
+            </span>
           </div>
           <span className="text-[11px] text-slate-400">
-            Saved {timeAgo(likedAt)}
+            {copy.saved} {formatProfileTimeAgo(locale, likedAt)}
           </span>
         </div>
       </Link>
@@ -152,7 +149,7 @@ function LikedHotelItem({
           void handleUnlike();
         }}
         disabled={unliking}
-        aria-label="Remove from saved"
+        aria-label={copy.removeFromSaved}
         className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm transition hover:bg-white hover:scale-110 disabled:opacity-60"
       >
         <Heart size={16} className="fill-rose-500 text-rose-500" />
@@ -164,6 +161,8 @@ function LikedHotelItem({
 // ─── LikesTab ─────────────────────────────────────────────────────────────────
 
 export function LikesTab() {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const member = useMemo(() => getSessionMember(), []);
   const [removed, setRemoved] = useState<Set<string>>(new Set());
 
@@ -216,16 +215,16 @@ export function LikesTab() {
             <Heart size={24} className="text-rose-300" />
           </div>
           <p className="mt-4 text-base font-semibold text-slate-700">
-            No saved hotels
+            {copy.noSavedHotels}
           </p>
           <p className="mt-1 text-sm text-slate-400">
-            Tap the heart icon on any hotel to save it here.
+            {copy.saveHotelHint}
           </p>
           <Link
             href="/hotels"
             className="mt-5 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
           >
-            Browse hotels
+            {copy.browseHotels}
           </Link>
         </div>
       )}

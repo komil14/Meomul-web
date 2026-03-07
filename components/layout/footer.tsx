@@ -1,26 +1,7 @@
 import Link from "next/link";
 import { Instagram, Linkedin, Twitter } from "lucide-react";
-
-const EXPLORE_LINKS = [
-  { label: "Browse Hotels", href: "/hotels" },
-  { label: "Last-Minute Deals", href: "/hotels" },
-  { label: "Editorial Guides", href: "/" },
-  { label: "Memberships", href: "/" },
-];
-
-const ACCOUNT_LINKS = [
-  { label: "Sign In", href: "/auth/login" },
-  { label: "Create Account", href: "/auth/signup" },
-  { label: "My Bookings", href: "/bookings" },
-  { label: "Profile Settings", href: "/profile" },
-];
-
-const COMPANY_LINKS = [
-  { label: "About Meomul", href: "#" },
-  { label: "Contact & Support", href: "#" },
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Service", href: "#" },
-];
+import { useI18n } from "@/lib/i18n/provider";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 
 interface FooterColumnProps {
   title: string;
@@ -48,6 +29,29 @@ function FooterColumn({ title, links }: FooterColumnProps) {
 }
 
 export function Footer() {
+  const { t } = useI18n();
+
+  const EXPLORE_LINKS = [
+    { label: t("footer_browse_hotels"), href: "/hotels" },
+    { label: t("footer_last_minute_deals"), href: "/hotels" },
+    { label: t("footer_editorial_guides"), href: "/" },
+    { label: t("footer_memberships"), href: "/" },
+  ];
+
+  const ACCOUNT_LINKS = [
+    { label: t("footer_sign_in"), href: "/auth/login" },
+    { label: t("footer_create_account"), href: "/auth/signup" },
+    { label: t("footer_my_bookings"), href: "/bookings" },
+    { label: t("footer_profile_settings"), href: "/profile" },
+  ];
+
+  const COMPANY_LINKS = [
+    { label: t("footer_about_meomul"), href: "#" },
+    { label: t("footer_contact_support"), href: "#" },
+    { label: t("footer_privacy_policy"), href: "#" },
+    { label: t("footer_terms_of_service"), href: "#" },
+  ];
+
   return (
     <footer className="bg-slate-900 border-t border-slate-800">
       <div className="mx-auto max-w-6xl px-3 sm:px-6 py-14 sm:py-16">
@@ -58,8 +62,11 @@ export function Footer() {
               MEOMUL
             </span>
             <p className="mt-3 text-sm text-slate-400 leading-relaxed max-w-xs">
-              Find, compare and book hotels — built for guests who decide fast.
+              {t("footer_brand_copy")}
             </p>
+            <div className="mt-5">
+              <LanguageSwitcher />
+            </div>
             <div className="mt-6 flex gap-4">
               <a
                 href="#"
@@ -85,19 +92,21 @@ export function Footer() {
             </div>
           </div>
 
-          <FooterColumn title="Explore" links={EXPLORE_LINKS} />
-          <FooterColumn title="Account" links={ACCOUNT_LINKS} />
-          <FooterColumn title="Company" links={COMPANY_LINKS} />
+          <FooterColumn title={t("footer_explore")} links={EXPLORE_LINKS} />
+          <FooterColumn title={t("footer_account")} links={ACCOUNT_LINKS} />
+          <FooterColumn title={t("footer_company")} links={COMPANY_LINKS} />
         </div>
 
         <div className="mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">© 2026 Meomul. All rights reserved.</p>
+          <p className="text-xs text-slate-500">
+            © 2026 Meomul. {t("footer_all_rights")}
+          </p>
           <div className="flex gap-4 text-xs text-slate-500">
             <a href="#" className="hover:text-slate-300 transition-colors">
-              Privacy
+              {t("footer_privacy_short")}
             </a>
             <a href="#" className="hover:text-slate-300 transition-colors">
-              Terms
+              {t("footer_terms_short")}
             </a>
           </div>
         </div>

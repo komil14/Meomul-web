@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { DetailIcon, type DetailIconName } from "@/components/rooms/detail/detail-icon";
+import { useI18n } from "@/lib/i18n/provider";
 import { formatNumber } from "@/lib/utils/format";
 import type { RoomDetailItem } from "@/types/hotel";
 
@@ -34,6 +35,7 @@ export const RoomHeroSection = memo(function RoomHeroSection({
   deal,
   highlights,
 }: RoomHeroSectionProps) {
+  const { t } = useI18n();
   return (
     <section className="relative overflow-hidden rounded-[2.2rem] border border-slate-200/90 bg-white shadow-[0_24px_60px_-35px_rgba(15,23,42,0.55)]">
       <div className="pointer-events-none absolute -left-24 -top-24 h-56 w-56 rounded-full bg-cyan-200/70 blur-3xl" />
@@ -43,7 +45,7 @@ export const RoomHeroSection = memo(function RoomHeroSection({
         style={coverImage ? { backgroundImage: `url(${coverImage})` } : undefined}
       >
         {!coverImage ? (
-          <div className="flex h-full items-center justify-center bg-slate-100 text-base font-medium text-slate-500">No room image</div>
+          <div className="flex h-full items-center justify-center bg-slate-100 text-base font-medium text-slate-500">{t("room_detail_no_image")}</div>
         ) : (
           <>
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/30 to-transparent" />
@@ -51,13 +53,13 @@ export const RoomHeroSection = memo(function RoomHeroSection({
             <div className="absolute left-4 right-4 top-4 rounded-2xl border border-white/35 bg-slate-900/55 px-4 py-3 text-right text-white shadow-xl backdrop-blur sm:left-auto sm:right-7 sm:top-7 sm:w-auto">
               {deal?.isActive ? (
                 <>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-200">Deal Price</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-200">{t("room_detail_deal_price")}</p>
                   <p className="mt-1 text-2xl font-semibold">₩ {formatNumber(deal.dealPrice)}</p>
                   <p className="text-[11px] text-slate-200 line-through">₩ {formatNumber(deal.originalPrice)}</p>
                 </>
               ) : (
                 <>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Nightly Rate</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">{t("room_detail_nightly_rate")}</p>
                   <p className="mt-1 text-2xl font-semibold">₩ {formatNumber(basePrice)}</p>
                 </>
               )}
@@ -68,16 +70,16 @@ export const RoomHeroSection = memo(function RoomHeroSection({
                   {roomTypeLabel}
                 </span>
                 <span className="rounded-full border border-white/45 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
-                  {viewTypeLabel} View
+                  {t("room_detail_view_suffix", { view: viewTypeLabel })}
                 </span>
                 {roomNumber ? (
                   <span className="rounded-full border border-white/45 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em]">
-                    Room #{roomNumber}
+                    {t("room_detail_room_number", { number: roomNumber })}
                   </span>
                 ) : null}
               </div>
               <h1 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">{roomName}</h1>
-              <p className="mt-3 max-w-3xl text-base text-slate-100 sm:text-lg">{roomDesc || "Premium room prepared with practical comforts and a refined atmosphere."}</p>
+              <p className="mt-3 max-w-3xl text-base text-slate-100 sm:text-lg">{roomDesc || t("room_detail_desc_fallback")}</p>
               <div className="mt-5 grid grid-cols-2 gap-2 lg:max-w-2xl lg:grid-cols-4">
                 {highlights.map((item) => (
                   <article key={item.label} className="rounded-xl border border-white/35 bg-white/10 px-3 py-2 backdrop-blur-sm">

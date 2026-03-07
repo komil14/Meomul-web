@@ -13,7 +13,8 @@ import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
 import { createApolloClient } from "@/lib/apollo/client";
 import { HOTELS_PAGE_SIZE } from "@/lib/hotels/hotels-filter-config";
 import { useHotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
-import { formatHotelsPaginationSummary } from "@/lib/hotels/hotels-ui";
+import { useI18n } from "@/lib/i18n/provider";
+import { formatHotelsPaginationSummaryLocalized } from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
   GetHotelsQueryData,
@@ -40,6 +41,7 @@ export default function HotelsPage({
   initialHotels,
   initialTotal,
 }: HotelsPageProps) {
+  const { t } = useI18n();
   const apolloClient = useApolloClient();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -120,10 +122,10 @@ export default function HotelsPage({
   return (
     <>
       <Head>
-        <title>Discover Hotels — Meomul</title>
+        <title>{t("hotels_meta_title")}</title>
         <meta
           name="description"
-          content="Browse curated premium hotels across South Korea. Filter by location, price, rating, and more to find your perfect stay."
+          content={t("hotels_meta_desc")}
         />
       </Head>
 
@@ -136,18 +138,8 @@ export default function HotelsPage({
         appliedTotal={total}
       />
 
-      <main className={`space-y-6 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
-        <ScrollReveal delayMs={20}>
-          <header>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Discover
-              </p>
-            </div>
-          </header>
-        </ScrollReveal>
-
-        <ScrollReveal delayMs={30} className="relative z-50">
+      <main className={`space-y-5 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
+        <ScrollReveal delayMs={20} className="relative z-50">
           <HotelsDiscoveryToolbar
             state={queryState}
             total={total}
@@ -158,7 +150,7 @@ export default function HotelsPage({
           />
         </ScrollReveal>
 
-        <ScrollReveal delayMs={35}>
+        <ScrollReveal delayMs={25}>
           <HotelsActiveFilterChips state={queryState} />
         </ScrollReveal>
 
@@ -168,7 +160,7 @@ export default function HotelsPage({
 
         {showEmptyState ? (
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-            No hotels found for current filters.
+            {t("hotels_empty")}
           </div>
         ) : null}
 
@@ -193,7 +185,7 @@ export default function HotelsPage({
                   <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-3xl bg-white/24 p-3 backdrop-blur-[1.5px]">
                     <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-sm">
                       <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-sky-500" />
-                      Refreshing results
+                      {t("hotels_refreshing")}
                     </div>
                   </div>
                 ) : null}
@@ -204,10 +196,11 @@ export default function HotelsPage({
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4 sm:py-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-slate-600">
-                    {formatHotelsPaginationSummary(
+                    {formatHotelsPaginationSummaryLocalized(
                       queryState.page,
                       totalPages,
                       total,
+                      t,
                     )}
                   </p>
                   <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -222,7 +215,7 @@ export default function HotelsPage({
                       }}
                       className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-1.5"
                     >
-                      Prev
+                      {t("hotels_prev")}
                     </button>
                     <button
                       type="button"
@@ -239,7 +232,7 @@ export default function HotelsPage({
                       }}
                       className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-1.5"
                     >
-                      Next
+                      {t("hotels_next")}
                     </button>
                   </div>
                 </div>

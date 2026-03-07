@@ -1,62 +1,79 @@
 import type { HotelLocation } from "@/types/hotel";
+import type { TranslationKey } from "@/lib/i18n/messages";
+import { getHotelAmenityLabel, getHotelLocationLabelLocalized } from "@/lib/hotels/hotels-i18n";
 import type { BudgetLevel, TravelStyle } from "@/types/recommendation";
 
 export const MAX_TRAVEL_STYLES = 3;
 export const MAX_DESTINATIONS = 4;
 export const MAX_AMENITIES = 5;
 
-export const TRAVEL_STYLE_OPTIONS: Array<{ value: TravelStyle; label: string; description: string }> = [
-  { value: "SOLO", label: "Solo", description: "Quiet, flexible stays for one traveler." },
-  { value: "FAMILY", label: "Family", description: "Family-friendly spaces and practical amenities." },
-  { value: "COUPLE", label: "Couple", description: "Romantic stays with comfort and privacy." },
-  { value: "FRIENDS", label: "Friends", description: "Social, fun stays for groups." },
-  { value: "BUSINESS", label: "Business", description: "Work-ready stays with reliable access." },
+type Translator = (
+  key: TranslationKey,
+  params?: Record<string, string | number>,
+) => string;
+
+export const TRAVEL_STYLE_VALUES: TravelStyle[] = ["SOLO", "FAMILY", "COUPLE", "FRIENDS", "BUSINESS"];
+
+export const DESTINATION_VALUES: HotelLocation[] = [
+  "SEOUL",
+  "BUSAN",
+  "INCHEON",
+  "DAEGU",
+  "GWANGJU",
+  "DAEJON",
+  "JEJU",
+  "GYEONGJU",
+  "GANGNEUNG",
 ];
 
-export const DESTINATION_OPTIONS: Array<{ value: HotelLocation; label: string }> = [
-  { value: "SEOUL", label: "Seoul" },
-  { value: "BUSAN", label: "Busan" },
-  { value: "INCHEON", label: "Incheon" },
-  { value: "DAEGU", label: "Daegu" },
-  { value: "GWANGJU", label: "Gwangju" },
-  { value: "DAEJON", label: "Daejeon" },
-  { value: "JEJU", label: "Jeju" },
-  { value: "GYEONGJU", label: "Gyeongju" },
-  { value: "GANGNEUNG", label: "Gangneung" },
+export const AMENITY_VALUES = [
+  "wifi",
+  "workspace",
+  "meetingRoom",
+  "parking",
+  "breakfast",
+  "roomService",
+  "gym",
+  "pool",
+  "spa",
+  "restaurant",
+  "familyRoom",
+  "kidsFriendly",
+  "playground",
+  "coupleRoom",
+  "romanticView",
+  "privateBath",
+  "airportShuttle",
+  "wheelchairAccessible",
+  "elevator",
+  "serviceAnimalsAllowed",
+] as const;
+
+export const BUDGET_VALUES: BudgetLevel[] = ["BUDGET", "MID", "PREMIUM", "LUXURY"];
+
+export const getTravelStyleOptions = (t: Translator): Array<{ value: TravelStyle; label: string; description: string }> => [
+  { value: "SOLO", label: t("onboarding_travel_solo"), description: t("onboarding_travel_solo_desc") },
+  { value: "FAMILY", label: t("onboarding_travel_family"), description: t("onboarding_travel_family_desc") },
+  { value: "COUPLE", label: t("onboarding_travel_couple"), description: t("onboarding_travel_couple_desc") },
+  { value: "FRIENDS", label: t("onboarding_travel_friends"), description: t("onboarding_travel_friends_desc") },
+  { value: "BUSINESS", label: t("onboarding_travel_business"), description: t("onboarding_travel_business_desc") },
 ];
 
-export const AMENITY_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "wifi", label: "Fast Wi-Fi" },
-  { value: "workspace", label: "Workspace" },
-  { value: "meetingRoom", label: "Meeting room" },
-  { value: "parking", label: "Parking" },
-  { value: "breakfast", label: "Breakfast" },
-  { value: "roomService", label: "Room service" },
-  { value: "gym", label: "Gym" },
-  { value: "pool", label: "Pool" },
-  { value: "spa", label: "Spa" },
-  { value: "restaurant", label: "Restaurant" },
-  { value: "familyRoom", label: "Family room" },
-  { value: "kidsFriendly", label: "Kids-friendly" },
-  { value: "playground", label: "Playground" },
-  { value: "coupleRoom", label: "Couple room" },
-  { value: "romanticView", label: "Romantic view" },
-  { value: "privateBath", label: "Private bath" },
-  { value: "airportShuttle", label: "Airport shuttle" },
-  { value: "wheelchairAccessible", label: "Wheelchair accessible" },
-  { value: "elevator", label: "Elevator" },
-  { value: "serviceAnimalsAllowed", label: "Service animals allowed" },
+export const getDestinationOptions = (t: Translator): Array<{ value: HotelLocation; label: string }> =>
+  DESTINATION_VALUES.map((value) => ({ value, label: getHotelLocationLabelLocalized(value, t) }));
+
+export const getAmenityOptions = (t: Translator): Array<{ value: string; label: string }> =>
+  AMENITY_VALUES.map((value) => ({ value, label: getHotelAmenityLabel(value, t) }));
+
+export const getBudgetOptions = (t: Translator): Array<{ value: BudgetLevel; label: string; range: string }> => [
+  { value: "BUDGET", label: t("onboarding_budget_budget"), range: t("onboarding_budget_budget_range") },
+  { value: "MID", label: t("onboarding_budget_mid"), range: t("onboarding_budget_mid_range") },
+  { value: "PREMIUM", label: t("onboarding_budget_premium"), range: t("onboarding_budget_premium_range") },
+  { value: "LUXURY", label: t("onboarding_budget_luxury"), range: t("onboarding_budget_luxury_range") },
 ];
 
-export const BUDGET_OPTIONS: Array<{ value: BudgetLevel; label: string; range: string }> = [
-  { value: "BUDGET", label: "Budget", range: "₩30k - ₩80k / night" },
-  { value: "MID", label: "Mid", range: "₩80k - ₩150k / night" },
-  { value: "PREMIUM", label: "Premium", range: "₩150k - ₩300k / night" },
-  { value: "LUXURY", label: "Luxury", range: "₩300k+ / night" },
-];
-
-const DESTINATION_SET = new Set<HotelLocation>(DESTINATION_OPTIONS.map((option) => option.value));
-const AMENITY_SET = new Set<string>(AMENITY_OPTIONS.map((option) => option.value));
+const DESTINATION_SET = new Set<HotelLocation>(DESTINATION_VALUES);
+const AMENITY_SET = new Set<string>(AMENITY_VALUES);
 const PURPOSE_TO_TRAVEL_STYLE: Record<string, TravelStyle | undefined> = {
   SOLO: "SOLO",
   FAMILY: "FAMILY",

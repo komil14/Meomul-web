@@ -2,6 +2,7 @@ import { memo, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import { useI18n } from "@/lib/i18n/provider";
 import { formatAmenityLabel, formatEnumLabel } from "@/lib/rooms/booking";
 import { formatNumber } from "@/lib/utils/format";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -12,35 +13,39 @@ interface RoomCardProps {
   hotelId?: string;
 }
 
-const getAvailabilityBadge = (availableRooms: number): { label: string; className: string } => {
+const getAvailabilityBadge = (
+  availableRooms: number,
+  t: (key: any, params?: Record<string, string | number>) => string,
+): { label: string; className: string } => {
   if (availableRooms <= 0) {
     return {
-      label: "Sold out",
+      label: t("room_card_sold_out"),
       className: "border border-rose-200 bg-rose-50 text-rose-700",
     };
   }
 
   if (availableRooms <= 2) {
     return {
-      label: `${availableRooms} left - high demand`,
+      label: t("room_card_left_high_demand", { count: availableRooms }),
       className: "border border-rose-200 bg-rose-100 text-rose-700",
     };
   }
 
   if (availableRooms <= 5) {
     return {
-      label: `${availableRooms} left`,
+      label: t("room_card_left", { count: availableRooms }),
       className: "border border-amber-200 bg-amber-100 text-amber-800",
     };
   }
 
   return {
-    label: `${availableRooms} left`,
+    label: t("room_card_left", { count: availableRooms }),
     className: "border border-emerald-200 bg-emerald-100 text-emerald-800",
   };
 };
 
 export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const hasPrefetchedRoomRef = useRef(false);
   const hasPrefetchedBookingRef = useRef(false);
@@ -50,17 +55,28 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
   const amenityTags = (room.roomAmenities ?? []).slice(0, 4).map((amenity) => formatAmenityLabel(amenity));
   const extraAmenities = Math.max(0, (room.roomAmenities?.length ?? 0) - amenityTags.length);
   const roomTypeLabel = formatEnumLabel(room.roomType);
-  const viewTypeLabel = room.viewType === "NONE" ? "No specific view" : `${formatEnumLabel(room.viewType)} view`;
-  const availabilityBadge = getAvailabilityBadge(room.availableRooms);
+  const viewTypeLabel =
+    room.viewType === "NONE"
+      ? t("room_card_no_specific_view")
+      : t("room_detail_view_suffix", { view: formatEnumLabel(room.viewType) });
+  const availabilityBadge = getAvailabilityBadge(room.availableRooms, t);
   const isBookable = room.roomStatus === "AVAILABLE" && room.availableRooms > 0;
   const deal = room.lastMinuteDeal?.isActive ? room.lastMinuteDeal : null;
   const nightlyPrice = deal?.dealPrice ?? room.basePrice;
   const originalPrice = deal?.originalPrice ?? room.basePrice;
   const hasDiscount = Boolean(deal && originalPrice > nightlyPrice);
   const bedLine =
-    typeof room.bedCount === "number" && room.bedType ? `${room.bedCount} x ${formatEnumLabel(room.bedType)}` : "Not specified";
-  const capacityLine = typeof room.maxOccupancy === "number" ? `${room.maxOccupancy} guests` : "Not specified";
-  const sizeLine = typeof room.roomSize === "number" && room.roomSize > 0 ? `${room.roomSize} m2` : "Not specified";
+    typeof room.bedCount === "number" && room.bedType
+      ? `${room.bedCount} x ${formatEnumLabel(room.bedType)}`
+      : t("room_card_not_specified");
+  const capacityLine =
+    typeof room.maxOccupancy === "number"
+      ? t("room_fact_guests_value", { count: room.maxOccupancy })
+      : t("room_card_not_specified");
+  const sizeLine =
+    typeof room.roomSize === "number" && room.roomSize > 0
+      ? `${room.roomSize} m2`
+      : t("room_card_not_specified");
   const statusLine = formatEnumLabel(room.roomStatus);
 
   const handlePrefetchRoomIntent = useCallback(() => {
@@ -93,7 +109,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-slate-100 text-xs font-medium uppercase tracking-[0.15em] text-slate-500">
-              No Image
+              {t("room_card_no_image")}
             </div>
           )}
 
@@ -116,7 +132,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
 
           <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">Nightly rate</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">{t("room_card_nightly_rate")}</p>
               <p className="mt-1 text-2xl font-semibold text-white sm:text-3xl">KRW {formatNumber(nightlyPrice)}</p>
               {hasDiscount ? (
                 <p className="text-xs font-medium text-slate-200 line-through">KRW {formatNumber(originalPrice)}</p>
@@ -125,7 +141,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
 
             {typeof room.currentViewers === "number" && room.currentViewers > 0 ? (
               <p className="rounded-full border border-white/35 bg-black/30 px-3 py-1 text-xs font-semibold text-white">
-                {room.currentViewers} viewing now
+                {t("room_card_viewing_now", { count: room.currentViewers })}
               </p>
             ) : null}
           </div>
@@ -139,19 +155,19 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
 
           <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Guests</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{t("room_card_guests")}</p>
               <p className="mt-1 text-sm font-semibold text-slate-900">{capacityLine}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Bed setup</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{t("room_card_bed_setup")}</p>
               <p className="mt-1 text-sm font-semibold text-slate-900">{bedLine}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Room size</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{t("room_card_room_size")}</p>
               <p className="mt-1 text-sm font-semibold text-slate-900">{sizeLine}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Status</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{t("room_card_status")}</p>
               <p className="mt-1 text-sm font-semibold text-slate-900">{statusLine}</p>
             </div>
           </div>
@@ -168,7 +184,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
               ))}
               {extraAmenities > 0 ? (
                 <span className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                  +{extraAmenities} more
+                  {t("room_card_more", { count: extraAmenities })}
                 </span>
               ) : null}
             </div>
@@ -182,7 +198,7 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
               onFocus={handlePrefetchRoomIntent}
               className="inline-flex rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500"
             >
-              Room details
+              {t("room_card_room_details")}
             </Link>
 
             {hotelId && isBookable ? (
@@ -193,11 +209,11 @@ export const RoomCard = memo(function RoomCard({ room, hotelId }: RoomCardProps)
                 onFocus={handlePrefetchBookingIntent}
                 className="inline-flex rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
               >
-                Book now
+                {t("room_card_book_now")}
               </Link>
             ) : (
               <span className="inline-flex rounded-xl border border-slate-200 bg-slate-100 px-5 py-2 text-sm font-semibold text-slate-500">
-                Unavailable now
+                {t("room_card_unavailable_now")}
               </span>
             )}
           </div>

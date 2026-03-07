@@ -1,16 +1,19 @@
 import { HOTEL_TYPES, ROOM_TYPES, STAR_RATINGS } from "@/lib/hotels/hotels-filter-config";
 import { toggleNumberCsv, toggleStringCsv } from "@/lib/hotels/filter-csv";
+import { getHotelTypeLabel, getRoomTypeLabel } from "@/lib/hotels/hotels-i18n";
 import type { HotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
+import { useI18n } from "@/lib/i18n/provider";
 
 interface HotelsCategoriesFiltersProps {
   state: HotelsPageQueryState;
 }
 
 export function HotelsCategoriesFilters({ state }: HotelsCategoriesFiltersProps) {
+  const { t } = useI18n();
   return (
     <div className="space-y-5">
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-700">Hotel types</legend>
+        <legend className="mb-2 text-sm font-medium text-slate-700">{t("hotels_category_hotel_types")}</legend>
         <div className="flex flex-wrap gap-2">
           {HOTEL_TYPES.map((type) => {
             const checked = state.selectedTypes.includes(type);
@@ -26,7 +29,7 @@ export function HotelsCategoriesFilters({ state }: HotelsCategoriesFiltersProps)
                   }}
                   className="h-4 w-4"
                 />
-                <span>{type}</span>
+                <span>{getHotelTypeLabel(type, t)}</span>
               </label>
             );
           })}
@@ -34,7 +37,7 @@ export function HotelsCategoriesFilters({ state }: HotelsCategoriesFiltersProps)
       </fieldset>
 
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-700">Room types</legend>
+        <legend className="mb-2 text-sm font-medium text-slate-700">{t("hotels_category_room_types")}</legend>
         <div className="flex flex-wrap gap-2">
           {ROOM_TYPES.map((type) => {
             const checked = state.selectedRoomTypes.includes(type);
@@ -50,7 +53,7 @@ export function HotelsCategoriesFilters({ state }: HotelsCategoriesFiltersProps)
                   }}
                   className="h-4 w-4"
                 />
-                <span>{type}</span>
+                <span>{getRoomTypeLabel(type, t)}</span>
               </label>
             );
           })}
@@ -58,7 +61,7 @@ export function HotelsCategoriesFilters({ state }: HotelsCategoriesFiltersProps)
       </fieldset>
 
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-700">Star ratings</legend>
+        <legend className="mb-2 text-sm font-medium text-slate-700">{t("hotels_category_star_ratings")}</legend>
         <div className="flex flex-wrap gap-2">
           {STAR_RATINGS.map((star) => {
             const checked = state.selectedStarRatings.includes(star);
@@ -74,7 +77,7 @@ export function HotelsCategoriesFilters({ state }: HotelsCategoriesFiltersProps)
                   }}
                   className="h-4 w-4"
                 />
-                <span>{star} star</span>
+                <span>{t("hotels_category_star_suffix", { count: star })}</span>
               </label>
             );
           })}

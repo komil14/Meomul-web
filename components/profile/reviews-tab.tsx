@@ -11,6 +11,11 @@ import {
 } from "@/graphql/review.gql";
 import { GET_HOTEL_CARD_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { useI18n } from "@/lib/i18n/provider";
+import {
+  formatProfileDate,
+  getProfileCopy,
+} from "@/lib/profile/profile-i18n";
 import { confirmDanger } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { ExternalLink, Pencil, Star, Trash2 } from "lucide-react";
@@ -56,16 +61,6 @@ interface GetHotelCardData {
     hotelType: string;
     hotelImages: string[];
   };
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 // ─── HotelMiniHeader ──────────────────────────────────────────────────────────
@@ -155,6 +150,8 @@ function StarPicker({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const [hovered, setHovered] = useState(0);
   return (
     <div className="flex items-center gap-1">
@@ -165,7 +162,7 @@ function StarPicker({
           onClick={() => onChange(n)}
           onMouseEnter={() => setHovered(n)}
           onMouseLeave={() => setHovered(0)}
-          aria-label={`${n} star${n !== 1 ? "s" : ""}`}
+          aria-label={`${n} ${copy.overallRating}`}
         >
           <Star
             size={26}
@@ -192,6 +189,8 @@ function EditReviewModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const toast = useToast();
   const [overallRating, setOverallRating] = useState(review.overallRating);
   const [title, setTitle] = useState(review.reviewTitle ?? "");
@@ -209,7 +208,7 @@ function EditReviewModal({
 
   const handleSave = async () => {
     if (!text.trim() || text.trim().length < 10) {
-      toast.error("Review must be at least 10 characters.");
+      toast.error(copy.reviewTooShort);
       return;
     }
     try {
@@ -223,7 +222,7 @@ function EditReviewModal({
           },
         },
       });
-      toast.success("Review updated.");
+      toast.success(copy.reviewUpdated);
       onSaved();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -234,26 +233,26 @@ function EditReviewModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={copy.close}
         onClick={onClose}
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
       />
       <div className="relative w-full max-w-md rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
-        <h3 className="text-base font-bold text-slate-900">Edit review</h3>
+        <h3 className="text-base font-bold text-slate-900">{copy.editReview}</h3>
 
         <div className="mt-5 space-y-4">
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Overall rating
+              {copy.overallRating}
             </label>
             <StarPicker value={overallRating} onChange={setOverallRating} />
           </div>
 
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Title{" "}
+              {copy.title}{" "}
               <span className="font-normal normal-case text-slate-400">
-                (optional)
+                ({copy.optional})
               </span>
             </label>
             <input
@@ -261,14 +260,14 @@ function EditReviewModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
-              placeholder="Summarize your stay..."
+              placeholder={copy.summarizeStay}
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300"
             />
           </div>
 
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Review
+              {copy.review}
             </label>
             <textarea
               value={text}
@@ -289,7 +288,7 @@ function EditReviewModal({
             onClick={onClose}
             className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
           >
-            Cancel
+            {copy.cancel}
           </button>
           <button
             type="button"
@@ -299,7 +298,7 @@ function EditReviewModal({
             disabled={loading || !text.trim()}
             className="flex-1 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-60"
           >
-            {loading ? "Saving..." : "Save changes"}
+            {loading ? copy.saving : copy.saveChanges}
           </button>
         </div>
       </div>
@@ -312,14 +311,16 @@ function EditReviewModal({
 const LIMIT = 10;
 
 const DIMS = [
-  { key: "cleanlinessRating", label: "Cleanliness" },
-  { key: "locationRating", label: "Location" },
-  { key: "valueRating", label: "Value" },
-  { key: "serviceRating", label: "Service" },
-  { key: "amenitiesRating", label: "Amenities" },
+  { key: "cleanlinessRating", labelKey: "cleanliness" },
+  { key: "locationRating", labelKey: "location" },
+  { key: "valueRating", labelKey: "value" },
+  { key: "serviceRating", labelKey: "service" },
+  { key: "amenitiesRating", labelKey: "amenities" },
 ] as const;
 
 export function ReviewsTab() {
+  const { locale } = useI18n();
+  const copy = getProfileCopy(locale);
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
   const [editing, setEditing] = useState<ReviewDto | null>(null);
@@ -376,15 +377,15 @@ export function ReviewsTab() {
 
   const handleDelete = async (reviewId: string) => {
     const confirmed = await confirmDanger({
-      title: "Delete review?",
-      text: "This action cannot be undone.",
-      confirmText: "Yes, delete",
+      title: copy.deleteReviewTitle,
+      text: copy.deleteReviewText,
+      confirmText: copy.deleteReviewConfirm,
     });
     if (!confirmed) return;
     setDeletingId(reviewId);
     try {
       await deleteReviewMutation({ variables: { reviewId } });
-      toast.success("Review deleted.");
+      toast.success(copy.reviewDeleted);
       resetPagination();
       void refetch();
     } catch (err) {
@@ -436,10 +437,10 @@ export function ReviewsTab() {
               <Star size={24} className="fill-amber-200 text-amber-300" />
             </div>
             <p className="mt-4 text-base font-semibold text-slate-700">
-              No reviews yet
+              {copy.noReviewsYet}
             </p>
             <p className="mt-1 text-sm text-slate-400">
-              Reviews you write after a stay will appear here.
+              {copy.reviewsAppearHint}
             </p>
           </div>
         )}
@@ -464,7 +465,7 @@ export function ReviewsTab() {
                       </span>
                     </div>
                     <p className="text-xs text-slate-400">
-                      {formatDate(review.createdAt)}
+                      {formatProfileDate(locale, review.createdAt)}
                     </p>
                   </div>
 
@@ -475,7 +476,7 @@ export function ReviewsTab() {
                       className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-50"
                     >
                       <Pencil size={12} />
-                      Edit
+                      {copy.edit}
                     </button>
                     <button
                       type="button"
@@ -486,7 +487,7 @@ export function ReviewsTab() {
                       className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-500 transition hover:bg-rose-50 disabled:opacity-50"
                     >
                       <Trash2 size={12} />
-                      {deletingId === review._id ? "Deleting\u2026" : "Delete"}
+                      {deletingId === review._id ? copy.deleting : copy.delete}
                     </button>
                   </div>
                 </div>
@@ -501,14 +502,14 @@ export function ReviewsTab() {
                 </p>
 
                 <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 sm:grid-cols-3">
-                  {DIMS.map(({ key, label }) => {
+                  {DIMS.map(({ key, labelKey }) => {
                     const val = review[key];
                     return (
                       <div
                         key={key}
                         className="flex items-center justify-between"
                       >
-                        <span className="text-xs text-slate-400">{label}</span>
+                        <span className="text-xs text-slate-400">{copy[labelKey]}</span>
                         <div className="flex items-center gap-1">
                           <div className="h-1 w-16 rounded-full bg-slate-100">
                             <div
@@ -528,7 +529,7 @@ export function ReviewsTab() {
                 {review.hotelResponse && (
                   <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
                     <p className="mb-1 text-xs font-semibold text-slate-500">
-                      Hotel response
+                      {copy.hotelResponse}
                     </p>
                     <p className="text-sm text-slate-700">
                       {review.hotelResponse.responseText}
@@ -544,8 +545,9 @@ export function ReviewsTab() {
                         : "bg-rose-50 text-rose-600"
                     }`}
                   >
-                    {review.reviewStatus.charAt(0) +
-                      review.reviewStatus.slice(1).toLowerCase()}
+                    {review.reviewStatus === "PENDING"
+                      ? copy.reviewPending
+                      : copy.reviewRejected}
                   </span>
                 )}
               </div>
@@ -560,7 +562,7 @@ export function ReviewsTab() {
                 disabled={loadingMore}
                 className="w-full rounded-xl border border-slate-200 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
               >
-                {loadingMore ? "Loading..." : "Load more"}
+                {loadingMore ? copy.loading : copy.loadMore}
               </button>
             )}
           </div>

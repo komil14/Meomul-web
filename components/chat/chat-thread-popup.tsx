@@ -17,12 +17,18 @@ import {
   SEND_MESSAGE_MUTATION,
 } from "@/graphql/chat.gql";
 import { getAccessToken, getSessionMember } from "@/lib/auth/session";
+import {
+  formatChatDateSeparator,
+  formatChatTime,
+  getChatCopy,
+} from "@/lib/chat/chat-i18n";
 import { env } from "@/lib/config/env";
+import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { errorAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
-import { SUPPORT_CHAT_TITLE, avatarBg } from "@/lib/chat/chat-helpers";
+import { avatarBg } from "@/lib/chat/chat-helpers";
 import type {
   GetChatQueryData,
   GetChatQueryVars,
@@ -90,29 +96,6 @@ function resolveMediaUrl(url: string | null | undefined): string {
   return `${API_BASE}/${url}`;
 }
 
-function formatMessageTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Seoul",
-  });
-}
-
-function formatDateSeparator(dateStr: string): string {
-  const date = new Date(dateStr);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return "Today";
-  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
 function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
@@ -155,10 +138,14 @@ function MessageBubble({
   message,
   isOwn,
   isLastInGroup,
+  locale,
+  copy,
 }: {
   message: MessageDto;
   isOwn: boolean;
   isLastInGroup: boolean;
+  locale: "en" | "ko" | "ru" | "uz";
+  copy: ReturnType<typeof getChatCopy>;
 }) {
   const sentCls = `bg-[#d4e5f7] text-slate-900 ${isLastInGroup ? "rounded-2xl rounded-br-sm" : "rounded-2xl"}`;
   const recvCls = `bg-white text-slate-900 border border-slate-100 shadow-sm ${isLastInGroup ? "rounded-2xl rounded-bl-sm" : "rounded-2xl"}`;
@@ -194,9 +181,9 @@ function MessageBubble({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-slate-800">
-              {message.fileUrl.split("/").pop() ?? "Download file"}
+              {message.fileUrl.split("/").pop() ?? copy.attachment}
             </p>
-            <p className="text-xs text-slate-500">Attachment</p>
+            <p className="text-xs text-slate-500">{copy.attachment}</p>
           </div>
           <Download size={13} className="text-slate-400" />
         </a>
@@ -218,6 +205,8 @@ interface ChatThreadPopupProps {
 }
 
 export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
+  const { locale } = useI18n();
+  const copy = getChatCopy(locale);
   const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
   const isPageVisible = usePageVisible();
@@ -377,7 +366,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
         if (!authAck?.success) {
           if (!socketJoinFailedRef.current) {
             toast.info(
-              authAck?.error ?? "Realtime auth failed. Using polling fallback.",
+              authAck?.error ?? copy.pollingFallback,
             );
             socketJoinFailedRef.current = true;
           }
@@ -535,7 +524,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
       if (textareaRef.current) textareaRef.current.style.height = "auto";
     } catch (mutationError) {
       await errorAlert(
-        "Could not send message",
+        copy.sendMessage,
         getErrorMessage(mutationError),
       );
     }
@@ -548,13 +537,13 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!allowed.includes(file.type)) {
       void errorAlert(
-        "Unsupported file type",
+        copy.uploadImage,
         "Please select a JPEG, PNG, WebP, or GIF image.",
       );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      void errorAlert("File too large", "Images must be under 10 MB.");
+      void errorAlert(copy.uploadImage, "Images must be under 10 MB.");
       return;
     }
     // Revoke previous preview URL if any
@@ -588,7 +577,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
       });
       clearPendingImage();
     } catch (uploadError) {
-      await errorAlert("Upload failed", getErrorMessage(uploadError));
+      await errorAlert(copy.uploadImage, getErrorMessage(uploadError));
     } finally {
       setUploadingImage(false);
     }
@@ -600,21 +589,21 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
 
   const isSupportChat = chat?.chatScope === "SUPPORT";
   const hotelTitle = isSupportChat
-    ? SUPPORT_CHAT_TITLE
-    : (hotelData?.getHotel.hotelTitle ?? "Hotel Support");
+    ? copy.supportTitle
+    : (hotelData?.getHotel.hotelTitle ?? copy.hotelSupport);
   const hotelLocation = isSupportChat
     ? ""
     : (hotelData?.getHotel.hotelLocation ?? "");
   const supportMeta =
     chat?.supportTopic?.trim() ||
-    (chat?.sourcePath ? `From ${chat.sourcePath}` : "Platform support");
-  const incomingSenderLabel = isSupportChat ? "Support Team" : "Hotel Staff";
+    (chat?.sourcePath ? `${copy.contextFromPage}: ${chat.sourcePath}` : copy.platformSupport);
+  const incomingSenderLabel = isSupportChat ? copy.supportTeam : copy.hotelStaff;
   const hotelAvatarColor = avatarBg(chat?.hotelId ?? chat?._id ?? hotelTitle);
 
   const statusSubtitle = chat
     ? isSupportChat
       ? supportMeta
-      : hotelLocation || (chat.chatStatus === "CLOSED" ? "Closed" : "")
+      : hotelLocation || (chat.chatStatus === "CLOSED" ? copy.closed : "")
     : null;
 
   return (
@@ -677,7 +666,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                     </p>
                   ) : null}
                   <span
-                    title={socketConnected ? "Live connection" : "Polling mode"}
+                    title={socketConnected ? copy.liveConnection : copy.pollingFallback}
                   >
                     {socketConnected ? (
                       <Wifi size={9} className="text-emerald-400" />
@@ -720,7 +709,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
         {/* ── Error banner ── */}
         {error && (
           <div className="flex-none border-b border-rose-100 bg-rose-50 px-5 py-2 text-xs font-medium text-rose-700">
-            Failed to load: {getErrorMessage(error)}
+            {getErrorMessage(error)}
           </div>
         )}
 
@@ -751,12 +740,12 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                 <MessageSquare size={20} className="text-slate-300" />
               </div>
               <p className="text-sm font-semibold text-slate-700">
-                Start the conversation
+                {copy.startConversation}
               </p>
               <p className="mt-1 text-xs text-slate-400">
                 {isSupportChat
-                  ? "Your message goes directly to Meomul support"
-                  : "Your message goes directly to the hotel team"}
+                  ? copy.messageDirectSupport
+                  : copy.messageDirectHotel}
               </p>
             </div>
           )}
@@ -796,7 +785,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                       <div className="my-6 flex items-center gap-3">
                         <div className="h-px flex-1 bg-slate-200/70" />
                         <span className="rounded-full border border-slate-200 bg-white px-3 py-0.5 text-[10px] font-semibold tracking-wide text-slate-400 shadow-sm">
-                          {formatDateSeparator(message.timestamp)}
+                          {formatChatDateSeparator(locale, message.timestamp)}
                         </span>
                         <div className="h-px flex-1 bg-slate-200/70" />
                       </div>
@@ -838,7 +827,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                       {isOwn && showTime && (
                         <div className="flex flex-shrink-0 flex-col items-end gap-0.5 pb-0.5">
                           <span className="text-[10px] leading-none text-slate-400">
-                            {formatMessageTime(message.timestamp)}
+                            {formatChatTime(locale, message.timestamp)}
                           </span>
                           {message.read ? (
                             <CheckCheck size={10} className="text-blue-400" />
@@ -859,13 +848,15 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                           message={message}
                           isOwn={isOwn}
                           isLastInGroup={isLastInGroup}
+                          locale={locale}
+                          copy={copy}
                         />
                       </div>
 
                       {/* Received: time shown RIGHT of bubble */}
                       {!isOwn && showTime && (
                         <span className="flex-shrink-0 pb-0.5 text-[10px] leading-none text-slate-400">
-                          {formatMessageTime(message.timestamp)}
+                          {formatChatTime(locale, message.timestamp)}
                         </span>
                       )}
                     </div>
@@ -897,7 +888,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
             <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 py-3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
               <p className="text-sm text-slate-500">
-                This conversation is closed
+                {copy.closedNotice}
               </p>
             </div>
           ) : (
@@ -916,7 +907,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                       type="button"
                       onClick={clearPendingImage}
                       className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-white shadow transition hover:bg-slate-900"
-                      aria-label="Remove image"
+                      aria-label={copy.removeImage}
                     >
                       <X size={10} />
                     </button>
@@ -932,7 +923,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                         ? "animate-pulse bg-sky-300 text-white"
                         : "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
                     }`}
-                    aria-label="Send image"
+                    aria-label={copy.sendImage}
                   >
                     <Send size={15} />
                   </button>
@@ -962,7 +953,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                         ? "text-sky-500"
                         : "text-slate-300 hover:text-slate-500"
                     }`}
-                    aria-label="Upload image"
+                    aria-label={copy.uploadImage}
                   >
                     <ImagePlus size={16} />
                   </button>
@@ -975,7 +966,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                       stopTypingSignal();
                     }}
                     rows={1}
-                    placeholder="Write a message…"
+                    placeholder={copy.sendMessagePlaceholder}
                     disabled={sending}
                     className="flex-1 resize-none bg-transparent py-1 text-sm text-slate-900 placeholder-slate-400 outline-none"
                     style={{ minHeight: "32px", maxHeight: "120px" }}
@@ -988,7 +979,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                         ? "bg-sky-500 text-white shadow-sm hover:bg-sky-600 active:scale-95"
                         : "text-slate-300"
                     }`}
-                    aria-label="Send message"
+                    aria-label={copy.sendMessage}
                   >
                     <Send size={15} />
                   </button>
