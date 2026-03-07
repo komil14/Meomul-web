@@ -58,10 +58,10 @@ export function LanguageSwitcher({
         aria-label={t("locale_switcher_label")}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className={`flex items-center gap-2 rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 ${
+        className={`flex items-center gap-2 bg-transparent text-slate-900 transition hover:bg-slate-50 ${
           mobile
-            ? "w-full justify-between px-4 py-3"
-            : "px-3 py-2"
+            ? "w-full justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-slate-300"
+            : "h-11 w-11 justify-center rounded-xl"
         }`}
       >
         <span className="flex items-center gap-2">
@@ -74,10 +74,12 @@ export function LanguageSwitcher({
             </span>
           ) : null}
         </span>
-        <ChevronDown
-          size={mobile ? 18 : 15}
-          className={`text-slate-500 transition ${open ? "rotate-180" : ""}`}
-        />
+        {mobile ? (
+          <ChevronDown
+            size={18}
+            className={`text-slate-500 transition ${open ? "rotate-180" : ""}`}
+          />
+        ) : null}
       </button>
 
       {open ? (

@@ -40,7 +40,7 @@ const getCurrentPath = (): string => {
 };
 
 const sendAnalyticsEvent = async (accessToken: string, input: AnalyticsMutationInput): Promise<void> => {
-  await fetch(env.graphqlUrl, {
+  await fetch(env.graphqlHttpUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",

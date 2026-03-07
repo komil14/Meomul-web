@@ -148,7 +148,7 @@ export const silentRefreshAccessToken = (): Promise<boolean> => {
 
   _refreshInProgress = (async () => {
     try {
-      const response = await fetch(env.graphqlUrl, {
+      const response = await fetch(env.graphqlHttpUrl, {
         method: "POST",
         credentials: "include", // sends httpOnly cookie
         headers: { "Content-Type": "application/json" },
@@ -185,7 +185,7 @@ export const silentRefreshAccessToken = (): Promise<boolean> => {
  */
 export const logoutSession = async (): Promise<void> => {
   try {
-    await fetch(env.graphqlUrl, {
+    await fetch(env.graphqlHttpUrl, {
       method: "POST",
       credentials: "include",
       headers: {

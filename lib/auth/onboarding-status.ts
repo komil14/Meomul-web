@@ -115,7 +115,7 @@ export const setOnboardingCompletionCachedValue = (memberId: string, value: bool
 
 const fetchHasRecommendationProfile = async (accessToken: string): Promise<boolean | null> => {
   try {
-    const response = await fetch(env.graphqlUrl, {
+    const response = await fetch(env.graphqlHttpUrl, {
       method: "POST",
       headers: {
         "content-type": "application/json",

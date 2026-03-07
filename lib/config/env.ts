@@ -22,11 +22,15 @@ function requireEnv(name: string, fallback: string): string {
   return fallback;
 }
 
+const graphqlOriginUrl = requireEnv(
+  "NEXT_PUBLIC_GRAPHQL_URL",
+  "http://localhost:3001/graphql",
+);
+
 export const env = {
-  graphqlUrl: requireEnv(
-    "NEXT_PUBLIC_GRAPHQL_URL",
-    "http://localhost:3001/graphql",
-  ),
+  graphqlUrl: graphqlOriginUrl,
+  graphqlHttpUrl:
+    typeof window !== "undefined" ? "/graphql" : graphqlOriginUrl,
   chatSocketUrl: requireEnv(
     "NEXT_PUBLIC_CHAT_SOCKET_URL",
     "http://localhost:3001",

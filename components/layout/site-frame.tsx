@@ -949,13 +949,13 @@ export function SiteFrame({ children }: PropsWithChildren) {
               <>
                 <Link
                   href="/auth/login"
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-white"
                 >
                   {t("action_log_in")}
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="rounded-full bg-sky-500 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600"
+                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                 >
                   {t("action_sign_up")}
                 </Link>
@@ -1004,19 +1004,19 @@ export function SiteFrame({ children }: PropsWithChildren) {
       {isMobileMenuOpen && (
         <div
           id="mobile-main-nav"
-          className="border-t border-slate-100 bg-white/95 backdrop-blur-md md:hidden"
+          className="border-t border-slate-100 bg-white md:hidden"
         >
-          <div className="mx-auto max-w-6xl px-3 py-3">
+          <div className="mx-auto min-h-[calc(100dvh-73px)] max-w-6xl overflow-y-auto px-4 py-5">
             {/* Logged-in member card */}
             {member && (
-              <div className="mb-3 flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+              <div className="mb-5 flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3.5">
                 <div
-                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full ${ROLE_COLOR[member.memberType] ?? "bg-slate-500"} text-[11px] font-bold text-white`}
+                  className={`flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full ${ROLE_COLOR[member.memberType] ?? "bg-slate-500"} text-[11px] font-bold text-white`}
                 >
                   {memberAvatar(memberWithLiveImage ?? member)}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900">
+                  <p className="truncate text-base font-semibold text-slate-900">
                     {member.memberNick}
                   </p>
                   <p className="text-[11px] capitalize text-slate-400">
@@ -1027,17 +1027,18 @@ export function SiteFrame({ children }: PropsWithChildren) {
             )}
 
             {/* Role-based nav links */}
-            <nav className="flex flex-col gap-0.5">
+            <nav className="flex flex-col gap-1">
               {navLinks.map((link) => {
                 const active = isActive(router.pathname, link.href);
                 return (
                   <Link
                     key={`mobile-${link.href}`}
                     href={link.href}
-                  className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`rounded-2xl px-4 py-3.5 text-base font-medium transition ${
                       active
                         ? "bg-slate-900 text-white"
-                        : "text-slate-700 hover:bg-slate-100"
+                        : "text-slate-800 hover:bg-slate-100"
                     }`}
                   >
                     {t(link.labelKey)}
@@ -1049,11 +1050,11 @@ export function SiteFrame({ children }: PropsWithChildren) {
             {/* Admin management links */}
             {(member?.memberType === "ADMIN" ||
               member?.memberType === "ADMIN_OPERATOR") && (
-              <div className="mt-3 border-t border-slate-100 pt-3">
-                <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <p className="mb-2 px-4 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">
                   {t("label_admin_section")}
                 </p>
-                <nav className="flex flex-col gap-0.5">
+                <nav className="flex flex-col gap-1">
                   {ADMIN_PAGES.map((page) => {
                     const Icon = page.icon;
                     const active = isActive(router.pathname, page.href);
@@ -1061,14 +1062,15 @@ export function SiteFrame({ children }: PropsWithChildren) {
                       <Link
                         key={`mobile-${page.href}`}
                         href={page.href}
-                        className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base font-medium transition ${
                           active
                             ? "bg-slate-900 text-white"
-                            : "text-slate-700 hover:bg-slate-100"
+                            : "text-slate-800 hover:bg-slate-100"
                         }`}
                       >
                         <Icon
-                          size={15}
+                          size={17}
                           className={active ? "text-white" : "text-slate-400"}
                         />
                         {t(page.labelKey)}
@@ -1080,49 +1082,53 @@ export function SiteFrame({ children }: PropsWithChildren) {
             )}
 
             {/* Bottom section: settings/logout or auth buttons */}
-            <div className="mt-3 border-t border-slate-100 pt-3">
+            <div className="mt-5 border-t border-slate-100 pt-4">
               {member ? (
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-1">
                   <Link
                     href="/profile"
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base text-slate-700 transition hover:bg-slate-100"
                   >
-                    <User size={15} className="text-slate-400" />
+                    <User size={17} className="text-slate-400" />
                     {t("action_profile")}
                   </Link>
                   <Link
                     href="/settings/preferences"
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-100"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base text-slate-700 transition hover:bg-slate-100"
                   >
-                    <Settings size={15} className="text-slate-400" />
+                    <Settings size={17} className="text-slate-400" />
                     {t("action_settings")}
                   </Link>
-                  <div className="px-3 py-2">
+                  <div className="px-1 py-2">
                     <LanguageSwitcher mobile />
                   </div>
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-rose-500 transition hover:bg-rose-50"
+                    className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base text-rose-500 transition hover:bg-rose-50"
                   >
-                    <LogOut size={15} />
+                    <LogOut size={17} />
                     {t("action_sign_out")}
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   <div className="px-1">
                     <LanguageSwitcher mobile />
                   </div>
                   <Link
                     href="/auth/login"
-                    className="rounded-xl border border-slate-200 px-4 py-2.5 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-center text-base font-medium text-slate-900 transition hover:bg-white"
                   >
                     {t("action_log_in")}
                   </Link>
                   <Link
                     href="/auth/signup"
-                    className="rounded-xl bg-sky-500 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-sky-600"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="rounded-2xl bg-slate-900 px-4 py-3.5 text-center text-base font-semibold text-white shadow-sm transition hover:bg-slate-800"
                   >
                     {t("action_sign_up")}
                   </Link>

@@ -109,7 +109,7 @@ const retryLink = new RetryLink({
 });
 
 const httpLink = new HttpLink({
-  uri: env.graphqlUrl,
+  uri: env.graphqlHttpUrl,
   credentials: "include",
 });
 

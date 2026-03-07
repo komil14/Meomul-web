@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+const backendGraphqlUrl =
+  process.env.NEXT_PUBLIC_GRAPHQL_URL ?? "http://localhost:3001/graphql";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   i18n: {
@@ -15,6 +18,15 @@ const nextConfig: NextConfig = {
 
   async rewrites() {
     return [
+      {
+        source: "/graphql",
+        destination: backendGraphqlUrl,
+      },
+      {
+        source: "/:locale(en|ko|ru|uz)/about",
+        destination: "/about.html",
+        locale: false,
+      },
       {
         source: "/about",
         destination: "/about.html",

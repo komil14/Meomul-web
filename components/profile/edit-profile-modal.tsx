@@ -27,7 +27,7 @@ const ACCEPTED_IMAGE_TYPES = new Set([
 ]);
 
 const getApiBaseUrl = (): string => {
-  const gql = env.graphqlUrl;
+  const gql = env.graphqlHttpUrl;
   return gql.replace(/\/graphql\/?$/i, "");
 };
 
