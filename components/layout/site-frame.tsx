@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PropsWithChildren } from "react";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
 import { Footer } from "@/components/layout/footer";
@@ -719,12 +719,17 @@ export function SiteFrame({ children }: PropsWithChildren) {
     void router.push("/auth/login");
   };
 
+  // Stable variable references prevent Apollo from re-subscribing on every render
+  const emptyVars = useMemo(() => ({}), []);
+
   const { data: unreadData, refetch: refetchUnread } =
     useQuery<GetMyUnreadChatCountQueryData>(GET_MY_UNREAD_CHAT_COUNT_QUERY, {
+      variables: emptyVars,
       skip: !canPollUnread,
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
       pollInterval: isPageVisible ? UNREAD_POLL_INTERVAL_MS : 0,
+      notifyOnNetworkStatusChange: false,
     });
 
   const unreadCount = unreadData?.getMyUnreadChatCount ?? 0;
@@ -733,10 +738,12 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const { data: notifUnreadData, refetch: refetchNotifUnread } = useQuery<{
     getUnreadCount: number;
   }>(GET_UNREAD_COUNT_QUERY, {
+    variables: emptyVars,
     skip: !canTrackUnread,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
     pollInterval: isPageVisible ? NOTIFICATION_POLL_INTERVAL_MS : 0,
+    notifyOnNetworkStatusChange: false,
   });
 
   const notifUnreadCount = notifUnreadData?.getUnreadCount ?? 0;

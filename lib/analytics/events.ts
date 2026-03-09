@@ -1,5 +1,5 @@
 import { TRACK_ANALYTICS_EVENT_MUTATION_TEXT } from "@/graphql/analytics.gql";
-import { getAccessToken } from "@/lib/auth/session";
+import { getSessionMember } from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
 
 type AnalyticsValue = string | number | boolean | null | undefined;
@@ -39,13 +39,11 @@ const getCurrentPath = (): string => {
   return path.length <= 500 ? path : path.slice(0, 500);
 };
 
-const sendAnalyticsEvent = async (accessToken: string, input: AnalyticsMutationInput): Promise<void> => {
+const sendAnalyticsEvent = async (input: AnalyticsMutationInput): Promise<void> => {
   await fetch(env.graphqlHttpUrl, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${accessToken}`,
-    },
+    credentials: "include", // sends httpOnly access token cookie automatically
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({
       query: TRACK_ANALYTICS_EVENT_MUTATION_TEXT,
       variables: { input },
@@ -59,8 +57,7 @@ const flushAnalyticsQueue = async (): Promise<void> => {
     return;
   }
 
-  const accessToken = getAccessToken();
-  if (!accessToken) {
+  if (!getSessionMember()) {
     analyticsQueue.length = 0;
     return;
   }
@@ -74,7 +71,7 @@ const flushAnalyticsQueue = async (): Promise<void> => {
       }
 
       try {
-        await sendAnalyticsEvent(accessToken, nextEvent);
+        await sendAnalyticsEvent(nextEvent);
       } catch {
         // Analytics is non-critical. Skip failed events and continue.
       }

@@ -3,6 +3,26 @@ import type { NextConfig } from "next";
 const backendGraphqlUrl =
   process.env.NEXT_PUBLIC_GRAPHQL_URL ?? "http://localhost:3001/graphql";
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const socketUrl =
+  process.env.NEXT_PUBLIC_CHAT_SOCKET_URL ?? "http://localhost:3001";
+
+// Build a strict CSP. The ws:/wss: connect-src entries cover Socket.IO.
+// style-src allows 'unsafe-inline' because Tailwind CSS generates inline styles.
+const buildCsp = (): string =>
+  [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self'",
+    `connect-src 'self' ${apiUrl} ${socketUrl} ws: wss:`,
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   i18n: {
@@ -67,6 +87,10 @@ const nextConfig: NextConfig = {
           {
             key: "X-XSS-Protection",
             value: "1; mode=block",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: buildCsp(),
           },
         ],
       },

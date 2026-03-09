@@ -6,27 +6,14 @@ import {
   from,
 } from "@apollo/client";
 import { CombinedGraphQLErrors } from "@apollo/client/errors";
-import { SetContextLink } from "@apollo/client/link/context";
 import { ErrorLink } from "@apollo/client/link/error";
 import { RetryLink } from "@apollo/client/link/retry";
 import { restorePersistedApolloCache } from "@/lib/apollo/cache-storage";
-import {
-  clearAuthSession,
-  getAccessToken,
-  silentRefreshAccessToken,
-} from "@/lib/auth/session";
+import { clearAuthSession, silentRefreshAccessToken } from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
 
-const authLink = new SetContextLink((prevContext) => {
-  const token = getAccessToken();
-
-  return {
-    headers: {
-      ...prevContext.headers,
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-  };
-});
+// No explicit authLink needed — the httpOnly access token cookie is sent
+// automatically by the browser via credentials: "include" on every request.
 
 const errorLink = new ErrorLink(({ error, operation, forward }) => {
   // Handle GraphQL errors
@@ -58,17 +45,8 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
               return;
             }
 
-            // Retry the original operation with the new token
-            const newToken = getAccessToken();
-            operation.setContext(
-              ({ headers }: { headers?: Record<string, string> }) => ({
-                headers: {
-                  ...headers,
-                  authorization: newToken ? `Bearer ${newToken}` : "",
-                },
-              }),
-            );
-
+            // Retry — the refreshed access token cookie is set by the server,
+            // so the browser sends it automatically on the next request.
             forward(operation).subscribe(subscriber);
           })
           .catch(() => {
@@ -144,6 +122,6 @@ export const createApolloClient = () => {
         fetchPolicy: "network-only",
       },
     },
-    link: from([errorLink, retryLink, authLink, httpLink]),
+    link: from([errorLink, retryLink, httpLink]),
   });
 };

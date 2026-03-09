@@ -1,11 +1,14 @@
 import type { ApolloCache, NormalizedCacheObject } from "@apollo/client";
 
 const APOLLO_CACHE_KEY = "meomul.apollo_cache";
-const APOLLO_CACHE_VERSION = 1;
+// Combines a manual bump with the Next.js build ID so any deployment
+// automatically invalidates stale cached data from a previous schema version.
+const APOLLO_CACHE_VERSION =
+  `1:${process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}`;
 const APOLLO_CACHE_MAX_AGE_MS = 1000 * 60 * 30;
 
 interface PersistedApolloCache {
-  version: number;
+  version: string;
   savedAt: number;
   data: NormalizedCacheObject;
 }

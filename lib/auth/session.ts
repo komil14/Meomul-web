@@ -3,7 +3,9 @@ import { clearOnboardingCompletionCache } from "@/lib/auth/onboarding-status";
 import { env } from "@/lib/config/env";
 import type { AuthMember, SessionMember } from "@/types/auth";
 
-const ACCESS_TOKEN_KEY = "meomul.access_token";
+// Access token is stored as an httpOnly cookie set by the server — never readable by JS.
+// We only persist the token's `exp` claim so we can show session-expiry warnings.
+const TOKEN_EXP_KEY = "meomul.token_exp";
 const MEMBER_KEY = "meomul.member";
 
 const isBrowser = (): boolean => typeof window !== "undefined";
@@ -20,13 +22,9 @@ export const unregisterSessionChangeListener = (): void => {
   _onSessionChange = null;
 };
 
-export const getAccessToken = (): string | null => {
-  if (!isBrowser()) {
-    return null;
-  }
-
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
-};
+// Cannot read the httpOnly cookie from JS — always returns null.
+// Retained for API compatibility; use getSessionMember() to check auth state.
+export const getAccessToken = (): string | null => null;
 
 export const getSessionMember = (): SessionMember | null => {
   if (!isBrowser()) {
@@ -54,7 +52,18 @@ export const saveAuthSession = (authMember: AuthMember): void => {
   clearPersistedApolloCache();
   clearOnboardingCompletionCache();
   const { accessToken, ...member } = authMember;
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  // Store only the `exp` claim so session-expiry warnings work without the raw token.
+  try {
+    const parts = accessToken.split(".");
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1])) as { exp?: number };
+      if (typeof payload.exp === "number") {
+        window.localStorage.setItem(TOKEN_EXP_KEY, String(payload.exp));
+      }
+    }
+  } catch {
+    // Ignore parse errors — expiry warnings simply won't fire
+  }
   window.localStorage.setItem(MEMBER_KEY, JSON.stringify(member));
   _onSessionChange?.();
 };
@@ -66,7 +75,7 @@ export const clearAuthSession = (): void => {
 
   clearPersistedApolloCache();
   clearOnboardingCompletionCache();
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+  window.localStorage.removeItem(TOKEN_EXP_KEY);
   window.localStorage.removeItem(MEMBER_KEY);
   _onSessionChange?.();
 };
@@ -89,7 +98,7 @@ export const updateSessionMember = (
   _onSessionChange?.();
 };
 
-export const isAuthenticated = (): boolean => Boolean(getAccessToken());
+export const isAuthenticated = (): boolean => getSessionMember() !== null;
 
 /**
  * Decode the JWT payload (without verification) to read its `exp` claim.
@@ -97,17 +106,11 @@ export const isAuthenticated = (): boolean => Boolean(getAccessToken());
  * is missing / malformed.
  */
 export const getTokenExpiry = (): number | null => {
-  const token = getAccessToken();
-  if (!token) return null;
-
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1])) as { exp?: number };
-    return typeof payload.exp === "number" ? payload.exp : null;
-  } catch {
-    return null;
-  }
+  if (!isBrowser()) return null;
+  const stored = window.localStorage.getItem(TOKEN_EXP_KEY);
+  if (!stored) return null;
+  const exp = Number(stored);
+  return isFinite(exp) ? exp : null;
 };
 
 /**
@@ -185,15 +188,11 @@ export const silentRefreshAccessToken = (): Promise<boolean> => {
  */
 export const logoutSession = async (): Promise<void> => {
   try {
+    // credentials: "include" sends the httpOnly access + refresh token cookies automatically
     await fetch(env.graphqlHttpUrl, {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(getAccessToken()
-          ? { Authorization: `Bearer ${getAccessToken()}` }
-          : {}),
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         query: `mutation Logout { logout { success message } }`,
       }),
