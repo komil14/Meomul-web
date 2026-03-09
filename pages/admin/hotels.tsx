@@ -86,6 +86,9 @@ function EditHotelDrawer({
   onSaved: () => void;
 }) {
   const [status, setStatus] = useState<HotelStatus>(hotel.hotelStatus);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>(
+    hotel.verificationStatus,
+  );
   const [badge, setBadge] = useState<BadgeLevel>(hotel.badgeLevel);
 
   const [updateHotel, { loading, error }] = useMutation<
@@ -96,6 +99,9 @@ function EditHotelDrawer({
   const handleSave = async () => {
     const input: HotelUpdateInput = { _id: hotel._id };
     if (status !== hotel.hotelStatus) input.hotelStatus = status;
+    if (verificationStatus !== hotel.verificationStatus) {
+      input.verificationStatus = verificationStatus;
+    }
     if (badge !== hotel.badgeLevel) input.badgeLevel = badge;
     await updateHotel({ variables: { input } });
     onSaved();
@@ -177,6 +183,23 @@ function EditHotelDrawer({
           </div>
 
           {/* editable badge */}
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Verification
+            </label>
+            <select
+              value={verificationStatus}
+              onChange={(e) =>
+                setVerificationStatus(e.target.value as VerificationStatus)
+              }
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+            >
+              <option value="PENDING">PENDING</option>
+              <option value="VERIFIED">VERIFIED</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+          </div>
+
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               Badge Level

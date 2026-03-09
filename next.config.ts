@@ -7,15 +7,17 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const socketUrl =
   process.env.NEXT_PUBLIC_CHAT_SOCKET_URL ?? "http://localhost:3001";
 
-// Build a strict CSP. The ws:/wss: connect-src entries cover Socket.IO.
-// style-src allows 'unsafe-inline' because Tailwind CSS generates inline styles.
+const isDev = process.env.NODE_ENV !== "production";
+
 const buildCsp = (): string =>
   [
     "default-src 'self'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
+    // 'unsafe-eval' required in dev mode for Next.js webpack source maps
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdn.prod.website-files.com https://d3e54v103j8qbb.cloudfront.net https://ajax.googleapis.com`,
+    "style-src 'self' 'unsafe-inline' https://cdn.prod.website-files.com https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
-    "font-src 'self'",
+    "media-src 'self' https://videos.pexels.com",
     `connect-src 'self' ${apiUrl} ${socketUrl} ws: wss:`,
     "frame-ancestors 'none'",
     "base-uri 'self'",

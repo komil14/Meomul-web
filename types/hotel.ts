@@ -404,6 +404,7 @@ export interface GetAllHotelsAdminQueryVars {
 export interface HotelUpdateInput {
   _id: string;
   hotelStatus?: HotelStatus;
+  verificationStatus?: VerificationStatus;
   badgeLevel?: BadgeLevel;
   starRating?: number;
 }

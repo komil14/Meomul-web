@@ -210,6 +210,9 @@ export default function HotelDetailPage({
         </div>
         <section className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
           {t("hotel_detail_unavailable")}
+          {hotelErrorMessage ? (
+            <p className="mt-2 text-xs text-rose-600">{hotelErrorMessage}</p>
+          ) : null}
         </section>
       </main>
     );
@@ -553,13 +556,24 @@ export const getServerSideProps: GetServerSideProps<
   const client = createApolloClient();
 
   try {
-    const [hotelResult, roomsResult] = await Promise.all([
-      client.query<GetHotelQueryData, GetHotelQueryVars>({
-        query: GET_HOTEL_QUERY,
-        variables: { hotelId },
-        fetchPolicy: "no-cache",
-      }),
-      client.query<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>({
+    const hotelResult = await client.query<GetHotelQueryData, GetHotelQueryVars>({
+      query: GET_HOTEL_QUERY,
+      variables: { hotelId },
+      fetchPolicy: "no-cache",
+    });
+
+    const serverHotel = hotelResult.data?.getHotel ?? null;
+    if (!serverHotel) {
+      return { notFound: true };
+    }
+
+    let initialRooms: RoomListItem[] = [];
+
+    try {
+      const roomsResult = await client.query<
+        GetRoomsByHotelQueryData,
+        GetRoomsByHotelQueryVars
+      >({
         query: GET_ROOMS_BY_HOTEL_QUERY,
         variables: {
           hotelId,
@@ -571,21 +585,21 @@ export const getServerSideProps: GetServerSideProps<
           },
         },
         fetchPolicy: "no-cache",
-      }),
-    ]);
+      });
 
-    const serverHotel = hotelResult.data?.getHotel ?? null;
-    if (!serverHotel) {
-      return { notFound: true };
+      initialRooms = roomsResult.data?.getRoomsByHotel.list ?? [];
+    } catch {
+      initialRooms = [];
     }
 
     return {
       props: {
         initialHotel: serverHotel,
-        initialRooms: roomsResult.data?.getRoomsByHotel.list ?? [],
+        initialRooms,
       },
     };
-  } catch {
+  } catch (error) {
+    console.error("[hotel-detail][ssr] failed to load hotel", hotelId, error);
     return {
       props: {
         initialHotel: null,
