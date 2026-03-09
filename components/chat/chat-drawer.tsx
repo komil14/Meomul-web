@@ -24,7 +24,6 @@ import {
 } from "@/lib/chat/chat-helpers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
-  ChatDto,
   GetChatQueryData,
   GetChatQueryVars,
   GetMyChatsQueryData,

@@ -6,6 +6,12 @@
   --surface: #ffffff;
   --muted: #64748b;
   --brand: #0f766e;
+  --font-manrope:
+    "Avenir Next", "Segoe UI Variable", "Segoe UI", "Noto Sans", "Apple SD Gothic Neo",
+    "Malgun Gothic", "Helvetica Neue", sans-serif;
+  --font-space-grotesk:
+    "Avenir Next Condensed", "Trebuchet MS", "Segoe UI Variable Display",
+    "Arial Narrow", "Helvetica Neue", sans-serif;
   --meomul-motion-distance: 14px;
   --meomul-motion-duration: 680ms;
   --meomul-pop-duration: 520ms;

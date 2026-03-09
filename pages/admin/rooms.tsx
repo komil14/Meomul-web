@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
+import Image from "next/image";
 import { useMemo, useState, useCallback } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
@@ -116,10 +117,12 @@ function EditRoomDrawer({
           {/* thumbnail */}
           {room.roomImages.length > 0 && (
             <div className="overflow-hidden rounded-xl">
-              <img
+              <Image
                 src={resolveImageUrl(room.roomImages[0])}
                 alt={room.roomName}
-                loading="lazy"
+                width={1200}
+                height={704}
+                unoptimized
                 className="h-44 w-full object-cover"
               />
             </div>
@@ -231,7 +234,7 @@ const AdminRoomsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const rooms = data?.getAllRoomsAdmin.list ?? [];
+  const rooms = useMemo(() => data?.getAllRoomsAdmin.list ?? [], [data?.getAllRoomsAdmin.list]);
   const total = data?.getAllRoomsAdmin.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -414,10 +417,12 @@ const AdminRoomsPage: NextPageWithAuth = () => {
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-3">
                         {r.roomImages.length > 0 ? (
-                          <img
+                          <Image
                             src={resolveImageUrl(r.roomImages[0])}
                             alt={r.roomName}
-                            loading="lazy"
+                            width={56}
+                            height={40}
+                            unoptimized
                             className="h-10 w-14 rounded-lg object-cover"
                           />
                         ) : (

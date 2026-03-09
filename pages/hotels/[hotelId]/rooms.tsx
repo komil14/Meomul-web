@@ -42,7 +42,6 @@ import type { NextPageWithAuth } from "@/types/page";
 import {
   ArrowLeft,
   BedDouble,
-  Building2,
   ChevronDown,
   DoorOpen,
   Plus,

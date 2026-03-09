@@ -184,6 +184,10 @@ export type BookingDto = {
   earlyCheckInFee: Scalars['Int']['output'];
   guestId: Scalars['String']['output'];
   hotelId: Scalars['String']['output'];
+  hotelImages?: Maybe<Array<Scalars['String']['output']>>;
+  hotelLocation?: Maybe<Scalars['String']['output']>;
+  hotelTitle?: Maybe<Scalars['String']['output']>;
+  hotelType?: Maybe<HotelType>;
   lateCheckOut: Scalars['Boolean']['output'];
   lateCheckOutFee: Scalars['Int']['output'];
   nights: Scalars['Int']['output'];
@@ -263,16 +267,23 @@ export type ChatDto = {
   _id: Scalars['String']['output'];
   assignedAgentId?: Maybe<Scalars['String']['output']>;
   bookingId?: Maybe<Scalars['String']['output']>;
+  chatScope: ChatScope;
   chatStatus: ChatStatus;
   createdAt: Scalars['DateTime']['output'];
   guestId: Scalars['String']['output'];
-  hotelId: Scalars['String']['output'];
+  hotelId?: Maybe<Scalars['String']['output']>;
   lastMessageAt: Scalars['DateTime']['output'];
   messages: Array<MessageDto>;
+  sourcePath?: Maybe<Scalars['String']['output']>;
+  supportTopic?: Maybe<Scalars['String']['output']>;
   unreadAgentMessages: Scalars['Int']['output'];
   unreadGuestMessages: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
 };
+
+export type ChatScope =
+  | 'HOTEL'
+  | 'SUPPORT';
 
 export type ChatStatus =
   | 'ACTIVE'
@@ -424,6 +435,49 @@ export type Followings = {
   metaCounter: MetaCounterDto;
 };
 
+export type HomeFeedDto = {
+  __typename?: 'HomeFeedDto';
+  featuredRatingsSummary?: Maybe<ReviewRatingsSummaryDto>;
+  featuredReviews: Array<ReviewDto>;
+  hotelInventoryTotal: Scalars['Int']['output'];
+  lastMinuteDeals: Array<HomeLastMinuteDealDto>;
+  recommendationMeta?: Maybe<RecommendationMetaDto>;
+  testimonials: Array<HomeTestimonialDto>;
+  topHotels: Array<HotelDto>;
+  trendingHotels: Array<HotelDto>;
+};
+
+export type HomeFeedInput = {
+  dealsLimit?: InputMaybe<Scalars['Int']['input']>;
+  featuredReviewLimit?: InputMaybe<Scalars['Int']['input']>;
+  heroLimit?: InputMaybe<Scalars['Int']['input']>;
+  recommendationLimit?: InputMaybe<Scalars['Int']['input']>;
+  testimonialsLimit?: InputMaybe<Scalars['Int']['input']>;
+  trendingLimit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type HomeLastMinuteDealDto = {
+  __typename?: 'HomeLastMinuteDealDto';
+  basePrice: Scalars['Int']['output'];
+  dealPrice: Scalars['Int']['output'];
+  discountPercent: Scalars['Float']['output'];
+  hotelId: Scalars['String']['output'];
+  hotelLocation: Scalars['String']['output'];
+  hotelTitle: Scalars['String']['output'];
+  imageUrl: Scalars['String']['output'];
+  roomId: Scalars['String']['output'];
+  roomName: Scalars['String']['output'];
+  roomType: Scalars['String']['output'];
+  validUntil: Scalars['DateTime']['output'];
+};
+
+export type HomeTestimonialDto = {
+  __typename?: 'HomeTestimonialDto';
+  hotelId: Scalars['String']['output'];
+  hotelTitle: Scalars['String']['output'];
+  review: ReviewDto;
+};
+
 export type HotelDto = {
   __typename?: 'HotelDto';
   _id: Scalars['String']['output'];
@@ -458,6 +512,7 @@ export type HotelDto = {
   safetyFeatures: SafetyFeaturesDto;
   smokingAllowed: Scalars['Boolean']['output'];
   starRating: Scalars['Int']['output'];
+  startingPrice: Scalars['Int']['output'];
   strikeHistory: Array<StrikeHistoryDto>;
   suitableFor: Array<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
@@ -564,6 +619,7 @@ export type HotelUpdate = {
   smokingAllowed?: InputMaybe<Scalars['Boolean']['input']>;
   starRating?: InputMaybe<Scalars['Int']['input']>;
   suitableFor?: InputMaybe<Array<Scalars['String']['input']>>;
+  verificationStatus?: InputMaybe<VerificationStatus>;
 };
 
 export type HotelsDto = {
@@ -675,6 +731,14 @@ export type MemberType =
   | 'AGENT'
   | 'USER';
 
+export type MemberTypeCounts = {
+  __typename?: 'MemberTypeCounts';
+  ADMIN: Scalars['Int']['output'];
+  ADMIN_OPERATOR: Scalars['Int']['output'];
+  AGENT: Scalars['Int']['output'];
+  USER: Scalars['Int']['output'];
+};
+
 export type MemberUpdate = {
   _id?: InputMaybe<Scalars['String']['input']>;
   memberAddress?: InputMaybe<Scalars['String']['input']>;
@@ -690,6 +754,7 @@ export type MembersDto = {
   __typename?: 'MembersDto';
   list: Array<MemberDto>;
   metaCounter: MetaCounterDto;
+  typeCounts?: Maybe<MemberTypeCounts>;
 };
 
 export type MessageDto = {
@@ -719,6 +784,7 @@ export type Mutation = {
   approveSubscription: MemberDto;
   cancelBooking: BookingDto;
   cancelBookingByOperator: BookingDto;
+  cancelMySubscription: ResponseDto;
   cancelPriceLock: Scalars['Boolean']['output'];
   cancelSubscription: MemberDto;
   claimChat: ChatDto;
@@ -736,17 +802,20 @@ export type Mutation = {
   denySubscription: ResponseDto;
   lockPrice: PriceLockDto;
   loginMember: AuthMemberDto;
+  logout: ResponseDto;
   markAllAsRead: Scalars['Int']['output'];
   markAsRead: NotificationDto;
   markChatMessagesAsRead: ChatDto;
   markHelpful: ReviewDto;
   reassignChat: ChatDto;
+  refreshToken: AuthMemberDto;
   requestSubscription: ResponseDto;
   respondToReview: ReviewDto;
   saveOnboardingPreferences: ResponseDto;
   sendMessage: ChatDto;
   signupMember: AuthMemberDto;
   startChat: ChatDto;
+  startSupportChat: ChatDto;
   toggleFollow: ToggleFollowDto;
   toggleLike: ToggleLikeDto;
   trackAnalyticsEvent: Scalars['Boolean']['output'];
@@ -917,6 +986,11 @@ export type MutationStartChatArgs = {
 };
 
 
+export type MutationStartSupportChatArgs = {
+  input: StartSupportChatInput;
+};
+
+
 export type MutationToggleFollowArgs = {
   input: FollowInput;
 };
@@ -995,6 +1069,7 @@ export type NotificationDto = {
   title: Scalars['String']['output'];
   type: NotificationType;
   userId: Scalars['String']['output'];
+  userNick?: Maybe<Scalars['String']['output']>;
 };
 
 export type NotificationInput = {
@@ -1108,10 +1183,14 @@ export type Query = {
   getFollowerCount: Scalars['Int']['output'];
   getFollowers: Array<FollowDto>;
   getFollowingCount: Scalars['Int']['output'];
+  getHomeFeed: HomeFeedDto;
+  getHomeLastMinuteDeals: Array<HomeLastMinuteDealDto>;
+  getHomeTestimonials: Array<HomeTestimonialDto>;
   getHotel: HotelDto;
   getHotelChats: ChatsDto;
   getHotelReviews: ReviewsDto;
   getHotels: HotelsDto;
+  getHotelsCount: MetaCounterDto;
   getLikeCount: Scalars['Int']['output'];
   getMember: MemberDto;
   getMemberByAdmin: MemberDto;
@@ -1132,6 +1211,7 @@ export type Query = {
   getNotification: NotificationDto;
   getPriceCalendar: PriceCalendarDto;
   getRecommendedHotels: Array<HotelDto>;
+  getRecommendedHotelsV2: RecommendedHotelsV2Dto;
   getReview: ReviewDto;
   getRoom: RoomDto;
   getRoomsByHotel: RoomsDto;
@@ -1236,6 +1316,21 @@ export type QueryGetFollowingCountArgs = {
 };
 
 
+export type QueryGetHomeFeedArgs = {
+  input?: InputMaybe<HomeFeedInput>;
+};
+
+
+export type QueryGetHomeLastMinuteDealsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryGetHomeTestimonialsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryGetHotelArgs = {
   hotelId: Scalars['String']['input'];
 };
@@ -1256,6 +1351,11 @@ export type QueryGetHotelReviewsArgs = {
 
 export type QueryGetHotelsArgs = {
   input: PaginationInput;
+  search?: InputMaybe<HotelSearchInput>;
+};
+
+
+export type QueryGetHotelsCountArgs = {
   search?: InputMaybe<HotelSearchInput>;
 };
 
@@ -1285,6 +1385,7 @@ export type QueryGetMemberFollowingsPaginatedArgs = {
 
 export type QueryGetMyBookingsArgs = {
   input: PaginationInput;
+  statusFilter?: InputMaybe<BookingStatus>;
 };
 
 
@@ -1299,6 +1400,7 @@ export type QueryGetMyLikesArgs = {
 
 
 export type QueryGetMyNotificationsArgs = {
+  limit?: InputMaybe<Scalars['Float']['input']>;
   unreadOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
@@ -1329,6 +1431,11 @@ export type QueryGetPriceCalendarArgs = {
 
 
 export type QueryGetRecommendedHotelsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryGetRecommendedHotelsV2Args = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -1382,6 +1489,32 @@ export type QuerySearchMembersForBookingArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type RecommendationExplanationDto = {
+  __typename?: 'RecommendationExplanationDto';
+  fromFallback: Scalars['Boolean']['output'];
+  hotelId: Scalars['String']['output'];
+  likedSimilar: Scalars['Boolean']['output'];
+  matchedAmenities: Array<Scalars['String']['output']>;
+  matchedLocation: Scalars['Boolean']['output'];
+  matchedPrice: Scalars['Boolean']['output'];
+  matchedPurposes: Array<Scalars['String']['output']>;
+  matchedType: Scalars['Boolean']['output'];
+  signals: Array<Scalars['String']['output']>;
+  stage: Scalars['String']['output'];
+};
+
+export type RecommendationMetaDto = {
+  __typename?: 'RecommendationMetaDto';
+  behaviorWeight: Scalars['Float']['output'];
+  fallbackCount: Scalars['Int']['output'];
+  generalStageCount: Scalars['Int']['output'];
+  matchedLocationCount: Scalars['Int']['output'];
+  onboardingWeight: Scalars['Float']['output'];
+  profileSource: Scalars['String']['output'];
+  relaxedStageCount: Scalars['Int']['output'];
+  strictStageCount: Scalars['Int']['output'];
+};
+
 export type RecommendationProfileDto = {
   __typename?: 'RecommendationProfileDto';
   avgPriceMax?: Maybe<Scalars['Float']['output']>;
@@ -1393,6 +1526,13 @@ export type RecommendationProfileDto = {
   preferredPurposes: Array<Scalars['String']['output']>;
   preferredTypes: Array<Scalars['String']['output']>;
   source?: Maybe<Scalars['String']['output']>;
+};
+
+export type RecommendedHotelsV2Dto = {
+  __typename?: 'RecommendedHotelsV2Dto';
+  explanations: Array<RecommendationExplanationDto>;
+  list: Array<HotelDto>;
+  meta: RecommendationMetaDto;
 };
 
 export type ResponseDto = {
@@ -1461,6 +1601,7 @@ export type ReviewStatus =
 
 export type ReviewUpdate = {
   _id: Scalars['String']['input'];
+  overallRating?: InputMaybe<Scalars['Int']['input']>;
   reviewStatus?: InputMaybe<Scalars['String']['input']>;
   reviewText?: InputMaybe<Scalars['String']['input']>;
   reviewTitle?: InputMaybe<Scalars['String']['input']>;
@@ -1604,6 +1745,13 @@ export type StartChatInput = {
   initialMessage: Scalars['String']['input'];
 };
 
+export type StartSupportChatInput = {
+  bookingId?: InputMaybe<Scalars['String']['input']>;
+  initialMessage: Scalars['String']['input'];
+  sourcePath?: InputMaybe<Scalars['String']['input']>;
+  topic?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type StayPurpose =
   | 'BUSINESS'
   | 'EVENT'
@@ -1626,6 +1774,7 @@ export type SubscriptionStatusDto = {
   active: Scalars['Boolean']['output'];
   daysRemaining?: Maybe<Scalars['Int']['output']>;
   expiresAt?: Maybe<Scalars['DateTime']['output']>;
+  pendingRequestedTier?: Maybe<Scalars['String']['output']>;
   tier: SubscriptionTier;
 };
 

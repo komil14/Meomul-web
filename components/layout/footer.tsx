@@ -46,8 +46,8 @@ export function Footer() {
   ];
 
   const COMPANY_LINKS = [
-    { label: t("footer_about_meomul"), href: "#" },
-    { label: t("footer_contact_support"), href: "#" },
+    { label: t("footer_about_meomul"), href: "/about" },
+    { label: t("footer_contact_support"), href: "/support" },
     { label: t("footer_privacy_policy"), href: "#" },
     { label: t("footer_terms_of_service"), href: "#" },
   ];

@@ -1,7 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Building2,
   ChevronLeft,
   ChevronRight,
   Headset,

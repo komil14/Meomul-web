@@ -1,6 +1,5 @@
 import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { useState } from "react";
 import { CREATE_HOTEL_MUTATION } from "@/graphql/hotel.gql";
 import { useI18n } from "@/lib/i18n/provider";
@@ -94,7 +93,6 @@ const AMENITY_OPTIONS: Array<{ key: keyof AmenitiesInput; label: string }> = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const CreateHotelPage: NextPageWithAuth = () => {
-  const router = useRouter();
   const { locale, t } = useI18n();
   const copy =
     locale === "ko"

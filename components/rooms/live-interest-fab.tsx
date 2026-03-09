@@ -8,6 +8,8 @@ interface LiveInterestFabProps {
   containerClassName?: string;
 }
 
+type Translate = ReturnType<typeof useI18n>["t"];
+
 const TOUCH_MEDIA_QUERY = "(hover: none), (pointer: coarse)";
 
 type LiveTone = {
@@ -22,7 +24,7 @@ const getLiveTone = (
   viewerCount: number,
   connected: boolean,
   availableRooms: number,
-  t: (key: any, params?: Record<string, string | number>) => string,
+  t: Translate,
 ): LiveTone => {
   if (!connected) {
     return {

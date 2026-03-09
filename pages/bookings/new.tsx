@@ -23,7 +23,6 @@ import {
 } from "@/lib/booking/booking-rules";
 import { getSessionMember } from "@/lib/auth/session";
 import {
-  formatBookingDate,
   formatNightsLabel,
   getPaymentMethodLabel,
   getPaymentStatusLabel,
@@ -72,7 +71,7 @@ const PAYMENT_METHODS_CONFIG: Array<{
 function getNewBookingCopy(locale: string) {
   if (locale === "ko") {
     return {
-      stepLabels: ["날짜 및 인원", "투숙객 정보", "결제"],
+      stepLabels: ["날짜 및 인원", "투숙객 정보", "결제 방식"],
       priceLock: "⚡ 가격 잠금",
       lastMinute: "🔥 막바지 딜",
       nightsSuffix: "박",
@@ -89,6 +88,8 @@ function getNewBookingCopy(locale: string) {
       bookingConfirmed: "예약 완료",
       allSet: "예약이 완료되었습니다!",
       reservationCreated: "예약이 성공적으로 생성되었습니다.",
+      reservationPaymentNote: "이 포트폴리오 빌드에서는 실제 결제가 처리되지 않습니다. 결제 상태는 데모 흐름에 따라 직원이 나중에 반영합니다.",
+      paymentDemoBadge: "데모 결제",
       bookingCode: "예약 코드",
       total: "총액",
       paymentStatus: "결제 상태",
@@ -125,6 +126,8 @@ function getNewBookingCopy(locale: string) {
       specialRequests: "특별 요청",
       specialRequestsPlaceholder: "늦은 도착, 접근성 요청, 객실 선호 사항…",
       paymentMethod: "결제 수단",
+      paymentDemoNoticeTitle: "포트폴리오 데모 결제",
+      paymentDemoNoticeBody: "실제 카드나 지갑 결제는 발생하지 않습니다. 선택한 방식은 예약 선호도로 저장되며, 결제 상태는 직원이 수동으로 업데이트합니다.",
       checkOptions: "체크인 / 체크아웃 옵션",
       beforeTime: "{{time}} 이전 · 객실당 +₩30,000",
       afterTime: "{{time}} 이후 · 객실당 +₩30,000",
@@ -147,7 +150,7 @@ function getNewBookingCopy(locale: string) {
   }
   if (locale === "ru") {
     return {
-      stepLabels: ["Даты и гости", "Информация о госте", "Оплата"],
+      stepLabels: ["Даты и гости", "Информация о госте", "Способ оплаты"],
       priceLock: "⚡ Фиксация цены",
       lastMinute: "🔥 Горящее предложение",
       nightsSuffix: "ноч.",
@@ -164,6 +167,8 @@ function getNewBookingCopy(locale: string) {
       bookingConfirmed: "Бронирование подтверждено",
       allSet: "Все готово!",
       reservationCreated: "Ваше бронирование успешно создано.",
+      reservationPaymentNote: "В этой портфолио-версии реальные платежи не проводятся. Статус оплаты обновляется позже как часть демо-потока.",
+      paymentDemoBadge: "Демо-оплата",
       bookingCode: "Код бронирования",
       total: "Итого",
       paymentStatus: "Статус оплаты",
@@ -200,6 +205,8 @@ function getNewBookingCopy(locale: string) {
       specialRequests: "Особые пожелания",
       specialRequestsPlaceholder: "Поздний заезд, доступность, пожелания по номеру…",
       paymentMethod: "Способ оплаты",
+      paymentDemoNoticeTitle: "Демо-оплата для портфолио",
+      paymentDemoNoticeBody: "Реальное списание карты или кошелька не выполняется. Выбранный способ сохраняется как предпочтение бронирования, а статус оплаты обновляется вручную.",
       checkOptions: "Опции заезда / выезда",
       beforeTime: "До {{time}} · +₩30,000 за номер",
       afterTime: "После {{time}} · +₩30,000 за номер",
@@ -222,7 +229,7 @@ function getNewBookingCopy(locale: string) {
   }
   if (locale === "uz") {
     return {
-      stepLabels: ["Sanalar va mehmonlar", "Mehmon ma'lumoti", "To'lov"],
+      stepLabels: ["Sanalar va mehmonlar", "Mehmon ma'lumoti", "To'lov usuli"],
       priceLock: "⚡ Narxni qulflash",
       lastMinute: "🔥 So'nggi daqiqadagi taklif",
       nightsSuffix: "kecha",
@@ -239,6 +246,8 @@ function getNewBookingCopy(locale: string) {
       bookingConfirmed: "Bron tasdiqlandi",
       allSet: "Hammasi tayyor!",
       reservationCreated: "Bron muvaffaqiyatli yaratildi.",
+      reservationPaymentNote: "Bu portfolio versiyasida haqiqiy to'lov ishlamaydi. To'lov holati demo oqimiga ko'ra keyinroq xodimlar tomonidan yangilanadi.",
+      paymentDemoBadge: "Demo to'lov",
       bookingCode: "Bron kodi",
       total: "Jami",
       paymentStatus: "To'lov holati",
@@ -275,6 +284,8 @@ function getNewBookingCopy(locale: string) {
       specialRequests: "Maxsus so'rovlar",
       specialRequestsPlaceholder: "Kech kelish, qulaylik ehtiyoji, xona afzalligi…",
       paymentMethod: "To'lov usuli",
+      paymentDemoNoticeTitle: "Portfolio uchun demo to'lov",
+      paymentDemoNoticeBody: "Haqiqiy karta yoki hamyon yechimi bo'lmaydi. Tanlangan usul bron afzalligi sifatida saqlanadi, to'lov holati esa qo'lda yangilanadi.",
       checkOptions: "Check-in / Check-out variantlari",
       beforeTime: "{{time}} dan oldin · har xona uchun +₩30,000",
       afterTime: "{{time}} dan keyin · har xona uchun +₩30,000",
@@ -296,7 +307,7 @@ function getNewBookingCopy(locale: string) {
     };
   }
   return {
-    stepLabels: ["Dates & Guests", "Guest Info", "Payment"],
+    stepLabels: ["Dates & Guests", "Guest Info", "Payment Method"],
     priceLock: "⚡ Price Lock",
     lastMinute: "🔥 Last-minute Deal",
     nightsSuffix: "night",
@@ -313,6 +324,8 @@ function getNewBookingCopy(locale: string) {
     bookingConfirmed: "Booking Confirmed",
     allSet: "You're all set!",
     reservationCreated: "Your reservation has been created successfully.",
+    reservationPaymentNote: "This portfolio build does not process real payments. Payment status is updated later as part of the demo workflow.",
+    paymentDemoBadge: "Demo payment",
     bookingCode: "Booking Code",
     total: "Total",
     paymentStatus: "Payment status",
@@ -349,6 +362,8 @@ function getNewBookingCopy(locale: string) {
     specialRequests: "Special requests",
     specialRequestsPlaceholder: "Late arrival, accessibility needs, room preference…",
     paymentMethod: "Payment Method",
+    paymentDemoNoticeTitle: "Portfolio demo payment",
+    paymentDemoNoticeBody: "No real card or wallet charge happens here. Your selection is saved as a booking preference, and staff can update payment status manually later.",
     checkOptions: "Check-in / Check-out Options",
     beforeTime: "Before {{time}} · +₩30,000 per room",
     afterTime: "After {{time}} · +₩30,000 per room",
@@ -641,13 +656,11 @@ function PriceSummaryPanel({
 }
 
 function PaymentCard({
-  value,
   label,
   emoji,
   selected,
   onSelect,
 }: {
-  value: PaymentMethod;
   label: string;
   emoji: string;
   selected: boolean;
@@ -774,12 +787,12 @@ const NewBookingPage: NextPageWithAuth = () => {
     code: string;
     total: number;
     paymentStatus: string;
+    paymentMethod: PaymentMethod;
   } | null>(null);
 
   // Queries
   const {
     data: hotelData,
-    loading: hotelLoading,
     error: hotelError,
     refetch: refetchHotel,
   } = useQuery<GetHotelContextQueryData, GetHotelContextQueryVars>(
@@ -794,7 +807,6 @@ const NewBookingPage: NextPageWithAuth = () => {
 
   const {
     data: roomData,
-    loading: roomLoading,
     error: roomError,
     refetch: refetchRoom,
   } = useQuery<GetRoomQueryData, GetRoomQueryVars>(GET_ROOM_QUERY, {
@@ -806,7 +818,6 @@ const NewBookingPage: NextPageWithAuth = () => {
 
   const {
     data: priceLockData,
-    loading: priceLockLoading,
     refetch: refetchPriceLock,
   } = useQuery<GetMyPriceLockQueryData, GetMyPriceLockQueryVars>(
     GET_MY_PRICE_LOCK_QUERY,
@@ -1061,6 +1072,7 @@ const NewBookingPage: NextPageWithAuth = () => {
           code: booking.bookingCode,
           total: booking.totalPrice,
           paymentStatus: booking.paymentStatus,
+          paymentMethod,
         });
       }
     } catch (error) {
@@ -1123,6 +1135,9 @@ const NewBookingPage: NextPageWithAuth = () => {
             <p className="text-sm text-slate-500">
               {copy.reservationCreated}
             </p>
+            <p className="text-xs text-slate-400">
+              {copy.reservationPaymentNote}
+            </p>
           </div>
 
           <div className="anim-cfade rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -1132,11 +1147,20 @@ const NewBookingPage: NextPageWithAuth = () => {
             <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-slate-900">
               {createdBooking.code}
             </p>
+            <div className="mt-4 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+              {copy.paymentDemoBadge}
+            </div>
             <div className="mt-4 space-y-1.5 border-t border-slate-100 pt-4 text-sm text-slate-600">
               <div className="flex justify-between">
                 <span>{copy.total}</span>
                 <span className="font-semibold text-slate-900">
                   ₩{formatNumber(createdBooking.total)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>{copy.paymentMethod}</span>
+                <span className="font-semibold text-slate-900">
+                  {getPaymentMethodLabel(locale as never, createdBooking.paymentMethod)}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1168,9 +1192,6 @@ const NewBookingPage: NextPageWithAuth = () => {
   }
 
   // ── Loading skeleton ─────────────────────────────────────────────────────────
-  const isLoading =
-    hotelLoading || roomLoading || (priceLockLoading && !isStaffCreator);
-
   if (!hotel || !room) {
     return (
       <main className="space-y-6">
@@ -1533,11 +1554,18 @@ const NewBookingPage: NextPageWithAuth = () => {
                       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
                         {copy.paymentMethod}
                       </h2>
+                      <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
+                          {copy.paymentDemoNoticeTitle}
+                        </p>
+                        <p className="mt-1 text-sm text-sky-800">
+                          {copy.paymentDemoNoticeBody}
+                        </p>
+                      </div>
                       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                         {PAYMENT_METHODS_CONFIG.map((m) => (
                           <PaymentCard
                             key={m.value}
-                            value={m.value}
                             label={getPaymentMethodLabel(locale as never, m.value)}
                             emoji={m.emoji}
                             selected={paymentMethod === m.value}

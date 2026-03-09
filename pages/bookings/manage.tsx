@@ -269,18 +269,18 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     adjustFiltersPrompt: "Try adjusting the status filter or search",
     guestFallback: "Guest",
     hotelFallback: "Hotel",
-    paid: "Paid",
+    paid: "Recorded",
     pageSummary: "Page",
     totalSuffix: "total",
     updateBookingStatus: "Update Booking Status",
     current: "Current",
     advanceTo: "Advance to",
     noFurtherTransitions: "No further status transitions available.",
-    updatePayment: "Update Payment",
-    paymentStatus: "Payment Status",
-    paidAmount: "Paid Amount (₩)",
+    updatePayment: "Record Payment",
+    paymentStatus: "Payment Record Status",
+    paidAmount: "Recorded Amount (₩)",
     totalAmount: "Total",
-    updatePaymentButton: "Update Payment",
+    updatePaymentButton: "Save Payment Record",
     updating: "Updating…",
     cancelBooking: "Cancel Booking",
     irreversibleCancelWarning:
@@ -302,12 +302,12 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     useCancellationFlowTitle: "Use cancellation flow",
     useCancellationFlowBody: "Use the cancel action to mark as refunded.",
     invalidAmountTitle: "Invalid amount",
-    invalidAmountBody: "Paid amount must be a non-negative integer.",
-    paymentUnchangedBody: "Payment values are unchanged.",
-    updatePaymentTitle: "Update payment for {{code}}?",
-    updatePaymentConfirm: "Update payment",
-    paymentUpdatedTitle: "Payment updated",
-    paymentUpdatedBody: "Payment updated for {{code}}.",
+    invalidAmountBody: "Recorded amount must be a non-negative integer.",
+    paymentUnchangedBody: "Payment record values are unchanged.",
+    updatePaymentTitle: "Update payment record for {{code}}?",
+    updatePaymentConfirm: "Save record",
+    paymentUpdatedTitle: "Payment record updated",
+    paymentUpdatedBody: "Payment record updated for {{code}}.",
     updateFailedTitle: "Update failed",
     notCancellableTitle: "Not cancellable",
     notCancellableBody: "Only pending or confirmed bookings can be cancelled.",
@@ -324,7 +324,7 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     confirmAction: "Confirm →",
     checkInAction: "Check-in →",
     checkOutAction: "Check-out →",
-    payAction: "₩ Pay",
+    payAction: "Record",
     cancelAction: "Cancel",
     createdOn: "Created {{date}}",
     moreActions: "More actions",
@@ -352,18 +352,18 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     adjustFiltersPrompt: "상태 필터나 검색 조건을 조정해 보세요",
     guestFallback: "투숙객",
     hotelFallback: "호텔",
-    paid: "결제됨",
+    paid: "반영 금액",
     pageSummary: "페이지",
     totalSuffix: "전체",
     updateBookingStatus: "예약 상태 변경",
     current: "현재",
     advanceTo: "다음 상태",
     noFurtherTransitions: "이후 진행 가능한 상태 변경이 없습니다.",
-    updatePayment: "결제 정보 수정",
-    paymentStatus: "결제 상태",
-    paidAmount: "결제 금액 (₩)",
+    updatePayment: "결제 기록 수정",
+    paymentStatus: "결제 기록 상태",
+    paidAmount: "반영 금액 (₩)",
     totalAmount: "총액",
-    updatePaymentButton: "결제 정보 수정",
+    updatePaymentButton: "결제 기록 저장",
     updating: "수정 중…",
     cancelBooking: "예약 취소",
     irreversibleCancelWarning:
@@ -385,12 +385,12 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     useCancellationFlowTitle: "취소 절차를 사용하세요",
     useCancellationFlowBody: "환불 처리에는 취소 작업을 사용하세요.",
     invalidAmountTitle: "잘못된 금액",
-    invalidAmountBody: "결제 금액은 0 이상의 정수여야 합니다.",
-    paymentUnchangedBody: "결제 정보가 변경되지 않았습니다.",
-    updatePaymentTitle: "{{code}} 결제 정보를 수정할까요?",
-    updatePaymentConfirm: "결제 수정",
-    paymentUpdatedTitle: "결제 정보가 수정되었습니다",
-    paymentUpdatedBody: "{{code}} 예약의 결제 정보가 수정되었습니다.",
+    invalidAmountBody: "반영 금액은 0 이상의 정수여야 합니다.",
+    paymentUnchangedBody: "결제 기록이 변경되지 않았습니다.",
+    updatePaymentTitle: "{{code}} 결제 기록을 수정할까요?",
+    updatePaymentConfirm: "기록 저장",
+    paymentUpdatedTitle: "결제 기록이 수정되었습니다",
+    paymentUpdatedBody: "{{code}} 예약의 결제 기록이 수정되었습니다.",
     updateFailedTitle: "수정 실패",
     notCancellableTitle: "취소할 수 없음",
     notCancellableBody: "대기 중 또는 확정된 예약만 취소할 수 있습니다.",
@@ -407,7 +407,7 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     confirmAction: "확정 →",
     checkInAction: "체크인 →",
     checkOutAction: "체크아웃 →",
-    payAction: "₩ 결제",
+    payAction: "기록",
     cancelAction: "취소",
     createdOn: "{{date}} 생성",
     moreActions: "추가 작업",
@@ -435,18 +435,18 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     adjustFiltersPrompt: "Попробуйте изменить фильтр статуса или поиск",
     guestFallback: "Гость",
     hotelFallback: "Отель",
-    paid: "Оплачено",
+    paid: "Зафиксировано",
     pageSummary: "Страница",
     totalSuffix: "всего",
     updateBookingStatus: "Изменить статус бронирования",
     current: "Текущий",
     advanceTo: "Перевести в",
     noFurtherTransitions: "Дальнейшие переходы статуса недоступны.",
-    updatePayment: "Изменить оплату",
-    paymentStatus: "Статус оплаты",
-    paidAmount: "Оплаченная сумма (₩)",
+    updatePayment: "Обновить запись оплаты",
+    paymentStatus: "Статус записи оплаты",
+    paidAmount: "Зафиксированная сумма (₩)",
     totalAmount: "Итого",
-    updatePaymentButton: "Обновить оплату",
+    updatePaymentButton: "Сохранить запись оплаты",
     updating: "Обновление…",
     cancelBooking: "Отменить бронирование",
     irreversibleCancelWarning:
@@ -469,12 +469,12 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     useCancellationFlowBody:
       "Чтобы отметить возврат, используйте действие отмены.",
     invalidAmountTitle: "Неверная сумма",
-    invalidAmountBody: "Оплаченная сумма должна быть целым числом не меньше нуля.",
-    paymentUnchangedBody: "Параметры оплаты не изменились.",
-    updatePaymentTitle: "Обновить оплату для {{code}}?",
-    updatePaymentConfirm: "Обновить оплату",
-    paymentUpdatedTitle: "Оплата обновлена",
-    paymentUpdatedBody: "Оплата для {{code}} обновлена.",
+    invalidAmountBody: "Зафиксированная сумма должна быть целым числом не меньше нуля.",
+    paymentUnchangedBody: "Параметры записи оплаты не изменились.",
+    updatePaymentTitle: "Обновить запись оплаты для {{code}}?",
+    updatePaymentConfirm: "Сохранить запись",
+    paymentUpdatedTitle: "Запись оплаты обновлена",
+    paymentUpdatedBody: "Запись оплаты для {{code}} обновлена.",
     updateFailedTitle: "Не удалось обновить",
     notCancellableTitle: "Нельзя отменить",
     notCancellableBody:
@@ -493,7 +493,7 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     confirmAction: "Подтвердить →",
     checkInAction: "Заселить →",
     checkOutAction: "Выселить →",
-    payAction: "₩ Оплата",
+    payAction: "Запись",
     cancelAction: "Отмена",
     createdOn: "Создано {{date}}",
     moreActions: "Еще действия",
@@ -521,18 +521,18 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     adjustFiltersPrompt: "Holat filtrini yoki qidiruvni o'zgartirib ko'ring",
     guestFallback: "Mehmon",
     hotelFallback: "Mehmonxona",
-    paid: "To'langan",
+    paid: "Qayd etilgan",
     pageSummary: "Sahifa",
     totalSuffix: "jami",
     updateBookingStatus: "Bron holatini yangilash",
     current: "Joriy",
     advanceTo: "Keyingi holat",
     noFurtherTransitions: "Boshqa holatga o'tish imkoniyati yo'q.",
-    updatePayment: "To'lovni yangilash",
-    paymentStatus: "To'lov holati",
-    paidAmount: "To'langan summa (₩)",
+    updatePayment: "To'lov qaydini yangilash",
+    paymentStatus: "To'lov qaydi holati",
+    paidAmount: "Qayd etilgan summa (₩)",
     totalAmount: "Jami",
-    updatePaymentButton: "To'lovni yangilash",
+    updatePaymentButton: "To'lov qaydini saqlash",
     updating: "Yangilanmoqda…",
     cancelBooking: "Bronni bekor qilish",
     irreversibleCancelWarning:
@@ -555,12 +555,12 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     useCancellationFlowBody:
       "Pulni qaytarildi deb belgilash uchun bekor qilish amalidan foydalaning.",
     invalidAmountTitle: "Noto'g'ri summa",
-    invalidAmountBody: "To'langan summa 0 yoki undan katta butun son bo'lishi kerak.",
-    paymentUnchangedBody: "To'lov qiymatlari o'zgarmagan.",
-    updatePaymentTitle: "{{code}} uchun to'lov yangilansinmi?",
-    updatePaymentConfirm: "To'lovni yangilash",
-    paymentUpdatedTitle: "To'lov yangilandi",
-    paymentUpdatedBody: "{{code}} uchun to'lov yangilandi.",
+    invalidAmountBody: "Qayd etilgan summa 0 yoki undan katta butun son bo'lishi kerak.",
+    paymentUnchangedBody: "To'lov qaydi qiymatlari o'zgarmagan.",
+    updatePaymentTitle: "{{code}} uchun to'lov qaydi yangilansinmi?",
+    updatePaymentConfirm: "Qaydni saqlash",
+    paymentUpdatedTitle: "To'lov qaydi yangilandi",
+    paymentUpdatedBody: "{{code}} uchun to'lov qaydi yangilandi.",
     updateFailedTitle: "Yangilash muvaffaqiyatsiz",
     notCancellableTitle: "Bekor qilib bo'lmaydi",
     notCancellableBody:
@@ -579,7 +579,7 @@ const BOOKING_MANAGEMENT_COPY: Record<SupportedLocale, BookingManagementCopy> = 
     confirmAction: "Tasdiqlash →",
     checkInAction: "Check-in →",
     checkOutAction: "Check-out →",
-    payAction: "₩ To'lov",
+    payAction: "Qayd",
     cancelAction: "Bekor qilish",
     createdOn: "{{date}} yaratildi",
     moreActions: "Ko'proq amallar",
@@ -651,7 +651,6 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const memberType = member?.memberType;
   const isAgent = memberType === "AGENT";
   const isAdmin = memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
-  const canAccess = isAgent || isAdmin;
 
   const { page, statusFilter, getParam, pushQuery } =
     usePaginationQueryState<BookingStatus>({
@@ -663,7 +662,6 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   // ─── Modal / draft state ──────────────────────────────────────────────────
 
   const [activeModal, setActiveModal] = useState<ModalState>(null);
-  const [statusDraft, setStatusDraft] = useState<BookingStatus | null>(null);
   const [paymentStatusDraft, setPaymentStatusDraft] =
     useState<PaymentStatus | null>(null);
   const [paidAmountDraft, setPaidAmountDraft] = useState<string>("");
@@ -871,7 +869,6 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       list = list.filter((b) => b.bookingCode.toUpperCase().includes(q));
     }
     return list;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     mergedBookings,
     statusFilter,
@@ -903,9 +900,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   ) => {
     const b = mergedBookings.find((x) => x._id === bookingId);
     if (!b) return;
-    if (type === "status") {
-      setStatusDraft(null); // user selects in modal
-    } else if (type === "payment") {
+    if (type === "payment") {
       setPaymentStatusDraft(b.paymentStatus);
       setPaidAmountDraft(String(b.paidAmount));
     } else {
@@ -917,7 +912,6 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
   const closeModal = () => {
     setActiveModal(null);
-    setStatusDraft(null);
     setPaymentStatusDraft(null);
     setPaidAmountDraft("");
     setCancelReasonDraft("");

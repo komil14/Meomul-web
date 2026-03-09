@@ -21,6 +21,7 @@ import { GET_MY_CHATS_QUERY, START_CHAT_MUTATION } from "@/graphql/chat.gql";
 import { GET_HOTEL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { useHotelDetailPageData } from "@/lib/hooks/use-hotel-detail-page-data";
 import { useI18n } from "@/lib/i18n/provider";
+import { env } from "@/lib/config/env";
 import { getHotelLocationLabelLocalized, getHotelTypeLabel } from "@/lib/hotels/hotels-i18n";
 import { ROOM_PAGE_SIZE } from "@/lib/hotels/detail-page-helpers";
 import { pushRecentlyViewedHotel } from "@/lib/hotels/recently-viewed";
@@ -218,7 +219,7 @@ export default function HotelDetailPage({
     );
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://meomul.com";
+  const siteUrl = env.siteUrl.replace(/\/+$/, "");
   const pageUrl = `${siteUrl}/hotels/${hotel._id}`;
   const pageTitle = `${hotel.hotelTitle} — ${hotel.hotelLocation} | Meomul`;
   const pageDescription =

@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
+import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
@@ -27,7 +28,6 @@ import {
   Loader2,
   MessageSquareText,
   Search,
-  ShieldAlert,
   Star,
   ThumbsUp,
   Trash2,
@@ -149,10 +149,12 @@ function ReviewDetailDrawer({
           {/* reviewer info */}
           <div className="flex items-center gap-3">
             {review.reviewerImage ? (
-              <img
+              <Image
                 src={resolveImageUrl(review.reviewerImage)}
                 alt={review.reviewerNick ?? "reviewer"}
-                loading="lazy"
+                width={40}
+                height={40}
+                unoptimized
                 className="h-10 w-10 rounded-full object-cover"
               />
             ) : (
@@ -222,11 +224,13 @@ function ReviewDetailDrawer({
               </p>
               <div className="flex flex-wrap gap-2">
                 {review.guestPhotos.map((photo, i) => (
-                  <img
+                  <Image
                     key={i}
                     src={resolveImageUrl(photo)}
                     alt={`Guest photo ${i + 1}`}
-                    loading="lazy"
+                    width={80}
+                    height={80}
+                    unoptimized
                     className="h-20 w-20 rounded-lg object-cover"
                   />
                 ))}
@@ -363,7 +367,7 @@ const AdminReviewsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const reviews = data?.getAllReviewsAdmin.list ?? [];
+  const reviews = useMemo(() => data?.getAllReviewsAdmin.list ?? [], [data?.getAllReviewsAdmin.list]);
   const total = data?.getAllReviewsAdmin.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const summary = data?.getAllReviewsAdmin.ratingsSummary;
@@ -565,10 +569,12 @@ const AdminReviewsPage: NextPageWithAuth = () => {
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-3">
                         {r.reviewerImage ? (
-                          <img
+                          <Image
                             src={resolveImageUrl(r.reviewerImage)}
                             alt={r.reviewerNick ?? "reviewer"}
-                            loading="lazy"
+                            width={32}
+                            height={32}
+                            unoptimized
                             className="h-8 w-8 rounded-full object-cover"
                           />
                         ) : (

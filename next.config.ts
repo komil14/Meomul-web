@@ -14,8 +14,8 @@ const buildCsp = (): string =>
     "default-src 'self'",
     // 'unsafe-eval' required in dev mode for Next.js webpack source maps
     `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdn.prod.website-files.com https://d3e54v103j8qbb.cloudfront.net https://ajax.googleapis.com`,
-    "style-src 'self' 'unsafe-inline' https://cdn.prod.website-files.com https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline' https://cdn.prod.website-files.com",
+    "font-src 'self' data:",
     "img-src 'self' data: blob: https:",
     "media-src 'self' https://videos.pexels.com",
     `connect-src 'self' ${apiUrl} ${socketUrl} ws: wss:`,
@@ -44,15 +44,8 @@ const nextConfig: NextConfig = {
         source: "/graphql",
         destination: backendGraphqlUrl,
       },
-      {
-        source: "/:locale(en|ko|ru|uz)/about",
-        destination: "/about.html",
-        locale: false,
-      },
-      {
-        source: "/about",
-        destination: "/about.html",
-      },
+      
+      
     ];
   },
 

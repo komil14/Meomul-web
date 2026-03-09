@@ -356,7 +356,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
     wheelchairAccessible,
   ]);
 
-  const { data: previewData, previousData: previousPreviewData, loading: previewLoading } = useQuery<
+  const { data: previewData, loading: previewLoading } = useQuery<
     GetHotelsCountQueryData,
     GetHotelsCountQueryVars
   >(
@@ -372,7 +372,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
     },
   );
 
-  const previewTotal = (previewData ?? previousPreviewData)?.getHotelsCount.total ?? appliedTotal;
+  const previewTotal = previewData?.getHotelsCount.total ?? appliedTotal;
 
   const draftPanelState: HotelsPageQueryState = useMemo(
     () => ({

@@ -22,7 +22,6 @@ import type {
   GetAnalyticsEventsAdminQueryVars,
 } from "@/types/analytics";
 import type {
-  BookingListItem,
   BookingStatus,
   GetAgentBookingsQueryData,
   GetAgentBookingsQueryVars,

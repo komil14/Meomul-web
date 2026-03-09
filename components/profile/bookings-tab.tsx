@@ -18,7 +18,6 @@ import { getErrorMessage } from "@/lib/utils/error";
 import {
   CalendarDays,
   ChevronRight,
-  CreditCard,
   MapPin,
   Moon,
   Search,

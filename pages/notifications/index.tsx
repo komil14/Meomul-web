@@ -16,7 +16,6 @@ import {
   AlertTriangle,
   Bell,
   Calendar,
-  Check,
   CheckCheck,
   Crown,
   MessageSquare,
@@ -330,7 +329,7 @@ const NotificationsPage: NextPageWithAuth = () => {
 
   const unreadOnly = tab === "unread" ? true : undefined;
 
-  const { data, loading, error, refetch } = useQuery<GetMyNotificationsData>(
+  const { data, loading, error } = useQuery<GetMyNotificationsData>(
     GET_MY_NOTIFICATIONS_QUERY,
     {
       skip: !member,
@@ -374,7 +373,7 @@ const NotificationsPage: NextPageWithAuth = () => {
     },
   );
 
-  const notifications = data?.getMyNotifications ?? [];
+  const notifications = useMemo(() => data?.getMyNotifications ?? [], [data?.getMyNotifications]);
   const unreadTotal = notifications.filter((n) => !n.read).length;
 
   const handleRead = useCallback(

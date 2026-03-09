@@ -45,7 +45,6 @@ import {
   Crown,
   DoorOpen,
   Headset,
-  Heart,
   LogOut,
   MessageSquare,
   Settings,

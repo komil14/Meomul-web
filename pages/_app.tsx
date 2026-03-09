@@ -1,7 +1,6 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { ApolloProvider } from "@apollo/client/react";
-import { Manrope, Space_Grotesk } from "next/font/google";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { SiteFrame } from "@/components/layout/site-frame";
@@ -23,16 +22,6 @@ import type { NextPageWithAuth } from "@/types/page";
 type AppPropsWithAuth = AppProps & {
   Component: NextPageWithAuth;
 };
-
-const manrope = Manrope({
-  subsets: ["latin"],
-  variable: "--font-manrope",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-});
 
 interface GuardState {
   key: string;
@@ -230,7 +219,7 @@ function AppInner({ Component, pageProps }: AppPropsWithAuth) {
     <ErrorBoundary>
       <ApolloProvider client={client}>
         <ToastProvider>
-          <div className={`${manrope.variable} ${spaceGrotesk.variable}`}>
+          <div>
             <SiteFrame>
               {showGuardLoading ? (
                 <div className="flex min-h-[40vh] items-center justify-center rounded-2xl border border-slate-200 bg-white/80">

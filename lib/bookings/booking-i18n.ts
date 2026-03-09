@@ -84,6 +84,7 @@ interface BookingCopy {
   bookingCodeLabel: string;
   bookingLabel: string;
   privateReviewNote: string;
+  paymentDemoNote: string;
   statusLabels: Record<BookingStatus, string>;
   paymentStatusLabels: Record<PaymentStatusKey, string>;
   paymentMethodLabels: Record<PaymentMethodKey, string>;
@@ -163,6 +164,8 @@ const en: BookingCopy = {
   bookingCodeLabel: "Booking code",
   bookingLabel: "Booking",
   privateReviewNote: "Your review is linked to a verified stay.",
+  paymentDemoNote:
+    "Payment methods in this portfolio are demo preferences. Payment status is recorded manually and no live charge is processed.",
   statusLabels: {
     PENDING: "Pending",
     CONFIRMED: "Confirmed",
@@ -172,19 +175,19 @@ const en: BookingCopy = {
     NO_SHOW: "No show",
   },
   paymentStatusLabels: {
-    PENDING: "Unpaid",
-    PARTIAL: "Partial",
-    PAID: "Paid",
-    FAILED: "Failed",
+    PENDING: "Pending review",
+    PARTIAL: "Partial record",
+    PAID: "Marked paid",
+    FAILED: "Not recorded",
     REFUNDED: "Refunded",
   },
   paymentMethodLabels: {
     AT_HOTEL: "Pay at hotel",
-    CREDIT_CARD: "Credit card",
-    DEBIT_CARD: "Debit card",
-    KAKAOPAY: "Kakao Pay",
-    NAVERPAY: "Naver Pay",
-    TOSS: "Toss",
+    CREDIT_CARD: "Credit card (demo)",
+    DEBIT_CARD: "Debit card (demo)",
+    KAKAOPAY: "Kakao Pay (demo)",
+    NAVERPAY: "Naver Pay (demo)",
+    TOSS: "Toss (demo)",
   },
 };
 
@@ -262,6 +265,8 @@ const ko: BookingCopy = {
   bookingCodeLabel: "예약 코드",
   bookingLabel: "예약",
   privateReviewNote: "후기는 인증된 투숙 기록과 연결됩니다.",
+  paymentDemoNote:
+    "이 포트폴리오에서는 결제 수단이 데모 선택값으로 저장됩니다. 실제 결제는 처리되지 않으며 결제 상태만 수동 반영됩니다.",
   statusLabels: {
     PENDING: "대기 중",
     CONFIRMED: "확정",
@@ -271,19 +276,19 @@ const ko: BookingCopy = {
     NO_SHOW: "노쇼",
   },
   paymentStatusLabels: {
-    PENDING: "미결제",
-    PARTIAL: "부분 결제",
-    PAID: "결제 완료",
-    FAILED: "결제 실패",
+    PENDING: "확인 대기",
+    PARTIAL: "부분 반영",
+    PAID: "결제 반영",
+    FAILED: "미반영",
     REFUNDED: "환불됨",
   },
   paymentMethodLabels: {
     AT_HOTEL: "현장 결제",
-    CREDIT_CARD: "신용카드",
-    DEBIT_CARD: "체크카드",
-    KAKAOPAY: "카카오페이",
-    NAVERPAY: "네이버페이",
-    TOSS: "토스",
+    CREDIT_CARD: "신용카드(데모)",
+    DEBIT_CARD: "체크카드(데모)",
+    KAKAOPAY: "카카오페이(데모)",
+    NAVERPAY: "네이버페이(데모)",
+    TOSS: "토스(데모)",
   },
 };
 
@@ -360,6 +365,8 @@ const ru: BookingCopy = {
   bookingCodeLabel: "Код бронирования",
   bookingLabel: "Бронирование",
   privateReviewNote: "Отзыв связан с подтвержденным проживанием.",
+  paymentDemoNote:
+    "В этой портфолио-версии способ оплаты сохраняется как демо-предпочтение. Реальное списание не выполняется, статус оплаты отмечается вручную.",
   statusLabels: {
     PENDING: "Ожидает",
     CONFIRMED: "Подтверждено",
@@ -369,19 +376,19 @@ const ru: BookingCopy = {
     NO_SHOW: "Не заехал",
   },
   paymentStatusLabels: {
-    PENDING: "Не оплачено",
-    PARTIAL: "Частично",
-    PAID: "Оплачено",
-    FAILED: "Ошибка",
+    PENDING: "На проверке",
+    PARTIAL: "Частично учтено",
+    PAID: "Отмечено как оплачено",
+    FAILED: "Не подтверждено",
     REFUNDED: "Возврат",
   },
   paymentMethodLabels: {
     AT_HOTEL: "Оплата в отеле",
-    CREDIT_CARD: "Кредитная карта",
-    DEBIT_CARD: "Дебетовая карта",
-    KAKAOPAY: "Kakao Pay",
-    NAVERPAY: "Naver Pay",
-    TOSS: "Toss",
+    CREDIT_CARD: "Кредитная карта (демо)",
+    DEBIT_CARD: "Дебетовая карта (демо)",
+    KAKAOPAY: "Kakao Pay (демо)",
+    NAVERPAY: "Naver Pay (демо)",
+    TOSS: "Toss (демо)",
   },
 };
 
@@ -458,6 +465,8 @@ const uz: BookingCopy = {
   bookingCodeLabel: "Bron kodi",
   bookingLabel: "Bron",
   privateReviewNote: "Sharh tasdiqlangan turar joy bilan bog'langan.",
+  paymentDemoNote:
+    "Bu portfolio loyihasida to'lov usuli demo tanlov sifatida saqlanadi. Haqiqiy yechim yo'q, to'lov holati qo'lda qayd etiladi.",
   statusLabels: {
     PENDING: "Kutilmoqda",
     CONFIRMED: "Tasdiqlangan",
@@ -467,19 +476,19 @@ const uz: BookingCopy = {
     NO_SHOW: "Kelmagan",
   },
   paymentStatusLabels: {
-    PENDING: "To'lanmagan",
-    PARTIAL: "Qisman",
-    PAID: "To'langan",
-    FAILED: "Muvaffaqiyatsiz",
+    PENDING: "Tasdiq kutilmoqda",
+    PARTIAL: "Qisman kiritilgan",
+    PAID: "To'langan deb belgilangan",
+    FAILED: "Tasdiqlanmagan",
     REFUNDED: "Qaytarilgan",
   },
   paymentMethodLabels: {
     AT_HOTEL: "Mehmonxonada to'lash",
-    CREDIT_CARD: "Kredit karta",
-    DEBIT_CARD: "Debet karta",
-    KAKAOPAY: "Kakao Pay",
-    NAVERPAY: "Naver Pay",
-    TOSS: "Toss",
+    CREDIT_CARD: "Kredit karta (demo)",
+    DEBIT_CARD: "Debet karta (demo)",
+    KAKAOPAY: "Kakao Pay (demo)",
+    NAVERPAY: "Naver Pay (demo)",
+    TOSS: "Toss (demo)",
   },
 };
 

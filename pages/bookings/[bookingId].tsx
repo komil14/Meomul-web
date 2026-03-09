@@ -38,7 +38,6 @@ import {
   Clock,
   CreditCard,
   MapPin,
-  MessageSquare,
   Moon,
   Star,
   Users,
@@ -350,13 +349,13 @@ const BookingDetailPage: NextPageWithAuth = () => {
           tax: "세금",
           serviceFee: "서비스 수수료",
           total: "총액",
-          paid: "결제 완료",
+          paid: "반영 금액",
           remaining: "잔액",
           refund: "환불",
           quickInfo: "빠른 정보",
           bookingCode: "예약 코드",
           status: "상태",
-          payment: "결제",
+          payment: "결제 기록",
         }
       : locale === "ru"
         ? {
@@ -376,13 +375,13 @@ const BookingDetailPage: NextPageWithAuth = () => {
             tax: "Налог",
             serviceFee: "Сервисный сбор",
             total: "Итого",
-            paid: "Оплачено",
+            paid: "Отражено",
             remaining: "Остаток",
             refund: "Возврат",
             quickInfo: "Краткая информация",
             bookingCode: "Код бронирования",
             status: "Статус",
-            payment: "Оплата",
+            payment: "Запись оплаты",
           }
         : locale === "uz"
           ? {
@@ -402,13 +401,13 @@ const BookingDetailPage: NextPageWithAuth = () => {
               tax: "Soliq",
               serviceFee: "Xizmat haqi",
               total: "Jami",
-              paid: "To'langan",
+              paid: "Qayd etilgan",
               remaining: "Qolgan",
               refund: "Qaytarilgan",
               quickInfo: "Qisqa ma'lumot",
               bookingCode: "Bron kodi",
               status: "Holat",
-              payment: "To'lov",
+              payment: "To'lov qaydi",
             }
           : {
               overallRating: "Overall rating",
@@ -427,13 +426,13 @@ const BookingDetailPage: NextPageWithAuth = () => {
               tax: "Tax",
               serviceFee: "Service fee",
               total: "Total",
-              paid: "Paid",
+              paid: "Recorded",
               remaining: "Remaining",
               refund: "Refund",
               quickInfo: "Quick info",
               bookingCode: "Booking code",
               status: "Status",
-              payment: "Payment",
+              payment: "Payment record",
             };
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
@@ -768,7 +767,12 @@ const BookingDetailPage: NextPageWithAuth = () => {
                 </DetailRow>
                 {booking.paymentMethod && (
                   <DetailRow icon={CreditCard} label={copy.paymentMethod}>
-                    {getPaymentMethodLabel(locale, booking.paymentMethod)}
+                    <div className="space-y-1">
+                      <div>{getPaymentMethodLabel(locale, booking.paymentMethod)}</div>
+                      <p className="text-xs font-normal text-slate-500">
+                        {copy.paymentDemoNote}
+                      </p>
+                    </div>
                   </DetailRow>
                 )}
                 <DetailRow icon={Clock} label={copy.bookedOn}>

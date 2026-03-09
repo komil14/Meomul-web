@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
+import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import {
@@ -83,7 +84,7 @@ function EditHotelDrawer({
 }: {
   hotel: AdminHotelListItem;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: () => Promise<unknown> | void;
 }) {
   const [status, setStatus] = useState<HotelStatus>(hotel.hotelStatus);
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>(
@@ -104,7 +105,7 @@ function EditHotelDrawer({
     }
     if (badge !== hotel.badgeLevel) input.badgeLevel = badge;
     await updateHotel({ variables: { input } });
-    onSaved();
+    await Promise.resolve(onSaved());
     onClose();
   };
 
@@ -134,10 +135,12 @@ function EditHotelDrawer({
           {/* thumbnail */}
           {hotel.hotelImages.length > 0 && (
             <div className="overflow-hidden rounded-xl">
-              <img
+              <Image
                 src={resolveImageUrl(hotel.hotelImages[0])}
                 alt={hotel.hotelTitle}
-                loading="lazy"
+                width={1200}
+                height={704}
+                unoptimized
                 className="h-44 w-full object-cover"
               />
             </div>
@@ -299,7 +302,7 @@ const AdminHotelsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const hotels = data?.getAllHotelsAdmin.list ?? [];
+  const hotels = useMemo(() => data?.getAllHotelsAdmin.list ?? [], [data?.getAllHotelsAdmin.list]);
   const total = data?.getAllHotelsAdmin.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -482,10 +485,12 @@ const AdminHotelsPage: NextPageWithAuth = () => {
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-3">
                         {h.hotelImages.length > 0 ? (
-                          <img
+                          <Image
                             src={resolveImageUrl(h.hotelImages[0])}
                             alt={h.hotelTitle}
-                            loading="lazy"
+                            width={56}
+                            height={40}
+                            unoptimized
                             className="h-10 w-14 rounded-lg object-cover"
                           />
                         ) : (
@@ -620,13 +625,13 @@ const AdminHotelsPage: NextPageWithAuth = () => {
       </section>
 
       {/* edit drawer */}
-      {editingHotel ? (
-        <EditHotelDrawer
-          hotel={editingHotel}
-          onClose={() => setEditingHotel(null)}
-          onSaved={() => void refetch()}
-        />
-      ) : null}
+        {editingHotel ? (
+          <EditHotelDrawer
+            hotel={editingHotel}
+            onClose={() => setEditingHotel(null)}
+            onSaved={() => refetch()}
+          />
+        ) : null}
     </main>
   );
 };

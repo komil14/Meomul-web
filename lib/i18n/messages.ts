@@ -49,6 +49,49 @@ export interface MessageDictionary {
   footer_privacy_short: string;
   footer_terms_short: string;
   locale_switcher_label: string;
+  about_meta_title: string;
+  about_meta_desc: string;
+  about_hero_badge: string;
+  about_hero_title: string;
+  about_hero_desc: string;
+  about_hero_cta_browse: string;
+  about_hero_cta_contact: string;
+  about_services_eyebrow: string;
+  about_services_title: string;
+  about_services_desc: string;
+  about_service_realtime_title: string;
+  about_service_realtime_desc: string;
+  about_service_verified_title: string;
+  about_service_verified_desc: string;
+  about_service_flexible_title: string;
+  about_service_flexible_desc: string;
+  about_service_support_title: string;
+  about_service_support_desc: string;
+  about_featured_eyebrow: string;
+  about_featured_title: string;
+  about_featured_desc: string;
+  about_featured_card_booking_title: string;
+  about_featured_card_booking_desc: string;
+  about_featured_card_quality_title: string;
+  about_featured_card_quality_desc: string;
+  about_featured_card_security_title: string;
+  about_featured_card_security_desc: string;
+  about_process_eyebrow: string;
+  about_process_title: string;
+  about_process_desc: string;
+  about_process_discover_title: string;
+  about_process_discover_desc: string;
+  about_process_plan_title: string;
+  about_process_plan_desc: string;
+  about_process_lock_title: string;
+  about_process_lock_desc: string;
+  about_process_book_title: string;
+  about_process_book_desc: string;
+  about_contact_eyebrow: string;
+  about_contact_title: string;
+  about_contact_desc: string;
+  about_contact_email: string;
+  about_contact_open: string;
   home_meta_title: string;
   home_meta_title_signed_in: string;
   home_meta_desc: string;
@@ -717,6 +760,66 @@ const en: MessageDictionary = {
   footer_all_rights: "All rights reserved.",
   footer_privacy_short: "Privacy",
   footer_terms_short: "Terms",
+  about_meta_title: "About Meomul",
+  about_meta_desc:
+    "Meomul helps travelers find verified hotels and modern booking experiences across Korea through transparent pricing and live demand intelligence.",
+  about_hero_badge: "About Meomul",
+  about_hero_title: "A hotel platform built for real travelers, not guesswork",
+  about_hero_desc:
+    "We combine live demand signals, verified guest behavior, and practical booking tools to help you move from search to reservation in one flow.",
+  about_hero_cta_browse: "Browse stays",
+  about_hero_cta_contact: "Contact support",
+  about_services_eyebrow: "Core platform services",
+  about_services_title: "What makes Meomul work",
+  about_services_desc:
+    "Four systems run together so each booking is quick, clear, and protected.",
+  about_service_realtime_title: "Real-time availability",
+  about_service_realtime_desc:
+    "You see live status by date and room inventory that updates instantly with confirmed actions.",
+  about_service_verified_title: "Verified stays and reviews",
+  about_service_verified_desc:
+    "Our ranking, not only ratings, reflects booking reliability and guest trust signals.",
+  about_service_flexible_title: "Flexible stay planning",
+  about_service_flexible_desc:
+    "Build trips fast with date-first search, flexible guest counts, and guided preferences.",
+  about_service_support_title: "Direct hotel communication",
+  about_service_support_desc:
+    "Contact hotels quickly during selection and booking, with dedicated support flow when you need help.",
+  about_featured_eyebrow: "Platform standards",
+  about_featured_title: "Built for speed, confidence, and repeat bookings",
+  about_featured_desc:
+    "These are the quality rules we optimize for every stay.",
+  about_featured_card_booking_title: "Speed",
+  about_featured_card_booking_desc:
+    "Fast filters, simple comparisons, and one-tap booking actions.",
+  about_featured_card_quality_title: "Quality",
+  about_featured_card_quality_desc:
+    "Review quality and guest feedback influence ranking every day.",
+  about_featured_card_security_title: "Safety",
+  about_featured_card_security_desc:
+    "Secure identity, secure chat, and clear status updates through every step.",
+  about_process_eyebrow: "How it works",
+  about_process_title: "4-step journey from idea to stay",
+  about_process_desc:
+    "A clear flow designed to remove friction and keep decision-making simple.",
+  about_process_discover_title: "Discover",
+  about_process_discover_desc:
+    "Explore verified stays and collections by location, type, and trip purpose.",
+  about_process_plan_title: "Plan",
+  about_process_plan_desc:
+    "Set date, guest count, and preferences, then review demand and final price preview.",
+  about_process_lock_title: "Lock",
+  about_process_lock_desc:
+    "Use short price holds to keep favorable rates while you complete details.",
+  about_process_book_title: "Book",
+  about_process_book_desc:
+    "Confirm, pay, and track in a single flow with live support if needed.",
+  about_contact_eyebrow: "Contact",
+  about_contact_title: "Need clarification on how Meomul works?",
+  about_contact_desc:
+    "Our team is available for account, booking, payment, or operation questions.",
+  about_contact_email: "support@meomul.com",
+  about_contact_open: "Open support chat",
   locale_switcher_label: "Language",
   home_meta_title: "Meomul | Book the right stay for every trip",
   home_meta_title_signed_in: "Meomul | Recommendations and stays across Korea",
@@ -1443,6 +1546,57 @@ const ko: MessageDictionary = {
   footer_all_rights: "판권 소유.",
   footer_privacy_short: "개인정보",
   footer_terms_short: "약관",
+  about_meta_title: "Meomul 소개",
+  about_meta_desc:
+    "Meomul은 실시간 수요 신호, 검증된 이용 후기, 명확한 예약 도구로 한국 전역의 호텔을 빠르게 비교하고 신뢰성 있게 예약할 수 있도록 돕습니다.",
+  about_hero_badge: "Meomul 소개",
+  about_hero_title: "실행 가능한 데이터를 바탕으로 한 진짜 여행 예약 플랫폼",
+  about_hero_desc:
+    "실시간 수요, 검증된 이용 데이터, 간단한 예약 플로우를 결합해 검색에서 예약까지 시간을 줄였습니다.",
+  about_hero_cta_browse: "호텔 둘러보기",
+  about_hero_cta_contact: "지원 문의하기",
+  about_services_eyebrow: "핵심 서비스",
+  about_services_title: "Meomul의 핵심 장점",
+  about_services_desc: "빠르고, 명확하고, 안전한 예약을 위해 4가지가 항상 함께 작동합니다.",
+  about_service_realtime_title: "실시간 객실 상태",
+  about_service_realtime_desc:
+    "날짜별 상태와 객실 수를 즉시 반영해 최신 예약 가능성을 바로 확인할 수 있습니다.",
+  about_service_verified_title: "검증된 숙박 경험",
+  about_service_verified_desc:
+    "실제 투숙 이력 기반의 리뷰 신뢰도와 이용 지표로 추천 순위를 구성합니다.",
+  about_service_flexible_title: "유연한 여행 계획",
+  about_service_flexible_desc:
+    "날짜, 인원, 선호도를 먼저 잡고 손쉽게 조합해 빠르게 후보를 좁힐 수 있습니다.",
+  about_service_support_title: "호텔 직접 소통",
+  about_service_support_desc:
+    "예약 전후로 호텔과 바로 소통하고, 필요 시 지원 채팅으로 신속히 해결합니다.",
+  about_featured_eyebrow: "플랫폼 기준",
+  about_featured_title: "속도, 신뢰, 재방문에 최적화된 기준",
+  about_featured_desc: "Meomul은 모든 숙소에서 아래 기준을 유지합니다.",
+  about_featured_card_booking_title: "속도",
+  about_featured_card_booking_desc: "빠른 필터와 간편 비교로 결정을 단축합니다.",
+  about_featured_card_quality_title: "품질",
+  about_featured_card_quality_desc: "리뷰와 만족도가 높은 숙소를 우선 추천합니다.",
+  about_featured_card_security_title: "안전",
+  about_featured_card_security_desc: "안전한 계정·채팅·단계별 상태 업데이트를 제공합니다.",
+  about_process_eyebrow: "동작 방식",
+  about_process_title: "4단계로 만드는 안정적인 예약",
+  about_process_desc: "의사결정을 빠르게 만들기 위해 불필요한 단계를 제거했습니다.",
+  about_process_discover_title: "발견",
+  about_process_discover_desc: "지역/목적/타입으로 검증된 호텔을 탐색합니다.",
+  about_process_plan_title: "계획",
+  about_process_plan_desc: "날짜, 인원, 선호도를 설정하고 수요와 가격 예측을 확인합니다.",
+  about_process_lock_title: "보류",
+  about_process_lock_desc: "짧은 가격 홀드로 조건 변경 전까지 유리한 가격을 고정합니다.",
+  about_process_book_title: "예약",
+  about_process_book_desc:
+    "최종 확인과 결제까지 한 번의 흐름으로 처리하고 필요 시 지원을 받습니다.",
+  about_contact_eyebrow: "문의",
+  about_contact_title: "Meomul의 운영 방식이 더 궁금하신가요?",
+  about_contact_desc:
+    "계정, 결제, 예약, 운영 관련 문의를 빠르게 지원해 드립니다.",
+  about_contact_email: "support@meomul.com",
+  about_contact_open: "지원 채팅 열기",
   locale_switcher_label: "언어",
   home_meta_title: "Meomul | 모든 여행에 맞는 숙소를 예약하세요",
   home_meta_title_signed_in: "Meomul | 한국 전역의 추천 숙소와 호텔",
@@ -1761,6 +1915,60 @@ const ru: MessageDictionary = {
   footer_all_rights: "Все права защищены.",
   footer_privacy_short: "Конфиденциальность",
   footer_terms_short: "Условия",
+  about_meta_title: "О Meomul",
+  about_meta_desc:
+    "Meomul помогает путешественникам быстро находить проверенные отели в Корее с использованием данных о реальном спросе, доверенных отзывов и прозрачного процесса бронирования.",
+  about_hero_badge: "О Meomul",
+  about_hero_title: "Платформа для бронирования, ориентированная на реальные решения",
+  about_hero_desc:
+    "Мы объединяем живой спрос, проверенные данные гостей и удобный процесс бронирования, чтобы сократить путь от поиска к подтверждению.",
+  about_hero_cta_browse: "Смотреть отели",
+  about_hero_cta_contact: "Связаться с поддержкой",
+  about_services_eyebrow: "Основные сервисы",
+  about_services_title: "Что дает Meomul",
+  about_services_desc: "4 ключевых блока, которые делают бронирование быстрее и понятнее.",
+  about_service_realtime_title: "Актуальная доступность",
+  about_service_realtime_desc:
+    "Сейчас видите статус по датам и доступное количество номеров в реальном времени.",
+  about_service_verified_title: "Проверенные поездки и отзывы",
+  about_service_verified_desc:
+    "Ранжирование формируется из реальных отзывов и поведенческих метрик.",
+  about_service_flexible_title: "Гибкое планирование",
+  about_service_flexible_desc:
+    "Даты, гостей и предпочтения можно быстро изменять для точного подбора.",
+  about_service_support_title: "Прямой контакт с отелем",
+  about_service_support_desc:
+    "Связывайтесь с отелем до и после бронирования, либо через поддержку.",
+  about_featured_eyebrow: "Стандарты платформы",
+  about_featured_title: "Оптимизация скорости, доверия и повторного бронирования",
+  about_featured_desc: "Meomul применяет эти принципы к каждому результату.",
+  about_featured_card_booking_title: "Скорость",
+  about_featured_card_booking_desc: "Быстрые фильтры и удобное сравнение для моментального выбора.",
+  about_featured_card_quality_title: "Качество",
+  about_featured_card_quality_desc: "Рейтинги и отзывы влияют на отображение в рекомендациях.",
+  about_featured_card_security_title: "Безопасность",
+  about_featured_card_security_desc:
+    "Безопасная аутентификация, чат и прозрачные статусы каждого шага.",
+  about_process_eyebrow: "Как это работает",
+  about_process_title: "4 шага до подтвержденной брони",
+  about_process_desc: "Мы убрали лишние шаги и сделали путь к брони максимально прямым.",
+  about_process_discover_title: "Поиск",
+  about_process_discover_desc:
+    "Подберите проверенные отели по локации, типу и цели поездки.",
+  about_process_plan_title: "План",
+  about_process_plan_desc:
+    "Укажите даты, гостей и приоритеты, проверьте спрос и стоимость.",
+  about_process_lock_title: "Бронирование ставки",
+  about_process_lock_desc:
+    "Короткий фикс цены помогает закрепить выгодное предложение на время оформления.",
+  about_process_book_title: "Подтверждение",
+  about_process_book_desc:
+    "Завершите заявку, оплату и продолжайте с поддержкой в том же потоке.",
+  about_contact_eyebrow: "Поддержка",
+  about_contact_title: "Нужны уточнения по работе платформы?",
+  about_contact_desc: "Ответим по вопросам аккаунта, оплаты, бронирования и технической помощи.",
+  about_contact_email: "support@meomul.com",
+  about_contact_open: "Открыть чат поддержки",
   locale_switcher_label: "Язык",
   home_meta_title: "Meomul | Бронируйте правильное размещение для любой поездки",
   home_meta_title_signed_in: "Meomul | Рекомендации и отели по всей Корее",
@@ -2086,6 +2294,64 @@ const uz: MessageDictionary = {
   footer_all_rights: "Barcha huquqlar himoyalangan.",
   footer_privacy_short: "Maxfiylik",
   footer_terms_short: "Shartlar",
+  about_meta_title: "Meomul haqida",
+  about_meta_desc:
+    "Meomul Koreya bo'ylab tasdiqlangan mehmonxonalarni real vaqtdagi ehtiyoj signallari, ishonchli sharhlar va aniq bron qilish jarayoni bilan qidirish va bron qilishni osonlashtiradi.",
+  about_hero_badge: "Meomul haqida",
+  about_hero_title: "Haqiqiy sayohatchilar uchun mo‘ljallangan bron platformasi",
+  about_hero_desc:
+    "Meomul real xarid ehtiyojlari, ishonchli sharhlar va oddiy bron oqimini birlashtirib, qidiruvdan bronlashgacha bo'lgan yo'lni qisqartiradi.",
+  about_hero_cta_browse: "Mehmonxonalarni ko'rish",
+  about_hero_cta_contact: "Yordamga bog'lanish",
+  about_services_eyebrow: "Asosiy xizmatlar",
+  about_services_title: "Meomul afzalliklari",
+  about_services_desc: "Bron jarayonini tez va aniq qiluvchi 4 ta asosiy modul.",
+  about_service_realtime_title: "Real vaqtdagi mavjudlik",
+  about_service_realtime_desc:
+    "Sana bo'yicha holat va xonalar soni har doim yangilanadi.",
+  about_service_verified_title: "Tasdiqlangan turar joy va sharhlar",
+  about_service_verified_desc:
+    "Tavsiyalar faqat reytingga emas, foydalanuvchi ishonchi va faoliyat ko'rsatkichlariga ham asoslanadi.",
+  about_service_flexible_title: "Moslashuvchan rejalashtirish",
+  about_service_flexible_desc:
+    "Sanalar, mehmonlar va afzalliklar orqali tezkorroq va qulayroq tanlov.",
+  about_service_support_title: "Mehmonxona bilan to'g'ridan-to'g'ri aloqa",
+  about_service_support_desc:
+    "Bron jarayonida va keyin ham tezkor yordam uchun to'g'ridan-to'g'ri aloqada qoling.",
+  about_featured_eyebrow: "Platforma mezonlari",
+  about_featured_title: "Tezlik, ishonch va qayta bron imkoniyatlari",
+  about_featured_desc: "Har bir turar joy uchun ushbu mezonlar nazorat qilinadi.",
+  about_featured_card_booking_title: "Tezlik",
+  about_featured_card_booking_desc:
+    "Filtrlash va qiyoslashni tezlashtirish orqali qaror qabul qilish oson.",
+  about_featured_card_quality_title: "Sifat",
+  about_featured_card_quality_desc:
+    "Yuqori sifatli sharhlar va reytinglar yuqori ko'rinish beradi.",
+  about_featured_card_security_title: "Xavfsizlik",
+  about_featured_card_security_desc:
+    "Xavfsiz akkaunt, chat va har bir qadamdagi holat xabarnomalari.",
+  about_process_eyebrow: "Qanday ishlaydi",
+  about_process_title: "4 qadamda bronlashtirish",
+  about_process_desc:
+    "Keraksiz bosqichlarni olib tashlab, bron jarayonini to'liq oqimga aylantirdik.",
+  about_process_discover_title: "Topish",
+  about_process_discover_desc:
+    "Joylashuv, maqsad va tur bo'yicha tavsiya etilgan turar joylarni toping.",
+  about_process_plan_title: "Rejalashtirish",
+  about_process_plan_desc:
+    "Sana, mehmonlar va afzalliklarni belgilang, so'ng narx va talabni ko'ring.",
+  about_process_lock_title: "Narxni tutib turish",
+  about_process_lock_desc:
+    "Qisqa muddatli price lock yordamida afzal narxni vaqtincha saqlang.",
+  about_process_book_title: "Bronlash",
+  about_process_book_desc:
+    "Tasdiqlash va to'lovni bir oqimda yakunlang, kerak bo‘lsa yordamni chaqiring.",
+  about_contact_eyebrow: "Aloqa",
+  about_contact_title: "Meomul ishlash usuli haqida ma'lumot kerakmi?",
+  about_contact_desc:
+    "Hisob qaydnomasi, to'lov, bronlash va texnik masalalar bo'yicha yordam beramiz.",
+  about_contact_email: "support@meomul.com",
+  about_contact_open: "Yordam chatini ochish",
   locale_switcher_label: "Til",
   home_meta_title: "Meomul | Har bir safar uchun to'g'ri turar joyni bron qiling",
   home_meta_title_signed_in: "Meomul | Koreya bo'ylab tavsiyalar va turar joylar",

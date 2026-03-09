@@ -138,13 +138,11 @@ function MessageBubble({
   message,
   isOwn,
   isLastInGroup,
-  locale,
   copy,
 }: {
   message: MessageDto;
   isOwn: boolean;
   isLastInGroup: boolean;
-  locale: "en" | "ko" | "ru" | "uz";
   copy: ReturnType<typeof getChatCopy>;
 }) {
   const sentCls = `bg-[#d4e5f7] text-slate-900 ${isLastInGroup ? "rounded-2xl rounded-br-sm" : "rounded-2xl"}`;
@@ -451,7 +449,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
       socketRef.current = null;
       setSocketConnected(false);
     };
-  }, [chatId, isPageVisible, member?._id, refetch, toast]);
+  }, [chatId, copy.pollingFallback, isPageVisible, member?._id, refetch, toast]);
 
   /** HANDLERS **/
 
@@ -848,7 +846,6 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                           message={message}
                           isOwn={isOwn}
                           isLastInGroup={isLastInGroup}
-                          locale={locale}
                           copy={copy}
                         />
                       </div>

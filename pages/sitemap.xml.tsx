@@ -1,6 +1,7 @@
 import type { GetServerSideProps } from "next";
+import { env } from "@/lib/config/env";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://meomul.com";
+const SITE_URL = env.siteUrl.replace(/\/+$/, "");
 
 const LOCATIONS = [
   "SEOUL",

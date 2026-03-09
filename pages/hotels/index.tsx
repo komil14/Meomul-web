@@ -45,13 +45,16 @@ export default function HotelsPage({
   const apolloClient = useApolloClient();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [displayedHotels, setDisplayedHotels] =
+    useState<HotelListItem[]>(initialHotels);
+  const [displayedTotal, setDisplayedTotal] = useState(initialTotal);
   const queryState = useHotelsPageQueryState();
 
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
-  const { data, previousData, loading, error } = useQuery<
+  const { data, loading, error } = useQuery<
     GetHotelsQueryData,
     GetHotelsQueryVars
   >(GET_HOTELS_QUERY, {
@@ -69,10 +72,21 @@ export default function HotelsPage({
     notifyOnNetworkStatusChange: true,
   });
 
-  const resultData = data ?? previousData;
-  const hotelsData = resultData?.getHotels;
-  const hotels = hotelsData?.list ?? initialHotels;
-  const total = hotelsData?.metaCounter?.total ?? initialTotal;
+  useEffect(() => {
+    setDisplayedHotels(initialHotels);
+    setDisplayedTotal(initialTotal);
+  }, [initialHotels, initialTotal]);
+
+  useEffect(() => {
+    const nextHotels = data?.getHotels;
+    if (nextHotels) {
+      setDisplayedHotels(nextHotels.list);
+      setDisplayedTotal(nextHotels.metaCounter?.total ?? 0);
+    }
+  }, [data]);
+
+  const hotels = displayedHotels;
+  const total = displayedTotal;
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(total / HOTELS_PAGE_SIZE)),
     [total],

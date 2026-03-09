@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarCheck,
-  ChevronDown,
   ChevronRight,
   CreditCard,
   HelpCircle,

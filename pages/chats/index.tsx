@@ -56,7 +56,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Headset,
   MessageSquare,
   Search,
   Send,
@@ -841,7 +840,7 @@ const ChatsPage: NextPageWithAuth = () => {
 
   /** COMPUTED **/
 
-  const chats = myChatsData?.getMyChats.list ?? [];
+  const chats = useMemo(() => myChatsData?.getMyChats.list ?? [], [myChatsData?.getMyChats.list]);
   const total = myChatsData?.getMyChats.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
 

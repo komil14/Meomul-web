@@ -157,13 +157,11 @@ function MessageBubble({
   message,
   isOwn,
   isLastInGroup,
-  locale,
   copy,
 }: {
   message: MessageDto;
   isOwn: boolean;
   isLastInGroup: boolean;
-  locale: "en" | "ko" | "ru" | "uz";
   copy: ReturnType<typeof getChatCopy>;
 }) {
   // Light blue for sent (matches iMessage/KakaoTalk soft palette), white for received
@@ -478,7 +476,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       socketRef.current = null;
       setSocketConnected(false);
     };
-  }, [chatId, isPageVisible, member?._id, refetch, toast]);
+  }, [chatId, copy.pollingFallback, isPageVisible, member?._id, refetch, toast]);
 
   /** HANDLERS **/
 
@@ -949,7 +947,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
                             message={message}
                             isOwn={isOwn}
                             isLastInGroup={isLastInGroup}
-                            locale={locale}
                             copy={copy}
                           />
                       </div>

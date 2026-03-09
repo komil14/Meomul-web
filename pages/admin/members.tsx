@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
+import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
@@ -246,7 +247,7 @@ const AdminMembersPage: NextPageWithAuth = () => {
     DeleteMemberByAdminMutationVars
   >(DELETE_MEMBER_BY_ADMIN_MUTATION);
 
-  const members = data?.getAllMembersByAdmin.list ?? [];
+  const members = useMemo(() => data?.getAllMembersByAdmin.list ?? [], [data?.getAllMembersByAdmin.list]);
   const total = data?.getAllMembersByAdmin.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -414,10 +415,12 @@ const AdminMembersPage: NextPageWithAuth = () => {
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-3">
                         {m.memberImage ? (
-                          <img
+                          <Image
                             src={resolveImageUrl(m.memberImage)}
                             alt={m.memberNick}
-                            loading="lazy"
+                            width={36}
+                            height={36}
+                            unoptimized
                             className="h-9 w-9 rounded-full object-cover"
                           />
                         ) : (

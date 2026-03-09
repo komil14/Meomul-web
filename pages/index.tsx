@@ -20,6 +20,7 @@ import { createApolloClient } from "@/lib/apollo/client";
 import { getAccessToken } from "@/lib/auth/session";
 import type { TranslationKey } from "@/lib/i18n/messages";
 import { useI18n } from "@/lib/i18n/provider";
+import { env } from "@/lib/config/env";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type {
   GetHomeFeedQueryData,
@@ -345,6 +346,7 @@ export default function HomePage({
     initialFeaturedRatingsSummary,
     initialHotelInventoryTotal,
     initialTopHotels,
+    locale,
     recommendedData?.getRecommendedHotelsV2.meta,
     t,
     trendingHotels,
@@ -432,8 +434,7 @@ export default function HomePage({
 
   // ─── SEO ─────────────────────────────────────────────────────────────────────
 
-  const canonicalBaseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "http://localhost:3000";
+  const canonicalBaseUrl = env.siteUrl.replace(/\/+$/, "");
   const canonicalUrl = `${canonicalBaseUrl}/`;
   const metaTitle = hasAccessToken
     ? t("home_meta_title_signed_in")

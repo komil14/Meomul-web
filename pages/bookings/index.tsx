@@ -17,7 +17,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Clock,
   CreditCard,
   MapPin,
   Moon,

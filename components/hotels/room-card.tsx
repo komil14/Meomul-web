@@ -13,9 +13,11 @@ interface RoomCardProps {
   hotelId?: string;
 }
 
+type Translate = ReturnType<typeof useI18n>["t"];
+
 const getAvailabilityBadge = (
   availableRooms: number,
-  t: (key: any, params?: Record<string, string | number>) => string,
+  t: Translate,
 ): { label: string; className: string } => {
   if (availableRooms <= 0) {
     return {

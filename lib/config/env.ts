@@ -36,6 +36,8 @@ export const env = {
     "http://localhost:3001",
   ),
   apiUrl: requireEnv("NEXT_PUBLIC_API_URL", "http://localhost:3001"),
+  siteUrl: requireEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000"),
+  buildId: requireEnv("NEXT_PUBLIC_BUILD_ID", "dev"),
 } as const;
 
 /**

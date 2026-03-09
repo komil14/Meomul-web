@@ -55,8 +55,6 @@ export const useHotelDetailPageData = ({
   const [hasAccessToken, setHasAccessToken] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
-  const [enableInitialNetworkFetch, setEnableInitialNetworkFetch] =
-    useState(false);
   const reviewsSectionRef = useRef<HTMLDivElement | null>(null);
   const hasVisibilityMountedRef = useRef(false);
   const wasVisibleRef = useRef(false);
@@ -89,44 +87,6 @@ export const useHotelDetailPageData = ({
     () => Boolean(initialHotel && initialHotel._id === hotelId),
     [hotelId, initialHotel],
   );
-
-  useEffect(() => {
-    if (!hotelId) {
-      setEnableInitialNetworkFetch(false);
-      return;
-    }
-
-    if (!hasMatchingInitialHotel) {
-      setEnableInitialNetworkFetch(true);
-      return;
-    }
-
-    setEnableInitialNetworkFetch(false);
-    const activateFetch = (): void => {
-      setEnableInitialNetworkFetch(true);
-    };
-
-    const windowWithIdle = window as Window & {
-      requestIdleCallback?: (
-        callback: () => void,
-        options?: { timeout: number },
-      ) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    if (typeof windowWithIdle.requestIdleCallback === "function") {
-      const idleId = windowWithIdle.requestIdleCallback(activateFetch, {
-        timeout: 1800,
-      });
-      return () => {
-        if (typeof windowWithIdle.cancelIdleCallback === "function") {
-          windowWithIdle.cancelIdleCallback(idleId);
-        }
-      };
-    }
-
-    const timer = window.setTimeout(activateFetch, 1800);
-    return () => window.clearTimeout(timer);
-  }, [hasMatchingInitialHotel, hotelId]);
 
   useEffect(() => {
     if (shouldLoadReviews) {
@@ -201,14 +161,22 @@ export const useHotelDetailPageData = ({
     error: hotelError,
     refetch: refetchHotel,
   } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
-    skip: !hotelId || !enableInitialNetworkFetch,
+    skip: !hotelId,
     variables: hotelQueryVariables,
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
+    fetchPolicy: "network-only",
+    nextFetchPolicy: "cache-first",
+    notifyOnNetworkStatusChange: true,
   });
 
-  const queriedHotel = hotelData?.getHotel ?? null;
-  const hotel = isHydrated ? (queriedHotel ?? initialHotel) : initialHotel;
+  const queriedHotel =
+    hotelData?.getHotel && hotelData.getHotel._id === hotelId
+      ? hotelData.getHotel
+      : null;
+  const hasResolvedHotelQuery = Boolean(hotelData) || Boolean(hotelError);
+  const hotel =
+    !isHydrated || !hasMatchingInitialHotel
+      ? queriedHotel ?? initialHotel
+      : queriedHotel ?? (hasResolvedHotelQuery ? null : initialHotel);
   const trendingLocation = hotel?.hotelLocation;
 
   const {
@@ -219,10 +187,11 @@ export const useHotelDetailPageData = ({
   } = useQuery<GetRoomsByHotelQueryData, GetRoomsByHotelQueryVars>(
     GET_ROOMS_BY_HOTEL_QUERY,
     {
-      skip: !hotelId || !enableInitialNetworkFetch,
+      skip: !hotelId,
       variables: roomsQueryVariables,
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
+      fetchPolicy: "network-only",
+      nextFetchPolicy: "cache-first",
+      notifyOnNetworkStatusChange: true,
     },
   );
 
@@ -314,9 +283,19 @@ export const useHotelDetailPageData = ({
   });
 
   const queriedRooms = roomsData?.getRoomsByHotel?.list;
+  const hasResolvedRoomsQuery = Boolean(roomsData) || Boolean(roomsError);
   const rooms = useMemo(
-    () => (isHydrated ? (queriedRooms ?? initialRooms) : initialRooms),
-    [initialRooms, isHydrated, queriedRooms],
+    () =>
+      !isHydrated || !hasMatchingInitialHotel
+        ? queriedRooms ?? initialRooms
+        : queriedRooms ?? (hasResolvedRoomsQuery ? [] : initialRooms),
+    [
+      hasMatchingInitialHotel,
+      hasResolvedRoomsQuery,
+      initialRooms,
+      isHydrated,
+      queriedRooms,
+    ],
   );
 
   const reviews = useMemo(

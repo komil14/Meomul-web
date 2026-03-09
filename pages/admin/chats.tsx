@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
+import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
@@ -247,10 +248,12 @@ function ChatDetailDrawer({
                           <p className="leading-relaxed">{msg.content}</p>
                         )}
                         {msg.imageUrl && (
-                          <img
+                          <Image
                             src={resolveMediaUrl(msg.imageUrl)}
                             alt="chat image"
-                            loading="lazy"
+                            width={512}
+                            height={384}
+                            unoptimized
                             className="mt-2 h-32 w-auto rounded-lg object-cover"
                           />
                         )}
@@ -333,7 +336,7 @@ const AdminChatsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const chats = data?.getAllChatsAdmin.list ?? [];
+  const chats = useMemo(() => data?.getAllChatsAdmin.list ?? [], [data?.getAllChatsAdmin.list]);
   const total = data?.getAllChatsAdmin.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 

@@ -289,7 +289,10 @@ const AdminNotificationsPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
-  const notifications = data?.getAllNotificationsAdmin.list ?? [];
+  const notifications = useMemo(
+    () => data?.getAllNotificationsAdmin.list ?? [],
+    [data?.getAllNotificationsAdmin.list],
+  );
   const total = data?.getAllNotificationsAdmin.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
