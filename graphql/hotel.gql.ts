@@ -572,6 +572,7 @@ export const GET_HOME_FEED_QUERY = gql`
         hotelImages
       }
       hotelInventoryTotal
+      totalVerifiedReviews
       trendingHotels {
         _id
         hotelTitle

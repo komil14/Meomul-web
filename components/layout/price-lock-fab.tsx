@@ -22,7 +22,6 @@ const canUsePriceLock = (memberType: string | undefined, isAuthenticated: boolea
 
 const getRemainingSeconds = (expiresAt: string, nowMs: number): number => Math.max(0, Math.floor((new Date(expiresAt).getTime() - nowMs) / 1000));
 const ACTIVE_LOCK_POLL_INTERVAL_MS = 60000;
-const IDLE_LOCK_POLL_INTERVAL_MS = 180000;
 
 const formatCountdown = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -84,8 +83,12 @@ export function PriceLockFab({
       return;
     }
 
-    const intervalMs = hasUnexpiredLocks ? ACTIVE_LOCK_POLL_INTERVAL_MS : IDLE_LOCK_POLL_INTERVAL_MS;
-    startPolling(intervalMs);
+    if (!hasUnexpiredLocks) {
+      stopPolling();
+      return;
+    }
+
+    startPolling(ACTIVE_LOCK_POLL_INTERVAL_MS);
     return () => stopPolling();
   }, [canUse, hasUnexpiredLocks, isHydrated, isPageVisible, startPolling, stopPolling]);
 

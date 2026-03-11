@@ -41,10 +41,11 @@ const toStayPeriodLabel = (
 
 interface TestimonialsSectionProps {
   testimonials: TestimonialReviewEntry[];
+  totalVerifiedReviews: number;
 }
 
-export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) {
-  const { t } = useI18n();
+export function TestimonialsSection({ testimonials, totalVerifiedReviews }: TestimonialsSectionProps) {
+  const { locale, t } = useI18n();
   const [activeCard, setActiveCard] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -77,6 +78,25 @@ export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) 
     return [...testimonials, ...testimonials];
   }, [autoScrollEnabled, testimonials]);
 
+  const trustMetric = useMemo(() => {
+    if (!Number.isFinite(totalVerifiedReviews) || totalVerifiedReviews <= 0) {
+      return t("home_common_no_reviews");
+    }
+
+    if (totalVerifiedReviews >= 1000) {
+      return t("home_common_verified_reviews", {
+        count: `${(totalVerifiedReviews / 1000).toLocaleString(locale, {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        })}k`,
+      });
+    }
+
+    return t("home_common_verified_reviews", {
+      count: totalVerifiedReviews.toLocaleString(locale),
+    });
+  }, [locale, t, totalVerifiedReviews]);
+
   if (testimonials.length === 0) return null;
 
   return (
@@ -84,6 +104,7 @@ export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) 
       <div className={styles.testimonialsHeader}>
         <div className={styles.testimonialsTopRow}>
           <p className={styles.testimonialsEyebrow}>{t("home_testimonials_eyebrow")}</p>
+          <p className={styles.testimonialsEyebrow}>{trustMetric}</p>
         </div>
         <h2 className={styles.testimonialsTitle}>{t("home_testimonials_title")}</h2>
         <p className={styles.testimonialsDescription}>

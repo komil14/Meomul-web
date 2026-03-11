@@ -17,6 +17,7 @@ import {
   getChatCopy,
   getLastPreviewLabel,
 } from "@/lib/chat/chat-i18n";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import {
@@ -241,12 +242,15 @@ function ListView({
     () => ({ page: 1, limit: 15, sort: "lastMessageAt", direction: -1 }),
     [],
   );
+  const isPageVisible = usePageVisible();
+  const [socketConnected, setSocketConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
   const hotelsInput = useMemo(
     () => ({ page: 1, limit: 20, sort: "createdAt", direction: -1 as const }),
     [],
   );
 
-  const { data: chatsData, loading: chatsLoading } = useQuery<
+  const { data: chatsData, loading: chatsLoading, refetch: refetchChats } = useQuery<
     GetMyChatsQueryData,
     GetMyChatsQueryVars
   >(GET_MY_CHATS_QUERY, {
@@ -254,16 +258,16 @@ function ListView({
     variables: { input: listInput },
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
-    pollInterval: 30000,
+    pollInterval: isOpen && isPageVisible && !socketConnected ? 120000 : 0,
   });
 
-  const { data: agentUnreadData } = useQuery<{ getMyUnreadChatCount: number }>(
+  const { data: agentUnreadData, refetch: refetchUnread } = useQuery<{ getMyUnreadChatCount: number }>(
     GET_MY_UNREAD_CHAT_COUNT_QUERY,
     {
       skip: isUser || !isOpen,
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
-      pollInterval: 30000,
+      pollInterval: isOpen && isPageVisible && !socketConnected ? 120000 : 0,
     },
   );
   const agentUnreadCount = agentUnreadData?.getMyUnreadChatCount ?? 0;
@@ -291,6 +295,48 @@ function ListView({
     WAITING: "bg-amber-400",
     CLOSED: "bg-slate-300",
   };
+
+  useEffect(() => {
+    if (!isOpen || !isPageVisible) {
+      return;
+    }
+
+    const token = getAccessToken();
+    const socket = createChatSocket(token);
+    socketRef.current = socket;
+
+    const handleListUpdate = (): void => {
+      if (isUser) {
+        void refetchChats();
+        return;
+      }
+      void refetchUnread();
+    };
+
+    const handleConnect = (): void => {
+      setSocketConnected(true);
+      socket.emit("authenticate", token ? { token } : {});
+    };
+
+    const handleDisconnect = (): void => {
+      setSocketConnected(false);
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleDisconnect);
+    socket.on("chatListUpdated", handleListUpdate);
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleDisconnect);
+      socket.off("chatListUpdated", handleListUpdate);
+      socket.disconnect();
+      socketRef.current = null;
+      setSocketConnected(false);
+    };
+  }, [isOpen, isPageVisible, isUser, refetchChats, refetchUnread]);
 
   return (
     <>
@@ -548,6 +594,7 @@ function ThreadView({
 }) {
   const [messageInput, setMessageInput] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
+  const isPageVisible = usePageVisible();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -596,28 +643,27 @@ function ThreadView({
 
   // Fallback polling when socket is disconnected
   useEffect(() => {
-    if (!chatId || !isOpen || socketConnected) {
+    if (!chatId || !isOpen || !isPageVisible || socketConnected) {
       stopPolling();
       return;
     }
-    startPolling(30000);
+    startPolling(120000);
     return () => {
       stopPolling();
     };
-  }, [chatId, isOpen, socketConnected, startPolling, stopPolling]);
+  }, [chatId, isOpen, isPageVisible, socketConnected, startPolling, stopPolling]);
 
   // Socket — connect only when open
   useEffect(() => {
-    if (!chatId || !isOpen) return;
+    if (!chatId || !isOpen || !isPageVisible) return;
     const token = getAccessToken();
-    if (!token) return;
 
     const socket = createChatSocket(token);
     socketRef.current = socket;
 
     socket.on("connect", () => {
       setSocketConnected(true);
-      socket.emit("authenticate", { token }, () => {
+      socket.emit("authenticate", token ? { token } : {}, () => {
         socket.emit("joinChat", { chatId });
       });
     });
@@ -640,7 +686,7 @@ function ThreadView({
       socketRef.current = null;
       setSocketConnected(false);
     };
-  }, [chatId, isOpen, refetch]);
+  }, [chatId, isOpen, isPageVisible, refetch]);
 
   const onSend = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

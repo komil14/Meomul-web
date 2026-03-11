@@ -1120,7 +1120,7 @@ const NewBookingPage: NextPageWithAuth = () => {
           }
           .anim-cfade { animation: confirmFade 0.4s ease-out 0.3s both; }
         `}</style>
-        <main className="mx-auto max-w-lg space-y-6 py-8 text-center">
+        <main className="w-full space-y-6 py-8 text-center">
           <div className="anim-confirm mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200">
             <Check size={36} strokeWidth={2.5} />
           </div>

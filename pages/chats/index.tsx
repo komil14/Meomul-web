@@ -311,14 +311,14 @@ function NewChatOverlay({
 
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+        className="fixed inset-0 z-[120] bg-black/30 backdrop-blur-[2px]"
         style={{ animation: "overlayFadeIn 0.2s ease-out both" }}
         onClick={onClose}
       />
 
       {/* Panel */}
       <div
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[80vh] sm:w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+        className="fixed inset-x-0 bottom-0 z-[130] flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[80vh] sm:w-[480px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
         style={{
           animation: "overlaySlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
         }}
@@ -922,7 +922,7 @@ const ChatsPage: NextPageWithAuth = () => {
 
       {/* ── User chat list ── */}
       {isUser && (
-        <main className="mx-auto max-w-2xl space-y-4">
+        <main className="w-full space-y-4">
           {/* Page header */}
           <div className="flex items-center justify-between">
             <div>

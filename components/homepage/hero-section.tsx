@@ -50,9 +50,15 @@ interface HeroSectionProps {
   slides: HeroSlide[];
   featuredReviews: ReviewDto[];
   ratingsSummary: ReviewRatingsSummaryDto | null;
+  totalVerifiedReviews: number;
 }
 
-export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSectionProps) {
+export function HeroSection({
+  slides,
+  featuredReviews,
+  ratingsSummary,
+  totalVerifiedReviews,
+}: HeroSectionProps) {
   const { t } = useI18n();
   const [activeSlide, setActiveSlide] = useState(0);
   const [isSliderPaused, setIsSliderPaused] = useState(false);
@@ -88,7 +94,9 @@ export function HeroSection({ slides, featuredReviews, ratingsSummary }: HeroSec
     ? "/hotels"
     : `/hotels/${activeSlideData?._id ?? ""}`;
 
-  const reviewCount = ratingsSummary?.totalReviews ?? featuredReviews.length;
+  const reviewCount = totalVerifiedReviews > 0
+    ? totalVerifiedReviews
+    : (ratingsSummary?.totalReviews ?? featuredReviews.length);
   const reviewRating = ratingsSummary?.overallRating ?? activeSlideData?.rating ?? 0;
   const reviewStars = formatRatingStars(reviewRating);
 

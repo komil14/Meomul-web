@@ -54,7 +54,7 @@ export function Footer() {
 
   return (
     <footer className="bg-slate-900 border-t border-slate-800">
-      <div className="mx-auto max-w-6xl px-3 sm:px-6 py-14 sm:py-16">
+      <div className="w-full px-3 py-14 sm:px-6 sm:py-16">
         <div className="grid grid-cols-2 gap-10 lg:grid-cols-4">
           {/* Brand column — spans full width on mobile */}
           <div className="col-span-2 lg:col-span-1">

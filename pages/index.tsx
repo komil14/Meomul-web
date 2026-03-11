@@ -182,6 +182,7 @@ const formatReviewCountLabel = (
 export default function HomePage({
   initialTopHotels,
   initialHotelInventoryTotal,
+  initialTotalVerifiedReviews,
   initialTrendingHotels,
   initialFeaturedReviews,
   initialFeaturedRatingsSummary,
@@ -482,6 +483,7 @@ export default function HomePage({
             slides={heroSlides}
             featuredReviews={initialFeaturedReviews}
             ratingsSummary={initialFeaturedRatingsSummary}
+            totalVerifiedReviews={initialTotalVerifiedReviews}
           />
           <RecentlyViewedSection />
           <RecommendedSection
@@ -492,7 +494,10 @@ export default function HomePage({
           <TrendingSection hotels={trendingHotels} />
           <ValuePillarsSection pillars={valuePillars} />
           <LastMinuteDealsSection deals={initialLastMinuteDeals} />
-          <TestimonialsSection testimonials={initialTestimonials} />
+          <TestimonialsSection
+            testimonials={initialTestimonials}
+            totalVerifiedReviews={initialTotalVerifiedReviews}
+          />
           <SubscriptionPlansSection />
           <EditorialGuidesSection cards={editorialGuideCards} />
         </div>
@@ -539,6 +544,7 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async (cont
       props: {
         initialTopHotels: feed?.topHotels ?? [],
         initialHotelInventoryTotal: feed?.hotelInventoryTotal ?? 0,
+        initialTotalVerifiedReviews: feed?.totalVerifiedReviews ?? 0,
         initialTrendingHotels: feed?.trendingHotels ?? [],
         initialFeaturedReviews: feed?.featuredReviews ?? [],
         initialFeaturedRatingsSummary: feed?.featuredRatingsSummary ?? null,
@@ -563,6 +569,7 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async (cont
       props: {
         initialTopHotels: [],
         initialHotelInventoryTotal: 0,
+        initialTotalVerifiedReviews: 0,
         initialTrendingHotels: [],
         initialFeaturedReviews: [],
         initialFeaturedRatingsSummary: null,

@@ -324,7 +324,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       stopPolling();
       return;
     }
-    startPolling(30000);
+    startPolling(180000);
     return () => {
       stopPolling();
     };
@@ -350,7 +350,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
   useEffect(() => {
     if (!chatId || !isPageVisible) return;
     const token = getAccessToken();
-    if (!token) return;
 
     const socket = createChatSocket(token);
     socketRef.current = socket;
@@ -384,7 +383,10 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
     const onConnect = () => {
       setSocketConnected(true);
-      socket.emit("authenticate", { token }, (authAck?: SocketAck) => {
+      socket.emit(
+        "authenticate",
+        token ? { token } : {},
+        (authAck?: SocketAck) => {
         if (!authAck?.success) {
           if (!socketJoinFailedRef.current) {
             toast.info(
@@ -404,7 +406,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
           }
           requestRefetch();
         });
-      });
+        },
+      );
     };
 
     const onDisconnect = () => {

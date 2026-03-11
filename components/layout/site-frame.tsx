@@ -55,7 +55,7 @@ import {
 } from "lucide-react";
 
 const UNREAD_POLL_INTERVAL_MS = 120000;
-const NOTIFICATION_POLL_INTERVAL_MS = 60000;
+const NOTIFICATION_POLL_INTERVAL_MS = 180000;
 
 // ─── Role-aware navigation ────────────────────────────────────────────────────
 
@@ -183,6 +183,7 @@ function UserAvatarMenu({
     member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR"
       ? t("label_role_admin")
       : member.memberType.replace("_", " ").toLowerCase();
+  const canAccessSettings = member.memberType !== "AGENT";
 
   return (
     <div ref={ref} className="relative">
@@ -213,14 +214,16 @@ function UserAvatarMenu({
               <User size={14} className="text-slate-400" />
               {t("action_profile")}
             </Link>
-            <Link
-              href="/settings/preferences"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-            >
-              <Settings size={14} className="text-slate-400" />
-              {t("action_settings")}
-            </Link>
+            {canAccessSettings ? (
+              <Link
+                href="/settings/preferences"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+              >
+                <Settings size={14} className="text-slate-400" />
+                {t("action_settings")}
+              </Link>
+            ) : null}
             <button
               type="button"
               onClick={() => {
@@ -705,8 +708,12 @@ export function SiteFrame({ children }: PropsWithChildren) {
     router.pathname === "/chats" || router.pathname === "/chats/[chatId]";
   const showFloatingWidgets = !isChatRoute;
   const isRoomDetailPage = router.pathname === "/rooms/[roomId]";
+  const isNotificationsRoute = router.pathname === "/notifications";
   const shouldShowPriceLockWidget = true;
-  const canPollUnread = canTrackUnread && isPageVisible && !isChatRoute;
+  const canPollUnread =
+    canTrackUnread && isPageVisible && !isChatRoute && !isChatPanelOpen;
+  const canPollNotifications =
+    canTrackUnread && isPageVisible && !isNotificationsRoute;
   const previousUnreadRef = useRef<number | null>(null);
   const hasPolledOnVisibleRef = useRef(false);
 
@@ -740,10 +747,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
     getUnreadCount: number;
   }>(GET_UNREAD_COUNT_QUERY, {
     variables: emptyVars,
-    skip: !canTrackUnread,
+    skip: !canPollNotifications,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
-    pollInterval: isPageVisible ? NOTIFICATION_POLL_INTERVAL_MS : 0,
+    pollInterval: canPollNotifications ? NOTIFICATION_POLL_INTERVAL_MS : 0,
     notifyOnNetworkStatusChange: false,
   });
 
@@ -763,14 +770,13 @@ export function SiteFrame({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!member) return;
     const token = getAccessToken();
-    if (!token) return;
 
     const socket = createNotificationSocket(token);
 
     socket.on("connect", () => {
       socket.emit(
         "authenticate",
-        { token: `Bearer ${token}` },
+        token ? { token: `Bearer ${token}` } : {},
         (ack: { success: boolean; error?: string }) => {
           if (!ack?.success) {
             console.warn("[notification-socket] auth ACK failed:", ack?.error);
@@ -906,7 +912,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
 
   const sharedHeader = (
     <header className="sticky top-0 z-90 w-screen border-b border-slate-200 bg-white">
-      <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-3 sm:px-6">
+      <div className="flex h-[72px] w-full items-center justify-between px-3 sm:px-6">
         {/* Logo */}
         <Link
           href="/"
@@ -1014,7 +1020,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
           id="mobile-main-nav"
           className="border-t border-slate-100 bg-white md:hidden"
         >
-          <div className="mx-auto min-h-[calc(100dvh-73px)] max-w-6xl overflow-y-auto px-4 py-5">
+          <div className="min-h-[calc(100dvh-73px)] w-full overflow-y-auto px-4 py-5">
             {/* Logged-in member card */}
             {member && (
               <div className="mb-5 flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3.5">
@@ -1101,14 +1107,16 @@ export function SiteFrame({ children }: PropsWithChildren) {
                     <User size={17} className="text-slate-400" />
                     {t("action_profile")}
                   </Link>
-                  <Link
-                    href="/settings/preferences"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base text-slate-700 transition hover:bg-slate-100"
-                  >
-                    <Settings size={17} className="text-slate-400" />
-                    {t("action_settings")}
-                  </Link>
+                  {member.memberType !== "AGENT" ? (
+                    <Link
+                      href="/settings/preferences"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-base text-slate-700 transition hover:bg-slate-100"
+                    >
+                      <Settings size={17} className="text-slate-400" />
+                      {t("action_settings")}
+                    </Link>
+                  ) : null}
                   <div className="px-1 py-2">
                     <LanguageSwitcher mobile />
                   </div>
@@ -1159,7 +1167,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
       ) : isHotelsRoute ? (
         <div className="w-full px-3 pb-8 pt-2 sm:px-6 sm:pb-10 sm:pt-5">{children}</div>
       ) : (
-        <div className="mx-auto w-full max-w-6xl px-3 py-8 sm:px-6 sm:py-10">
+        <div className="w-full px-3 py-8 sm:px-6 sm:py-10">
           {children}
         </div>
       )}

@@ -197,7 +197,7 @@ const ProfilePage: NextPageWithAuth = () => {
   const memberType = member?.memberType ?? sessionMember.memberType;
 
   return (
-    <main className="space-y-6">
+    <main className="mx-auto w-full max-w-5xl space-y-6">
       {/* Eyebrow */}
       <div className="motion-fade-up">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">

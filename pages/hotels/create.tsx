@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import {
   getHotelAmenityLabel,
   getHotelLocationLabelLocalized,
+  getStayPurposeLabel,
   getHotelTypeLabel,
 } from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
@@ -18,6 +19,8 @@ import type {
   CreateHotelMutationData,
   CreateHotelMutationVars,
   HotelLocation,
+  SafetyFeaturesInput,
+  StayPurpose,
   HotelType,
 } from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
@@ -92,6 +95,27 @@ const AMENITY_OPTIONS: Array<{ key: keyof AmenitiesInput; label: string }> = [
   { key: "privateBath", label: "Private Bathroom" },
 ];
 
+const SAFETY_OPTIONS: Array<{ key: keyof SafetyFeaturesInput; label: string }> =
+  [
+    { key: "fireSafety", label: "Fire Safety Equipment" },
+    { key: "securityCameras", label: "Security Cameras" },
+    { key: "frontDesk24h", label: "24h Front Desk" },
+    { key: "roomSafe", label: "In-Room Safe" },
+    { key: "femaleOnlyFloors", label: "Female-Only Floors" },
+    { key: "wellLitParking", label: "Well-Lit Parking" },
+  ];
+
+const SUITABLE_FOR_OPTIONS: StayPurpose[] = [
+  "BUSINESS",
+  "ROMANTIC",
+  "FAMILY",
+  "SOLO",
+  "STAYCATION",
+  "EVENT",
+  "MEDICAL",
+  "LONG_TERM",
+];
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const CreateHotelPage: NextPageWithAuth = () => {
@@ -113,10 +137,19 @@ const CreateHotelPage: NextPageWithAuth = () => {
           basicInformation: "기본 정보",
           policies: "정책",
           amenities: "편의시설",
+          locationDetails: "세부 위치",
+          suitableFor: "적합한 여행 목적",
+          safetyFeatures: "안전 기능",
           hotelName: "호텔 이름",
           type: "유형",
           city: "도시",
           address: "주소",
+          district: "구/군",
+          dong: "동/읍/면",
+          nearestSubway: "가까운 지하철역",
+          subwayExit: "지하철 출구",
+          subwayLines: "지하철 노선",
+          walkingDistance: "도보 거리(분)",
           latitude: "위도",
           longitude: "경도",
           coordinatesHelp:
@@ -134,8 +167,19 @@ const CreateHotelPage: NextPageWithAuth = () => {
           hotelVideosHelp: "대표 영상을 업로드하거나 YouTube 링크를 추가해 분위기와 공간감을 보여주세요",
           nextPolicies: "다음: 정책 →",
           cancellationPolicy: "취소 정책",
+          guestPolicies: "투숙 정책",
+          ageRestriction: "최소 체크인 연령",
           petsAllowed: "반려동물 허용",
+          maxPetWeight: "최대 반려동물 무게(kg)",
           smokingAllowed: "흡연 허용",
+          wifiSpeed: "와이파이 속도(Mbps)",
+          parkingFee: "주차 요금 (₩)",
+          flexibleTimingOptions: "유연 시간 옵션",
+          flexibleCheckIn: "유연 체크인",
+          flexibleCheckOut: "유연 체크아웃",
+          allowEarlyCheckIn: "얼리 체크인 요청 허용",
+          allowLateCheckOut: "레이트 체크아웃 요청 허용",
+          surcharge: "추가 요금 (₩)",
           back: "← 뒤로",
           nextAmenities: "다음: 편의시설 →",
           registering: "등록 중…",
@@ -168,10 +212,19 @@ const CreateHotelPage: NextPageWithAuth = () => {
             basicInformation: "Основная информация",
             policies: "Политики",
             amenities: "Удобства",
+            locationDetails: "Локация",
+            suitableFor: "Подходит для",
+            safetyFeatures: "Безопасность",
             hotelName: "Название отеля",
             type: "Тип",
             city: "Город",
             address: "Адрес",
+            district: "Район",
+            dong: "Квартал / район",
+            nearestSubway: "Ближайшее метро",
+            subwayExit: "Выход метро",
+            subwayLines: "Линии метро",
+            walkingDistance: "Пешком (мин)",
             latitude: "Широта",
             longitude: "Долгота",
             coordinatesHelp:
@@ -189,8 +242,19 @@ const CreateHotelPage: NextPageWithAuth = () => {
             hotelVideosHelp: "Загрузите ключевые видео или добавьте ссылку YouTube, чтобы показать атмосферу и пространство",
             nextPolicies: "Далее: политики →",
             cancellationPolicy: "Политика отмены",
+            guestPolicies: "Правила проживания",
+            ageRestriction: "Мин. возраст для заезда",
             petsAllowed: "Можно с животными",
+            maxPetWeight: "Макс. вес питомца (кг)",
             smokingAllowed: "Разрешено курение",
+            wifiSpeed: "Скорость Wi‑Fi (Mbps)",
+            parkingFee: "Плата за парковку (₩)",
+            flexibleTimingOptions: "Гибкие временные опции",
+            flexibleCheckIn: "Гибкий заезд",
+            flexibleCheckOut: "Гибкий выезд",
+            allowEarlyCheckIn: "Разрешить ранний заезд",
+            allowLateCheckOut: "Разрешить поздний выезд",
+            surcharge: "Доплата (₩)",
             back: "← Назад",
             nextAmenities: "Далее: удобства →",
             registering: "Регистрация…",
@@ -222,10 +286,19 @@ const CreateHotelPage: NextPageWithAuth = () => {
               basicInformation: "Asosiy ma'lumotlar",
               policies: "Qoidalar",
               amenities: "Qulayliklar",
+              locationDetails: "Joylashuv tafsilotlari",
+              suitableFor: "Mos keladi",
+              safetyFeatures: "Xavfsizlik",
               hotelName: "Mehmonxona nomi",
               type: "Turi",
               city: "Shahar",
               address: "Manzil",
+              district: "Tuman",
+              dong: "Mahalla / dong",
+              nearestSubway: "Eng yaqin metro",
+              subwayExit: "Metro chiqishi",
+              subwayLines: "Metro yo'nalishlari",
+              walkingDistance: "Piyoda masofa (daq)",
               latitude: "Kenglik",
               longitude: "Uzunlik",
               coordinatesHelp:
@@ -243,8 +316,19 @@ const CreateHotelPage: NextPageWithAuth = () => {
               hotelVideosHelp: "Muhit va maydonni ko'rsatish uchun asosiy videolarni yuklang yoki YouTube havolasini qo'shing",
               nextPolicies: "Keyingi: qoidalar →",
               cancellationPolicy: "Bekor qilish siyosati",
+              guestPolicies: "Turar joy qoidalari",
+              ageRestriction: "Minimal check-in yoshi",
               petsAllowed: "Uy hayvonlari mumkin",
+              maxPetWeight: "Hayvon vazni limiti (kg)",
               smokingAllowed: "Chekish mumkin",
+              wifiSpeed: "Wi‑Fi tezligi (Mbps)",
+              parkingFee: "Avtoturargoh narxi (₩)",
+              flexibleTimingOptions: "Moslashuvchan vaqt variantlari",
+              flexibleCheckIn: "Moslashuvchan check-in",
+              flexibleCheckOut: "Moslashuvchan check-out",
+              allowEarlyCheckIn: "Erta check-in so'roviga ruxsat",
+              allowLateCheckOut: "Kech check-out so'roviga ruxsat",
+              surcharge: "Qo'shimcha to'lov (₩)",
               back: "← Orqaga",
               nextAmenities: "Keyingi: qulayliklar →",
               registering: "Ro'yxatdan o'tkazilmoqda…",
@@ -275,10 +359,19 @@ const CreateHotelPage: NextPageWithAuth = () => {
               basicInformation: "Basic Information",
               policies: "Policies",
               amenities: "Amenities",
+              locationDetails: "Location Details",
+              suitableFor: "Suitable For",
+              safetyFeatures: "Safety Features",
               hotelName: "Hotel Name",
               type: "Type",
               city: "City",
               address: "Address",
+              district: "District",
+              dong: "Dong / Neighborhood",
+              nearestSubway: "Nearest Subway",
+              subwayExit: "Subway Exit",
+              subwayLines: "Subway Lines",
+              walkingDistance: "Walking Distance (min)",
               latitude: "Latitude",
               longitude: "Longitude",
               coordinatesHelp:
@@ -296,8 +389,19 @@ const CreateHotelPage: NextPageWithAuth = () => {
               hotelVideosHelp: "Upload key videos or add a YouTube link to show the atmosphere and space",
               nextPolicies: "Next: Policies →",
               cancellationPolicy: "Cancellation Policy",
+              guestPolicies: "Guest Policies",
+              ageRestriction: "Minimum Check-In Age",
               petsAllowed: "Pets Allowed",
+              maxPetWeight: "Max Pet Weight (kg)",
               smokingAllowed: "Smoking Allowed",
+              wifiSpeed: "Wi-Fi Speed (Mbps)",
+              parkingFee: "Parking Fee (₩)",
+              flexibleTimingOptions: "Flexible Timing Options",
+              flexibleCheckIn: "Flexible Check-In",
+              flexibleCheckOut: "Flexible Check-Out",
+              allowEarlyCheckIn: "Allow guests to request early check-in",
+              allowLateCheckOut: "Allow guests to request late check-out",
+              surcharge: "Surcharge (₩)",
               back: "← Back",
               nextAmenities: "Next: Amenities →",
               registering: "Registering…",
@@ -375,6 +479,12 @@ const CreateHotelPage: NextPageWithAuth = () => {
   const [hotelType, setHotelType] = useState<HotelType>("HOTEL");
   const [hotelLocation, setHotelLocation] = useState<HotelLocation>("SEOUL");
   const [address, setAddress] = useState("");
+  const [district, setDistrict] = useState("");
+  const [dong, setDong] = useState("");
+  const [nearestSubway, setNearestSubway] = useState("");
+  const [subwayExit, setSubwayExit] = useState("");
+  const [subwayLines, setSubwayLines] = useState("");
+  const [walkingDistance, setWalkingDistance] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [hotelDesc, setHotelDesc] = useState("");
@@ -383,15 +493,25 @@ const CreateHotelPage: NextPageWithAuth = () => {
   const [checkOutTime, setCheckOutTime] = useState("11:00");
   const [hotelImages, setHotelImages] = useState<string[]>([]);
   const [hotelVideos, setHotelVideos] = useState<string[]>([]);
+  const [suitableFor, setSuitableFor] = useState<StayPurpose[]>([]);
 
   // Policies
   const [cancellationPolicy, setCancellationPolicy] =
     useState<CancellationPolicy>("MODERATE");
+  const [ageRestriction, setAgeRestriction] = useState("19");
   const [petsAllowed, setPetsAllowed] = useState(false);
+  const [maxPetWeight, setMaxPetWeight] = useState("");
   const [smokingAllowed, setSmokingAllowed] = useState(false);
+  const [flexCheckInEnabled, setFlexCheckInEnabled] = useState(false);
+  const [flexCheckInTimes, setFlexCheckInTimes] = useState("");
+  const [flexCheckInFee, setFlexCheckInFee] = useState("");
+  const [flexCheckOutEnabled, setFlexCheckOutEnabled] = useState(false);
+  const [flexCheckOutTimes, setFlexCheckOutTimes] = useState("");
+  const [flexCheckOutFee, setFlexCheckOutFee] = useState("");
 
   // Amenities
   const [amenities, setAmenities] = useState<AmenitiesInput>({});
+  const [safetyFeatures, setSafetyFeatures] = useState<SafetyFeaturesInput>({});
 
   // UI
   const [openSection, setOpenSection] = useState<1 | 2 | 3>(1);
@@ -411,6 +531,18 @@ const CreateHotelPage: NextPageWithAuth = () => {
     setAmenities((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const toggleSuitableFor = (value: StayPurpose) => {
+    setSuitableFor((prev) =>
+      prev.includes(value)
+        ? prev.filter((entry) => entry !== value)
+        : [...prev, value],
+    );
+  };
+
+  const toggleSafetyFeature = (key: keyof SafetyFeaturesInput) => {
+    setSafetyFeatures((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const handleSubmit = async () => {
     setFormError(null);
     if (!hotelTitle.trim()) {
@@ -427,9 +559,53 @@ const CreateHotelPage: NextPageWithAuth = () => {
       setFormError(copy.gpsRequired);
       return;
     }
+    if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+      setFormError(copy.gpsRequired);
+      return;
+    }
 
     const imageUrls = hotelImages.filter(Boolean);
     const videoUrls = hotelVideos.filter(Boolean);
+    const parsedWalkingDistance = walkingDistance
+      ? Number(walkingDistance)
+      : undefined;
+    const parsedAgeRestriction = Number(ageRestriction);
+    const parsedMaxPetWeight = maxPetWeight ? Number(maxPetWeight) : undefined;
+    const parsedWifiSpeed = amenities.wifi && amenities.wifiSpeed
+      ? Number(amenities.wifiSpeed)
+      : undefined;
+    const parsedParkingFee = amenities.parking && amenities.parkingFee != null
+      ? Number(amenities.parkingFee)
+      : undefined;
+    const parsedSubwayLines = subwayLines
+      .split(",")
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isFinite(value));
+    const buildFlexibleTiming = (
+      enabled: boolean,
+      timesValue: string,
+      feeValue: string,
+    ) =>
+      enabled
+        ? {
+            enabled: true,
+            times: timesValue
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean),
+            fee: feeValue ? Number(feeValue) : 0,
+          }
+        : undefined;
+    const normalizedAmenities: AmenitiesInput | undefined =
+      Object.keys(amenities).length > 0
+        ? {
+            ...amenities,
+            wifiSpeed: parsedWifiSpeed,
+            parkingFee: parsedParkingFee ?? 0,
+          }
+        : undefined;
+    const normalizedSafetyFeatures =
+      Object.keys(safetyFeatures).length > 0 ? safetyFeatures : undefined;
 
     try {
       const result = await createHotel({
@@ -442,16 +618,44 @@ const CreateHotelPage: NextPageWithAuth = () => {
               city: hotelLocation,
               address: address.trim(),
               coordinates: { lat: latNum, lng: lngNum },
+              district: district.trim() || undefined,
+              dong: dong.trim() || undefined,
+              nearestSubway: nearestSubway.trim() || undefined,
+              subwayExit: subwayExit.trim() || undefined,
+              subwayLines:
+                parsedSubwayLines.length > 0 ? parsedSubwayLines : undefined,
+              walkingDistance:
+                parsedWalkingDistance && Number.isFinite(parsedWalkingDistance)
+                  ? parsedWalkingDistance
+                  : undefined,
             },
             hotelDesc: hotelDesc.trim() || undefined,
             starRating,
             checkInTime,
             checkOutTime,
+            flexibleCheckIn: buildFlexibleTiming(
+              flexCheckInEnabled,
+              flexCheckInTimes,
+              flexCheckInFee,
+            ),
+            flexibleCheckOut: buildFlexibleTiming(
+              flexCheckOutEnabled,
+              flexCheckOutTimes,
+              flexCheckOutFee,
+            ),
             cancellationPolicy,
+            ageRestriction: Number.isFinite(parsedAgeRestriction)
+              ? parsedAgeRestriction
+              : undefined,
             petsAllowed,
+            maxPetWeight:
+              petsAllowed && parsedMaxPetWeight && Number.isFinite(parsedMaxPetWeight)
+                ? parsedMaxPetWeight
+                : undefined,
             smokingAllowed,
-            amenities:
-              Object.keys(amenities).length > 0 ? amenities : undefined,
+            amenities: normalizedAmenities,
+            safetyFeatures: normalizedSafetyFeatures,
+            suitableFor,
             hotelImages: imageUrls.length > 0 ? imageUrls : undefined,
             hotelVideos: videoUrls.length > 0 ? videoUrls : undefined,
           },
@@ -485,7 +689,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
           }
           .anim-cfade { animation: confirmFade 0.4s ease-out 0.3s both; }
         `}</style>
-        <main className="mx-auto max-w-lg space-y-6 py-8 text-center">
+        <main className="w-full space-y-6 py-8 text-center">
           <div className="anim-confirm mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-200">
             <Check size={36} strokeWidth={2.5} />
           </div>
@@ -590,7 +794,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
           </div>
         )}
 
-        <div className="max-w-2xl space-y-3">
+        <div className="w-full space-y-3">
           {/* ── Section 1: Basic Info ── */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <SectionHeader
@@ -663,6 +867,77 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     placeholder={copy.fullStreetAddress}
                   />
                 </label>
+
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {copy.locationDetails}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {copy.district}
+                      </span>
+                      <input
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {copy.dong}
+                      </span>
+                      <input
+                        value={dong}
+                        onChange={(e) => setDong(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {copy.nearestSubway}
+                      </span>
+                      <input
+                        value={nearestSubway}
+                        onChange={(e) => setNearestSubway(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {copy.subwayExit}
+                      </span>
+                      <input
+                        value={subwayExit}
+                        onChange={(e) => setSubwayExit(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {copy.subwayLines}
+                      </span>
+                      <input
+                        value={subwayLines}
+                        onChange={(e) => setSubwayLines(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                        placeholder="2, 9"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {copy.walkingDistance}
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={walkingDistance}
+                        onChange={(e) => setWalkingDistance(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
+                  </div>
+                </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
@@ -771,6 +1046,31 @@ const CreateHotelPage: NextPageWithAuth = () => {
                   description={copy.hotelVideosHelp}
                 />
 
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {copy.suitableFor}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {SUITABLE_FOR_OPTIONS.map((value) => {
+                      const active = suitableFor.includes(value);
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => toggleSuitableFor(value)}
+                          className={`rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition ${
+                            active
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          {getStayPurposeLabel(value, t)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="flex justify-end">
                   <button
                     type="button"
@@ -828,6 +1128,42 @@ const CreateHotelPage: NextPageWithAuth = () => {
                         </div>
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {copy.guestPolicies}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {copy.ageRestriction}
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={ageRestriction}
+                        onChange={(e) => setAgeRestriction(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {copy.maxPetWeight}{" "}
+                        <span className="font-normal normal-case text-slate-400">
+                          ({copy.optional})
+                        </span>
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={maxPetWeight}
+                        onChange={(e) => setMaxPetWeight(e.target.value)}
+                        disabled={!petsAllowed}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                      />
+                    </label>
                   </div>
                 </div>
 
@@ -889,6 +1225,122 @@ const CreateHotelPage: NextPageWithAuth = () => {
                       )}
                     </div>
                   </button>
+                </div>
+
+                <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {copy.flexibleTimingOptions}
+                  </p>
+
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+                    <button
+                      type="button"
+                      onClick={() => setFlexCheckInEnabled((v) => !v)}
+                      className="flex w-full items-center justify-between text-left"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {copy.flexibleCheckIn}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {copy.allowEarlyCheckIn}
+                        </p>
+                      </div>
+                      <div
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                          flexCheckInEnabled
+                            ? "border-sky-500 bg-sky-500"
+                            : "border-slate-300"
+                        }`}
+                      >
+                        {flexCheckInEnabled ? (
+                          <Check size={11} className="text-white" strokeWidth={3} />
+                        ) : null}
+                      </div>
+                    </button>
+                    {flexCheckInEnabled ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {copy.checkInTime}
+                          </span>
+                          <input
+                            value={flexCheckInTimes}
+                            onChange={(e) => setFlexCheckInTimes(e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                            placeholder="13:00, 14:00"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {copy.surcharge}
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={flexCheckInFee}
+                            onChange={(e) => setFlexCheckInFee(e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+                    <button
+                      type="button"
+                      onClick={() => setFlexCheckOutEnabled((v) => !v)}
+                      className="flex w-full items-center justify-between text-left"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {copy.flexibleCheckOut}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {copy.allowLateCheckOut}
+                        </p>
+                      </div>
+                      <div
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                          flexCheckOutEnabled
+                            ? "border-sky-500 bg-sky-500"
+                            : "border-slate-300"
+                        }`}
+                      >
+                        {flexCheckOutEnabled ? (
+                          <Check size={11} className="text-white" strokeWidth={3} />
+                        ) : null}
+                      </div>
+                    </button>
+                    {flexCheckOutEnabled ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {copy.checkOutTime}
+                          </span>
+                          <input
+                            value={flexCheckOutTimes}
+                            onChange={(e) => setFlexCheckOutTimes(e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                            placeholder="12:00, 13:00"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {copy.surcharge}
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={flexCheckOutFee}
+                            onChange={(e) => setFlexCheckOutFee(e.target.value)}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="flex justify-between">
@@ -955,6 +1407,87 @@ const CreateHotelPage: NextPageWithAuth = () => {
                       </button>
                     );
                   })}
+                </div>
+
+                {amenities.wifi ? (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {copy.wifiSpeed}{" "}
+                      <span className="font-normal normal-case text-slate-400">
+                        ({copy.optional})
+                      </span>
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={amenities.wifiSpeed ?? ""}
+                      onChange={(e) =>
+                        setAmenities((prev) => ({
+                          ...prev,
+                          wifiSpeed: e.target.value ? Number(e.target.value) : undefined,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </label>
+                ) : null}
+
+                {amenities.parking ? (
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {copy.parkingFee}
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={amenities.parkingFee ?? 0}
+                      onChange={(e) =>
+                        setAmenities((prev) => ({
+                          ...prev,
+                          parkingFee: e.target.value ? Number(e.target.value) : 0,
+                        }))
+                      }
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </label>
+                ) : null}
+
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {copy.safetyFeatures}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {SAFETY_OPTIONS.map((opt) => {
+                      const active = Boolean(safetyFeatures[opt.key]);
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => toggleSafetyFeature(opt.key)}
+                          className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                            active
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <div
+                            className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition ${
+                              active
+                                ? "border-white/40 bg-white/20"
+                                : "border-slate-300"
+                            }`}
+                          >
+                            {active ? (
+                              <Check size={10} className="text-white" strokeWidth={3} />
+                            ) : null}
+                          </div>
+                          <span className="text-xs font-medium leading-tight">
+                            {opt.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="flex justify-between pt-2">

@@ -6,7 +6,7 @@ import type { NextPageWithAuth } from "@/types/page";
 const ForgotPasswordPage: NextPageWithAuth = () => {
   const { t } = useI18n();
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col justify-center">
+    <main className="flex w-full flex-col justify-center">
       <h1 className="text-3xl font-semibold text-slate-900">{t("auth_forgot_title")}</h1>
       <p className="mt-2 text-sm text-slate-500">
         {t("auth_forgot_desc")}

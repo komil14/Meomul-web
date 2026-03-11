@@ -415,7 +415,7 @@ const NotificationsPage: NextPageWithAuth = () => {
   if (!member) return null;
 
   return (
-    <main className="mx-auto max-w-2xl">
+    <main className="mx-auto w-full max-w-2xl">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>

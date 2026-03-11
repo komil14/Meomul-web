@@ -45,8 +45,26 @@ const nextConfig: NextConfig = {
         source: "/graphql",
         destination: backendGraphqlUrl,
       },
-      
-      
+      {
+        source: "/about",
+        destination: "/about.html",
+        locale: false,
+      },
+      {
+        source: "/about/",
+        destination: "/about.html",
+        locale: false,
+      },
+      {
+        source: "/:locale/about",
+        destination: "/about.html",
+        locale: false,
+      },
+      {
+        source: "/:locale/about/",
+        destination: "/about.html",
+        locale: false,
+      },
     ];
   },
 

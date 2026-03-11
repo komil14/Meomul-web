@@ -217,8 +217,8 @@ const HotelsManagePage: NextPageWithAuth = () => {
 
         {/* Loading skeleton */}
         {loading && hotels.length === 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
@@ -254,7 +254,7 @@ const HotelsManagePage: NextPageWithAuth = () => {
 
         {/* Hotel grid */}
         {hotels.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {hotels.map((hotel, idx) => {
               const thumbnail = hotel.hotelImages?.[0];
               const status = (

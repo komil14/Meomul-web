@@ -606,6 +606,7 @@ export interface HomeFeedInput {
 export interface HomeFeedDto {
   topHotels: HotelListItem[];
   hotelInventoryTotal: number;
+  totalVerifiedReviews: number;
   trendingHotels: HotelListItem[];
   featuredReviews: ReviewDto[];
   featuredRatingsSummary?: ReviewRatingsSummaryDto | null;
@@ -854,12 +855,15 @@ export interface DetailedLocationInput {
   dong?: string;
   nearestSubway?: string;
   subwayExit?: string;
+  subwayLines?: number[];
   walkingDistance?: number;
 }
 
 export interface AmenitiesInput {
   wifi?: boolean;
+  wifiSpeed?: number;
   parking?: boolean;
+  parkingFee?: number;
   breakfast?: boolean;
   breakfastIncluded?: boolean;
   roomService?: boolean;
@@ -902,10 +906,16 @@ export interface AgentHotelCreateInput {
   starRating?: number;
   checkInTime?: string;
   checkOutTime?: string;
+  flexibleCheckIn?: { enabled: boolean; times?: string[]; fee?: number };
+  flexibleCheckOut?: { enabled: boolean; times?: string[]; fee?: number };
   cancellationPolicy?: CancellationPolicy;
+  ageRestriction?: number;
   petsAllowed?: boolean;
+  maxPetWeight?: number;
   smokingAllowed?: boolean;
   amenities?: AmenitiesInput;
+  safetyFeatures?: SafetyFeaturesInput;
+  suitableFor?: StayPurpose[];
   hotelImages?: string[];
   hotelVideos?: string[];
 }

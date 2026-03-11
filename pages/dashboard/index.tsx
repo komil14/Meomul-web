@@ -540,7 +540,7 @@ const DashboardPage: NextPageWithAuth = () => {
     const selectedHotel = agentHotelList.find(h => h._id === effectiveHotelId);
 
     return (
-      <main className="mx-auto w-full max-w-6xl space-y-6">
+      <main className="w-full space-y-6">
         {/* ── Header ── */}
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -891,7 +891,7 @@ const DashboardPage: NextPageWithAuth = () => {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl space-y-6">
+    <main className="w-full space-y-6">
       {/* ── Header ── */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>

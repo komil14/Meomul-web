@@ -437,7 +437,7 @@ const EditHotelPage: NextPageWithAuth = () => {
   // ── Loading ──
   if (loadingHotel && !hotel) {
     return (
-      <main className="max-w-2xl space-y-4">
+      <main className="w-full space-y-4">
         <div className="h-4 w-32 animate-pulse rounded-full bg-slate-200" />
         <div className="h-7 w-48 animate-pulse rounded-full bg-slate-200" />
         <div className="h-96 animate-pulse rounded-2xl bg-slate-100" />
@@ -454,7 +454,7 @@ const EditHotelPage: NextPageWithAuth = () => {
   const hasHotelId = Boolean(hotelId);
 
   return (
-    <main className="max-w-2xl space-y-6">
+    <main className="w-full space-y-6">
       {/* Back + header */}
       <Link
         href="/hotels/manage"

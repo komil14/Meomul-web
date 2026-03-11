@@ -403,7 +403,7 @@ const AdminReviewsPage: NextPageWithAuth = () => {
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-6 pb-12">
+    <main className="w-full space-y-6 pb-12">
       {/* header */}
       <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)]">
         <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-amber-50 blur-3xl" />

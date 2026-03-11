@@ -306,7 +306,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
       stopPolling();
       return;
     }
-    startPolling(30000);
+    startPolling(180000);
     return () => {
       stopPolling();
     };
@@ -326,7 +326,6 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   useEffect(() => {
     if (!chatId || !isPageVisible) return;
     const token = getAccessToken();
-    if (!token) return;
 
     const socket = createChatSocket(token);
     socketRef.current = socket;
@@ -360,7 +359,10 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
 
     const onConnect = () => {
       setSocketConnected(true);
-      socket.emit("authenticate", { token }, (authAck?: SocketAck) => {
+      socket.emit(
+        "authenticate",
+        token ? { token } : {},
+        (authAck?: SocketAck) => {
         if (!authAck?.success) {
           if (!socketJoinFailedRef.current) {
             toast.info(
@@ -377,7 +379,8 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
           }
           requestRefetch();
         });
-      });
+        },
+      );
     };
 
     const onDisconnect = () => {
@@ -627,14 +630,14 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
 
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
+        className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-[2px]"
         style={{ animation: "popupFadeIn 0.2s ease-out both" }}
         onClick={onClose}
       />
 
       {/* Phone-sized panel */}
       <div
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[700px] sm:w-[390px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+        className="fixed inset-x-0 bottom-0 z-[130] flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[700px] sm:w-[390px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
         style={{
           animation: "popupSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
         }}

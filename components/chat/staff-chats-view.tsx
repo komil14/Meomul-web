@@ -1,5 +1,6 @@
 import { useQuery } from "@apollo/client/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Socket } from "socket.io-client";
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,13 +13,16 @@ import {
   GET_HOTEL_CHATS_QUERY,
   GET_MY_CHATS_QUERY,
 } from "@/graphql/chat.gql";
+import { getAccessToken } from "@/lib/auth/session";
 import {
   formatChatTimeAgo,
   getChatCopy,
   getChatStatusLabel,
   getLastPreviewLabel,
 } from "@/lib/chat/chat-i18n";
+import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { useI18n } from "@/lib/i18n/provider";
+import { createChatSocket } from "@/lib/socket/chat";
 import {
   avatarBg,
 } from "@/lib/chat/chat-helpers";
@@ -81,7 +85,7 @@ function HotelSidebarRow({
         input: { page: 1, limit: 50, sort: "lastMessageAt", direction: -1 },
       },
       fetchPolicy: "cache-and-network",
-      pollInterval: 30_000,
+      nextFetchPolicy: "cache-first",
     },
   );
 
@@ -162,6 +166,7 @@ export function StaffChatsView({
 }: StaffChatsViewProps) {
   const { locale } = useI18n();
   const copy = getChatCopy(locale);
+  const isPageVisible = usePageVisible();
   const isAdmin = memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 
   const [activeTab, setActiveTab] = useState<"hotels" | "support">("hotels");
@@ -169,6 +174,8 @@ export function StaffChatsView({
   const [statusFilter, setStatusFilter] = useState<ChatStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
   const [hotelSearchQuery, setHotelSearchQuery] = useState("");
+  const [socketConnected, setSocketConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
 
   // Auto-select first hotel when list loads
   useEffect(() => {
@@ -197,6 +204,7 @@ export function StaffChatsView({
   const {
     data: hotelChatsData,
     loading: hotelChatsLoading,
+    refetch: refetchHotelChats,
   } = useQuery<GetHotelChatsQueryData, GetHotelChatsQueryVars>(
     GET_HOTEL_CHATS_QUERY,
     {
@@ -208,7 +216,7 @@ export function StaffChatsView({
       },
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-and-network",
-      pollInterval: 15_000,
+      pollInterval: isPageVisible && !socketConnected ? 120_000 : 0,
     },
   );
 
@@ -217,6 +225,7 @@ export function StaffChatsView({
   const {
     data: supportChatsData,
     loading: supportChatsLoading,
+    refetch: refetchSupportChats,
   } = useQuery<GetMyChatsQueryData, GetMyChatsQueryVars>(GET_MY_CHATS_QUERY, {
     skip: activeTab !== "support",
     variables: {
@@ -224,8 +233,54 @@ export function StaffChatsView({
     },
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
-    pollInterval: 15_000,
+    pollInterval: isPageVisible && !socketConnected ? 120_000 : 0,
   });
+
+  useEffect(() => {
+    if (!isPageVisible) {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      setSocketConnected(false);
+      return;
+    }
+
+    const token = getAccessToken();
+    const socket = createChatSocket(token);
+    socketRef.current = socket;
+
+    const handleConnect = () => setSocketConnected(true);
+    const handleDisconnect = () => setSocketConnected(false);
+    const handleListUpdate = () => {
+      if (activeTab === "support") {
+        void refetchSupportChats();
+        return;
+      }
+      if (selectedHotelId) {
+        void refetchHotelChats();
+      }
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("chatListUpdated", handleListUpdate);
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("chatListUpdated", handleListUpdate);
+      socket.disconnect();
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
+      setSocketConnected(false);
+    };
+  }, [
+    activeTab,
+    isPageVisible,
+    refetchHotelChats,
+    refetchSupportChats,
+    selectedHotelId,
+  ]);
 
   // ─── Derived data ─────────────────────────────────────────────────────────
 

@@ -26,9 +26,8 @@
 }
 
 .shell {
-  width: min(1540px, calc(100vw - 3.9rem));
-  margin: 0 auto;
-  padding: 0.95rem 0 1.35rem;
+  width: 100%;
+  padding: 0.95rem 0.95rem 1.35rem;
   min-height: 100vh;
   display: flex;
   flex-direction: column;

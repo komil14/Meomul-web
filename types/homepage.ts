@@ -72,6 +72,7 @@ export interface ValuePillar {
 export interface HomePageProps {
   initialTopHotels: HotelListItem[];
   initialHotelInventoryTotal: number;
+  initialTotalVerifiedReviews: number;
   initialTrendingHotels: HotelListItem[];
   initialFeaturedReviews: ReviewDto[];
   initialFeaturedRatingsSummary: ReviewRatingsSummaryDto | null;
