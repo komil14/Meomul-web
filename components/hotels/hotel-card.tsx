@@ -1,9 +1,18 @@
-import { memo, useCallback, useEffect, useRef } from "react";
+import { useMutation } from "@apollo/client/react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { trackAnalyticsEvent } from "@/lib/analytics/events";
-import type { HotelListItem } from "@/types/hotel";
+import { TOGGLE_LIKE_MUTATION } from "@/graphql/hotel.gql";
+import { getAccessToken, getSessionMember } from "@/lib/auth/session";
+import { getErrorMessage } from "@/lib/utils/error";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
+import type {
+  HotelListItem,
+  ToggleLikeMutationData,
+  ToggleLikeMutationVars,
+} from "@/types/hotel";
 
 export interface HotelCardTrackingContext {
   source: string;
@@ -15,6 +24,7 @@ export interface HotelCardTrackingContext {
 
 interface HotelCardProps {
   hotel: HotelListItem;
+  isInitiallyLiked?: boolean;
   trackingContext?: HotelCardTrackingContext;
   imagePriority?: boolean;
   imageSizes?: string;
@@ -25,10 +35,11 @@ const formatLocationLabel = (location: string): string =>
     ? `${location.toLowerCase().charAt(0).toUpperCase()}${location.toLowerCase().slice(1)}`
     : "Unknown";
 
-const DEFAULT_IMAGE_SIZES = "(max-width: 479px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 24rem";
+const DEFAULT_IMAGE_SIZES = "(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1439px) 33vw, 25vw";
 
 export const HotelCard = memo(function HotelCard({
   hotel,
+  isInitiallyLiked = false,
   trackingContext,
   imagePriority = false,
   imageSizes = DEFAULT_IMAGE_SIZES,
@@ -36,11 +47,22 @@ export const HotelCard = memo(function HotelCard({
   const router = useRouter();
   const articleRef = useRef<HTMLElement | null>(null);
   const hasPrefetchedRef = useRef(false);
-  const coverImage = hotel.hotelImages[0];
+  const hoverIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [likeState, setLikeState] = useState<{ liked: boolean; count: number } | null>(null);
+  const coverImage = resolveMediaUrl(hotel.hotelImages[activeImageIndex] ?? hotel.hotelImages[0]);
   const hotelHref = `/hotels/${hotel._id}`;
   const ratingText = Number.isFinite(hotel.hotelRating) ? hotel.hotelRating.toFixed(1) : "0.0";
-  const likeText = hotel.hotelLikes.toLocaleString();
+  const hasSession = Boolean(getSessionMember() || getAccessToken());
   const locationLabel = formatLocationLabel(hotel.hotelLocation);
+
+  const [toggleLikeMutation, { loading: togglingLike }] = useMutation<
+    ToggleLikeMutationData,
+    ToggleLikeMutationVars
+  >(TOGGLE_LIKE_MUTATION);
+
+  const isLiked = likeState?.liked ?? isInitiallyLiked;
+  const savedText = (likeState?.count ?? hotel.hotelLikes).toLocaleString();
 
   const handlePrefetchIntent = useCallback(() => {
     if (hasPrefetchedRef.current) {
@@ -76,17 +98,86 @@ export const HotelCard = memo(function HotelCard({
     };
   }, [handlePrefetchIntent]);
 
+  useEffect(() => {
+    setActiveImageIndex(0);
+    setLikeState(null);
+  }, [hotel._id]);
+
+  const stopHoverCycle = useCallback(() => {
+    if (hoverIntervalRef.current) {
+      clearInterval(hoverIntervalRef.current);
+      hoverIntervalRef.current = null;
+    }
+    setActiveImageIndex(0);
+  }, []);
+
+  const startHoverCycle = useCallback(() => {
+    handlePrefetchIntent();
+    if (hotel.hotelImages.length <= 1 || hoverIntervalRef.current) {
+      return;
+    }
+
+    hoverIntervalRef.current = setInterval(() => {
+      setActiveImageIndex((previous) => (previous + 1) % hotel.hotelImages.length);
+    }, 1100);
+  }, [handlePrefetchIntent, hotel.hotelImages.length]);
+
+  useEffect(() => () => {
+    if (hoverIntervalRef.current) {
+      clearInterval(hoverIntervalRef.current);
+    }
+  }, []);
+
+  const handleToggleSaved = useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (!hasSession) {
+        await router.push({
+          pathname: "/auth/login",
+          query: { next: router.asPath },
+        });
+        return;
+      }
+
+      try {
+        const response = await toggleLikeMutation({
+          variables: {
+            input: {
+              likeGroup: "HOTEL",
+              likeRefId: hotel._id,
+            },
+          },
+        });
+
+        const payload = response.data?.toggleLike;
+        if (payload) {
+          setLikeState({
+            liked: payload.liked,
+            count: payload.likeCount,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to toggle hotel save state:", getErrorMessage(error));
+      }
+    },
+    [hasSession, hotel._id, router, toggleLikeMutation],
+  );
+
   return (
     <article
       ref={articleRef}
-      className="group overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_22px_46px_-34px_rgba(15,23,42,0.55)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_30px_66px_-30px_rgba(15,23,42,0.58)]"
+      className="group hover-lift rounded-[1.35rem] bg-white transition duration-300"
     >
       <Link
         href={hotelHref}
         prefetch={false}
         className="block h-full focus:outline-none"
-        onMouseEnter={handlePrefetchIntent}
-        onFocus={handlePrefetchIntent}
+        onMouseEnter={startHoverCycle}
+        onMouseLeave={stopHoverCycle}
+        onFocus={startHoverCycle}
+        onBlur={stopHoverCycle}
         onClick={() => {
           if (!trackingContext) {
             return;
@@ -103,66 +194,138 @@ export const HotelCard = memo(function HotelCard({
           });
         }}
       >
-        <div className="relative h-64 w-full overflow-hidden bg-slate-200 sm:h-72">
-          {coverImage ? (
-            <Image
-              src={coverImage}
-              alt={hotel.hotelTitle}
-              fill
-              priority={imagePriority}
-              sizes={imageSizes}
-              className="object-cover transition duration-700 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-200 via-slate-100 to-white text-xs font-medium uppercase tracking-[0.15em] text-slate-500">
-              curated stay
-            </div>
-          )}
-
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/18 to-transparent" />
-
-          <div className="absolute inset-x-0 bottom-0 p-4 md:hidden">
-            <p className="line-clamp-2 text-xl font-semibold leading-tight text-white">{hotel.hotelTitle}</p>
-            <div className="mt-2 flex items-center justify-between text-xs text-white/90">
-              <span>
-                {locationLabel} · {hotel.hotelType}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5" aria-hidden>
+        <div className="flex gap-3 sm:hidden">
+          <div className="relative h-28 w-[42%] shrink-0 overflow-hidden rounded-[1.1rem] bg-slate-100">
+            {coverImage ? (
+              <Image
+                src={coverImage}
+                alt={hotel.hotelTitle}
+                fill
+                priority={imagePriority}
+                sizes="42vw"
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-slate-100 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-500">
+                curated stay
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleToggleSaved}
+              disabled={togglingLike}
+              className={`absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-sm transition ${togglingLike ? "cursor-wait opacity-70" : "hover:bg-white"}`}
+              aria-label={isLiked ? "Remove saved hotel" : "Save hotel"}
+            >
+              <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" className={`h-4 w-4 ${isLiked ? "text-rose-500" : ""}`} aria-hidden>
+                <path d="m12 21-1.45-1.32C5.4 15.02 2 11.92 2 8.12 2 5.02 4.42 3 7.44 3c1.7 0 3.33.79 4.36 2.03C12.83 3.79 14.46 3 16.16 3 19.18 3 21.6 5.02 21.6 8.12c0 3.8-3.4 6.9-8.55 11.57z" />
+              </svg>
+            </button>
+          </div>
+          <div className="min-w-0 flex-1 pr-2 pt-0.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="line-clamp-2 text-[0.98rem] font-semibold leading-snug text-slate-950">
+                  {hotel.hotelTitle}
+                </p>
+                <p className="mt-1 text-[13px] text-slate-500">
+                  {locationLabel}, South Korea
+                </p>
+                <p className="mt-0.5 text-[13px] text-slate-500">
+                  {hotel.hotelType.toLowerCase()}
+                </p>
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-1 pt-0.5 text-[12px] font-semibold text-slate-900">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3" aria-hidden>
                   <path d="M12 2l2.95 6.08 6.72.98-4.86 4.67 1.15 6.6L12 17.2l-5.96 3.13 1.15-6.6L2.33 9.06l6.72-.98L12 2z" />
                 </svg>
                 {ratingText}
               </span>
             </div>
+            <div className="mt-3 flex items-center justify-between gap-3 text-[12px] text-slate-500">
+              <span>{savedText} saved</span>
+              {hotel.hotelImages.length > 1 ? (
+                <div className="mr-1 flex shrink-0 items-center gap-1.5" aria-hidden>
+                  {hotel.hotelImages.slice(0, 4).map((_, index) => (
+                    <span
+                      key={`${hotel._id}-dot-${index}`}
+                      className={`h-1.5 w-1.5 rounded-full ${index === activeImageIndex ? "bg-slate-900" : "bg-slate-300"}`}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden sm:block">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[1.55rem] bg-slate-100">
+            {coverImage ? (
+              <Image
+                src={coverImage}
+                alt={hotel.hotelTitle}
+                fill
+                priority={imagePriority}
+                sizes={imageSizes}
+                className="object-cover transition duration-500 group-hover:scale-[1.03]"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-slate-100 text-xs font-medium uppercase tracking-[0.15em] text-slate-500">
+                curated stay
+              </div>
+            )}
+            <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
+              <span className="rounded-full bg-white/92 px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm">
+                {locationLabel}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/92 px-3 py-1 text-[11px] font-semibold text-slate-900 shadow-sm">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5" aria-hidden>
+                    <path d="M12 2l2.95 6.08 6.72.98-4.86 4.67 1.15 6.6L12 17.2l-5.96 3.13 1.15-6.6L2.33 9.06l6.72-.98L12 2z" />
+                  </svg>
+                  {ratingText}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleSaved}
+                  disabled={togglingLike}
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-sm transition ${togglingLike ? "cursor-wait opacity-70" : "hover:bg-white"}`}
+                  aria-label={isLiked ? "Remove saved hotel" : "Save hotel"}
+                >
+                  <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" className={`h-4 w-4 ${isLiked ? "text-rose-500" : ""}`} aria-hidden>
+                    <path d="m12 21-1.45-1.32C5.4 15.02 2 11.92 2 8.12 2 5.02 4.42 3 7.44 3c1.7 0 3.33.79 4.36 2.03C12.83 3.79 14.46 3 16.16 3 19.18 3 21.6 5.02 21.6 8.12c0 3.8-3.4 6.9-8.55 11.57z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {hotel.hotelImages.length > 1 ? (
+              <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1.5" aria-hidden>
+                {hotel.hotelImages.slice(0, 5).map((_, index) => (
+                  <span
+                    key={`${hotel._id}-desktop-dot-${index}`}
+                    className={`h-1.5 w-1.5 rounded-full ${index === activeImageIndex ? "bg-white" : "bg-white/55"}`}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
 
-          <div className="absolute inset-0 hidden p-5 opacity-0 transition duration-300 md:flex md:flex-col md:justify-end md:group-hover:opacity-100 md:group-focus-within:opacity-100">
-            <div className="rounded-2xl border border-white/20 bg-black/45 p-4 backdrop-blur-md">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="rounded-full border border-white/35 bg-white/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
-                  {locationLabel}
-                </span>
-                <span className="rounded-full border border-white/35 bg-white/12 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
-                  {hotel.hotelType}
-                </span>
+          <div className="px-2 pb-1 pt-3 sm:px-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="line-clamp-2 text-[1.02rem] font-semibold leading-snug text-slate-950">
+                  {hotel.hotelTitle}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {locationLabel}, South Korea
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {hotel.hotelType.toLowerCase()}
+                </p>
               </div>
-              <p className="line-clamp-2 text-2xl font-semibold leading-tight text-white">{hotel.hotelTitle}</p>
-              <div className="mt-3 flex items-center justify-between">
-                <div className="inline-flex items-center gap-3 text-sm text-white/90">
-                  <span className="inline-flex items-center gap-1">
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5 text-amber-300" aria-hidden>
-                      <path d="M12 2l2.95 6.08 6.72.98-4.86 4.67 1.15 6.6L12 17.2l-5.96 3.13 1.15-6.6L2.33 9.06l6.72-.98L12 2z" />
-                    </svg>
-                    {ratingText}
-                  </span>
-                  <span>{likeText} likes</span>
-                </div>
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/35 bg-white/15 text-white">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden>
-                    <path d="M5 12h14M13 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
+              <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                {savedText} saved
+              </span>
             </div>
           </div>
         </div>

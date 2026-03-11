@@ -21,7 +21,7 @@ export function HotelsLocationPanel({ selectedLocation, onSelectLocation, onClea
         <button
           type="button"
           onClick={onClear}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+          className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
         >
           {t("hotels_location_anywhere")}
         </button>
@@ -38,10 +38,10 @@ export function HotelsLocationPanel({ selectedLocation, onSelectLocation, onClea
               onClick={() => {
                 onSelectLocation(location);
               }}
-              className={`rounded-xl border px-3 py-3 text-left transition sm:rounded-2xl sm:px-4 ${
+              className={`rounded-[1.2rem] border px-3 py-3 text-left transition sm:rounded-[1.35rem] sm:px-4 ${
                 isActive
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-200 bg-slate-50/70 text-slate-800 hover:border-slate-300 hover:bg-white"
+                  ? "border-slate-950 bg-slate-950 text-white"
+                  : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50"
               }`}
             >
               <span className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] opacity-70 sm:block">{t("hotels_location_stay_in")}</span>

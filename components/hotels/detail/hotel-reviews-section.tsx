@@ -1,8 +1,16 @@
-import { memo, useCallback } from "react";
+import { memo, useState } from "react";
 import Image from "next/image";
+import {
+  BadgeCheck,
+  MapPinned,
+  MessageCircleMore,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Wallet,
+} from "lucide-react";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useI18n } from "@/lib/i18n/provider";
-import { formatNumber } from "@/lib/utils/format";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type { ReviewDto, ReviewRatingsSummaryDto } from "@/types/hotel";
 
@@ -33,151 +41,64 @@ const formatDate = (value?: string | null): string => {
   if (Number.isNaN(date.getTime())) {
     return "-";
   }
-  return date.toISOString().slice(0, 10);
+  return date.toLocaleString("en-US", { month: "long", year: "numeric" });
+};
+
+const formatDateTime = (value?: string | null): string => {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 };
 
 const getReviewerDisplayName = (review: ReviewDto): string => {
   const nick = review.reviewerNick?.trim();
-  if (nick) {
-    return nick;
-  }
-
-  return review.reviewerId.slice(-4);
+  return nick || review.reviewerId.slice(-4);
 };
 
-const getReviewerInitial = (review: ReviewDto): string =>
-  getReviewerDisplayName(review).slice(0, 1).toUpperCase();
-
-interface RatingBarProps {
-  label: string;
-  rating: number;
-}
-
-function RatingBar({ label, rating }: RatingBarProps) {
-  const percent = Math.max(0, Math.min(100, Math.round((rating / 5) * 100)));
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-          {label}
-        </span>
-        <span className="text-xs font-semibold text-slate-700">{percent}%</span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-[width] duration-300"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-interface ReviewRowProps {
-  review: ReviewDto;
-  helpfulCount: number;
-  canMarkHelpful: boolean;
-  isMarkingHelpful: boolean;
-  onMarkHelpful: (reviewId: string) => void;
-}
-
-const ReviewRow = memo(function ReviewRow({
-  review,
-  helpfulCount,
-  canMarkHelpful,
-  isMarkingHelpful,
-  onMarkHelpful,
-}: ReviewRowProps) {
-  const { t } = useI18n();
-  const handleMarkHelpful = useCallback(() => {
-    onMarkHelpful(review._id);
-  }, [onMarkHelpful, review._id]);
-  const reviewerName = getReviewerDisplayName(review);
-  const reviewerInitial = getReviewerInitial(review);
-  const reviewerImageUrl = resolveMediaUrl(review.reviewerImage);
-  const reviewerLabel = review.reviewerNick?.trim()
-    ? reviewerName
-    : t("hotel_reviews_guest_fallback", { suffix: reviewerName });
-
-  return (
-    <article className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {reviewerImageUrl ? (
-            <Image
-              src={reviewerImageUrl}
-              alt={reviewerLabel}
-              width={36}
-              height={36}
-              className="h-9 w-9 rounded-full border border-slate-200 object-cover"
-            />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-bold text-slate-600">
-              {reviewerInitial}
-            </div>
-          )}
-          <div>
-            <p className="text-sm font-semibold text-slate-900">
-              {reviewerLabel}
-            </p>
-            <p className="text-xs text-slate-500">
-              {formatDate(review.createdAt)}
-            </p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-semibold text-slate-900">
-            {review.overallRating.toFixed(1)} / 5
-          </p>
-          <p className="text-xs text-slate-500">
-            {t("hotel_reviews_verified_stay")}: {review.verifiedStay ? t("hotel_reviews_yes") : t("hotel_reviews_no")}
-          </p>
-        </div>
-      </div>
-
-      {review.reviewTitle ? (
-        <p className="text-sm font-semibold text-slate-900">
-          {review.reviewTitle}
-        </p>
-      ) : null}
-      <p className="text-sm leading-6 text-slate-700">{review.reviewText}</p>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {t("hotel_reviews_helpful")}{" "}
-        <span className="ml-1 text-sm text-slate-800">
-          {formatNumber(helpfulCount)}
-        </span>
-      </p>
-
-      {review.hotelResponse ? (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-          <p className="font-medium text-slate-900">{t("hotel_reviews_response")}</p>
-          <p className="mt-1">{review.hotelResponse.responseText}</p>
-          <p className="mt-1 text-xs text-slate-500">
-            {formatDate(review.hotelResponse.respondedAt)}
-          </p>
-        </div>
-      ) : null}
-
-      <button
-        type="button"
-        onClick={canMarkHelpful ? handleMarkHelpful : undefined}
-        disabled={!canMarkHelpful || isMarkingHelpful}
-        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
-        title={
-          canMarkHelpful
-            ? t("hotel_reviews_mark_helpful")
-            : t("hotel_reviews_mark_helpful_login")
-        }
-      >
-        {canMarkHelpful
-          ? isMarkingHelpful
-            ? t("hotel_reviews_updating")
-            : t("hotel_reviews_mark_helpful")
-          : t("hotel_reviews_mark_helpful_login")}
-      </button>
-    </article>
-  );
-});
+const reviewMetrics = (
+  t: ReturnType<typeof useI18n>["t"],
+  summary: ReviewRatingsSummaryDto,
+) => [
+  {
+    label: t("review_label_cleanliness"),
+    rating: summary.cleanlinessRating,
+    icon: Sparkles,
+  },
+  {
+    label: t("review_label_service"),
+    rating: summary.serviceRating,
+    icon: BadgeCheck,
+  },
+  {
+    label: t("review_label_location"),
+    rating: summary.locationRating,
+    icon: MapPinned,
+  },
+  {
+    label: t("review_label_amenities"),
+    rating: summary.amenitiesRating,
+    icon: ShieldCheck,
+  },
+  {
+    label: t("review_label_value"),
+    rating: summary.valueRating,
+    icon: Wallet,
+  },
+  {
+    label: t("review_label_overall"),
+    rating: summary.overallRating,
+    icon: MessageCircleMore,
+  },
+];
 
 export const HotelReviewsSection = memo(function HotelReviewsSection({
   reviews,
@@ -186,7 +107,6 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
   reviewActionErrorMessage,
   reviewPage,
   reviewTotalPages,
-  reviewTotal,
   ratingsSummary,
   onPrevPage,
   onNextPage,
@@ -198,127 +118,181 @@ export const HotelReviewsSection = memo(function HotelReviewsSection({
   onMarkHelpful,
 }: HotelReviewsSectionProps) {
   const { t } = useI18n();
+  const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
+
+  if (reviewsLoading && reviews.length === 0) {
+    return (
+      <section id="reviews" className="space-y-4 pt-2 sm:pt-4">
+        <div className="text-lg text-stone-600">{t("hotel_reviews_loading")}</div>
+      </section>
+    );
+  }
+
+  if (!reviewsLoading && reviews.length === 0) {
+    return (
+      <section id="reviews" className="space-y-4 pt-2 sm:pt-4">
+        <div className="text-lg text-stone-600">{t("hotel_reviews_empty")}</div>
+      </section>
+    );
+  }
+
   return (
-    <section id="reviews" className="space-y-4">
-      <header>
-        <h2 className="text-2xl font-semibold text-slate-900">{t("hotel_reviews_title")}</h2>
-        <p className="text-sm text-slate-600">
-          {t("hotel_reviews_desc")}
-        </p>
-      </header>
+    <section id="reviews" className="space-y-8 pt-2 sm:space-y-10 sm:pt-4">
+      <div className="space-y-6">
+        <h2 className="flex items-center gap-2 text-[1.8rem] font-semibold tracking-tight text-stone-950 sm:text-[2.2rem]">
+          <Star className="h-6 w-6 shrink-0 fill-current sm:h-7 sm:w-7" />
+          {(ratingsSummary?.overallRating ?? 0).toFixed(2)} · {ratingsSummary?.totalReviews ?? reviews.length} reviews
+        </h2>
 
-      {reviewsErrorMessage ? (
-        <ErrorNotice message={reviewsErrorMessage} />
-      ) : null}
-      {reviewActionErrorMessage ? (
-        <ErrorNotice message={reviewActionErrorMessage} />
-      ) : null}
+        {reviewsErrorMessage ? <ErrorNotice message={reviewsErrorMessage} /> : null}
+        {reviewActionErrorMessage ? <ErrorNotice message={reviewActionErrorMessage} /> : null}
 
-      {reviewsLoading && reviews.length === 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-          {t("hotel_reviews_loading")}
-        </section>
-      ) : null}
-
-      {!reviewsLoading && reviews.length === 0 ? (
-        <section className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-          {t("hotel_reviews_empty")}
-        </section>
-      ) : null}
-
-      {reviews.length > 0 ? (
-        <>
-          {ratingsSummary ? (
-            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 hover-lift">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {t("hotel_reviews_average_title")}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {t("hotel_reviews_average_desc")}
-                  </p>
-                </div>
-                <p className="text-sm font-semibold text-slate-800">
-                  {ratingsSummary.overallRating.toFixed(2)} / 5 ·{" "}
-                  {formatNumber(ratingsSummary.totalReviews)} {t("hotel_reviews_title").toLowerCase()}
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <RatingBar
-                  label={t("review_label_overall")}
-                  rating={ratingsSummary.overallRating}
-                />
-                <RatingBar
-                  label={t("review_label_cleanliness")}
-                  rating={ratingsSummary.cleanlinessRating}
-                />
-                <RatingBar
-                  label={t("review_label_location")}
-                  rating={ratingsSummary.locationRating}
-                />
-                <RatingBar
-                  label={t("review_label_service")}
-                  rating={ratingsSummary.serviceRating}
-                />
-                <RatingBar
-                  label={t("review_label_amenities")}
-                  rating={ratingsSummary.amenitiesRating}
-                />
-                <RatingBar label={t("review_label_value")} rating={ratingsSummary.valueRating} />
-              </div>
-            </section>
-          ) : null}
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
-            {reviews.map((review) => {
-              const helpfulCount =
-                helpfulCountOverrides[review._id] ?? review.helpfulCount;
-              const isMarkingHelpful = markingHelpfulReviewId === review._id;
-
+        {ratingsSummary ? (
+          <div className="grid grid-cols-3 gap-0 border-t border-b border-stone-200 py-5 sm:py-8 lg:grid-cols-6">
+            {reviewMetrics(t, ratingsSummary).map((metric) => {
+              const Icon = metric.icon;
               return (
-                <ReviewRow
-                  key={review._id}
-                  review={review}
-                  helpfulCount={helpfulCount}
-                  canMarkHelpful={canMarkHelpful}
-                  isMarkingHelpful={isMarkingHelpful}
-                  onMarkHelpful={onMarkHelpful}
-                />
+                <article
+                  key={metric.label}
+                  className="space-y-2 py-3 lg:border-r lg:border-stone-200 lg:px-6 lg:last:border-r-0"
+                >
+                  <div className="space-y-1">
+                    <p className="text-base font-semibold tracking-tight text-stone-950 sm:text-[1.35rem]">
+                      {metric.label}
+                    </p>
+                    <p className="text-[1.55rem] font-semibold text-stone-950 sm:text-[1.9rem]">{metric.rating.toFixed(1)}</p>
+                  </div>
+                  <Icon className="h-7 w-7 text-stone-950 sm:h-8 sm:w-8" />
+                </article>
               );
             })}
           </div>
+        ) : null}
+      </div>
 
-          <footer className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
-            <p className="text-slate-600">
-              {t("hotel_reviews_pagination", {
-                page: reviewPage,
-                totalPages: reviewTotalPages,
-                total: formatNumber(reviewTotal),
-              })}
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={onPrevPage}
-                disabled={!canGoPrev}
-                className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {t("hotel_reviews_previous")}
-              </button>
-              <button
-                type="button"
-                onClick={onNextPage}
-                disabled={!canGoNext}
-                className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {t("hotel_reviews_next")}
-              </button>
-            </div>
-          </footer>
-        </>
-      ) : null}
+      <div className="grid gap-x-16 gap-y-10 lg:grid-cols-2">
+        {reviews.map((review) => {
+          const reviewerName = getReviewerDisplayName(review);
+          const reviewerImage = resolveMediaUrl(review.reviewerImage);
+          const helpfulCount = helpfulCountOverrides[review._id] ?? review.helpfulCount;
+          const isMarkingHelpful = markingHelpfulReviewId === review._id;
+          const isExpanded = expandedReviews[review._id] ?? false;
+          const updatedLabel =
+            review.updatedAt && review.updatedAt !== review.createdAt
+              ? formatDateTime(review.updatedAt)
+              : "";
+
+          return (
+            <article key={review._id} className="space-y-5">
+              <div className="flex items-center gap-4">
+                {reviewerImage ? (
+                  <Image
+                    src={reviewerImage}
+                    alt={reviewerName}
+                    width={56}
+                    height={56}
+                    className="h-14 w-14 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-stone-100 text-lg font-semibold text-stone-950">
+                    {reviewerName.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <p className="text-[1.2rem] font-semibold tracking-tight text-stone-950 sm:text-[1.45rem]">
+                    {reviewerName}
+                  </p>
+                  <p className="text-base text-stone-600 sm:text-lg">{t("hotel_reviews_verified_stay")}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 text-sm text-stone-700 sm:text-lg">
+                <span className="inline-flex items-center gap-1 text-stone-950">
+                  <Star className="h-4 w-4 fill-current" />
+                  {review.overallRating.toFixed(1)}
+                </span>
+                <span>·</span>
+                <span>{formatDate(review.createdAt)}</span>
+                {typeof review.reviewViews === "number" ? (
+                  <>
+                    <span>·</span>
+                    <span>{review.reviewViews} views</span>
+                  </>
+                ) : null}
+                {updatedLabel ? (
+                  <>
+                    <span>·</span>
+                    <span>Edited {updatedLabel}</span>
+                  </>
+                ) : null}
+              </div>
+
+              <p className={`${isExpanded ? "" : "line-clamp-4"} text-base leading-7 text-stone-800 sm:text-[1.06rem] sm:leading-8`}>
+                {review.reviewText}
+              </p>
+
+              {review.hotelResponse ? (
+                <div className="rounded-2xl bg-stone-50 px-5 py-4">
+                  <p className="text-base font-semibold text-stone-950">{t("hotel_reviews_response")}</p>
+                  <p className="mt-2 text-base leading-7 text-stone-700 sm:text-lg sm:leading-8">{review.hotelResponse.responseText}</p>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedReviews((prev) => ({
+                      ...prev,
+                      [review._id]: !isExpanded,
+                    }))
+                  }
+                  className="text-sm font-semibold underline underline-offset-2 sm:text-[1.02rem]"
+                >
+                  {isExpanded ? t("hotel_airbnb_show_less") : t("hotel_airbnb_show_more")}
+                </button>
+                <button
+                  type="button"
+                  onClick={canMarkHelpful ? () => onMarkHelpful(review._id) : undefined}
+                  disabled={!canMarkHelpful || isMarkingHelpful}
+                  className="text-sm font-semibold underline underline-offset-2 disabled:opacity-50 sm:text-[1.02rem]"
+                >
+                  {isMarkingHelpful ? t("hotel_reviews_updating") : t("hotel_reviews_mark_helpful")}
+                </button>
+                <span className="text-sm text-stone-600 sm:text-[1.02rem]">{helpfulCount}</span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-col gap-4 border-t border-stone-200 pt-6 sm:flex-row sm:items-center sm:justify-between sm:pt-8">
+        <p className="text-sm text-stone-600 sm:text-lg">
+          {t("hotel_reviews_pagination", {
+            page: reviewPage,
+            totalPages: reviewTotalPages,
+            total: ratingsSummary?.totalReviews ?? reviews.length,
+          })}
+        </p>
+        <div className="flex w-full gap-3 sm:w-auto">
+          <button
+            type="button"
+            onClick={onPrevPage}
+            disabled={!canGoPrev}
+            className="flex-1 rounded-full border border-stone-300 px-4 py-2.5 text-sm font-semibold text-stone-950 disabled:opacity-50 sm:flex-none sm:px-5 sm:text-base"
+          >
+            {t("hotel_reviews_previous")}
+          </button>
+          <button
+            type="button"
+            onClick={onNextPage}
+            disabled={!canGoNext}
+            className="flex-1 rounded-full border border-stone-300 px-4 py-2.5 text-sm font-semibold text-stone-950 disabled:opacity-50 sm:flex-none sm:px-5 sm:text-base"
+          >
+            {t("hotel_reviews_next")}
+          </button>
+        </div>
+      </div>
     </section>
   );
 });

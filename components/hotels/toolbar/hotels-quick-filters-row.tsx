@@ -30,13 +30,13 @@ export function HotelsQuickFiltersRow({
   const { t } = useI18n();
   return (
     <div className="relative z-20 mt-3">
-      <div className="rounded-[1.7rem] border border-slate-200 bg-slate-50/90 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+      <div className="rounded-[1.45rem] border border-slate-200 bg-white p-1 sm:rounded-[1.7rem] sm:p-1.5">
         <div className="grid grid-cols-2 gap-1.5 md:grid-cols-[1fr_1fr_1fr_auto]">
           <button
             type="button"
             onClick={onOpenLocation}
-            className={`rounded-[1.35rem] px-4 py-3 text-left transition ${
-              activePanel === "location" ? "bg-white shadow-sm" : "hover:bg-white/80"
+            className={`rounded-[1.15rem] px-3.5 py-2.5 text-left transition sm:rounded-[1.35rem] sm:px-4 sm:py-3 ${
+              activePanel === "location" ? "bg-slate-50" : "hover:bg-slate-50"
             }`}
           >
             <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotels_quick_location")}</span>
@@ -46,8 +46,8 @@ export function HotelsQuickFiltersRow({
           <button
             type="button"
             onClick={onOpenDates}
-            className={`rounded-[1.35rem] px-4 py-3 text-left transition ${
-              activePanel === "dates" ? "bg-white shadow-sm" : "hover:bg-white/80"
+            className={`rounded-[1.15rem] px-3.5 py-2.5 text-left transition sm:rounded-[1.35rem] sm:px-4 sm:py-3 ${
+              activePanel === "dates" ? "bg-slate-50" : "hover:bg-slate-50"
             }`}
           >
             <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotels_quick_when")}</span>
@@ -57,8 +57,8 @@ export function HotelsQuickFiltersRow({
           <button
             type="button"
             onClick={onOpenGuests}
-            className={`rounded-[1.35rem] px-4 py-3 text-left transition ${
-              activePanel === "guests" ? "bg-white shadow-sm" : "hover:bg-white/80"
+            className={`rounded-[1.15rem] px-3.5 py-2.5 text-left transition sm:rounded-[1.35rem] sm:px-4 sm:py-3 ${
+              activePanel === "guests" ? "bg-slate-50" : "hover:bg-slate-50"
             }`}
           >
             <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotels_quick_guests")}</span>
@@ -68,9 +68,9 @@ export function HotelsQuickFiltersRow({
           <button
             type="button"
             onClick={onOpenFilters}
-            className={`relative inline-flex min-h-[4.75rem] items-center justify-center rounded-[1.35rem] border bg-white text-slate-700 transition hover:text-slate-900 ${
+            className={`relative inline-flex min-h-[4.25rem] items-center justify-center rounded-[1.15rem] border bg-white text-slate-700 transition hover:text-slate-900 sm:min-h-[4.75rem] sm:rounded-[1.35rem] ${
               hiddenFilterCount > 0
-                ? "border-slate-300 px-3 shadow-sm hover:border-slate-400 md:min-w-[6.25rem] md:gap-2"
+                ? "border-slate-300 px-3 hover:border-slate-400 md:min-w-[6.25rem] md:gap-2"
                 : "border-slate-200 hover:border-slate-300 md:w-14"
             }`}
             aria-label={t("hotels_drawer_filters")}

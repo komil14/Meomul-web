@@ -30,6 +30,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
 import {
   ArrowLeft,
   CalendarDays,
@@ -524,6 +525,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
   });
 
   const hotel = hotelData?.getHotel;
+  const hotelCoverImage = resolveMediaUrl(hotel?.hotelImages[0]);
   const isStaff =
     memberType === "AGENT" ||
     memberType === "ADMIN" ||
@@ -678,11 +680,11 @@ const BookingDetailPage: NextPageWithAuth = () => {
           <div className="space-y-5">
             {/* ── Hotel hero card ────────────────────────────────────────── */}
             <div className="motion-fade-up overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.08)]">
-              {hotel?.hotelImages[0] && (
+              {hotelCoverImage && (
                 <div className="relative h-48 w-full sm:h-56">
                   <Image
-                    src={hotel.hotelImages[0]}
-                    alt={hotel.hotelTitle}
+                    src={hotelCoverImage}
+                    alt={hotel?.hotelTitle ?? `Hotel #${booking.hotelId.slice(-6)}`}
                     fill
                     sizes="(max-width: 1024px) 100vw, 660px"
                     className="object-cover"
@@ -704,7 +706,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
                   </div>
                 </div>
               )}
-              {!hotel?.hotelImages[0] && (
+              {!hotelCoverImage && (
                 <div className="px-5 pt-5">
                   <p className="font-[family-name:var(--font-display)] text-xl font-semibold text-slate-900">
                     {hotel?.hotelTitle ?? `Hotel #${booking.hotelId.slice(-6)}`}

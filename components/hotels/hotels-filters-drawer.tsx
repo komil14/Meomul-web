@@ -456,15 +456,15 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
         type="button"
         aria-label={t("hotels_drawer_close_filters")}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/45 transition duration-300"
+        className="absolute inset-0 bg-slate-900/36 transition duration-300"
       />
 
       <div className="absolute inset-0 flex items-end justify-center p-0 md:items-center md:p-6">
         <aside
-          className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-white shadow-[0_32px_120px_-40px_rgba(15,23,42,0.45)] transition duration-300 md:h-auto md:max-h-[88vh] md:max-w-4xl md:rounded-[2rem] translate-y-0 opacity-100"
+          className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] border border-slate-200 bg-[#fcfcfb] shadow-[0_32px_120px_-40px_rgba(15,23,42,0.38)] transition duration-300 md:h-auto md:max-h-[88vh] md:max-w-4xl md:rounded-[2rem] translate-y-0 opacity-100"
           aria-hidden={false}
         >
-          <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
+          <div className="sticky top-0 z-10 border-b border-slate-200 bg-[#fcfcfb] px-4 py-4 sm:px-6">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-slate-200 md:hidden" />
             <div className="mt-3 flex items-start justify-between gap-3 md:mt-0">
               <div>
@@ -483,7 +483,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
                 <button
                   type="button"
                   onClick={onClose}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
                   aria-label={t("hotels_drawer_close")}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
@@ -498,7 +498,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
             <HotelsFiltersPanel state={draftPanelState} />
           </div>
 
-          <div className="sticky bottom-0 border-t border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
+          <div className="sticky bottom-0 border-t border-slate-200 bg-[#fcfcfb] px-4 py-4 sm:px-6 sm:py-5">
             <p className="mb-3 text-sm text-slate-600">
               {showMatchesSummary
                 ? `${previewLoading ? t("hotels_drawer_checking") : t("hotels_drawer_matches", {
@@ -516,7 +516,7 @@ export function HotelsFiltersDrawer({ isOpen, onClose, state, appliedTotal }: Ho
               type="button"
               onClick={applyDraftFilters}
               disabled={hasDraftValidationError}
-              className="w-full rounded-full bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-full bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
             >
               {primaryButtonLabel}
             </button>

@@ -6,7 +6,7 @@ import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_LIKES_QUERY } from "@/graphql/like.gql";
 import {
-  GET_HOTEL_CARD_QUERY,
+  GET_HOTEL_CARDS_QUERY,
   TOGGLE_LIKE_MUTATION,
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
@@ -16,6 +16,7 @@ import {
   getProfileCopy,
 } from "@/lib/profile/profile-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { Heart } from "lucide-react";
 import type { HotelListItem } from "@/types/hotel";
 
@@ -33,7 +34,7 @@ interface GetMyLikesData {
 }
 
 interface GetHotelCardData {
-  getHotel: HotelListItem;
+  getHotelsByIds: HotelListItem[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -44,51 +45,30 @@ const formatLocation = (loc: string) =>
 // ─── LikedHotelItem ───────────────────────────────────────────────────────────
 
 function LikedHotelItem({
-  hotelId,
+  hotel,
   likedAt,
   onUnliked,
 }: {
-  hotelId: string;
+  hotel: HotelListItem;
   likedAt: string;
   onUnliked: (hotelId: string) => void;
 }) {
   const { locale } = useI18n();
   const copy = getProfileCopy(locale);
   const toast = useToast();
-  const { data, loading } = useQuery<GetHotelCardData>(GET_HOTEL_CARD_QUERY, {
-    variables: { hotelId },
-    fetchPolicy: "cache-first",
-  });
-
   const [toggleLike, { loading: unliking }] = useMutation(TOGGLE_LIKE_MUTATION);
-
-  const hotel = data?.getHotel;
-  const coverImage = hotel?.hotelImages[0];
+  const coverImage = resolveMediaUrl(hotel?.hotelImages[0]);
 
   const handleUnlike = async () => {
     try {
       await toggleLike({
-        variables: { input: { likeGroup: "HOTEL", likeRefId: hotelId } },
+        variables: { input: { likeGroup: "HOTEL", likeRefId: hotel._id } },
       });
-      onUnliked(hotelId);
+      onUnliked(hotel._id);
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
   };
-
-  if (loading) {
-    return (
-      <div className="overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_22px_46px_-34px_rgba(15,23,42,0.55)]">
-        <div className="h-56 animate-pulse bg-slate-100 sm:h-64" />
-        <div className="space-y-2 p-4">
-          <div className="h-4 w-3/4 animate-pulse rounded-full bg-slate-100" />
-          <div className="h-3 w-1/2 animate-pulse rounded-full bg-slate-50" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!hotel) return null;
 
   return (
     <div className="hover-lift group relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.12)] transition duration-300 hover:border-slate-300 hover:shadow-[0_22px_46px_-34px_rgba(15,23,42,0.25)]">
@@ -178,6 +158,24 @@ export function LikesTab() {
 
   const allLikes = data?.getMyLikes ?? [];
   const likes = allLikes.filter((l) => !removed.has(l.likeRefId));
+  const likedHotelIds = useMemo(
+    () => likes.map((like) => like.likeRefId),
+    [likes],
+  );
+  const { data: hotelsData, loading: hotelsLoading } = useQuery<GetHotelCardData>(
+    GET_HOTEL_CARDS_QUERY,
+    {
+      skip: likedHotelIds.length === 0,
+      variables: { hotelIds: likedHotelIds },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-first",
+    },
+  );
+  const hotelMap = useMemo(
+    () =>
+      new Map((hotelsData?.getHotelsByIds ?? []).map((hotel) => [hotel._id, hotel])),
+    [hotelsData],
+  );
 
   const handleUnliked = (hotelId: string) => {
     setRemoved((prev) => new Set(prev).add(hotelId));
@@ -191,7 +189,7 @@ export function LikesTab() {
       {error && <ErrorNotice message={getErrorMessage(error)} />}
 
       {/* Loading skeleton */}
-      {loading && likes.length === 0 && (
+      {(loading || hotelsLoading) && likes.length === 0 && (
         <div className="grid gap-5 sm:grid-cols-2">
           {[1, 2, 3].map((i) => (
             <div
@@ -238,11 +236,13 @@ export function LikesTab() {
               className="motion-fade-up"
               style={{ animationDelay: `${i * 60}ms` }}
             >
-              <LikedHotelItem
-                hotelId={like.likeRefId}
-                likedAt={like.createdAt}
-                onUnliked={handleUnliked}
-              />
+              {hotelMap.get(like.likeRefId) ? (
+                <LikedHotelItem
+                  hotel={hotelMap.get(like.likeRefId)!}
+                  likedAt={like.createdAt}
+                  onUnliked={handleUnliked}
+                />
+              ) : null}
             </div>
           ))}
         </div>

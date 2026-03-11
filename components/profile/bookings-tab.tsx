@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_MY_BOOKINGS_QUERY } from "@/graphql/booking.gql";
-import { GET_HOTEL_CARD_QUERY } from "@/graphql/hotel.gql";
+import { GET_HOTEL_CARDS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import {
   formatBookingDate,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/bookings/booking-i18n";
 import { useI18n } from "@/lib/i18n/provider";
 import { getErrorMessage } from "@/lib/utils/error";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
 import {
   CalendarDays,
   ChevronRight,
@@ -53,12 +54,12 @@ interface GetMyBookingsData {
 }
 
 interface GetHotelCardData {
-  getHotel: {
+  getHotelsByIds: {
     _id: string;
     hotelTitle: string;
     hotelImages: string[];
     hotelLocation?: string;
-  };
+  }[];
 }
 
 // ─── Style maps ───────────────────────────────────────────────────────────────
@@ -91,15 +92,15 @@ function diffNights(checkIn: string, checkOut: string): number {
 
 // ─── BookingRow ───────────────────────────────────────────────────────────────
 
-function BookingRow({ booking }: { booking: BookingListItem }) {
+function BookingRow({
+  booking,
+  hotel,
+}: {
+  booking: BookingListItem;
+  hotel?: GetHotelCardData["getHotelsByIds"][number];
+}) {
   const { locale } = useI18n();
-  const { data } = useQuery<GetHotelCardData>(GET_HOTEL_CARD_QUERY, {
-    variables: { hotelId: booking.hotelId },
-    fetchPolicy: "cache-first",
-  });
-
-  const hotel = data?.getHotel;
-  const cover = hotel?.hotelImages[0];
+  const cover = resolveMediaUrl(hotel?.hotelImages[0]);
   const statusClass =
     STATUS_BADGE[booking.bookingStatus] ??
     "border-slate-200 bg-slate-50 text-slate-600";
@@ -241,6 +242,24 @@ export function BookingsTab() {
   const bookings = [...firstPageBookings, ...extraBookings];
   const total = data?.getMyBookings.metaCounter.total ?? 0;
   const hasMore = bookings.length < total;
+  const bookingHotelIds = useMemo(
+    () => Array.from(new Set(bookings.map((booking) => booking.hotelId))),
+    [bookings],
+  );
+  const { data: hotelsData, loading: hotelsLoading } = useQuery<GetHotelCardData>(
+    GET_HOTEL_CARDS_QUERY,
+    {
+      skip: bookingHotelIds.length === 0,
+      variables: { hotelIds: bookingHotelIds },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-first",
+    },
+  );
+  const hotelMap = useMemo(
+    () =>
+      new Map((hotelsData?.getHotelsByIds ?? []).map((hotel) => [hotel._id, hotel])),
+    [hotelsData],
+  );
 
   const handleLoadMore = async () => {
     const nextPage = currentPage + 1;
@@ -264,7 +283,7 @@ export function BookingsTab() {
       {error && <ErrorNotice message={getErrorMessage(error)} />}
 
       {/* Loading skeleton */}
-      {loading && bookings.length === 0 && (
+      {(loading || hotelsLoading) && bookings.length === 0 && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div
@@ -319,7 +338,7 @@ export function BookingsTab() {
           </div>
           <div className="space-y-3">
             {bookings.map((b) => (
-              <BookingRow key={b._id} booking={b} />
+              <BookingRow key={b._id} booking={b} hotel={hotelMap.get(b.hotelId)} />
             ))}
           </div>
           {hasMore && (

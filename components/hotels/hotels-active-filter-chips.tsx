@@ -188,10 +188,10 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
       onClick={() => {
         state.patchQuery(chip.clearPatch);
       }}
-      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-500"
+      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
     >
       <span>{chip.label}</span>
-      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-[10px] text-slate-600">
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-50 text-[10px] text-slate-500">
         x
       </span>
     </button>
@@ -202,7 +202,7 @@ export function HotelsActiveFilterChips({ state }: HotelsActiveFilterChipsProps)
       <div className="flex flex-wrap items-center gap-2 sm:hidden">
         {mobileVisibleChips.map((chip) => renderChip(chip))}
         {hiddenChipCount > 0 ? (
-          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">
+          <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500">
             {t("hotels_chip_more", { count: hiddenChipCount })}
           </span>
         ) : null}

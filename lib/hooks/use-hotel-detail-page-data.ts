@@ -2,7 +2,7 @@ import { useQuery } from "@apollo/client/react";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  GET_HOTEL_QUERY,
+  GET_HOTEL_DETAIL_QUERY,
   GET_HOTEL_REVIEWS_QUERY,
   GET_ROOMS_BY_HOTEL_QUERY,
 } from "@/graphql/hotel.gql";
@@ -160,7 +160,7 @@ export const useHotelDetailPageData = ({
     loading: hotelLoading,
     error: hotelError,
     refetch: refetchHotel,
-  } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_QUERY, {
+  } = useQuery<GetHotelQueryData, GetHotelQueryVars>(GET_HOTEL_DETAIL_QUERY, {
     skip: !hotelId,
     variables: hotelQueryVariables,
     fetchPolicy: "network-only",
@@ -348,20 +348,34 @@ export const useHotelDetailPageData = ({
   }, [reviewTotalPages]);
 
   const fromPrice = useMemo(() => {
+    if (typeof hotel?.startingPrice === "number" && hotel.startingPrice > 0) {
+      return hotel.startingPrice;
+    }
     const prices = rooms
       .map((room) => room.basePrice)
       .filter((price): price is number => typeof price === "number");
     return prices.length > 0 ? Math.min(...prices) : 0;
-  }, [rooms]);
+  }, [hotel?.startingPrice, rooms]);
 
   const heroImage = useMemo(
     () => hotel?.hotelImages[0] ?? rooms[0]?.roomImages[0] ?? "",
     [hotel?.hotelImages, rooms],
   );
+  const heroVideo = useMemo(
+    () => hotel?.hotelVideos?.[0] ?? "",
+    [hotel?.hotelVideos],
+  );
   const secondaryImage = useMemo(
     () => hotel?.hotelImages[1] ?? heroImage,
     [heroImage, hotel?.hotelImages],
   );
+  const galleryVideos = useMemo(() => {
+    if (!hotel?.hotelVideos?.length) {
+      return [];
+    }
+
+    return hotel.hotelVideos.slice(1);
+  }, [hotel?.hotelVideos]);
 
   const galleryImages = useMemo(() => {
     if (!hotel) {
@@ -458,7 +472,9 @@ export const useHotelDetailPageData = ({
     hotelLikeCount,
     hotelLiked,
     heroImage,
+    heroVideo,
     secondaryImage,
+    galleryVideos,
     galleryImages,
     discoverySectionRef,
     locationSectionRef,

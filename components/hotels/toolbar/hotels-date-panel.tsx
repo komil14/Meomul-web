@@ -57,11 +57,11 @@ export function HotelsDatePanel({
         </div>
       </div>
 
-      <div className="mx-auto w-full rounded-[1.2rem] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,1))] p-2">
+      <div className="hover-lift mx-auto w-full rounded-[1.35rem] border border-slate-200 bg-white p-2 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]">
         <div className="grid gap-2 md:grid-cols-2">{months}</div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-[1.35rem] border border-slate-200 bg-slate-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="hover-lift flex flex-col gap-3 rounded-[1.35rem] border border-slate-200 bg-white px-4 py-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)] sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotels_date_selected_stay")}</p>
           <p className="mt-1 text-sm font-medium text-slate-900">{selectedSummary}</p>
@@ -80,7 +80,7 @@ export function HotelsDatePanel({
             type="button"
             onClick={onApplyDates}
             disabled={hasDateRangeError}
-            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t("hotels_date_apply")}
           </button>

@@ -150,6 +150,102 @@ export const GET_HOTEL_QUERY = gql`
   }
 `;
 
+export const GET_HOTEL_DETAIL_QUERY = gql`
+  query GetHotelDetail($hotelId: String!) {
+    getHotel(hotelId: $hotelId) {
+      _id
+      memberId
+      hotelTitle
+      hotelLocation
+      hotelType
+      hotelStatus
+      verificationStatus
+      badgeLevel
+      hotelRating
+      hotelRank
+      hotelReviews
+      hotelViews
+      hotelLikes
+      warningStrikes
+      startingPrice
+      safeStayCertified
+      ageRestriction
+      maxPetWeight
+      hotelImages
+      hotelVideos
+      hotelDesc
+      starRating
+      checkInTime
+      checkOutTime
+      suitableFor
+      petsAllowed
+      smokingAllowed
+      cancellationPolicy
+      flexibleCheckIn {
+        enabled
+        times
+        fee
+      }
+      flexibleCheckOut {
+        enabled
+        times
+        fee
+      }
+      detailedLocation {
+        address
+        city
+        district
+        dong
+        nearestSubway
+        subwayExit
+        subwayLines
+        walkingDistance
+        coordinates {
+          lat
+          lng
+        }
+      }
+      amenities {
+        wifi
+        wifiSpeed
+        parking
+        parkingFee
+        breakfast
+        breakfastIncluded
+        roomService
+        gym
+        pool
+        workspace
+        familyRoom
+        kidsFriendly
+        wheelchairAccessible
+        elevator
+        accessibleBathroom
+        visualAlarms
+        serviceAnimalsAllowed
+        airportShuttle
+        evCharging
+        playground
+        meetingRoom
+        privateBath
+        restaurant
+        spa
+        coupleRoom
+        romanticView
+      }
+      safetyFeatures {
+        fireSafety
+        securityCameras
+        frontDesk24h
+        roomSafe
+        femaleOnlyFloors
+        wellLitParking
+      }
+      createdAt
+    }
+  }
+`;
+
 export const GET_ROOM_QUERY = gql`
   query GetRoom($roomId: String!) {
     getRoom(roomId: $roomId) {
@@ -190,14 +286,19 @@ export const GET_ROOMS_BY_HOTEL_QUERY = gql`
     getRoomsByHotel(hotelId: $hotelId, input: $input) {
       list {
         _id
+        hotelId
         roomName
         roomType
+        roomNumber
+        roomDesc
         viewType
         maxOccupancy
         bedType
         bedCount
+        weekendSurcharge
         roomSize
         roomAmenities
+        totalRooms
         basePrice
         availableRooms
         currentViewers
@@ -210,6 +311,8 @@ export const GET_ROOMS_BY_HOTEL_QUERY = gql`
         }
         roomImages
         roomStatus
+        createdAt
+        updatedAt
       }
       metaCounter {
         total
@@ -374,10 +477,12 @@ export const GET_HOTEL_REVIEWS_QUERY = gql`
         reviewText
         guestPhotos
         helpfulCount
+        reviewViews
         reviewStatus
         verifiedStay
         stayDate
         createdAt
+        updatedAt
         hotelResponse {
           responseText
           respondedBy
@@ -759,6 +864,20 @@ export const CANCEL_PRICE_LOCK_MUTATION = gql`
 export const GET_HOTEL_CARD_QUERY = gql`
   query GetHotelCard($hotelId: String!) {
     getHotel(hotelId: $hotelId) {
+      _id
+      hotelTitle
+      hotelLocation
+      hotelType
+      hotelRating
+      hotelLikes
+      hotelImages
+    }
+  }
+`;
+
+export const GET_HOTEL_CARDS_QUERY = gql`
+  query GetHotelCards($hotelIds: [String!]!) {
+    getHotelsByIds(hotelIds: $hotelIds) {
       _id
       hotelTitle
       hotelLocation

@@ -15,6 +15,7 @@ import {
   getSessionMember,
   getTokenRemainingMs,
   isAuthenticated,
+  silentRefreshAccessToken,
 } from "@/lib/auth/session";
 import { infoAlert } from "@/lib/ui/alerts";
 import type { NextPageWithAuth } from "@/types/page";
@@ -177,7 +178,13 @@ function AppInner({ Component, pageProps }: AppPropsWithAuth) {
       const remaining = getTokenRemainingMs();
 
       if (remaining === 0) {
-        // Token already expired — clear and redirect
+        const refreshed = await silentRefreshAccessToken();
+        if (refreshed) {
+          warned = false;
+          return;
+        }
+
+        // Token already expired and refresh failed — clear and redirect
         clearAuthSession();
         await infoAlert(
           t("shell_session_expired_title"),
@@ -188,6 +195,14 @@ function AppInner({ Component, pageProps }: AppPropsWithAuth) {
         );
         warned = false;
         return;
+      }
+
+      if (remaining <= WARNING_THRESHOLD) {
+        const refreshed = await silentRefreshAccessToken();
+        if (refreshed) {
+          warned = false;
+          return;
+        }
       }
 
       if (remaining <= WARNING_THRESHOLD && !warned) {

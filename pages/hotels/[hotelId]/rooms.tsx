@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
+import { ImageCollectionField } from "@/components/uploads/image-collection-field";
 import {
   GET_HOTEL_QUERY,
   GET_AGENT_ROOMS_QUERY,
@@ -123,7 +124,7 @@ interface RoomFormState {
   viewType: ViewType;
   totalRooms: number;
   roomAmenities: string[];
-  roomImages: string;
+  roomImages: string[];
 }
 
 const DEFAULT_FORM: RoomFormState = {
@@ -140,7 +141,7 @@ const DEFAULT_FORM: RoomFormState = {
   viewType: "NONE",
   totalRooms: 1,
   roomAmenities: [],
-  roomImages: "",
+  roomImages: [],
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -194,7 +195,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           viewType: "전망 유형",
           roomAmenities: "객실 편의시설",
           roomImages: "객실 이미지",
-          imageUrlsPerLine: "이미지 URL (한 줄에 하나)",
+          imageUrlsPerLine: "객실 사진을 업로드해 주세요",
           cancel: "취소",
           saving: "저장 중...",
           saveChanges: "변경 사항 저장",
@@ -245,7 +246,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
             viewType: "Тип вида",
             roomAmenities: "Удобства номера",
             roomImages: "Изображения номера",
-            imageUrlsPerLine: "URL изображений (по одному в строке)",
+            imageUrlsPerLine: "Загрузите фотографии номера",
             cancel: "Отмена",
             saving: "Сохранение...",
             saveChanges: "Сохранить",
@@ -297,7 +298,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               viewType: "Ko'rinish turi",
               roomAmenities: "Xona qulayliklari",
               roomImages: "Xona rasmlari",
-              imageUrlsPerLine: "Rasm URL lari (har qatorda bitta)",
+              imageUrlsPerLine: "Xona rasmlarini yuklang",
               cancel: "Bekor qilish",
               saving: "Saqlanmoqda...",
               saveChanges: "Saqlash",
@@ -347,7 +348,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
               viewType: "View Type",
               roomAmenities: "Room Amenities",
               roomImages: "Room Images",
-              imageUrlsPerLine: "Image URLs (one per line)",
+              imageUrlsPerLine: "Upload room photos",
               cancel: "Cancel",
               saving: "Saving...",
               saveChanges: "Save Changes",
@@ -440,7 +441,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
       viewType: room.viewType,
       totalRooms: room.totalRooms,
       roomAmenities: [...room.roomAmenities],
-      roomImages: room.roomImages.join("\n"),
+      roomImages: [...room.roomImages],
     });
     setPanelMode("edit");
   };
@@ -473,10 +474,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
       return;
     }
 
-    const imagesList = form.roomImages
-      .split("\n")
-      .map((u) => u.trim())
-      .filter(Boolean);
+    const imagesList = form.roomImages.filter(Boolean);
 
     try {
       if (panelMode === "create") {
@@ -1166,20 +1164,15 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                 <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
                   {copy.roomImages}
                 </h3>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                    {copy.imageUrlsPerLine}
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={form.roomImages}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, roomImages: e.target.value }))
-                    }
-                    placeholder={"https://...\nhttps://..."}
-                    className="w-full resize-none rounded-xl border border-slate-200 px-4 py-2.5 font-mono text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
-                  />
-                </div>
+                <ImageCollectionField
+                  target="room"
+                  value={form.roomImages}
+                  onChange={(next) =>
+                    setForm((previous) => ({ ...previous, roomImages: next }))
+                  }
+                  maxFiles={8}
+                  description={copy.imageUrlsPerLine}
+                />
               </section>
             </div>
 

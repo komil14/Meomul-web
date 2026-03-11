@@ -2,6 +2,8 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { ImageCollectionField } from "@/components/uploads/image-collection-field";
+import { VideoCollectionField } from "@/components/uploads/video-collection-field";
 import { GET_HOTEL_QUERY, UPDATE_HOTEL_MUTATION } from "@/graphql/hotel.gql";
 import { useI18n } from "@/lib/i18n/provider";
 import {
@@ -119,8 +121,10 @@ const EditHotelPage: NextPageWithAuth = () => {
           starLabel: "성",
           checkInTime: "체크인 시간",
           checkOutTime: "체크아웃 시간",
-          imageUrls: "이미지 URL",
-          onePerLine: "한 줄에 하나",
+          imageUrls: "호텔 이미지",
+          onePerLine: "대표 이미지와 갤러리를 업로드하세요",
+          hotelVideos: "호텔 영상",
+          hotelVideosHelp: "분위기와 객실 동선을 보여줄 영상을 업로드하거나 YouTube 링크를 추가하세요",
           suitableFor: "적합한 여행 목적",
           facilities: "시설",
           safetyFeatures: "안전 기능",
@@ -157,8 +161,10 @@ const EditHotelPage: NextPageWithAuth = () => {
             starLabel: "звезды",
             checkInTime: "Время заезда",
             checkOutTime: "Время выезда",
-            imageUrls: "URL изображений",
-            onePerLine: "по одному в строке",
+            imageUrls: "Изображения отеля",
+            onePerLine: "Загрузите обложку и галерею отеля",
+            hotelVideos: "Видео отеля",
+            hotelVideosHelp: "Загрузите видео, показывающие атмосферу и планировку, или добавьте ссылку YouTube",
             suitableFor: "Подходит для",
             facilities: "Удобства",
             safetyFeatures: "Безопасность",
@@ -195,8 +201,10 @@ const EditHotelPage: NextPageWithAuth = () => {
               starLabel: "yulduz",
               checkInTime: "Check-in vaqti",
               checkOutTime: "Check-out vaqti",
-              imageUrls: "Rasm URL lari",
-              onePerLine: "har qatorda bitta",
+              imageUrls: "Mehmonxona rasmlari",
+              onePerLine: "Muqova va galereya rasmlarini yuklang",
+              hotelVideos: "Mehmonxona videolari",
+              hotelVideosHelp: "Muhit va joylashuvni ko'rsatadigan videolarni yuklang yoki YouTube havolasini qo'shing",
               suitableFor: "Mos keladi",
               facilities: "Qulayliklar",
               safetyFeatures: "Xavfsizlik",
@@ -232,8 +240,10 @@ const EditHotelPage: NextPageWithAuth = () => {
               starLabel: "Star",
               checkInTime: "Check-in Time",
               checkOutTime: "Check-out Time",
-              imageUrls: "Image URLs",
-              onePerLine: "one per line",
+              imageUrls: "Hotel Images",
+              onePerLine: "Upload your cover image and gallery",
+              hotelVideos: "Hotel Videos",
+              hotelVideosHelp: "Upload videos that show the atmosphere and layout, or add a YouTube link",
               suitableFor: "Suitable For",
               facilities: "Facilities",
               safetyFeatures: "Safety Features",
@@ -264,7 +274,8 @@ const EditHotelPage: NextPageWithAuth = () => {
   const [starRating, setStarRating] = useState(3);
   const [checkInTime, setCheckInTime] = useState("15:00");
   const [checkOutTime, setCheckOutTime] = useState("11:00");
-  const [hotelImages, setHotelImages] = useState("");
+  const [hotelImages, setHotelImages] = useState<string[]>([]);
+  const [hotelVideos, setHotelVideos] = useState<string[]>([]);
   const [suitableFor, setSuitableFor] = useState<string[]>([]);
 
   // Amenities tab
@@ -303,7 +314,8 @@ const EditHotelPage: NextPageWithAuth = () => {
     setStarRating(hotel.starRating ?? 3);
     setCheckInTime(hotel.checkInTime ?? "15:00");
     setCheckOutTime(hotel.checkOutTime ?? "11:00");
-    setHotelImages((hotel.hotelImages ?? []).join("\n"));
+    setHotelImages(hotel.hotelImages ?? []);
+    setHotelVideos(hotel.hotelVideos ?? []);
     setSuitableFor(hotel.suitableFor ?? []);
     if (hotel.amenities) {
       setAmenities({
@@ -374,10 +386,8 @@ const EditHotelPage: NextPageWithAuth = () => {
     if (!hotelId) return;
     setSaving(true);
     try {
-      const imageUrls = hotelImages
-        .split("\n")
-        .map((u) => u.trim())
-        .filter(Boolean);
+      const imageUrls = hotelImages.filter(Boolean);
+      const videoUrls = hotelVideos.filter(Boolean);
       const input: AgentHotelUpdateInput = {
         _id: hotelId,
         hotelTitle: hotelTitle.trim() || undefined,
@@ -394,6 +404,7 @@ const EditHotelPage: NextPageWithAuth = () => {
         safetyFeatures,
         suitableFor,
         hotelImages: imageUrls,
+        hotelVideos: videoUrls,
         flexibleCheckIn: {
           enabled: flexCheckInEnabled,
           fee: flexCheckInFee ? Number(flexCheckInFee) : 0,
@@ -440,6 +451,7 @@ const EditHotelPage: NextPageWithAuth = () => {
         ? "bg-slate-900 text-white"
         : "text-slate-600 hover:bg-slate-100"
     }`;
+  const hasHotelId = Boolean(hotelId);
 
   return (
     <main className="max-w-2xl space-y-6">
@@ -558,20 +570,21 @@ const EditHotelPage: NextPageWithAuth = () => {
             </label>
           </div>
 
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {copy.imageUrls}{" "}
-              <span className="font-normal normal-case text-slate-400">
-                ({copy.onePerLine})
-              </span>
-            </span>
-            <textarea
-              value={hotelImages}
-              onChange={(e) => setHotelImages(e.target.value)}
-              rows={3}
-              className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-xs outline-none transition focus:border-slate-400"
-            />
-          </label>
+          <ImageCollectionField
+            target="hotel"
+            value={hotelImages}
+            onChange={setHotelImages}
+            maxFiles={12}
+            title={copy.imageUrls}
+            description={copy.onePerLine}
+          />
+          <VideoCollectionField
+            value={hotelVideos}
+            onChange={setHotelVideos}
+            maxFiles={4}
+            title={copy.hotelVideos}
+            description={copy.hotelVideosHelp}
+          />
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -886,18 +899,22 @@ const EditHotelPage: NextPageWithAuth = () => {
       {/* Bottom save (mobile convenience) */}
       <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex gap-4">
-          <Link
-            href={`/hotels/${hotelId}/rooms`}
-            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-          >
-            {copy.manageRooms} →
-          </Link>
-          <Link
-            href={`/hotels/${hotelId}/reviews`}
-            className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
-          >
-            {copy.reviews} →
-          </Link>
+          {hasHotelId ? (
+            <>
+              <Link
+                href={`/hotels/${hotelId}/rooms`}
+                className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+              >
+                {copy.manageRooms} →
+              </Link>
+              <Link
+                href={`/hotels/${hotelId}/reviews`}
+                className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+              >
+                {copy.reviews} →
+              </Link>
+            </>
+          ) : null}
         </div>
         <button
           type="button"

@@ -1,6 +1,8 @@
 import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
 import { useState } from "react";
+import { ImageCollectionField } from "@/components/uploads/image-collection-field";
+import { VideoCollectionField } from "@/components/uploads/video-collection-field";
 import { CREATE_HOTEL_MUTATION } from "@/graphql/hotel.gql";
 import { useI18n } from "@/lib/i18n/provider";
 import {
@@ -126,8 +128,10 @@ const CreateHotelPage: NextPageWithAuth = () => {
           starRating: "성급",
           checkInTime: "체크인 시간",
           checkOutTime: "체크아웃 시간",
-          imageUrls: "이미지 URL",
-          onePerLineOptional: "한 줄에 하나, 선택",
+          imageUrls: "호텔 이미지",
+          onePerLineOptional: "대표 이미지와 갤러리를 업로드해 주세요",
+          hotelVideos: "호텔 영상",
+          hotelVideosHelp: "대표 영상을 업로드하거나 YouTube 링크를 추가해 분위기와 공간감을 보여주세요",
           nextPolicies: "다음: 정책 →",
           cancellationPolicy: "취소 정책",
           petsAllowed: "반려동물 허용",
@@ -179,8 +183,10 @@ const CreateHotelPage: NextPageWithAuth = () => {
             starRating: "Звездность",
             checkInTime: "Время заезда",
             checkOutTime: "Время выезда",
-            imageUrls: "URL изображений",
-            onePerLineOptional: "по одному в строке, необязательно",
+            imageUrls: "Изображения отеля",
+            onePerLineOptional: "Загрузите обложку и галерею отеля",
+            hotelVideos: "Видео отеля",
+            hotelVideosHelp: "Загрузите ключевые видео или добавьте ссылку YouTube, чтобы показать атмосферу и пространство",
             nextPolicies: "Далее: политики →",
             cancellationPolicy: "Политика отмены",
             petsAllowed: "Можно с животными",
@@ -231,8 +237,10 @@ const CreateHotelPage: NextPageWithAuth = () => {
               starRating: "Yulduz darajasi",
               checkInTime: "Check-in vaqti",
               checkOutTime: "Check-out vaqti",
-              imageUrls: "Rasm URL lari",
-              onePerLineOptional: "har qatorda bitta, ixtiyoriy",
+              imageUrls: "Mehmonxona rasmlari",
+              onePerLineOptional: "Muqova va galereya rasmlarini yuklang",
+              hotelVideos: "Mehmonxona videolari",
+              hotelVideosHelp: "Muhit va maydonni ko'rsatish uchun asosiy videolarni yuklang yoki YouTube havolasini qo'shing",
               nextPolicies: "Keyingi: qoidalar →",
               cancellationPolicy: "Bekor qilish siyosati",
               petsAllowed: "Uy hayvonlari mumkin",
@@ -282,8 +290,10 @@ const CreateHotelPage: NextPageWithAuth = () => {
               starRating: "Star Rating",
               checkInTime: "Check-in Time",
               checkOutTime: "Check-out Time",
-              imageUrls: "Image URLs",
-              onePerLineOptional: "one per line, optional",
+              imageUrls: "Hotel Images",
+              onePerLineOptional: "Upload your cover image and gallery",
+              hotelVideos: "Hotel Videos",
+              hotelVideosHelp: "Upload key videos or add a YouTube link to show the atmosphere and space",
               nextPolicies: "Next: Policies →",
               cancellationPolicy: "Cancellation Policy",
               petsAllowed: "Pets Allowed",
@@ -371,7 +381,8 @@ const CreateHotelPage: NextPageWithAuth = () => {
   const [starRating, setStarRating] = useState(3);
   const [checkInTime, setCheckInTime] = useState("15:00");
   const [checkOutTime, setCheckOutTime] = useState("11:00");
-  const [hotelImages, setHotelImages] = useState("");
+  const [hotelImages, setHotelImages] = useState<string[]>([]);
+  const [hotelVideos, setHotelVideos] = useState<string[]>([]);
 
   // Policies
   const [cancellationPolicy, setCancellationPolicy] =
@@ -417,10 +428,8 @@ const CreateHotelPage: NextPageWithAuth = () => {
       return;
     }
 
-    const imageUrls = hotelImages
-      .split("\n")
-      .map((u) => u.trim())
-      .filter(Boolean);
+    const imageUrls = hotelImages.filter(Boolean);
+    const videoUrls = hotelVideos.filter(Boolean);
 
     try {
       const result = await createHotel({
@@ -444,6 +453,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
             amenities:
               Object.keys(amenities).length > 0 ? amenities : undefined,
             hotelImages: imageUrls.length > 0 ? imageUrls : undefined,
+            hotelVideos: videoUrls.length > 0 ? videoUrls : undefined,
           },
         },
       });
@@ -745,21 +755,21 @@ const CreateHotelPage: NextPageWithAuth = () => {
                   </label>
                 </div>
 
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {copy.imageUrls}{" "}
-                    <span className="font-normal normal-case text-slate-400">
-                      ({copy.onePerLineOptional})
-                    </span>
-                  </span>
-                  <textarea
-                    value={hotelImages}
-                    onChange={(e) => setHotelImages(e.target.value)}
-                    rows={3}
-                    className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-xs outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                    placeholder="https://example.com/photo1.jpg&#10;https://example.com/photo2.jpg"
-                  />
-                </label>
+                <ImageCollectionField
+                  target="hotel"
+                  value={hotelImages}
+                  onChange={setHotelImages}
+                  maxFiles={12}
+                  title={copy.imageUrls}
+                  description={copy.onePerLineOptional}
+                />
+                <VideoCollectionField
+                  value={hotelVideos}
+                  onChange={setHotelVideos}
+                  maxFiles={4}
+                  title={copy.hotelVideos}
+                  description={copy.hotelVideosHelp}
+                />
 
                 <div className="flex justify-end">
                   <button

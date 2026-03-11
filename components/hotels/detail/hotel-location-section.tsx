@@ -19,12 +19,12 @@ export const HotelLocationSection = memo(function HotelLocationSection({
 }: HotelLocationSectionProps) {
   const { t } = useI18n();
   return (
-    <section id="location" ref={mapSectionRef} className="space-y-5">
-      <header className="space-y-2">
+    <section id="location" ref={mapSectionRef} className="space-y-4 sm:space-y-5">
+      <header className="space-y-2 font-[family-name:var(--font-airbnb)]">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
           {t("hotel_location_eyebrow")}
         </p>
-        <h2 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
+        <h2 className="text-[1.75rem] font-semibold text-slate-900 sm:text-3xl">
           {t("hotel_location_title")}
         </h2>
         <p className="text-sm text-slate-600">
@@ -33,7 +33,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 hover-lift">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 hover-lift font-[family-name:var(--font-airbnb)]">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
             {t("hotel_features_address")}
           </p>
@@ -88,7 +88,7 @@ export const HotelLocationSection = memo(function HotelLocationSection({
           </a>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover-lift">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover-lift font-[family-name:var(--font-airbnb)]">
           <div className="overflow-hidden rounded-xl border border-slate-200">
             {shouldLoadMap ? (
               <iframe
@@ -96,11 +96,11 @@ export const HotelLocationSection = memo(function HotelLocationSection({
                 src={mapEmbedUrl}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                className="h-80 w-full lg:h-[22.5rem]"
+                className="h-64 w-full sm:h-80 lg:h-[22.5rem]"
                 allowFullScreen
               />
             ) : (
-              <div className="flex h-80 items-center justify-center bg-slate-100 text-sm text-slate-600 lg:h-[22.5rem]">
+              <div className="flex h-64 items-center justify-center bg-slate-100 text-sm text-slate-600 sm:h-80 lg:h-[22.5rem]">
                 {t("hotel_location_loading_map")}
               </div>
             )}

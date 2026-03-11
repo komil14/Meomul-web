@@ -6,12 +6,11 @@
   --surface: #ffffff;
   --muted: #64748b;
   --brand: #0f766e;
-  --font-manrope:
-    "Avenir Next", "Segoe UI Variable", "Segoe UI", "Noto Sans", "Apple SD Gothic Neo",
-    "Malgun Gothic", "Helvetica Neue", sans-serif;
-  --font-space-grotesk:
-    "Avenir Next Condensed", "Trebuchet MS", "Segoe UI Variable Display",
-    "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-airbnbish:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-manrope: var(--font-airbnbish);
+  --font-space-grotesk: var(--font-airbnbish);
   --meomul-motion-distance: 14px;
   --meomul-motion-duration: 680ms;
   --meomul-pop-duration: 520ms;
@@ -30,6 +29,7 @@
   --color-brand: var(--brand);
   --font-sans: var(--font-manrope);
   --font-display: var(--font-space-grotesk);
+  --font-airbnb: var(--font-airbnbish);
 }
 
 * {

@@ -33,7 +33,7 @@ export const HotelListSection = memo(function HotelListSection({
   const isHorizontal = layout === "horizontal";
 
   return (
-    <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 hover-lift">
+    <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 hover-lift font-[family-name:var(--font-airbnb)]">
       <header className="space-y-1">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t("hotel_list_eyebrow")}</p>
         <h2 className="text-2xl font-semibold text-slate-900">{title}</h2>

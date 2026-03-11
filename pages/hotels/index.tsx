@@ -10,13 +10,17 @@ import { HotelCard } from "@/components/hotels/hotel-card";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { GET_HOTELS_QUERY } from "@/graphql/hotel.gql";
+import { GET_MY_LIKES_QUERY } from "@/graphql/like.gql";
 import { createApolloClient } from "@/lib/apollo/client";
+import { getAccessToken, getSessionMember } from "@/lib/auth/session";
 import { HOTELS_PAGE_SIZE } from "@/lib/hotels/hotels-filter-config";
 import { useHotelsPageQueryState } from "@/lib/hooks/use-hotels-page-query-state";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatHotelsPaginationSummaryLocalized } from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
+  GetMyLikesQueryData,
+  GetMyLikesQueryVars,
   GetHotelsQueryData,
   GetHotelsQueryVars,
   HotelListItem,
@@ -49,6 +53,7 @@ export default function HotelsPage({
     useState<HotelListItem[]>(initialHotels);
   const [displayedTotal, setDisplayedTotal] = useState(initialTotal);
   const queryState = useHotelsPageQueryState();
+  const hasSession = Boolean(getSessionMember() || getAccessToken());
 
   useEffect(() => {
     setIsHydrated(true);
@@ -72,6 +77,18 @@ export default function HotelsPage({
     notifyOnNetworkStatusChange: true,
   });
 
+  const { data: myLikesData } = useQuery<
+    GetMyLikesQueryData,
+    GetMyLikesQueryVars
+  >(GET_MY_LIKES_QUERY, {
+    skip: !hasSession,
+    variables: {
+      likeGroup: "HOTEL",
+    },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+  });
+
   useEffect(() => {
     setDisplayedHotels(initialHotels);
     setDisplayedTotal(initialTotal);
@@ -87,6 +104,10 @@ export default function HotelsPage({
 
   const hotels = displayedHotels;
   const total = displayedTotal;
+  const likedHotelIds = useMemo(
+    () => new Set((myLikesData?.getMyLikes ?? []).map((like) => like.likeRefId)),
+    [myLikesData],
+  );
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(total / HOTELS_PAGE_SIZE)),
     [total],
@@ -152,7 +173,7 @@ export default function HotelsPage({
         appliedTotal={total}
       />
 
-      <main className={`space-y-5 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
+      <main className={`space-y-3 sm:space-y-4 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
         <ScrollReveal delayMs={20} className="relative z-50">
           <HotelsDiscoveryToolbar
             state={queryState}
@@ -173,7 +194,7 @@ export default function HotelsPage({
         {showInitialSkeleton ? <HotelsResultsSkeleton /> : null}
 
         {showEmptyState ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+          <div className="hover-lift rounded-[1.8rem] border border-slate-200 bg-white px-5 py-7 text-sm text-slate-600 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.28)]">
             {t("hotels_empty")}
           </div>
         ) : null}
@@ -183,20 +204,21 @@ export default function HotelsPage({
             <ScrollReveal delayMs={40}>
               <div className="relative">
                 <div
-                  className={`grid gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 transition duration-200 ${showResultsOverlay ? "opacity-75" : "opacity-100"}`}
+                  className={`grid gap-x-4 gap-y-5 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 transition duration-200 ${showResultsOverlay ? "opacity-75" : "opacity-100"}`}
                 >
                   {hotels.map((hotel, index) => (
                     <HotelCard
                       key={hotel._id}
                       hotel={hotel}
+                      isInitiallyLiked={likedHotelIds.has(hotel._id)}
                       imagePriority={index < 3}
-                      imageSizes="(max-width: 479px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 24rem"
+                      imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1439px) 33vw, 25vw"
                     />
                   ))}
                 </div>
 
                 {showResultsOverlay ? (
-                  <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-3xl bg-white/24 p-3 backdrop-blur-[1.5px]">
+                  <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-[1.8rem] bg-white/28 p-3 backdrop-blur-[1.5px]">
                     <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-sm">
                       <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-sky-500" />
                       {t("hotels_refreshing")}
@@ -207,7 +229,7 @@ export default function HotelsPage({
             </ScrollReveal>
 
             <ScrollReveal delayMs={50}>
-              <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4 sm:py-3">
+              <div className="hover-lift rounded-[1.8rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.28)] sm:px-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-slate-600">
                     {formatHotelsPaginationSummaryLocalized(
@@ -227,7 +249,7 @@ export default function HotelsPage({
                           false,
                         );
                       }}
-                      className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-1.5"
+                      className="min-h-11 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-2"
                     >
                       {t("hotels_prev")}
                     </button>
@@ -244,7 +266,7 @@ export default function HotelsPage({
                           false,
                         );
                       }}
-                      className="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-1.5"
+                      className="min-h-11 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-2"
                     >
                       {t("hotels_next")}
                     </button>

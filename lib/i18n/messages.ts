@@ -423,9 +423,15 @@ export interface MessageDictionary {
   hotel_detail_safe_stay: string;
   hotel_detail_saving: string;
   hotel_detail_saved: string;
+  hotel_detail_save: string;
   hotel_detail_save_hotel: string;
+  hotel_detail_share: string;
+  hotel_detail_show_all_photos: string;
   hotel_detail_login_to_save: string;
   hotel_detail_see_rooms: string;
+  hotel_detail_reserve: string;
+  hotel_detail_no_charge_yet: string;
+  hotel_detail_booking_from_price: string;
   hotel_detail_guest_reviews_cta: string;
   hotel_detail_guest_rating: string;
   hotel_detail_out_of_five: string;
@@ -439,6 +445,14 @@ export interface MessageDictionary {
   hotel_detail_checkout: string;
   hotel_detail_explore_location: string;
   hotel_detail_transit_pending: string;
+  hotel_detail_hero_motion: string;
+  hotel_detail_hero_signature_angle: string;
+  hotel_detail_hero_arrival: string;
+  hotel_detail_hero_neighborhood: string;
+  hotel_detail_hero_first_impression: string;
+  hotel_detail_hero_profile: string;
+  hotel_detail_hero_editorial: string;
+  hotel_detail_hero_arrival_story: string;
   hotel_location_eyebrow: string;
   hotel_location_title: string;
   hotel_location_desc: string;
@@ -453,8 +467,39 @@ export interface MessageDictionary {
   hotel_detail_preparing_recommendations: string;
   hotel_detail_discovery_loading: string;
   hotel_detail_chat_initial_message: string;
+  hotel_detail_share_copied_title: string;
+  hotel_detail_share_copied_body: string;
+  hotel_detail_share_failed_title: string;
+  hotel_detail_share_failed_body: string;
   hotel_reviews_pagination: string;
   hotel_reviews_guest_fallback: string;
+  hotel_airbnb_intro_title: string;
+  hotel_airbnb_hosted_by: string;
+  hotel_airbnb_professional_host: string;
+  hotel_airbnb_highlight_area: string;
+  hotel_airbnb_highlight_transit: string;
+  hotel_airbnb_highlight_parking: string;
+  hotel_airbnb_highlight_parking_desc: string;
+  hotel_airbnb_highlight_safety: string;
+  hotel_airbnb_highlight_safety_desc: string;
+  hotel_airbnb_translated_note: string;
+  hotel_airbnb_show_original: string;
+  hotel_airbnb_show_more: string;
+  hotel_airbnb_show_less: string;
+  hotel_airbnb_private_bath: string;
+  hotel_airbnb_bathroom: string;
+  hotel_airbnb_amenities: string;
+  hotel_airbnb_show_all_amenities: string;
+  hotel_things_title: string;
+  hotel_things_cancellation: string;
+  hotel_things_house_rules: string;
+  hotel_things_checkin_line: string;
+  hotel_things_safety: string;
+  hotel_things_security_cameras: string;
+  hotel_things_fire_safety: string;
+  hotel_things_frontdesk: string;
+  hotel_things_room_safe: string;
+  hotel_things_safety_standard: string;
   room_detail_no_image: string;
   room_detail_deal_price: string;
   room_detail_nightly_rate: string;
@@ -1184,16 +1229,22 @@ const en: MessageDictionary = {
   hotel_detail_unavailable: "Hotel is not available right now.",
   hotel_detail_page_description_fallback:
     "Book {{hotel}} in {{location}}. {{type}} rated {{rating}}/5. Best prices on Meomul.",
-  hotel_detail_badge_verified: "Verified property",
+  hotel_detail_badge_verified: "Verified hotel",
   hotel_detail_badge_pending: "Verification pending",
   hotel_detail_badge_host: "{{level}} host",
   hotel_detail_star_class: "{{count}} star class",
   hotel_detail_safe_stay: "Safe stay certified",
   hotel_detail_saving: "Saving...",
   hotel_detail_saved: "Saved",
+  hotel_detail_save: "Save",
   hotel_detail_save_hotel: "Save hotel",
+  hotel_detail_share: "Share",
+  hotel_detail_show_all_photos: "Show all photos",
   hotel_detail_login_to_save: "Login to save",
   hotel_detail_see_rooms: "See rooms",
+  hotel_detail_reserve: "Reserve",
+  hotel_detail_no_charge_yet: "You won't be charged yet",
+  hotel_detail_booking_from_price: "Lowest available nightly rate",
   hotel_detail_guest_reviews_cta: "Guest reviews",
   hotel_detail_guest_rating: "Guest rating",
   hotel_detail_out_of_five: "out of 5.0",
@@ -1207,6 +1258,14 @@ const en: MessageDictionary = {
   hotel_detail_checkout: "Check-out",
   hotel_detail_explore_location: "Explore location",
   hotel_detail_transit_pending: "Transit info pending",
+  hotel_detail_hero_motion: "Motion",
+  hotel_detail_hero_signature_angle: "Signature angle",
+  hotel_detail_hero_arrival: "Arrival",
+  hotel_detail_hero_neighborhood: "Neighborhood",
+  hotel_detail_hero_first_impression: "First impression",
+  hotel_detail_hero_profile: "Resort profile",
+  hotel_detail_hero_editorial: "Editorial cut",
+  hotel_detail_hero_arrival_story: "Arrival story",
   hotel_location_eyebrow: "Location",
   hotel_location_title: "Where you will stay",
   hotel_location_desc:
@@ -1223,8 +1282,39 @@ const en: MessageDictionary = {
   hotel_detail_discovery_loading: "Discovery sections will load as you scroll.",
   hotel_detail_chat_initial_message:
     "Hi, I'm interested in {{hotelTitle}}. Could you help me?",
+  hotel_detail_share_copied_title: "Link copied",
+  hotel_detail_share_copied_body: "Hotel link copied to clipboard.",
+  hotel_detail_share_failed_title: "Share failed",
+  hotel_detail_share_failed_body: "Could not share this hotel right now.",
   hotel_reviews_pagination: "Page {{page}} / {{totalPages}} · Total reviews: {{total}}",
   hotel_reviews_guest_fallback: "Guest {{suffix}}",
+  hotel_airbnb_intro_title: "Hotel in {{district}}, South Korea",
+  hotel_airbnb_hosted_by: "Hosted by {{host}}",
+  hotel_airbnb_professional_host: "Professional host",
+  hotel_airbnb_highlight_area: "Beautiful area",
+  hotel_airbnb_highlight_transit: "Easy transit access",
+  hotel_airbnb_highlight_parking: "Parking on premises",
+  hotel_airbnb_highlight_parking_desc: "Convenient parking is available for guests staying here.",
+  hotel_airbnb_highlight_safety: "Safe and professionally managed",
+  hotel_airbnb_highlight_safety_desc: "Verified hotel details and added guest safety features.",
+  hotel_airbnb_translated_note: "Some hotel details may be automatically translated.",
+  hotel_airbnb_show_original: "Show original",
+  hotel_airbnb_show_more: "Show more",
+  hotel_airbnb_show_less: "Show less",
+  hotel_airbnb_private_bath: "Private bathroom",
+  hotel_airbnb_bathroom: "Bathroom",
+  hotel_airbnb_amenities: "Amenities",
+  hotel_airbnb_show_all_amenities: "Show all {{count}} amenities",
+  hotel_things_title: "Things to know",
+  hotel_things_cancellation: "Cancellation policy",
+  hotel_things_house_rules: "House rules",
+  hotel_things_checkin_line: "Check-in: {{checkIn}} · Checkout: {{checkOut}}",
+  hotel_things_safety: "Safety & hotel",
+  hotel_things_security_cameras: "Security cameras in hotel",
+  hotel_things_fire_safety: "Fire safety features available",
+  hotel_things_frontdesk: "24-hour front desk support",
+  hotel_things_room_safe: "In-room safe available",
+  hotel_things_safety_standard: "Standard safety features are provided throughout the hotel.",
   room_detail_no_image: "No room image",
   room_detail_deal_price: "Deal Price",
   room_detail_nightly_rate: "Nightly Rate",
@@ -1338,7 +1428,7 @@ const en: MessageDictionary = {
   hotel_gallery_next: "Next",
   hotel_gallery_empty: "No gallery images available yet.",
   hotel_features_eyebrow: "Stay Profile",
-  hotel_features_title: "Everything this property offers",
+  hotel_features_title: "Everything this hotel offers",
   hotel_features_desc:
     "Pricing, rules, and amenity strengths from live backend data.",
   hotel_features_starting_rate: "Starting rate",
@@ -1363,7 +1453,7 @@ const en: MessageDictionary = {
   hotel_features_matched_count: "{{count}} matched",
   hotel_features_more: "+{{count}} more",
   hotel_features_amenities_empty:
-    "Amenities are still being updated for this property.",
+    "Amenities are still being updated for this hotel.",
   hotel_rooms_eyebrow: "Stay Selection",
   hotel_rooms_title: "Choose your room",
   hotel_rooms_desc:

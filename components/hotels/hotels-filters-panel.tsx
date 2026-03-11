@@ -14,7 +14,7 @@ export function HotelsFiltersPanel({ state }: HotelsFiltersPanelProps) {
   const { t } = useI18n();
   return (
     <section className="space-y-4">
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+      <section className="hover-lift rounded-[1.8rem] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.24)] sm:p-5">
         <header className="mb-4 space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t("hotels_panel_trip_basics")}</p>
           <p className="text-sm text-slate-600">{t("hotels_panel_trip_basics_desc")}</p>
@@ -22,7 +22,7 @@ export function HotelsFiltersPanel({ state }: HotelsFiltersPanelProps) {
         <HotelsBasicFilters state={state} />
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+      <section className="hover-lift rounded-[1.8rem] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.24)] sm:p-5">
         <header className="mb-4 space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t("hotels_panel_booking_options")}</p>
           <p className="text-sm text-slate-600">{t("hotels_panel_booking_options_desc")}</p>
@@ -30,7 +30,7 @@ export function HotelsFiltersPanel({ state }: HotelsFiltersPanelProps) {
         <HotelsFlagsFilters state={state} />
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+      <section className="hover-lift rounded-[1.8rem] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.24)] sm:p-5">
         <header className="mb-4 space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t("hotels_panel_stay_type")}</p>
           <p className="text-sm text-slate-600">{t("hotels_panel_stay_type_desc")}</p>
@@ -38,7 +38,7 @@ export function HotelsFiltersPanel({ state }: HotelsFiltersPanelProps) {
         <HotelsCategoriesFilters state={state} />
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+      <section className="hover-lift rounded-[1.8rem] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.24)] sm:p-5">
         <header className="mb-4 space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t("hotels_panel_amenities")}</p>
           <p className="text-sm text-slate-600">{t("hotels_panel_amenities_desc")}</p>

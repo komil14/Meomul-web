@@ -592,15 +592,15 @@ export function HotelsDiscoveryToolbar({
                 onClick={() => {
                   setOpenPanel(null);
                 }}
-              className="absolute inset-0 bg-slate-900/35"
+              className="absolute inset-0 bg-slate-900/28"
             />
 
             <div
               ref={mobilePanelRef}
-              className="relative flex h-[min(86vh,46rem)] w-full flex-col rounded-t-[2rem] border border-slate-200 bg-white shadow-[0_-24px_64px_-32px_rgba(15,23,42,0.45)]"
+              className="relative flex h-[min(82vh,42rem)] w-full flex-col overflow-hidden rounded-t-[2rem] border border-slate-200 bg-[#fcfcfb] shadow-[0_-24px_64px_-32px_rgba(15,23,42,0.38)] overscroll-contain"
             >
-              <div className="border-b border-slate-200 px-4 pb-3 pt-3">
-                <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-200" />
+              <div className="border-b border-slate-200 bg-[#fcfcfb] px-4 pb-3 pt-3">
+                <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-200" />
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -615,7 +615,7 @@ export function HotelsDiscoveryToolbar({
                     onClick={() => {
                       setOpenPanel(null);
                     }}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
                     aria-label={t("hotels_drawer_close")}
                   >
                     <svg
@@ -631,7 +631,7 @@ export function HotelsDiscoveryToolbar({
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 {panelContent}
               </div>
             </div>
@@ -642,7 +642,7 @@ export function HotelsDiscoveryToolbar({
 
   return (
     <div ref={containerRef} className="relative z-30">
-      <div className="rounded-[2rem] border border-slate-200/90 bg-white/95 p-3 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.45)]">
+      <div className="hover-lift rounded-[1.6rem] border border-slate-200/90 bg-white/95 p-2.5 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.45)] sm:rounded-[2rem] sm:p-3">
         <HotelsSearchRow
           draftText={draftText}
           sortBy={state.sortBy}
@@ -675,7 +675,7 @@ export function HotelsDiscoveryToolbar({
 
           <div
             ref={desktopPanelRef}
-            className={`absolute top-full z-40 mt-3 hidden rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-[0_20px_44px_-34px_rgba(15,23,42,0.35)] md:block md:p-5 ${desktopPanelClass}`}
+            className={`hover-lift absolute top-full z-40 mt-3 hidden rounded-[1.75rem] border border-slate-200 bg-[#fcfcfb] p-4 shadow-[0_24px_48px_-34px_rgba(15,23,42,0.3)] md:block md:p-5 ${desktopPanelClass}`}
           >
             {panelContent}
           </div>

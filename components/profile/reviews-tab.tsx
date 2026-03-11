@@ -9,7 +9,7 @@ import {
   GET_MY_REVIEWS_QUERY,
   UPDATE_REVIEW_MUTATION,
 } from "@/graphql/review.gql";
-import { GET_HOTEL_CARD_QUERY } from "@/graphql/hotel.gql";
+import { GET_HOTEL_CARDS_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { useI18n } from "@/lib/i18n/provider";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/lib/profile/profile-i18n";
 import { confirmDanger } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { ExternalLink, Pencil, Star, Trash2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -54,48 +55,33 @@ interface GetMyReviewsData {
 }
 
 interface GetHotelCardData {
-  getHotel: {
+  getHotelsByIds: {
     _id: string;
     hotelTitle: string;
     hotelLocation: string;
     hotelType: string;
     hotelImages: string[];
-  };
+  }[];
 }
 
 // ─── HotelMiniHeader ──────────────────────────────────────────────────────────
 
-function HotelMiniHeader({ hotelId }: { hotelId: string }) {
-  const { data, loading } = useQuery<GetHotelCardData>(GET_HOTEL_CARD_QUERY, {
-    variables: { hotelId },
-    fetchPolicy: "cache-first",
-  });
-
-  const hotel = data?.getHotel;
-
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2.5">
-        <div className="h-10 w-14 flex-shrink-0 animate-pulse rounded-lg bg-slate-100" />
-        <div className="space-y-1.5">
-          <div className="h-3.5 w-36 animate-pulse rounded-full bg-slate-100" />
-          <div className="h-2.5 w-24 animate-pulse rounded-full bg-slate-50" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!hotel) return null;
+function HotelMiniHeader({
+  hotel,
+}: {
+  hotel: GetHotelCardData["getHotelsByIds"][number];
+}) {
+  const coverImage = resolveMediaUrl(hotel.hotelImages[0]);
 
   return (
     <Link
-      href={`/hotels/${hotelId}`}
+      href={`/hotels/${hotel._id}`}
       className="group flex items-center gap-2.5 rounded-xl transition hover:bg-slate-50 -mx-1 px-1 py-0.5"
     >
       <div className="relative h-10 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
-        {hotel.hotelImages[0] && (
+        {coverImage && (
           <Image
-            src={hotel.hotelImages[0]}
+            src={coverImage}
             alt={hotel.hotelTitle}
             fill
             sizes="56px"
@@ -340,11 +326,28 @@ export function ReviewsTab() {
     });
 
   const [deleteReviewMutation] = useMutation(DELETE_REVIEW_MUTATION);
-
   const firstPageReviews = data?.getMyReviews.list ?? [];
   const reviews = [...firstPageReviews, ...extraReviews];
   const total = data?.getMyReviews.metaCounter.total ?? 0;
   const hasMore = reviews.length < total;
+  const reviewHotelIds = useMemo(
+    () => Array.from(new Set(reviews.map((review) => review.hotelId))),
+    [reviews],
+  );
+  const { data: hotelsData, loading: hotelsLoading } = useQuery<GetHotelCardData>(
+    GET_HOTEL_CARDS_QUERY,
+    {
+      skip: reviewHotelIds.length === 0,
+      variables: { hotelIds: reviewHotelIds },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-first",
+    },
+  );
+  const hotelMap = useMemo(
+    () =>
+      new Map((hotelsData?.getHotelsByIds ?? []).map((hotel) => [hotel._id, hotel])),
+    [hotelsData],
+  );
 
   const resetPagination = () => {
     setExtraReviews([]);
@@ -413,7 +416,7 @@ export function ReviewsTab() {
         {error && <ErrorNotice message={getErrorMessage(error)} />}
 
         {/* Loading skeleton */}
-        {loading && reviews.length === 0 && (
+        {(loading || hotelsLoading) && reviews.length === 0 && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div
@@ -453,7 +456,9 @@ export function ReviewsTab() {
                 key={review._id}
                 className="rounded-2xl border border-slate-100 bg-white p-5 space-y-4"
               >
-                <HotelMiniHeader hotelId={review.hotelId} />
+                {hotelMap.get(review.hotelId) ? (
+                  <HotelMiniHeader hotel={hotelMap.get(review.hotelId)!} />
+                ) : null}
                 <div className="border-t border-slate-50" />
 
                 <div className="flex items-start justify-between gap-3">

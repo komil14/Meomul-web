@@ -267,10 +267,10 @@ function AdminDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+        className={`flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition ${
           anyActive
-            ? "bg-slate-900 text-white"
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            ? "bg-slate-950 text-white"
+            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
         }`}
         aria-expanded={open}
         aria-haspopup="true"
@@ -284,7 +284,7 @@ function AdminDropdown({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-10 z-50 w-52 overflow-hidden rounded-2xl border border-slate-100 bg-white py-1 shadow-2xl">
+        <div className="absolute left-0 top-12 z-50 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-[0_24px_48px_-28px_rgba(15,23,42,0.32)]">
           {ADMIN_PAGES.map((page) => {
             const Icon = page.icon;
             const active = isActive(pathname, page.href);
@@ -634,6 +634,8 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const toast = useToast();
   const { t } = useI18n();
   const isHomeRoute = router.pathname === "/";
+  const isHotelDetailRoute = router.pathname === "/hotels/[hotelId]";
+  const isHotelsRoute = router.pathname === "/hotels";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
 
@@ -903,29 +905,29 @@ export function SiteFrame({ children }: PropsWithChildren) {
   };
 
   const sharedHeader = (
-    <header className="sticky top-0 z-90 w-screen border-b border-slate-200/70 bg-white/85 backdrop-blur-md">
-      <div className="mx-auto flex h-[57px] w-full max-w-6xl items-center justify-between px-3 sm:px-6">
+    <header className="sticky top-0 z-90 w-screen border-b border-slate-200 bg-white">
+      <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between px-3 sm:px-6">
         {/* Logo */}
         <Link
           href="/"
-          className="font-display text-lg font-semibold tracking-[0.12em] text-slate-800"
+          className="text-lg font-semibold tracking-[0.24em] text-slate-900"
         >
           MEOMUL
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden items-center gap-1 md:flex">
-          <nav className="flex items-center gap-0.5">
+        <div className="hidden items-center gap-2 md:flex">
+          <nav className="flex items-center gap-1">
             {navLinks.map((link) => {
               const active = isActive(router.pathname, link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                     active
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      ? "bg-slate-950 text-white"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                 >
                   {t(link.labelKey)}
@@ -939,7 +941,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
           </nav>
 
           {/* Divider + right-side actions */}
-          <div className="ml-2 flex items-center gap-2 border-l border-slate-200 pl-2">
+          <div className="ml-3 flex items-center gap-2 border-l border-slate-200 pl-4">
             <LanguageSwitcher />
             {member ? (
               <>
@@ -955,13 +957,13 @@ export function SiteFrame({ children }: PropsWithChildren) {
               <>
                 <Link
                   href="/auth/login"
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-white"
+                  className="rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-900 transition hover:border-slate-400"
                 >
                   {t("action_log_in")}
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                  className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-black"
                 >
                   {t("action_sign_up")}
                 </Link>
@@ -971,13 +973,13 @@ export function SiteFrame({ children }: PropsWithChildren) {
         </div>
 
         {/* Mobile: notification bell + chat icon + hamburger */}
-        <div className="flex items-center gap-1.5 md:hidden">
+        <div className="flex items-center gap-2 md:hidden">
           {notifBellButton}
           {chatIconButton}
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-50"
             aria-label="Toggle menu"
             aria-expanded={isMobileMenuOpen}
           >
@@ -1152,6 +1154,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
       {sharedHeader}
       {isHomeRoute ? (
         children
+      ) : isHotelDetailRoute ? (
+        <div className="w-full px-3 pb-8 pt-0 sm:px-6 sm:py-10">{children}</div>
+      ) : isHotelsRoute ? (
+        <div className="w-full px-3 pb-8 pt-2 sm:px-6 sm:pb-10 sm:pt-5">{children}</div>
       ) : (
         <div className="mx-auto w-full max-w-6xl px-3 py-8 sm:px-6 sm:py-10">
           {children}

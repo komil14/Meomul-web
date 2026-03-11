@@ -8,17 +8,19 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { Loader2, MessageSquare } from "lucide-react";
 import { getSessionMember } from "@/lib/auth/session";
 import { createApolloClient } from "@/lib/apollo/client";
+import { HotelAmenitiesSection } from "@/components/hotels/detail/hotel-amenities-section";
 import { HotelFeaturesSection } from "@/components/hotels/detail/hotel-features-section";
 import { HotelGallerySection } from "@/components/hotels/detail/hotel-gallery-section";
 import { HotelLocationSection } from "@/components/hotels/detail/hotel-location-section";
 import { HotelOverviewHero } from "@/components/hotels/detail/hotel-overview-hero";
 import { HotelReviewsSection } from "@/components/hotels/detail/hotel-reviews-section";
 import { HotelRoomsSection } from "@/components/hotels/detail/hotel-rooms-section";
+import { HotelThingsToKnowSection } from "@/components/hotels/detail/hotel-things-to-know-section";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_CHATS_QUERY, START_CHAT_MUTATION } from "@/graphql/chat.gql";
-import { GET_HOTEL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
+import { GET_HOTEL_DETAIL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { useHotelDetailPageData } from "@/lib/hooks/use-hotel-detail-page-data";
 import { useI18n } from "@/lib/i18n/provider";
 import { env } from "@/lib/config/env";
@@ -132,7 +134,9 @@ export default function HotelDetailPage({
     hotelLikeCount,
     hotelLiked,
     heroImage,
+    heroVideo,
     secondaryImage,
+    galleryVideos,
     galleryImages,
     discoverySectionRef,
     locationSectionRef,
@@ -174,7 +178,7 @@ export default function HotelDetailPage({
 
   if (!hotelId) {
     return (
-        <main className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+      <main className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
         {t("hotel_detail_loading_route")}
       </main>
     );
@@ -233,6 +237,25 @@ export default function HotelDetailPage({
   const ogImage = heroImage
     ? resolveMediaUrl(heroImage)
     : `${siteUrl}/og-default.png`;
+  const handleShareHotel = async (): Promise<void> => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: hotel.hotelTitle,
+          text: pageDescription,
+          url: pageUrl,
+        });
+        return;
+      }
+
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(pageUrl);
+        toast.success(`${t("hotel_detail_share_copied_title")} — ${t("hotel_detail_share_copied_body")}`);
+      }
+    } catch {
+      toast.error(`${t("hotel_detail_share_failed_title")} — ${t("hotel_detail_share_failed_body")}`);
+    }
+  };
 
   const hotelStructuredData = {
     "@context": "https://schema.org",
@@ -303,22 +326,8 @@ export default function HotelDetailPage({
       </Head>
 
       <main
-        className={`space-y-6 [scroll-behavior:smooth] ${HOTEL_DETAIL_MOTION_INTENSITY_CLASS}`}
+        className={`w-full space-y-7 sm:space-y-10 [scroll-behavior:smooth] ${HOTEL_DETAIL_MOTION_INTENSITY_CLASS}`}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href="/hotels"
-            className="text-sm text-slate-600 underline underline-offset-4"
-          >
-            {t("hotel_detail_back")}
-          </Link>
-          <div className="flex items-center gap-2">
-            <p className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
-              {getHotelLocationLabelLocalized(hotel.hotelLocation, t)} · {getHotelTypeLabel(hotel.hotelType, t)}
-            </p>
-          </div>
-        </div>
-
         {hotelErrorMessage ? <ErrorNotice message={hotelErrorMessage} /> : null}
         {hotelLikedErrorMessage ? (
           <ErrorNotice message={hotelLikedErrorMessage} />
@@ -331,6 +340,7 @@ export default function HotelDetailPage({
           <HotelOverviewHero
             hotel={hotel}
             heroImage={heroImage}
+            heroVideo={heroVideo}
             secondaryImage={secondaryImage}
             shortDescription={shortDescription}
             reviewCountText={reviewCountText}
@@ -341,73 +351,88 @@ export default function HotelDetailPage({
             canToggleLike={canUseLikeActions}
             togglingLike={togglingHotelLike}
             onToggleLike={handleToggleHotelLike}
+            onShare={handleShareHotel}
           />
         </ScrollReveal>
 
-        <div className="space-y-10">
-          <ScrollReveal delayMs={40}>
-            <HotelGallerySection images={galleryImages} />
-          </ScrollReveal>
+        <div className="space-y-7 sm:space-y-10">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 hover-lift">
+              <ScrollReveal delayMs={40}>
+                <HotelFeaturesSection hotel={hotel} />
+              </ScrollReveal>
+            </div>
 
-          <ScrollReveal delayMs={50}>
-            <HotelFeaturesSection
-              fromPrice={fromPrice}
-              cancellationPolicyText={cancellationPolicyText}
-              address={hotel.detailedLocation?.address ?? ""}
-              nearestSubway={hotel.detailedLocation?.nearestSubway ?? ""}
-              activeAmenities={activeAmenities}
-              checkInTime={hotel.checkInTime}
-              checkOutTime={hotel.checkOutTime}
-              flexibleCheckInEnabled={hotel.flexibleCheckIn?.enabled ?? false}
-              flexibleCheckOutEnabled={hotel.flexibleCheckOut?.enabled ?? false}
-              petsAllowed={hotel.petsAllowed}
-              smokingAllowed={hotel.smokingAllowed}
-            />
-          </ScrollReveal>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 hover-lift">
+              <ScrollReveal delayMs={45}>
+                <HotelAmenitiesSection hotel={hotel} />
+              </ScrollReveal>
+            </div>
 
-          <ScrollReveal delayMs={60}>
-            <HotelRoomsSection
-              rooms={rooms}
-              roomsLoading={roomsLoading}
-              roomsErrorMessage={roomsErrorMessage}
-              hotelId={hotelId}
-            />
-          </ScrollReveal>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 hover-lift">
+              <ScrollReveal delayMs={50}>
+                <HotelRoomsSection
+                  rooms={rooms}
+                  roomsLoading={roomsLoading}
+                  roomsErrorMessage={roomsErrorMessage}
+                  hotelId={hotelId}
+                />
+              </ScrollReveal>
+            </div>
 
-          <div ref={reviewsSectionRef}>
-            <ScrollReveal delayMs={70}>
-              <HotelReviewsSection
-                reviews={reviews}
-                reviewsLoading={reviewsLoading}
-                reviewsErrorMessage={reviewsErrorMessage}
-                reviewActionErrorMessage={reviewActionError}
-                reviewPage={reviewPage}
-                reviewTotalPages={reviewTotalPages}
-                reviewTotal={reviewTotal}
-                ratingsSummary={ratingsSummary}
-                onPrevPage={handlePrevReviewPage}
-                onNextPage={handleNextReviewPage}
-                canGoPrev={canGoPrev}
-                canGoNext={canGoNext}
-                canMarkHelpful={canUseLikeActions}
-                markingHelpfulReviewId={markingHelpfulReviewId}
-                helpfulCountOverrides={helpfulCountOverrides}
-                onMarkHelpful={handleMarkHelpful}
-              />
-            </ScrollReveal>
-          </div>
+            <div
+              ref={reviewsSectionRef}
+              className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 hover-lift"
+            >
+              <ScrollReveal delayMs={60}>
+                <HotelReviewsSection
+                  reviews={reviews}
+                  reviewsLoading={reviewsLoading}
+                  reviewsErrorMessage={reviewsErrorMessage}
+                  reviewActionErrorMessage={reviewActionError}
+                  reviewPage={reviewPage}
+                  reviewTotalPages={reviewTotalPages}
+                  reviewTotal={reviewTotal}
+                  ratingsSummary={ratingsSummary}
+                  onPrevPage={handlePrevReviewPage}
+                  onNextPage={handleNextReviewPage}
+                  canGoPrev={canGoPrev}
+                  canGoNext={canGoNext}
+                  canMarkHelpful={canUseLikeActions}
+                  markingHelpfulReviewId={markingHelpfulReviewId}
+                  helpfulCountOverrides={helpfulCountOverrides}
+                  onMarkHelpful={handleMarkHelpful}
+                />
+              </ScrollReveal>
+            </div>
 
-          <ScrollReveal delayMs={80}>
-            <HotelLocationSection
-              hotel={hotel}
-              mapSectionRef={locationSectionRef}
-              shouldLoadMap={shouldLoadMap}
-              mapEmbedUrl={mapEmbedUrl}
-              mapUrl={mapUrl}
-            />
-          </ScrollReveal>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 hover-lift">
+              <ScrollReveal delayMs={70}>
+                <HotelThingsToKnowSection
+                  hotel={hotel}
+                  cancellationPolicyText={cancellationPolicyText}
+                />
+              </ScrollReveal>
+            </div>
 
-          <section ref={discoverySectionRef} className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 hover-lift">
+              <ScrollReveal delayMs={80}>
+                <HotelGallerySection images={galleryImages} videos={galleryVideos} />
+              </ScrollReveal>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8 hover-lift">
+              <ScrollReveal delayMs={90}>
+                <HotelLocationSection
+                  hotel={hotel}
+                  mapSectionRef={locationSectionRef}
+                  shouldLoadMap={shouldLoadMap}
+                  mapEmbedUrl={mapEmbedUrl}
+                  mapUrl={mapUrl}
+                />
+              </ScrollReveal>
+            </div>
+
+            <section ref={discoverySectionRef} className="space-y-6">
             {shouldLoadDiscovery ? (
               <>
                 <ScrollReveal delayMs={40}>
@@ -481,7 +506,7 @@ export default function HotelDetailPage({
                 </div>
               </div>
             )}
-          </section>
+            </section>
         </div>
       </main>
 
@@ -558,7 +583,7 @@ export const getServerSideProps: GetServerSideProps<
 
   try {
     const hotelResult = await client.query<GetHotelQueryData, GetHotelQueryVars>({
-      query: GET_HOTEL_QUERY,
+      query: GET_HOTEL_DETAIL_QUERY,
       variables: { hotelId },
       fetchPolicy: "no-cache",
     });

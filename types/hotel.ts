@@ -129,6 +129,7 @@ export interface HotelDetailItem extends HotelListItem {
   hotelReviews: number;
   hotelViews: number;
   warningStrikes: number;
+  startingPrice: number;
   safeStayCertified: boolean;
   ageRestriction: number;
   maxPetWeight?: number | null;
@@ -240,14 +241,19 @@ export interface GetHotelsCountQueryVars {
 
 export interface RoomListItem {
   _id: string;
+  hotelId?: string;
   roomName: string;
   roomType: RoomType;
+  roomNumber?: string | null;
+  roomDesc?: string;
   viewType: ViewType;
   maxOccupancy?: number;
   bedType?: BedType;
   bedCount?: number;
+  weekendSurcharge?: number;
   roomSize?: number;
   roomAmenities?: string[];
+  totalRooms?: number;
   basePrice: number;
   availableRooms: number;
   currentViewers?: number;
@@ -260,6 +266,8 @@ export interface RoomListItem {
   } | null;
   roomImages: string[];
   roomStatus: RoomStatus;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RoomDetailItem extends RoomListItem {
@@ -685,6 +693,22 @@ export interface HasLikedQueryVars {
   likeGroup: LikeGroup;
 }
 
+export interface MyLikeListItem {
+  _id: string;
+  likeGroup: LikeGroup;
+  likeRefId: string;
+  memberId: string;
+  createdAt: string;
+}
+
+export interface GetMyLikesQueryData {
+  getMyLikes: MyLikeListItem[];
+}
+
+export interface GetMyLikesQueryVars {
+  likeGroup: LikeGroup;
+}
+
 export interface ToggleLikeMutationData {
   toggleLike: {
     liked: boolean;
@@ -883,6 +907,7 @@ export interface AgentHotelCreateInput {
   smokingAllowed?: boolean;
   amenities?: AmenitiesInput;
   hotelImages?: string[];
+  hotelVideos?: string[];
 }
 
 export interface AgentHotelUpdateInput {
@@ -900,6 +925,7 @@ export interface AgentHotelUpdateInput {
   safetyFeatures?: SafetyFeaturesInput;
   suitableFor?: string[];
   hotelImages?: string[];
+  hotelVideos?: string[];
   flexibleCheckIn?: { enabled: boolean; times?: string[]; fee?: number };
   flexibleCheckOut?: { enabled: boolean; times?: string[]; fee?: number };
 }

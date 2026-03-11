@@ -233,10 +233,10 @@ export function HotelsSearchRow({
   return (
     <div
       ref={containerRef}
-      className="relative z-20 rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.95),rgba(255,255,255,0.98))] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+      className="relative z-20 rounded-[1.5rem] border border-slate-200 bg-white p-1.5 sm:rounded-[1.75rem] sm:p-2"
     >
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <label className="flex-1 rounded-[1.3rem] bg-white px-4 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)]">
+        <label className="flex-1 rounded-[1.15rem] border border-slate-200 bg-white px-3.5 py-2.5 sm:rounded-[1.3rem] sm:px-4 sm:py-3">
           <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             {t("hotels_search_title")}
           </span>
@@ -246,7 +246,7 @@ export function HotelsSearchRow({
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             placeholder={t("hotels_search_placeholder")}
-            className="mt-1 w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
+            className="mt-1 w-full bg-transparent text-[13px] font-medium text-slate-900 outline-none placeholder:text-slate-400 sm:text-sm"
           />
         </label>
 
@@ -257,7 +257,7 @@ export function HotelsSearchRow({
               setShowDropdown(false);
               onSearch();
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-[1.3rem] bg-slate-900 px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 md:min-w-[9.5rem] md:px-5 md:py-4"
+            className="inline-flex items-center justify-center gap-2 rounded-[1.15rem] bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-black md:min-w-[9.5rem] md:rounded-[1.3rem] md:px-5 md:py-4"
           >
             <svg
               viewBox="0 0 24 24"
@@ -272,7 +272,7 @@ export function HotelsSearchRow({
             {t("hotels_search_button")}
           </button>
 
-          <label className="flex items-center gap-2 rounded-[1.3rem] bg-white px-3 py-3 text-sm text-slate-600 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)] md:min-w-[13rem] md:px-4">
+          <label className="flex items-center gap-2 rounded-[1.15rem] border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 md:min-w-[13rem] md:rounded-[1.3rem] md:px-4 md:py-3">
             <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 md:text-[11px]">
               {t("hotels_sort_label")}
             </span>
@@ -299,7 +299,7 @@ export function HotelsSearchRow({
           <div
             ref={dropdownRef}
             style={dropdownStyle}
-            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_48px_-24px_rgba(15,23,42,0.25)]"
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_48px_-28px_rgba(15,23,42,0.32)]"
           >
             {historyLoading && historyItems.length === 0 ? (
               <div className="px-4 py-5 text-center">
