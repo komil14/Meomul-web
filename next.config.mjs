@@ -1,5 +1,3 @@
-import type { NextConfig } from "next";
-
 const backendGraphqlUrl =
   process.env.NEXT_PUBLIC_GRAPHQL_URL ?? "http://localhost:3001/graphql";
 
@@ -16,11 +14,16 @@ const resolveApiRemotePattern = () => {
       return null;
     }
 
-    return {
-      protocol: parsed.protocol.replace(":", "") as "http" | "https",
+    const pattern = {
+      protocol: parsed.protocol.replace(":", ""),
       hostname: parsed.hostname,
-      ...(parsed.port ? { port: parsed.port } : {}),
     };
+
+    if (parsed.port) {
+      pattern.port = parsed.port;
+    }
+
+    return pattern;
   } catch {
     return null;
   }
@@ -28,10 +31,9 @@ const resolveApiRemotePattern = () => {
 
 const apiRemotePattern = resolveApiRemotePattern();
 
-const buildCsp = (): string =>
+const buildCsp = () =>
   [
     "default-src 'self'",
-    // 'unsafe-eval' required in dev mode for Next.js webpack source maps
     `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdn.prod.website-files.com https://d3e54v103j8qbb.cloudfront.net https://ajax.googleapis.com`,
     "style-src 'self' 'unsafe-inline' https://cdn.prod.website-files.com",
     "font-src 'self' data:",
@@ -45,19 +47,17 @@ const buildCsp = (): string =>
     "upgrade-insecure-requests",
   ].join("; ");
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
   i18n: {
     locales: ["en", "ko", "ru", "uz"],
     defaultLocale: "en",
     localeDetection: false,
   },
-
-  // Tree-shake barrel exports for large icon/UI libraries
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
-
   async rewrites() {
     return [
       {
@@ -86,7 +86,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-
   async headers() {
     return [
       {
@@ -129,7 +128,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24,
@@ -158,11 +156,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
-      // Allow API server for uploaded images (localhost for dev, production domain for prod)
       ...(process.env.NODE_ENV === "development"
         ? [
             {
-              protocol: "http" as const,
+              protocol: "http",
               hostname: "localhost",
             },
           ]
