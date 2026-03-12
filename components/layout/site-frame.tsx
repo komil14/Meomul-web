@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PropsWithChildren } from "react";
 import { ChatDrawer } from "@/components/chat/chat-drawer";
+import { AppLogo } from "@/components/brand/app-logo";
 import { Footer } from "@/components/layout/footer";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { PriceLockFab } from "@/components/layout/price-lock-fab";
@@ -914,12 +915,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
     <header className="sticky top-0 z-90 w-screen border-b border-slate-200 bg-white">
       <div className="flex h-[72px] w-full items-center justify-between px-3 sm:px-6">
         {/* Logo */}
-        <Link
-          href="/"
-          className="text-lg font-semibold tracking-[0.24em] text-slate-900"
-        >
-          MEOMUL
-        </Link>
+        <AppLogo href="/" compact />
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-2 md:flex">

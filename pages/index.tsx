@@ -441,6 +441,7 @@ export default function HomePage({
     ? t("home_meta_title_signed_in")
     : t("home_meta_title");
   const metaDescription = t("home_meta_desc");
+  const ogImageUrl = `${canonicalBaseUrl}/og-default.png`;
   const homepageStructuredData = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -466,9 +467,11 @@ export default function HomePage({
         <meta property="og:description" content={metaDescription} />
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:site_name" content="Meomul" />
+        <meta property="og:image" content={ogImageUrl} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={metaTitle} />
         <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={ogImageUrl} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageStructuredData) }}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Instagram, Linkedin, Twitter } from "lucide-react";
+import { AppLogo } from "@/components/brand/app-logo";
 import { useI18n } from "@/lib/i18n/provider";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 
@@ -67,9 +68,7 @@ export function Footer() {
         <div className="grid grid-cols-2 gap-10 lg:grid-cols-4">
           {/* Brand column — spans full width on mobile */}
           <div className="col-span-2 lg:col-span-1">
-            <span className="text-white font-bold tracking-[0.18em] uppercase text-sm">
-              MEOMUL
-            </span>
+            <AppLogo href="/" inverted />
             <p className="mt-3 text-sm text-slate-400 leading-relaxed max-w-xs">
               {t("footer_brand_copy")}
             </p>
