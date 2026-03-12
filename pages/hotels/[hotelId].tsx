@@ -236,6 +236,7 @@ export default function HotelDetailPage({
   const ogImage = heroImage
     ? resolveMediaUrl(heroImage)
     : `${siteUrl}/og-default.png`;
+  const ogImageAlt = `${hotel.hotelTitle} in ${getHotelLocationLabelLocalized(hotel.hotelLocation, t)}`;
   const handleShareHotel = async (): Promise<void> => {
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
@@ -303,6 +304,7 @@ export default function HotelDetailPage({
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:image" content={ogImage} />
+        <meta property="og:image:alt" content={ogImageAlt} />
         <meta property="og:site_name" content="Meomul" />
         <meta property="og:locale" content="en_US" />
 
@@ -311,6 +313,7 @@ export default function HotelDetailPage({
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
         <meta name="twitter:image" content={ogImage} />
+        <meta name="twitter:image:alt" content={ogImageAlt} />
 
         {/* Structured Data */}
         <script

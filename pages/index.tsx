@@ -442,6 +442,7 @@ export default function HomePage({
     : t("home_meta_title");
   const metaDescription = t("home_meta_desc");
   const ogImageUrl = `${canonicalBaseUrl}/og-default.png`;
+  const ogImageAlt = "Meomul brand card for curated hotel stays across South Korea";
   const homepageStructuredData = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -468,10 +469,12 @@ export default function HomePage({
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:site_name" content="Meomul" />
         <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:image:alt" content={ogImageAlt} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={metaTitle} />
         <meta name="twitter:description" content={metaDescription} />
         <meta name="twitter:image" content={ogImageUrl} />
+        <meta name="twitter:image:alt" content={ogImageAlt} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageStructuredData) }}

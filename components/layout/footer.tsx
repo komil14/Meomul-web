@@ -84,14 +84,14 @@ export function Footer() {
                 <Twitter size={18} />
               </a>
               <a
-                href="#"
+                href="https://www.instagram.com/4komil"
                 aria-label="Instagram"
                 className="text-slate-500 hover:text-teal-400 transition-colors"
               >
                 <Instagram size={18} />
               </a>
               <a
-                href="#"
+                href="https://id.linkedin.com/in/4komil"
                 aria-label="LinkedIn"
                 className="text-slate-500 hover:text-teal-400 transition-colors"
               >
