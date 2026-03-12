@@ -3,6 +3,10 @@ import { env } from "@/lib/config/env";
 
 export type UploadImageTarget = "hotel" | "room";
 
+function getUploadBaseUrl(): string {
+  return typeof window !== "undefined" ? "/upload" : `${env.apiUrl}/upload`;
+}
+
 export async function uploadImageFile(
   file: File,
   target: UploadImageTarget,
@@ -16,7 +20,7 @@ export async function uploadImageFile(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${env.apiUrl}/upload/image?target=${target}`, {
+  const response = await fetch(`${getUploadBaseUrl()}/image?target=${target}`, {
     method: "POST",
     headers,
     body: formData,

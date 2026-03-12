@@ -31,6 +31,16 @@ const resolveApiBaseUrl = (): string => {
 const API_BASE_URL = resolveApiBaseUrl();
 export const PROFILE_FALLBACK_IMAGE = `${API_BASE_URL}/uploads/default-avatar.png`;
 
+const isLoopbackHostname = (hostname: string): boolean => {
+  const normalized = hostname.toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "0.0.0.0" ||
+    normalized === "::1"
+  );
+};
+
 const sanitizeValue = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -89,7 +99,15 @@ export const resolveMediaUrl = (value?: string | null): string => {
   }
 
   if (/^https?:\/\//i.test(sanitized)) {
-    return sanitized;
+    try {
+      const parsed = new URL(sanitized);
+      if (isLoopbackHostname(parsed.hostname)) {
+        return `${API_BASE_URL}${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+      return sanitized;
+    } catch {
+      return sanitized;
+    }
   }
 
   if (sanitized.includes("://")) {

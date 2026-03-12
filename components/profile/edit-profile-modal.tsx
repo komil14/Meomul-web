@@ -26,11 +26,6 @@ const ACCEPTED_IMAGE_TYPES = new Set([
   "image/gif",
 ]);
 
-const getApiBaseUrl = (): string => {
-  const gql = env.graphqlHttpUrl;
-  return gql.replace(/\/graphql\/?$/i, "");
-};
-
 const AVATAR_BG: Record<string, string> = {
   USER: "bg-sky-500",
   AGENT: "bg-violet-500",
@@ -126,13 +121,22 @@ export function EditProfileModal({
 
     setUploading(true);
     try {
-      const apiUrl = getApiBaseUrl();
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(`${apiUrl}/upload/image?target=member`, {
+      const headers = new Headers();
+      const token = getAccessToken();
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      const uploadUrl =
+        typeof window !== "undefined"
+          ? "/upload/image?target=member"
+          : `${env.apiUrl}/upload/image?target=member`;
+      const res = await fetch(uploadUrl, {
         method: "POST",
-        headers: { Authorization: `Bearer ${getAccessToken() ?? ""}` },
+        headers,
         body: formData,
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Upload failed");
       const json = (await res.json()) as { url: string };
