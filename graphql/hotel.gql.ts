@@ -35,9 +35,77 @@ export const GET_HOTEL_CONTEXT_QUERY = gql`
       hotelTitle
       hotelLocation
       hotelType
+      safeStayCertified
+      starRating
+      hotelImages
       checkInTime
       checkOutTime
+      suitableFor
+      petsAllowed
+      smokingAllowed
       cancellationPolicy
+      flexibleCheckIn {
+        enabled
+        times
+        fee
+      }
+      flexibleCheckOut {
+        enabled
+        times
+        fee
+      }
+      detailedLocation {
+        address
+        city
+        district
+        dong
+        nearestSubway
+        subwayExit
+        subwayLines
+        walkingDistance
+        coordinates {
+          lat
+          lng
+        }
+      }
+      amenities {
+        wifi
+        wifiSpeed
+        parking
+        parkingFee
+        breakfast
+        breakfastIncluded
+        roomService
+        gym
+        pool
+        workspace
+        familyRoom
+        kidsFriendly
+        wheelchairAccessible
+        elevator
+        accessibleBathroom
+        visualAlarms
+        serviceAnimalsAllowed
+        airportShuttle
+        evCharging
+        playground
+        meetingRoom
+        privateBath
+        restaurant
+        spa
+        coupleRoom
+        romanticView
+      }
+      safetyFeatures {
+        fireSafety
+        securityCameras
+        frontDesk24h
+        roomSafe
+        femaleOnlyFloors
+        wellLitParking
+      }
+      ageRestriction
+      maxPetWeight
     }
   }
 `;

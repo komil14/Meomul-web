@@ -427,6 +427,7 @@ export interface MessageDictionary {
   hotel_detail_save_hotel: string;
   hotel_detail_share: string;
   hotel_detail_show_all_photos: string;
+  hotel_detail_close_gallery: string;
   hotel_detail_login_to_save: string;
   hotel_detail_see_rooms: string;
   hotel_detail_reserve: string;
@@ -501,6 +502,8 @@ export interface MessageDictionary {
   hotel_things_room_safe: string;
   hotel_things_safety_standard: string;
   room_detail_no_image: string;
+  room_detail_show_gallery: string;
+  room_detail_close_gallery: string;
   room_detail_deal_price: string;
   room_detail_nightly_rate: string;
   room_detail_view_suffix: string;
@@ -515,6 +518,31 @@ export interface MessageDictionary {
   room_detail_amenities_desc: string;
   room_detail_ready_to_use: string;
   room_detail_no_amenities: string;
+  room_hotel_context_title: string;
+  room_hotel_context_desc: string;
+  room_hotel_context_location_title: string;
+  room_hotel_context_policy_title: string;
+  room_hotel_context_safety_title: string;
+  room_hotel_context_facilities_title: string;
+  room_hotel_context_best_for: string;
+  room_hotel_context_neighborhood: string;
+  room_hotel_context_transit: string;
+  room_hotel_context_exit: string;
+  room_hotel_context_checkin_support: string;
+  room_hotel_context_checkout_support: string;
+  room_hotel_context_no_extra_fee: string;
+  room_hotel_context_standard_only: string;
+  room_hotel_context_pet_policy: string;
+  room_hotel_context_pets_allowed: string;
+  room_hotel_context_pets_not_allowed: string;
+  room_hotel_context_pet_limit: string;
+  room_hotel_context_smoking_policy: string;
+  room_hotel_context_smoking_allowed: string;
+  room_hotel_context_smoking_not_allowed: string;
+  room_hotel_context_minimum_age: string;
+  room_hotel_context_age_value: string;
+  room_hotel_context_female_only: string;
+  room_hotel_context_lit_parking: string;
   room_booking_quick: string;
   room_booking_title: string;
   room_booking_steps: string;
@@ -660,6 +688,11 @@ export interface MessageDictionary {
   room_detail_loading_panel: string;
   room_detail_loading_room: string;
   room_detail_not_found: string;
+  price_lock_guest_title: string;
+  price_lock_guest_body: string;
+  price_lock_guest_benefit_hold: string;
+  price_lock_guest_benefit_timer: string;
+  price_lock_guest_benefit_booking: string;
   auth_login_title: string;
   auth_login_desc: string;
   auth_signup_title: string;
@@ -1240,6 +1273,7 @@ const en: MessageDictionary = {
   hotel_detail_save_hotel: "Save hotel",
   hotel_detail_share: "Share",
   hotel_detail_show_all_photos: "Show all photos",
+  hotel_detail_close_gallery: "Close gallery",
   hotel_detail_login_to_save: "Login to save",
   hotel_detail_see_rooms: "See rooms",
   hotel_detail_reserve: "Reserve",
@@ -1316,6 +1350,8 @@ const en: MessageDictionary = {
   hotel_things_room_safe: "In-room safe available",
   hotel_things_safety_standard: "Standard safety features are provided throughout the hotel.",
   room_detail_no_image: "No room image",
+  room_detail_show_gallery: "Show all photos",
+  room_detail_close_gallery: "Close gallery",
   room_detail_deal_price: "Deal Price",
   room_detail_nightly_rate: "Nightly Rate",
   room_detail_view_suffix: "{{view}} View",
@@ -1333,6 +1369,32 @@ const en: MessageDictionary = {
     "Clear icon-based amenity list so guests quickly understand what this room includes.",
   room_detail_ready_to_use: "Ready to use",
   room_detail_no_amenities: "No detailed amenities were provided for this room.",
+  room_hotel_context_title: "Hotel details for this room",
+  room_hotel_context_desc:
+    "Location, hotel-wide policies, safety signals, and shared facilities from the parent hotel listing.",
+  room_hotel_context_location_title: "Location and access",
+  room_hotel_context_policy_title: "Policies and access",
+  room_hotel_context_safety_title: "Safety signals",
+  room_hotel_context_facilities_title: "Hotel facilities",
+  room_hotel_context_best_for: "Best for",
+  room_hotel_context_neighborhood: "Neighborhood",
+  room_hotel_context_transit: "Transit",
+  room_hotel_context_exit: "Exit {{value}}",
+  room_hotel_context_checkin_support: "Check-in options",
+  room_hotel_context_checkout_support: "Check-out options",
+  room_hotel_context_no_extra_fee: "No extra fee",
+  room_hotel_context_standard_only: "Standard schedule only",
+  room_hotel_context_pet_policy: "Pet policy",
+  room_hotel_context_pets_allowed: "Pets allowed",
+  room_hotel_context_pets_not_allowed: "Pets not allowed",
+  room_hotel_context_pet_limit: "up to {{value}} kg",
+  room_hotel_context_smoking_policy: "Smoking policy",
+  room_hotel_context_smoking_allowed: "Smoking allowed",
+  room_hotel_context_smoking_not_allowed: "Non-smoking hotel",
+  room_hotel_context_minimum_age: "Minimum check-in age",
+  room_hotel_context_age_value: "{{value}} years old",
+  room_hotel_context_female_only: "Female-only floors available",
+  room_hotel_context_lit_parking: "Well-lit parking areas",
   room_booking_quick: "Quick Booking",
   room_booking_title: "Select Stay Dates",
   room_booking_steps:
@@ -1485,10 +1547,15 @@ const en: MessageDictionary = {
   review_label_service: "Service",
   review_label_amenities: "Amenities",
   review_label_value: "Value",
-  room_detail_back: "Back to hotels",
+  room_detail_back: "Back to hotel",
   room_detail_loading_panel: "Loading booking panel...",
   room_detail_loading_room: "Loading room...",
   room_detail_not_found: "Room not found.",
+  price_lock_guest_title: "Hold this rate before you book",
+  price_lock_guest_body: "Price lock saves this room's current rate for a limited time after you sign in, so you can finish your dates and booking details without losing the offer.",
+  price_lock_guest_benefit_hold: "Keep the current room price for a short protected window.",
+  price_lock_guest_benefit_timer: "See the live countdown until the locked rate expires.",
+  price_lock_guest_benefit_booking: "Use the locked rate when you continue to booking.",
   auth_login_title: "Login",
   auth_login_desc: "Use your member nick and password to continue.",
   auth_signup_title: "Create Account",
@@ -1871,7 +1938,10 @@ const ko: MessageDictionary = {
   hotel_reviews_total: "전체 리뷰: {{count}}개",
   hotel_reviews_previous: "이전",
   hotel_reviews_next: "다음",
+  hotel_detail_close_gallery: "갤러리 닫기",
   room_detail_no_image: "객실 이미지 없음",
+  room_detail_show_gallery: "사진 모두 보기",
+  room_detail_close_gallery: "갤러리 닫기",
   room_detail_deal_price: "특가 요금",
   room_detail_nightly_rate: "1박 요금",
   room_detail_view_suffix: "{{view}} 전망",
@@ -1886,10 +1956,40 @@ const ko: MessageDictionary = {
   room_detail_amenities_desc: "실제 투숙 중 자주 확인되는 객실 내 편의요소입니다.",
   room_detail_ready_to_use: "바로 이용 가능",
   room_detail_no_amenities: "이 객실에 대한 상세 편의시설 정보가 없습니다.",
-  room_detail_back: "호텔로 돌아가기",
+  room_hotel_context_title: "이 객실과 연결된 호텔 정보",
+  room_hotel_context_desc: "호텔 위치, 운영 정책, 안전 요소, 공용 시설 정보를 함께 확인하세요.",
+  room_hotel_context_location_title: "위치 및 접근",
+  room_hotel_context_policy_title: "정책 및 이용 정보",
+  room_hotel_context_safety_title: "안전 신호",
+  room_hotel_context_facilities_title: "호텔 공용 시설",
+  room_hotel_context_best_for: "추천 여행 유형",
+  room_hotel_context_neighborhood: "주변 지역",
+  room_hotel_context_transit: "교통",
+  room_hotel_context_exit: "{{value}}번 출구",
+  room_hotel_context_checkin_support: "체크인 옵션",
+  room_hotel_context_checkout_support: "체크아웃 옵션",
+  room_hotel_context_no_extra_fee: "추가 요금 없음",
+  room_hotel_context_standard_only: "기본 시간만 가능",
+  room_hotel_context_pet_policy: "반려동물 정책",
+  room_hotel_context_pets_allowed: "반려동물 동반 가능",
+  room_hotel_context_pets_not_allowed: "반려동물 불가",
+  room_hotel_context_pet_limit: "{{value}}kg 이하",
+  room_hotel_context_smoking_policy: "흡연 정책",
+  room_hotel_context_smoking_allowed: "흡연 가능",
+  room_hotel_context_smoking_not_allowed: "금연 호텔",
+  room_hotel_context_minimum_age: "최소 체크인 연령",
+  room_hotel_context_age_value: "{{value}}세 이상",
+  room_hotel_context_female_only: "여성 전용 층 운영",
+  room_hotel_context_lit_parking: "조명이 충분한 주차 구역",
+  room_detail_back: "이 호텔로 돌아가기",
   room_detail_loading_panel: "예약 패널 불러오는 중...",
   room_detail_loading_room: "객실을 불러오는 중...",
   room_detail_not_found: "객실을 찾을 수 없습니다.",
+  price_lock_guest_title: "예약 전 이 요금을 잠그세요",
+  price_lock_guest_body: "로그인 후 현재 객실 요금을 일정 시간 동안 고정해 두고 날짜와 예약 정보를 마무리하는 동안 가격을 지킬 수 있습니다.",
+  price_lock_guest_benefit_hold: "현재 객실 요금을 잠시 보호된 상태로 유지합니다.",
+  price_lock_guest_benefit_timer: "잠긴 요금이 만료되기 전까지 실시간 카운트다운을 확인할 수 있습니다.",
+  price_lock_guest_benefit_booking: "예약 단계로 넘어갈 때 잠긴 요금을 그대로 사용할 수 있습니다.",
   room_card_sold_out: "매진",
   room_card_left_high_demand: "{{count}}개 남음 - 수요 높음",
   room_card_left: "{{count}}개 남음",
@@ -2250,7 +2350,10 @@ const ru: MessageDictionary = {
   hotel_reviews_total: "Всего отзывов: {{count}}",
   hotel_reviews_previous: "Назад",
   hotel_reviews_next: "Далее",
+  hotel_detail_close_gallery: "Закрыть галерею",
   room_detail_no_image: "Нет изображения номера",
+  room_detail_show_gallery: "Показать все фото",
+  room_detail_close_gallery: "Закрыть галерею",
   room_detail_deal_price: "Цена по акции",
   room_detail_nightly_rate: "Цена за ночь",
   room_detail_view_suffix: "Вид: {{view}}",
@@ -2265,10 +2368,40 @@ const ru: MessageDictionary = {
   room_detail_amenities_desc: "Фактические удобства номера, которые важны во время проживания.",
   room_detail_ready_to_use: "Готово к использованию",
   room_detail_no_amenities: "Для этого номера пока не указаны подробные удобства.",
-  room_detail_back: "Назад к отелям",
+  room_hotel_context_title: "Информация об отеле для этого номера",
+  room_hotel_context_desc: "Локация, правила отеля, сигналы безопасности и общие удобства из карточки отеля.",
+  room_hotel_context_location_title: "Локация и доступ",
+  room_hotel_context_policy_title: "Правила и доступ",
+  room_hotel_context_safety_title: "Сигналы безопасности",
+  room_hotel_context_facilities_title: "Услуги отеля",
+  room_hotel_context_best_for: "Лучше всего подходит для",
+  room_hotel_context_neighborhood: "Район",
+  room_hotel_context_transit: "Транспорт",
+  room_hotel_context_exit: "Выход {{value}}",
+  room_hotel_context_checkin_support: "Варианты заезда",
+  room_hotel_context_checkout_support: "Варианты выезда",
+  room_hotel_context_no_extra_fee: "Без доплаты",
+  room_hotel_context_standard_only: "Только стандартное время",
+  room_hotel_context_pet_policy: "Политика по животным",
+  room_hotel_context_pets_allowed: "С животными можно",
+  room_hotel_context_pets_not_allowed: "Без животных",
+  room_hotel_context_pet_limit: "до {{value}} кг",
+  room_hotel_context_smoking_policy: "Политика курения",
+  room_hotel_context_smoking_allowed: "Курение разрешено",
+  room_hotel_context_smoking_not_allowed: "Отель для некурящих",
+  room_hotel_context_minimum_age: "Минимальный возраст заезда",
+  room_hotel_context_age_value: "от {{value}} лет",
+  room_hotel_context_female_only: "Женские этажи доступны",
+  room_hotel_context_lit_parking: "Хорошо освещенная парковка",
+  room_detail_back: "Назад к отелю",
   room_detail_loading_panel: "Загрузка панели бронирования...",
   room_detail_loading_room: "Загрузка номера...",
   room_detail_not_found: "Номер не найден.",
+  price_lock_guest_title: "Зафиксируйте этот тариф до бронирования",
+  price_lock_guest_body: "После входа вы сможете временно удержать текущую цену номера и спокойно завершить выбор дат и деталей бронирования, не потеряв предложение.",
+  price_lock_guest_benefit_hold: "Сохраните текущую цену номера на короткий защищенный период.",
+  price_lock_guest_benefit_timer: "Видите живой таймер до окончания фиксации цены.",
+  price_lock_guest_benefit_booking: "Используйте зафиксированную цену при переходе к бронированию.",
   room_card_sold_out: "Распродано",
   room_card_left_high_demand: "Осталось {{count}} - высокий спрос",
   room_card_left: "Осталось {{count}}",
@@ -2633,7 +2766,10 @@ const uz: MessageDictionary = {
   hotel_reviews_total: "Jami sharhlar: {{count}}",
   hotel_reviews_previous: "Oldingi",
   hotel_reviews_next: "Keyingi",
+  hotel_detail_close_gallery: "Galereyani yopish",
   room_detail_no_image: "Xona rasmi yo'q",
+  room_detail_show_gallery: "Barcha rasmlarni ko'rish",
+  room_detail_close_gallery: "Galereyani yopish",
   room_detail_deal_price: "Aksiya narxi",
   room_detail_nightly_rate: "Bir kecha narxi",
   room_detail_view_suffix: "{{view}} ko'rinish",
@@ -2648,10 +2784,40 @@ const uz: MessageDictionary = {
   room_detail_amenities_desc: "Turar joy davomida kerak bo'ladigan haqiqiy xona qulayliklari.",
   room_detail_ready_to_use: "Darhol foydalanishga tayyor",
   room_detail_no_amenities: "Bu xona uchun batafsil qulayliklar ko'rsatilmagan.",
-  room_detail_back: "Mehmonxonalarga qaytish",
+  room_hotel_context_title: "Bu xona uchun mehmonxona ma'lumotlari",
+  room_hotel_context_desc: "Asosiy mehmonxona ro'yxatidan joylashuv, siyosatlar, xavfsizlik signallari va umumiy qulayliklar.",
+  room_hotel_context_location_title: "Joylashuv va kirish",
+  room_hotel_context_policy_title: "Qoidalar va kirish",
+  room_hotel_context_safety_title: "Xavfsizlik signallari",
+  room_hotel_context_facilities_title: "Mehmonxona qulayliklari",
+  room_hotel_context_best_for: "Eng mos",
+  room_hotel_context_neighborhood: "Hudud",
+  room_hotel_context_transit: "Transport",
+  room_hotel_context_exit: "{{value}}-chi chiqish",
+  room_hotel_context_checkin_support: "Check-in variantlari",
+  room_hotel_context_checkout_support: "Check-out variantlari",
+  room_hotel_context_no_extra_fee: "Qo'shimcha to'lov yo'q",
+  room_hotel_context_standard_only: "Faqat standart jadval",
+  room_hotel_context_pet_policy: "Uy hayvonlari siyosati",
+  room_hotel_context_pets_allowed: "Uy hayvonlariga ruxsat bor",
+  room_hotel_context_pets_not_allowed: "Uy hayvonlariga ruxsat yo'q",
+  room_hotel_context_pet_limit: "{{value}} kg gacha",
+  room_hotel_context_smoking_policy: "Chekish siyosati",
+  room_hotel_context_smoking_allowed: "Chekish mumkin",
+  room_hotel_context_smoking_not_allowed: "Chekilmaydigan mehmonxona",
+  room_hotel_context_minimum_age: "Minimal check-in yoshi",
+  room_hotel_context_age_value: "{{value}} yoshdan",
+  room_hotel_context_female_only: "Ayollar uchun alohida qavatlar mavjud",
+  room_hotel_context_lit_parking: "Yaxshi yoritilgan avtoturargoh",
+  room_detail_back: "Mehmonxonaga qaytish",
   room_detail_loading_panel: "Bron paneli yuklanmoqda...",
   room_detail_loading_room: "Xona yuklanmoqda...",
   room_detail_not_found: "Xona topilmadi.",
+  price_lock_guest_title: "Bron qilishdan oldin shu narxni saqlab qo'ying",
+  price_lock_guest_body: "Tizimga kirgandan so'ng, hozirgi xona narxini qisqa muddatga ushlab turishingiz va sana hamda bron tafsilotlarini yo'qotmasdan yakunlashingiz mumkin.",
+  price_lock_guest_benefit_hold: "Hozirgi xona narxini qisqa himoyalangan vaqtga saqlab turadi.",
+  price_lock_guest_benefit_timer: "Qulflangan narx tugashigacha jonli taymerni ko'rasiz.",
+  price_lock_guest_benefit_booking: "Bron qilish bosqichiga o'tganda shu qulflangan narxdan foydalanasiz.",
   room_card_sold_out: "Tugagan",
   room_card_left_high_demand: "{{count}} ta qoldi - talab yuqori",
   room_card_left: "{{count}} ta qoldi",

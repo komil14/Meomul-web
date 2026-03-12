@@ -127,7 +127,6 @@ export default function HotelDetailPage({
     handleToggleHotelLike,
     handleMarkHelpful,
     fromPrice,
-    activeAmenities,
     shortDescription,
     reviewCountText,
     satisfactionText,

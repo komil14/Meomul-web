@@ -1,7 +1,8 @@
-import { memo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { ArrowLeft, Heart, Share, Star } from "lucide-react";
+import { ArrowLeft, Heart, Share, Star, X } from "lucide-react";
 import { getHotelLocationLabelLocalized, getHotelTypeLabel } from "@/lib/hotels/hotels-i18n";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -43,23 +44,86 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
 }: HotelOverviewHeroProps) {
   const router = useRouter();
   const { t } = useI18n();
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const locationLabel = getHotelLocationLabelLocalized(hotel.hotelLocation, t);
   const hotelTypeLabel = getHotelTypeLabel(hotel.hotelType, t);
   const starLabel =
     typeof hotel.starRating === "number" && hotel.starRating > 0
       ? `${hotel.starRating}-star`
       : null;
-  const primaryVideoValue = heroVideo || hotel.hotelVideos[0] || "";
-  const primaryYoutube = getYouTubeEmbedUrl(primaryVideoValue);
-  const primaryVideo = primaryYoutube ? "" : resolveMediaUrl(primaryVideoValue);
-  const primaryImage = resolveMediaUrl(heroImage || hotel.hotelImages[0] || "");
-  const primaryMedia: MediaItem | null = primaryYoutube
-    ? { kind: "youtube", src: primaryYoutube }
-    : primaryVideo
-      ? { kind: "video", src: primaryVideo }
-      : primaryImage
-        ? { kind: "image", src: primaryImage }
-        : null;
+  const primaryMedia = useMemo<MediaItem | null>(() => {
+    const primaryVideoValue = heroVideo || hotel.hotelVideos[0] || "";
+    const primaryYoutube = getYouTubeEmbedUrl(primaryVideoValue);
+    const primaryVideo = primaryYoutube ? "" : resolveMediaUrl(primaryVideoValue);
+    const primaryImage = resolveMediaUrl(heroImage || hotel.hotelImages[0] || "");
+
+    if (primaryYoutube) {
+      return { kind: "youtube", src: primaryYoutube };
+    }
+    if (primaryVideo) {
+      return { kind: "video", src: primaryVideo };
+    }
+    if (primaryImage) {
+      return { kind: "image", src: primaryImage };
+    }
+    return null;
+  }, [heroImage, heroVideo, hotel.hotelImages, hotel.hotelVideos]);
+  const collageImages = useMemo(() => {
+    const seen = new Set<string>();
+    const primaryImageSrc = primaryMedia?.kind === "image" ? primaryMedia.src : null;
+
+    return hotel.hotelImages
+      .map((image) => resolveMediaUrl(image))
+      .filter((image) => {
+        if (!image || seen.has(image) || image === primaryImageSrc) {
+          return false;
+        }
+        seen.add(image);
+        return true;
+      })
+      .slice(0, 4);
+  }, [hotel.hotelImages, primaryMedia]);
+  const allGalleryImages = useMemo(() => {
+    const seen = new Set<string>();
+    const mediaImages = [
+      primaryMedia?.kind === "image" ? primaryMedia.src : null,
+      ...hotel.hotelImages.map((image) => resolveMediaUrl(image)),
+    ];
+
+    return mediaImages.filter((image): image is string => {
+      if (!image || seen.has(image)) {
+        return false;
+      }
+      seen.add(image);
+      return true;
+    });
+  }, [hotel.hotelImages, primaryMedia]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isGalleryOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") {
+        setIsGalleryOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isGalleryOpen]);
 
   return (
     <section id="overview" className="space-y-5">
@@ -154,6 +218,13 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
                 <div className="pointer-events-auto flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() => setIsGalleryOpen(true)}
+                    className="inline-flex rounded-full bg-white/90 px-3 py-2 text-xs font-semibold text-stone-950 shadow-sm"
+                  >
+                    {t("hotel_detail_show_all_photos")}
+                  </button>
+                  <button
+                    type="button"
                     onClick={onShare}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-stone-950 shadow-sm"
                     aria-label={t("hotel_detail_share")}
@@ -207,50 +278,166 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
       </div>
 
       {primaryMedia ? (
-        <div className="relative hidden overflow-hidden rounded-[1.75rem] bg-stone-100 md:block">
-          <article className="relative min-h-[16rem] overflow-hidden bg-stone-100 sm:min-h-[22rem] lg:min-h-[30rem]">
-            {primaryMedia.kind === "youtube" ? (
-              <iframe
-                src={primaryMedia.src}
-                title={hotel.hotelTitle}
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-                className="absolute inset-0 h-full w-full border-0"
-              />
-            ) : primaryMedia.kind === "video" ? (
-              <video
-                key={primaryMedia.src}
-                src={primaryMedia.src}
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="absolute inset-0 h-full w-full object-cover object-center"
-              />
-            ) : (
-              <Image
-                src={primaryMedia.src}
-                alt={hotel.hotelTitle}
-                fill
-                priority
-                sizes="100vw"
-                className="object-cover"
-              />
-            )}
-          </article>
+        <div className="hidden md:block">
+          {collageImages.length >= 4 ? (
+            <div className="grid gap-2 overflow-hidden rounded-[1.75rem] md:grid-cols-[minmax(0,1.18fr)_minmax(0,0.82fr)]">
+              <article className="relative min-h-[32rem] overflow-hidden rounded-l-[1.75rem] bg-stone-100">
+                {primaryMedia.kind === "youtube" ? (
+                  <iframe
+                    src={primaryMedia.src}
+                    title={hotel.hotelTitle}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 h-full w-full border-0"
+                  />
+                ) : primaryMedia.kind === "video" ? (
+                  <video
+                    key={primaryMedia.src}
+                    src={primaryMedia.src}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="absolute inset-0 h-full w-full object-cover object-center"
+                  />
+                ) : (
+                  <Image
+                    src={primaryMedia.src}
+                    alt={hotel.hotelTitle}
+                    fill
+                    priority
+                    sizes="(min-width: 768px) 52vw, 100vw"
+                    className="object-cover"
+                  />
+                )}
+              </article>
 
-          <a
-            href="#gallery"
-            className="absolute bottom-4 right-4 inline-flex items-center rounded-xl border border-stone-900 bg-white px-4 py-3 text-sm font-semibold text-stone-950 shadow-sm transition hover:bg-stone-50"
-          >
-            {t("hotel_detail_show_all_photos")}
-          </a>
+              <div className="grid grid-cols-2 gap-2">
+                {collageImages.map((image, index) => {
+                  const isLastTile = index === collageImages.length - 1;
+                  return (
+                    <div
+                      key={`${image}-${index}`}
+                      className={`group relative min-h-[15.9rem] overflow-hidden bg-stone-100 ${
+                        index === 1 ? "rounded-tr-[1.75rem]" : ""
+                      } ${isLastTile ? "rounded-br-[1.75rem]" : ""}`}
+                    >
+                      <Image
+                        src={image}
+                        alt={`${hotel.hotelTitle} ${index + 2}`}
+                        fill
+                        sizes="(min-width: 768px) 23vw, 100vw"
+                        className="object-cover"
+                      />
+                      {isLastTile ? (
+                        <button
+                          type="button"
+                          onClick={() => setIsGalleryOpen(true)}
+                          className="absolute bottom-4 right-4 inline-flex items-center rounded-2xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-950 shadow-sm transition hover:bg-stone-50"
+                        >
+                          {t("hotel_detail_show_all_photos")}
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="relative overflow-hidden rounded-[1.75rem] bg-stone-100">
+              <article className="relative min-h-[16rem] overflow-hidden bg-stone-100 sm:min-h-[22rem] lg:min-h-[30rem]">
+                {primaryMedia.kind === "youtube" ? (
+                  <iframe
+                    src={primaryMedia.src}
+                    title={hotel.hotelTitle}
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 h-full w-full border-0"
+                  />
+                ) : primaryMedia.kind === "video" ? (
+                  <video
+                    key={primaryMedia.src}
+                    src={primaryMedia.src}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="absolute inset-0 h-full w-full object-cover object-center"
+                  />
+                ) : (
+                  <Image
+                    src={primaryMedia.src}
+                    alt={hotel.hotelTitle}
+                    fill
+                    priority
+                    sizes="100vw"
+                    className="object-cover"
+                  />
+                )}
+              </article>
+
+              <button
+                type="button"
+                onClick={() => setIsGalleryOpen(true)}
+                className="absolute bottom-4 right-4 inline-flex items-center rounded-xl border border-stone-900 bg-white px-4 py-3 text-sm font-semibold text-stone-950 shadow-sm transition hover:bg-stone-50"
+              >
+                {t("hotel_detail_show_all_photos")}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-[1.75rem] bg-stone-100 px-6 py-20 text-center text-sm text-stone-600">
           {t("hotel_gallery_empty")}
         </div>
       )}
+
+      {isMounted && isGalleryOpen && allGalleryImages.length > 0
+        ? createPortal(
+            <div className="fixed inset-0 z-[140] bg-black/72 backdrop-blur-[2px]">
+              <button
+                type="button"
+                onClick={() => setIsGalleryOpen(false)}
+                className="absolute inset-0 h-full w-full cursor-default"
+                aria-label={t("hotel_detail_close_gallery")}
+              />
+
+              <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-4 sm:px-6">
+                <p className="text-sm font-semibold text-white">{hotel.hotelTitle}</p>
+                <button
+                  type="button"
+                  onClick={() => setIsGalleryOpen(false)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-stone-950 shadow-sm"
+                  aria-label={t("hotel_detail_close_gallery")}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="absolute inset-0 overflow-y-auto px-4 pb-8 pt-20 sm:px-6 sm:pt-24">
+                <div className="mx-auto max-w-5xl space-y-4">
+                  {allGalleryImages.map((image, index) => (
+                    <div
+                      key={`${image}-${index}`}
+                      className="overflow-hidden rounded-[1.75rem] bg-white shadow-[0_24px_60px_-40px_rgba(15,23,42,0.5)]"
+                    >
+                      <div className="relative aspect-[16/10] w-full bg-stone-100">
+                        <Image
+                          src={image}
+                          alt={`${hotel.hotelTitle} ${index + 1}`}
+                          fill
+                          sizes="(min-width: 1024px) 960px, 100vw"
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 });

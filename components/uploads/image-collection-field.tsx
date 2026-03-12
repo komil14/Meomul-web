@@ -27,6 +27,7 @@ interface ImageCollectionFieldProps {
   maxFiles?: number;
   title?: string;
   description?: string;
+  layout?: "default" | "compact";
 }
 
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
@@ -128,6 +129,7 @@ export function ImageCollectionField({
   maxFiles = 10,
   title,
   description,
+  layout = "default",
 }: ImageCollectionFieldProps) {
   const { locale } = useI18n();
   const toast = useToast();
@@ -139,6 +141,7 @@ export function ImageCollectionField({
   const images = value.map((item) => item.trim()).filter(Boolean);
 
   const remainingSlots = Math.max(0, maxFiles - images.length);
+  const isCompact = layout === "compact";
 
   const processFiles = async (files: File[]) => {
     if (files.length === 0) {
@@ -325,7 +328,7 @@ export function ImageCollectionField({
             <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
               {copy.dragHint}
             </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className={`grid gap-3 ${isCompact ? "grid-cols-3 sm:grid-cols-4 xl:grid-cols-5" : "grid-cols-2 sm:grid-cols-3"}`}>
             {images.map((image, index) => (
               <div
                 key={`${image}-${index}`}
@@ -340,52 +343,52 @@ export function ImageCollectionField({
                     : "border-slate-200"
                 }`}
               >
-                <div className="relative aspect-[4/3] bg-slate-100">
+                <div className={`relative bg-slate-100 ${isCompact ? "aspect-square" : "aspect-[4/3]"}`}>
                   <Image
                     src={resolveMediaUrl(image)}
                     alt={`Uploaded ${target} image ${index + 1}`}
                     fill
                     unoptimized
                     className="object-cover transition duration-300 group-hover:scale-[1.02]"
-                    sizes="(min-width: 640px) 220px, 44vw"
+                    sizes={isCompact ? "(min-width: 1280px) 12vw, (min-width: 640px) 18vw, 28vw" : "(min-width: 640px) 220px, 44vw"}
                   />
                   <div className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
                     <GripVertical size={10} />
                     {index === 0 ? copy.cover : `${index + 1}`}
                   </div>
                 </div>
-                <div className="space-y-2 px-3 py-2">
+                <div className={`space-y-2 ${isCompact ? "px-2.5 py-2" : "px-3 py-2"}`}>
                   <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-xs font-medium text-slate-500">
-                    {target} {index + 1}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(index)}
-                    className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                    <span className="truncate text-xs font-medium text-slate-500">
+                      {target} {index + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(index)}
+                      className={`inline-flex items-center gap-1 rounded-full text-rose-600 transition hover:bg-rose-50 ${isCompact ? "px-1.5 py-1 text-[11px]" : "px-2 py-1 text-xs"} `}
                     >
                       <Trash2 size={12} />
-                      {copy.remove}
+                      {!isCompact ? copy.remove : null}
                     </button>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className={`flex items-center gap-2 ${isCompact ? "justify-between" : ""}`}>
                     <button
                       type="button"
                       onClick={() => handleMove(index, index - 1)}
                       disabled={index === 0}
-                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className={`inline-flex items-center gap-1 rounded-full border font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${isCompact ? "border-stone-950 px-3 py-2 text-xs text-stone-950 hover:bg-stone-100" : "border-slate-200 px-2.5 py-1 text-[11px] text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}
                     >
-                      <MoveLeft size={11} />
-                      {copy.moveLeft}
+                      <MoveLeft size={isCompact ? 18 : 11} />
+                      {!isCompact ? copy.moveLeft : null}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleMove(index, index + 1)}
                       disabled={index === images.length - 1}
-                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className={`inline-flex items-center gap-1 rounded-full border font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${isCompact ? "border-stone-950 px-3 py-2 text-xs text-stone-950 hover:bg-stone-100" : "border-slate-200 px-2.5 py-1 text-[11px] text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}
                     >
-                      <MoveRight size={11} />
-                      {copy.moveRight}
+                      <MoveRight size={isCompact ? 18 : 11} />
+                      {!isCompact ? copy.moveRight : null}
                     </button>
                   </div>
                 </div>

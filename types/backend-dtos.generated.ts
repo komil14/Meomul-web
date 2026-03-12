@@ -444,6 +444,7 @@ export type HomeFeedDto = {
   recommendationMeta?: Maybe<RecommendationMetaDto>;
   testimonials: Array<HomeTestimonialDto>;
   topHotels: Array<HotelDto>;
+  totalVerifiedReviews: Scalars['Int']['output'];
   trendingHotels: Array<HotelDto>;
 };
 
@@ -1190,6 +1191,7 @@ export type Query = {
   getHotelChats: ChatsDto;
   getHotelReviews: ReviewsDto;
   getHotels: HotelsDto;
+  getHotelsByIds: Array<HotelDto>;
   getHotelsCount: MetaCounterDto;
   getLikeCount: Scalars['Int']['output'];
   getMember: MemberDto;
@@ -1352,6 +1354,11 @@ export type QueryGetHotelReviewsArgs = {
 export type QueryGetHotelsArgs = {
   input: PaginationInput;
   search?: InputMaybe<HotelSearchInput>;
+};
+
+
+export type QueryGetHotelsByIdsArgs = {
+  hotelIds: Array<Scalars['String']['input']>;
 };
 
 

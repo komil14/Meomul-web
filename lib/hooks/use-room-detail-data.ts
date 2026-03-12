@@ -191,8 +191,20 @@ export const useRoomDetailData = (): UseRoomDetailDataResult => {
   });
 
   const hotel = hotelData?.getHotel;
-  const coverImage = room?.roomImages[0] ?? "";
-  const galleryImages = room?.roomImages.slice(1) ?? [];
+  const combinedGalleryImages = useMemo(() => {
+    const seen = new Set<string>();
+    const primaryImages = room?.roomImages?.length ? room.roomImages : hotel?.hotelImages ?? [];
+
+    return primaryImages.filter((image) => {
+      if (!image || seen.has(image)) {
+        return false;
+      }
+      seen.add(image);
+      return true;
+    });
+  }, [hotel?.hotelImages, room?.roomImages]);
+  const coverImage = combinedGalleryImages[0] ?? "";
+  const galleryImages = combinedGalleryImages.slice(1);
   const activeDeal = useMemo(() => {
     const deal = room?.lastMinuteDeal;
     if (!deal?.isActive) {

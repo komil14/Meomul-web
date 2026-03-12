@@ -322,9 +322,77 @@ export interface HotelContextItem {
   hotelTitle: string;
   hotelLocation: HotelLocation;
   hotelType: HotelType;
+  safeStayCertified: boolean;
+  starRating: number;
+  hotelImages: string[];
   checkInTime: string;
   checkOutTime: string;
+  suitableFor: string[];
+  petsAllowed: boolean;
+  smokingAllowed: boolean;
   cancellationPolicy: CancellationPolicy;
+  flexibleCheckIn: {
+    enabled: boolean;
+    times: string[];
+    fee: number;
+  };
+  flexibleCheckOut: {
+    enabled: boolean;
+    times: string[];
+    fee: number;
+  };
+  detailedLocation: {
+    address: string;
+    city: string;
+    district?: string | null;
+    dong?: string | null;
+    nearestSubway?: string | null;
+    subwayExit?: string | null;
+    subwayLines?: string[] | null;
+    walkingDistance?: number | null;
+    coordinates: {
+      lat: number;
+      lng: number;
+    };
+  };
+  amenities: {
+    wifi: boolean;
+    wifiSpeed?: number | null;
+    parking: boolean;
+    parkingFee: number;
+    breakfast: boolean;
+    breakfastIncluded: boolean;
+    roomService: boolean;
+    gym: boolean;
+    pool: boolean;
+    workspace: boolean;
+    familyRoom: boolean;
+    kidsFriendly: boolean;
+    wheelchairAccessible: boolean;
+    elevator: boolean;
+    accessibleBathroom: boolean;
+    visualAlarms: boolean;
+    serviceAnimalsAllowed: boolean;
+    airportShuttle: boolean;
+    evCharging: boolean;
+    playground: boolean;
+    meetingRoom: boolean;
+    privateBath: boolean;
+    restaurant: boolean;
+    spa: boolean;
+    coupleRoom: boolean;
+    romanticView: boolean;
+  };
+  safetyFeatures: {
+    fireSafety: boolean;
+    securityCameras: boolean;
+    frontDesk24h: boolean;
+    roomSafe: boolean;
+    femaleOnlyFloors: boolean;
+    wellLitParking: boolean;
+  };
+  ageRestriction: number;
+  maxPetWeight?: number | null;
 }
 
 export interface GetHotelContextQueryData {

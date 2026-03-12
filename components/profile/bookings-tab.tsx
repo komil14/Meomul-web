@@ -238,8 +238,14 @@ export function BookingsTab() {
     },
   );
 
-  const firstPageBookings = data?.getMyBookings.list ?? [];
-  const bookings = [...firstPageBookings, ...extraBookings];
+  const firstPageBookings = useMemo(
+    () => data?.getMyBookings.list ?? [],
+    [data?.getMyBookings.list],
+  );
+  const bookings = useMemo(
+    () => [...firstPageBookings, ...extraBookings],
+    [extraBookings, firstPageBookings],
+  );
   const total = data?.getMyBookings.metaCounter.total ?? 0;
   const hasMore = bookings.length < total;
   const bookingHotelIds = useMemo(

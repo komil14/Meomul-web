@@ -1,11 +1,14 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback } from "react";
+import { RoomAmenitiesSection } from "@/components/rooms/detail/room-amenities-section";
 import { PriceLockReadyBar } from "@/components/rooms/detail/price-lock-ready-bar";
 import { RoomHeroSection } from "@/components/rooms/detail/room-hero-section";
+import { RoomHotelContextSection } from "@/components/rooms/detail/room-hotel-context-section";
 import { RoomOverviewSection } from "@/components/rooms/detail/room-overview-section";
 import { LiveInterestFabContainer } from "@/components/rooms/live-interest-fab-container";
 import { ErrorNotice } from "@/components/ui/error-notice";
+import { getBedTypeLabel, getHotelLocationLabelLocalized } from "@/lib/hotels/hotels-i18n";
 import { useRoomDetailPageViewModel } from "@/lib/hooks/use-room-detail-page-view-model";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatEnumLabel } from "@/lib/rooms/booking";
@@ -83,7 +86,6 @@ export default function RoomDetailPage() {
     viewTypeLabel,
     roomTypeLine,
     roomFactCards,
-    roomHeroHighlights,
     roomAmenityCards,
   } = useRoomDetailPageViewModel();
 
@@ -91,12 +93,19 @@ export default function RoomDetailPage() {
     void onLockPrice();
   }, [onLockPrice]);
 
+  const locationLabel = hotel ? getHotelLocationLabelLocalized(hotel.hotelLocation, t) : "";
+  const guestLine = room
+    ? `${t("room_fact_guests_value", { count: room.maxOccupancy })} · ${t("room_fact_bed_value", { count: room.bedCount, bedType: getBedTypeLabel(room.bedType, t) })}`
+    : "";
+  const priceLine = hotel?.checkInTime && hotel?.checkOutTime ? `${hotel.checkInTime} - ${hotel.checkOutTime}` : undefined;
+  const backHref = hotel?._id ? `/hotels/${hotel._id}` : "/hotels";
+
   return (
     <main
       className={`${ROOM_DETAIL_MOTION_INTENSITY_CLASS} ${showBottomLockBar ? "space-y-6 pb-[calc(env(safe-area-inset-bottom)+9.5rem)] sm:pb-32" : "space-y-6"}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 motion-fade-up motion-delay-1">
-        <Link href="/hotels" className="text-sm text-slate-600 underline underline-offset-4">
+      <div className="hidden flex-wrap items-center justify-between gap-3 motion-fade-up motion-delay-1 md:flex">
+        <Link href={backHref} className="text-sm text-slate-600 underline underline-offset-4">
           {t("room_detail_back")}
         </Link>
       </div>
@@ -128,61 +137,73 @@ export default function RoomDetailPage() {
               viewTypeLabel={viewTypeLabel}
               roomNumber={room.roomNumber}
               roomName={room.roomName}
-              roomDesc={room.roomDesc}
+              hotelTitle={hotel?.hotelTitle}
+              locationLabel={locationLabel}
+              guestLine={guestLine}
+              priceLine={priceLine}
               basePrice={room.basePrice}
               deal={activeDeal ?? undefined}
-              highlights={roomHeroHighlights}
+              backHref={backHref}
             />
           </div>
 
-          <section className="relative overflow-visible rounded-[2.2rem] border border-slate-200 bg-gradient-to-b from-white via-slate-50/60 to-white p-5 shadow-[0_24px_55px_-35px_rgba(15,23,42,0.45)] motion-fade-up motion-delay-2 sm:p-7">
-            <div className="pointer-events-none absolute -right-28 top-16 h-52 w-52 rounded-full bg-sky-100/80 blur-3xl" />
-            <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)]">
-              <RoomOverviewSection
-                roomTypeLine={roomTypeLine}
-                roomName={room.roomName}
-                hotelTitle={hotel?.hotelTitle}
-                hotelCheckInTime={hotel?.checkInTime}
-                hotelCheckOutTime={hotel?.checkOutTime}
-                hotelCancellationPolicy={hotel?.cancellationPolicy ? formatEnumLabel(hotel.cancellationPolicy) : undefined}
-                deal={activeDeal ?? undefined}
-                roomDesc={room.roomDesc}
-                factCards={roomFactCards}
-                amenityCards={roomAmenityCards}
-              />
-              <RoomBookingSidebar
-                effectiveNightlyRate={effectiveNightlyRate}
-                effectiveNightlyRateSourceLabel={effectiveNightlyRateSourceLabel}
-                adultCount={adultCount}
-                childCount={childCount}
-                roomQuantity={roomQuantity}
-                onAdultCountChange={onAdultCountChange}
-                onChildCountChange={onChildCountChange}
-                onRoomQuantityChange={onRoomQuantityChange}
-                checkInDate={checkInDate}
-                checkOutDate={checkOutDate}
-                availabilityByDate={availabilityByDate}
-                selectedRange={selectedRange}
-                calendarMonthDate={calendarMonthDate}
-                minCalendarMonthDate={minCalendarMonthDate}
-                onCalendarMonthChange={onCalendarMonthChange}
-                onCalendarDayClick={onCalendarDayClick}
-                disabledDays={disabledDays}
-                dayPickerClassNames={dayPickerClassNames}
-                dayPickerStyle={dayPickerStyle}
-                calendarLoadInProgress={priceCalendarLoading}
-                calendarLoadErrorMessage={calendarLoadErrorMessage}
-                visibleWindowCalendarLength={visibleWindowCalendar.length}
-                averageVisiblePrice={averageVisiblePrice}
-                cheapestDateKey={cheapestDateKey}
-                cheapestDatePrice={cheapestDatePrice}
-                peakDateKey={peakDateKey}
-                peakDatePrice={peakDatePrice}
-                bookingValidationMessage={bookingValidationMessage}
-                canContinueBooking={canContinueBooking}
-                continueBookingHref={continueBookingHref}
-              />
+          <section className="grid items-start gap-7 motion-fade-up motion-delay-2 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)]">
+            <div className="space-y-6">
+              <div className="hover-lift rounded-[2rem] border border-stone-200 bg-white p-5 shadow-[0_24px_55px_-35px_rgba(15,23,42,0.18)] sm:p-7">
+                <RoomOverviewSection
+                  roomTypeLine={roomTypeLine}
+                  hotelTitle={hotel?.hotelTitle}
+                  hotelCheckInTime={hotel?.checkInTime}
+                  hotelCheckOutTime={hotel?.checkOutTime}
+                  hotelCancellationPolicy={hotel?.cancellationPolicy ? formatEnumLabel(hotel.cancellationPolicy) : undefined}
+                  deal={activeDeal ?? undefined}
+                  roomDesc={room.roomDesc}
+                  factCards={roomFactCards}
+                  isSafeStayCertified={hotel?.safeStayCertified}
+                />
+              </div>
+
+              <div className="hover-lift rounded-[2rem] border border-stone-200 bg-white p-5 shadow-[0_24px_55px_-35px_rgba(15,23,42,0.18)] sm:p-7">
+                <RoomAmenitiesSection amenityCards={roomAmenityCards} />
+              </div>
+
+              <div className="hover-lift rounded-[2rem] border border-stone-200 bg-white p-5 shadow-[0_24px_55px_-35px_rgba(15,23,42,0.18)] sm:p-7">
+                <RoomHotelContextSection hotel={hotel} />
+              </div>
             </div>
+
+            <RoomBookingSidebar
+              effectiveNightlyRate={effectiveNightlyRate}
+              effectiveNightlyRateSourceLabel={effectiveNightlyRateSourceLabel}
+              adultCount={adultCount}
+              childCount={childCount}
+              roomQuantity={roomQuantity}
+              onAdultCountChange={onAdultCountChange}
+              onChildCountChange={onChildCountChange}
+              onRoomQuantityChange={onRoomQuantityChange}
+              checkInDate={checkInDate}
+              checkOutDate={checkOutDate}
+              availabilityByDate={availabilityByDate}
+              selectedRange={selectedRange}
+              calendarMonthDate={calendarMonthDate}
+              minCalendarMonthDate={minCalendarMonthDate}
+              onCalendarMonthChange={onCalendarMonthChange}
+              onCalendarDayClick={onCalendarDayClick}
+              disabledDays={disabledDays}
+              dayPickerClassNames={dayPickerClassNames}
+              dayPickerStyle={dayPickerStyle}
+              calendarLoadInProgress={priceCalendarLoading}
+              calendarLoadErrorMessage={calendarLoadErrorMessage}
+              visibleWindowCalendarLength={visibleWindowCalendar.length}
+              averageVisiblePrice={averageVisiblePrice}
+              cheapestDateKey={cheapestDateKey}
+              cheapestDatePrice={cheapestDatePrice}
+              peakDateKey={peakDateKey}
+              peakDatePrice={peakDatePrice}
+              bookingValidationMessage={bookingValidationMessage}
+              canContinueBooking={canContinueBooking}
+              continueBookingHref={continueBookingHref}
+            />
           </section>
 
           {showBottomLockBar ? (

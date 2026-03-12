@@ -2,16 +2,13 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Accessibility,
-  Armchair,
   Baby,
   Bath,
   BedDouble,
   BellRing,
   BatteryCharging,
-  BriefcaseBusiness,
   CarFront,
   Coffee,
-  ConciergeBell,
   Dumbbell,
   HandPlatter,
   Heart,

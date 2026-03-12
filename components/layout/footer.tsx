@@ -15,12 +15,21 @@ function FooterColumn({ title, links }: FooterColumnProps) {
       <ul className="mt-4 space-y-3">
         {links.map((link) => (
           <li key={link.label}>
-            <Link
-              href={link.href}
-              className="text-sm text-slate-400 hover:text-white transition-colors"
-            >
-              {link.label}
-            </Link>
+            {link.href.startsWith("#") ? (
+              <a
+                href={link.href}
+                className="text-sm text-slate-400 transition-colors hover:text-white"
+              >
+                {link.label}
+              </a>
+            ) : (
+              <Link
+                href={link.href}
+                className="text-sm text-slate-400 transition-colors hover:text-white"
+              >
+                {link.label}
+              </Link>
+            )}
           </li>
         ))}
       </ul>

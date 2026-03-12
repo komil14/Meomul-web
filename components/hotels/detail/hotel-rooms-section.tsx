@@ -131,7 +131,7 @@ export const HotelRoomsSection = memo(function HotelRoomsSection({
                   <div className="mt-4 flex flex-col gap-3 sm:mt-6">
                     <Link
                       href={bookingHref}
-                      className="inline-flex min-h-[3rem] items-center justify-center rounded-xl bg-[linear-gradient(90deg,#ff385c_0%,#e61e4d_48%,#d70466_100%)] px-5 text-sm font-semibold text-white sm:min-h-[3.25rem] sm:text-base"
+                      className="inline-flex min-h-[3rem] items-center justify-center rounded-xl bg-stone-950 px-5 text-sm font-semibold text-white transition hover:bg-stone-800 sm:min-h-[3.25rem] sm:text-base"
                     >
                       {t("hotel_detail_reserve")}
                     </Link>

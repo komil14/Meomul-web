@@ -575,6 +575,7 @@ const EditHotelPage: NextPageWithAuth = () => {
             value={hotelImages}
             onChange={setHotelImages}
             maxFiles={12}
+            layout="compact"
             title={copy.imageUrls}
             description={copy.onePerLine}
           />

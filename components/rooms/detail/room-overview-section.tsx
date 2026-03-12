@@ -1,4 +1,5 @@
-import { memo } from "react";
+import { memo, useMemo, useState } from "react";
+import { BadgeCheck, ShieldCheck } from "lucide-react";
 import { DetailIcon, type DetailIconName } from "@/components/rooms/detail/detail-icon";
 import { useI18n } from "@/lib/i18n/provider";
 import { formatNumber } from "@/lib/utils/format";
@@ -7,7 +8,7 @@ import type { RoomDetailItem } from "@/types/hotel";
 export interface RoomFactCard {
   label: string;
   value: string;
-  icon: DetailIconName;
+  icon: "status" | "capacity" | "bed" | "view" | "size" | "inventory" | "surcharge" | "eyes" | "clock";
 }
 
 export interface RoomAmenityCard {
@@ -23,7 +24,6 @@ export interface RoomAmenityCard {
 
 interface RoomOverviewSectionProps {
   roomTypeLine: string;
-  roomName: string;
   hotelTitle?: string;
   hotelCheckInTime?: string;
   hotelCheckOutTime?: string;
@@ -31,12 +31,11 @@ interface RoomOverviewSectionProps {
   deal?: RoomDetailItem["lastMinuteDeal"];
   roomDesc: string;
   factCards: RoomFactCard[];
-  amenityCards: RoomAmenityCard[];
+  isSafeStayCertified?: boolean;
 }
 
 export const RoomOverviewSection = memo(function RoomOverviewSection({
   roomTypeLine,
-  roomName,
   hotelTitle,
   hotelCheckInTime,
   hotelCheckOutTime,
@@ -44,86 +43,104 @@ export const RoomOverviewSection = memo(function RoomOverviewSection({
   deal,
   roomDesc,
   factCards,
-  amenityCards,
+  isSafeStayCertified,
 }: RoomOverviewSectionProps) {
   const { t } = useI18n();
+  const [showFullDescription, setShowFullDescription] = useState(false);
+  const primaryFacts = useMemo(() => factCards.slice(0, 4), [factCards]);
+  const secondaryFacts = useMemo(() => factCards.slice(4), [factCards]);
+
   return (
-    <div className="order-2 relative space-y-8 lg:order-1 lg:pr-2">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{roomTypeLine}</p>
-          <h2 className="mt-2 text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">{roomName}</h2>
-          {hotelTitle ? <p className="mt-3 text-lg text-slate-600">{hotelTitle}</p> : null}
+    <div className="order-2 space-y-7 lg:order-1 lg:pr-2">
+      <section className="space-y-7 sm:space-y-8">
+        <div className="border-b border-stone-200 pb-7">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              {hotelTitle ? <p className="text-base font-medium text-stone-600">{hotelTitle}</p> : null}
+              <h2 className="text-[1.9rem] font-semibold tracking-tight text-stone-950 sm:text-[2.2rem]">
+                {roomTypeLine}
+              </h2>
+            </div>
+            {deal?.isActive ? (
+              <div className="w-full rounded-2xl border border-stone-200 bg-white px-5 py-4 text-right shadow-sm sm:w-auto sm:min-w-[14rem]">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">{t("room_detail_last_minute_deal")}</p>
+                <p className="mt-1 text-3xl font-semibold text-stone-950">₩ {formatNumber(deal.dealPrice)}</p>
+                <p className="text-xs text-stone-500 line-through">₩ {formatNumber(deal.originalPrice)}</p>
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-950">
+              <BadgeCheck className="h-4 w-4" />
+              <span>{t("hotel_detail_badge_verified")}</span>
+            </div>
+            {isSafeStayCertified ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-950">
+                <ShieldCheck className="h-4 w-4" />
+                <span>{t("hotel_detail_safe_stay")}</span>
+              </div>
+            ) : null}
+          </div>
         </div>
-        {deal?.isActive ? (
-          <div className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-right shadow-sm sm:w-auto sm:min-w-[14rem]">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">{t("room_detail_last_minute_deal")}</p>
-            <p className="mt-1 text-3xl font-semibold text-slate-900">₩ {formatNumber(deal.dealPrice)}</p>
-            <p className="text-xs text-slate-500 line-through">₩ {formatNumber(deal.originalPrice)}</p>
+
+        {primaryFacts.length > 0 ? (
+          <div className={`border-b border-stone-200 pb-7 ${primaryFacts.length > 2 ? "grid gap-6 sm:grid-cols-2" : "space-y-6"}`}>
+            {primaryFacts.map((item) => (
+              <div key={item.label} className="flex items-start gap-4">
+                <DetailIcon name={item.icon} className="mt-1 h-5 w-5 shrink-0 text-stone-950 sm:h-6 sm:w-6" />
+                <div>
+                  <p className="text-lg font-semibold tracking-tight text-stone-950 sm:text-[1.15rem]">{item.label}</p>
+                  <p className="mt-1 text-sm leading-7 text-stone-600 sm:text-[1.02rem] sm:leading-8">{item.value}</p>
+                </div>
+              </div>
+            ))}
           </div>
         ) : null}
-      </div>
 
-      <p className="max-w-3xl text-lg leading-8 text-slate-700">
-        {roomDesc || t("room_detail_overview_desc_fallback")}
-      </p>
-
-      {hotelCheckInTime || hotelCheckOutTime || hotelCancellationPolicy ? (
-        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 sm:grid-cols-3">
-          <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t("room_detail_checkin")}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCheckInTime || "-"}</p>
-          </article>
-          <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t("room_detail_checkout")}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCheckOutTime || "-"}</p>
-          </article>
-          <article className="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t("room_detail_cancellation")}</p>
-            <p className="mt-1 text-sm font-semibold text-slate-900">{hotelCancellationPolicy || "-"}</p>
-          </article>
+        <div className="space-y-4">
+          <p className={`text-base leading-7 text-stone-800 sm:text-[1.05rem] sm:leading-8 ${showFullDescription ? "" : "line-clamp-5"}`}>
+            {roomDesc || t("room_detail_overview_desc_fallback")}
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowFullDescription((previous) => !previous)}
+            className="text-sm font-semibold underline underline-offset-2 sm:text-[1.02rem]"
+          >
+            {showFullDescription ? t("hotel_airbnb_show_less") : t("hotel_airbnb_show_more")}
+          </button>
         </div>
-      ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {factCards.map((item) => (
-          <article key={item.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
-            <div className="mb-2 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
-              <DetailIcon name={item.icon} className="h-6 w-6" />
-            </div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{item.label}</p>
-            <p className="mt-1 text-base font-semibold text-slate-900">{item.value}</p>
-          </article>
-        ))}
-      </div>
+        {(hotelCheckInTime || hotelCheckOutTime || hotelCancellationPolicy) && (
+          <div className="grid gap-6 border-t border-b border-stone-200 py-6 sm:grid-cols-3">
+            <article>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-500">{t("room_detail_checkin")}</p>
+              <p className="mt-1 text-base font-semibold text-stone-950">{hotelCheckInTime || "-"}</p>
+            </article>
+            <article>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-500">{t("room_detail_checkout")}</p>
+              <p className="mt-1 text-base font-semibold text-stone-950">{hotelCheckOutTime || "-"}</p>
+            </article>
+            <article>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-500">{t("room_detail_cancellation")}</p>
+              <p className="mt-1 text-base font-semibold text-stone-950">{hotelCancellationPolicy || "-"}</p>
+            </article>
+          </div>
+        )}
 
-      <div className="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">{t("room_detail_amenities_title")}</h3>
-          <p className="mt-1 text-sm text-slate-600">{t("room_detail_amenities_desc")}</p>
-        </div>
-        {amenityCards.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {amenityCards.map((item) => (
-              <article key={item.amenity} className={`rounded-2xl border px-4 py-3 transition duration-300 hover:-translate-y-0.5 hover:shadow-sm ${item.styles.card}`}>
-                <div className="flex items-center gap-3">
-                  <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${item.styles.icon}`}>
-                    <DetailIcon name={item.icon} />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 sm:text-base">{item.label}</p>
-                    <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] ${item.styles.badge}`}>
-                      {t("room_detail_ready_to_use")}
-                    </span>
-                  </div>
+        {secondaryFacts.length > 0 ? (
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            {secondaryFacts.map((item) => (
+              <article key={item.label} className="flex items-start gap-4">
+                <DetailIcon name={item.icon} className="mt-1 h-5 w-5 shrink-0 text-stone-950 sm:h-6 sm:w-6" />
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-500">{item.label}</p>
+                  <p className="mt-1 text-base font-semibold text-stone-950">{item.value}</p>
                 </div>
               </article>
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-slate-600">{t("room_detail_no_amenities")}</p>
-        )}
-      </div>
+        ) : null}
+      </section>
     </div>
   );
 });

@@ -326,8 +326,14 @@ export function ReviewsTab() {
     });
 
   const [deleteReviewMutation] = useMutation(DELETE_REVIEW_MUTATION);
-  const firstPageReviews = data?.getMyReviews.list ?? [];
-  const reviews = [...firstPageReviews, ...extraReviews];
+  const firstPageReviews = useMemo(
+    () => data?.getMyReviews.list ?? [],
+    [data?.getMyReviews.list],
+  );
+  const reviews = useMemo(
+    () => [...firstPageReviews, ...extraReviews],
+    [extraReviews, firstPageReviews],
+  );
   const total = data?.getMyReviews.metaCounter.total ?? 0;
   const hasMore = reviews.length < total;
   const reviewHotelIds = useMemo(

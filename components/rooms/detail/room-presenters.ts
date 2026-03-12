@@ -96,11 +96,11 @@ export const getRoomPresentation = (
   const roomTypeLine = `${roomTypeLabel}${room.roomNumber ? ` · #${room.roomNumber}` : ""}`;
 
   const roomFactCards: RoomFactCard[] = [
-    { label: t("room_fact_view"), value: t("room_detail_view_suffix", { view: viewTypeLabel }), icon: "view" },
-    { label: t("room_fact_status"), value: getRoomStatusLabel(room.roomStatus, t), icon: "status" },
     { label: t("room_fact_capacity"), value: t("room_fact_guests_value", { count: room.maxOccupancy }), icon: "capacity" },
     { label: t("room_fact_bed_setup"), value: t("room_fact_bed_value", { count: room.bedCount, bedType: getBedTypeLabel(room.bedType, t) }), icon: "bed" },
+    { label: t("room_fact_view"), value: t("room_detail_view_suffix", { view: viewTypeLabel }), icon: "view" },
     { label: t("room_fact_size"), value: `${room.roomSize} m²`, icon: "size" },
+    { label: t("room_fact_status"), value: getRoomStatusLabel(room.roomStatus, t), icon: "status" },
     { label: t("room_fact_inventory"), value: t("room_fact_inventory_value", { count: room.totalRooms, mode: t("room_fact_inventory_date_based") }), icon: "inventory" },
     { label: t("room_fact_weekend_addon"), value: `₩ ${formatNumber(room.weekendSurcharge)}`, icon: "surcharge" },
     { label: t("room_fact_updated"), value: formatIsoDate(room.updatedAt), icon: "clock" },
