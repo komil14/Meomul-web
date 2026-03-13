@@ -132,8 +132,18 @@ const ICON_CONFIG: Record<
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function normalizeNotificationLink(link: string | null | undefined): string | null {
+  if (!link) return null;
+  const adminChatMatch = link.match(/^\/admin\/chats\/([^/?#]+)$/);
+  if (adminChatMatch) {
+    return `/chats/${adminChatMatch[1]}`;
+  }
+  return link;
+}
+
 function resolveLink(notification: NotificationDto): string | null {
-  if (notification.link) return notification.link;
+  const normalizedLink = normalizeNotificationLink(notification.link);
+  if (normalizedLink) return normalizedLink;
 
   // Attempt to derive a link from the notification type
   // Backend stores `link` in most cases, but fall back based on type

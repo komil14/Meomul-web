@@ -25,6 +25,7 @@ interface ChatCopy {
   contactSupport: string;
   supportTeam: string;
   hotelStaff: string;
+  guest: string;
   support: string;
   hotel: string;
   platformSupport: string;
@@ -63,6 +64,7 @@ interface ChatCopy {
   closeAction: string;
   closing: string;
   closedNotice: string;
+  claimRequiredNotice: string;
   supportPageDesc: string;
   inbox: string;
   page: string;
@@ -71,6 +73,8 @@ interface ChatCopy {
   all: string;
   of: string;
   hotels: string;
+  userSupportChats: string;
+  hotelStaffChats: string;
   missingChatId: string;
   backToChats: string;
 }
@@ -99,6 +103,7 @@ const en: ChatCopy = {
   contactSupport: "Contact support",
   supportTeam: "Support Team",
   hotelStaff: "Hotel Staff",
+  guest: "Guest",
   support: "Support",
   hotel: "Hotel",
   platformSupport: "Platform support",
@@ -137,6 +142,7 @@ const en: ChatCopy = {
   closeAction: "Close",
   closing: "Closing…",
   closedNotice: "This chat is closed. You can still read the conversation, but you cannot send new messages.",
+  claimRequiredNotice: "Claim this chat before replying or closing it.",
   supportPageDesc: "Start a support conversation or message any hotel",
   inbox: "Inbox",
   page: "Page",
@@ -145,6 +151,8 @@ const en: ChatCopy = {
   all: "All",
   of: "of",
   hotels: "Hotels",
+  userSupportChats: "User support chats",
+  hotelStaffChats: "Hotel staff chats",
   missingChatId: "Missing chat ID.",
   backToChats: "Back to chats",
 };
@@ -174,6 +182,7 @@ const ko: ChatCopy = {
   contactSupport: "지원 문의",
   supportTeam: "지원팀",
   hotelStaff: "호텔 담당자",
+  guest: "고객",
   support: "지원",
   hotel: "호텔",
   platformSupport: "플랫폼 지원",
@@ -212,6 +221,7 @@ const ko: ChatCopy = {
   closeAction: "종료",
   closing: "종료 중…",
   closedNotice: "종료된 채팅입니다. 대화는 읽을 수 있지만 새 메시지는 보낼 수 없습니다.",
+  claimRequiredNotice: "답변하거나 종료하기 전에 이 채팅을 먼저 할당하세요.",
   supportPageDesc: "지원 대화를 시작하거나 원하는 호텔에 메시지를 보내세요",
   inbox: "받은 편지함",
   page: "페이지",
@@ -220,6 +230,8 @@ const ko: ChatCopy = {
   all: "전체",
   of: "/",
   hotels: "호텔",
+  userSupportChats: "사용자 지원 채팅",
+  hotelStaffChats: "호텔 담당자 채팅",
   missingChatId: "채팅 ID가 없습니다.",
   backToChats: "채팅 목록으로",
 };
@@ -249,6 +261,7 @@ const ru: ChatCopy = {
   contactSupport: "Связаться с поддержкой",
   supportTeam: "Команда поддержки",
   hotelStaff: "Сотрудники отеля",
+  guest: "Гость",
   support: "Поддержка",
   hotel: "Отель",
   platformSupport: "Поддержка платформы",
@@ -287,6 +300,7 @@ const ru: ChatCopy = {
   closeAction: "Закрыть",
   closing: "Закрытие…",
   closedNotice: "Чат закрыт. История доступна для чтения, но новые сообщения отправлять нельзя.",
+  claimRequiredNotice: "Сначала примите этот чат, затем отвечайте или закрывайте его.",
   supportPageDesc: "Начните чат с поддержкой или напишите любому отелю",
   inbox: "Входящие",
   page: "Страница",
@@ -295,6 +309,8 @@ const ru: ChatCopy = {
   all: "Все",
   of: "из",
   hotels: "Отели",
+  userSupportChats: "Чаты поддержки пользователей",
+  hotelStaffChats: "Чаты сотрудников отелей",
   missingChatId: "Отсутствует ID чата.",
   backToChats: "Назад к чатам",
 };
@@ -324,6 +340,7 @@ const uz: ChatCopy = {
   contactSupport: "Yordam bilan bog'lanish",
   supportTeam: "Yordam jamoasi",
   hotelStaff: "Mehmonxona xodimlari",
+  guest: "Mehmon",
   support: "Yordam",
   hotel: "Mehmonxona",
   platformSupport: "Platforma yordami",
@@ -362,6 +379,7 @@ const uz: ChatCopy = {
   closeAction: "Yopish",
   closing: "Yopilmoqda…",
   closedNotice: "Bu chat yopilgan. Suhbatni o'qish mumkin, lekin yangi xabar yuborib bo'lmaydi.",
+  claimRequiredNotice: "Javob berish yoki yopishdan oldin bu chatni biriktiring.",
   supportPageDesc: "Yordam suhbati boshlang yoki istalgan mehmonxonaga yozing",
   inbox: "Kiruvchi xabarlar",
   page: "Sahifa",
@@ -370,6 +388,8 @@ const uz: ChatCopy = {
   all: "Barchasi",
   of: "/",
   hotels: "Mehmonxonalar",
+  userSupportChats: "Foydalanuvchi yordam chatlari",
+  hotelStaffChats: "Mehmonxona xodimlari chatlari",
   missingChatId: "Chat ID topilmadi.",
   backToChats: "Chatlarga qaytish",
 };
@@ -449,7 +469,7 @@ export const getLastPreviewLabel = (
   chat: ChatDto,
 ): string => {
   const copy = getChatCopy(locale);
-  const msg = (chat.messages ?? []).at(-1);
+  const msg = chat.lastMessage ?? (chat.messages ?? []).at(-1);
   if (!msg) return copy.startConversation;
   if (msg.messageType === "IMAGE") return `📷 ${copy.photo}`;
   if (msg.messageType === "FILE") return `📎 ${copy.attachment}`;

@@ -2,6 +2,12 @@ export type ChatStatus = "WAITING" | "ACTIVE" | "CLOSED";
 export type ChatScope = "HOTEL" | "SUPPORT";
 export type SenderType = "GUEST" | "AGENT";
 export type MessageType = "TEXT" | "IMAGE" | "FILE";
+export type ChatGuestMemberType =
+  | "USER"
+  | "AGENT"
+  | "ADMIN"
+  | "ADMIN_OPERATOR"
+  | "OWNER";
 
 export interface PaginationInput {
   page: number;
@@ -28,6 +34,9 @@ export interface MessageDto {
 export interface ChatDto {
   _id: string;
   guestId: string;
+  guestNick?: string | null;
+  guestImage?: string | null;
+  guestMemberType?: ChatGuestMemberType | null;
   hotelId?: string | null;
   bookingId?: string | null;
   chatScope: ChatScope;
@@ -40,6 +49,7 @@ export interface ChatDto {
   lastMessageAt: string;
   createdAt: string;
   updatedAt: string;
+  lastMessage?: MessageDto | null;
   messages?: MessageDto[];
 }
 
@@ -64,6 +74,17 @@ export interface GetHotelChatsQueryVars {
   hotelId: string;
   input: PaginationInput;
   statusFilter?: ChatStatus;
+}
+
+export interface GetOperatorChatsQueryData {
+  getOperatorChats: ChatsDto;
+}
+
+export interface GetOperatorChatsQueryVars {
+  input: PaginationInput;
+  scopeFilter?: ChatScope;
+  statusFilter?: ChatStatus;
+  hotelId?: string;
 }
 
 export interface GetChatQueryData {

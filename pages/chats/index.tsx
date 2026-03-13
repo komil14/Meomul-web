@@ -654,7 +654,7 @@ function NewChatOverlay({
                     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
                   }}
                   onKeyDown={(e) => {
-                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       void handleSend();
                     }
@@ -681,7 +681,7 @@ function NewChatOverlay({
               </div>
               {message.trim() && (
                 <p className="mt-1 text-right text-[10px] text-slate-400">
-                  ⌘↩ to send
+                  Enter to send, Shift+Enter for a new line
                 </p>
               )}
             </div>

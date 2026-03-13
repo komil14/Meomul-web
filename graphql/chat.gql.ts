@@ -13,10 +13,13 @@ const CHAT_MESSAGE_FIELDS = gql`
   }
 `;
 
-const CHAT_FIELDS = gql`
-  fragment ChatFields on ChatDto {
+const CHAT_LIST_FIELDS = gql`
+  fragment ChatListFields on ChatDto {
     _id
     guestId
+    guestNick
+    guestImage
+    guestMemberType
     hotelId
     bookingId
     chatScope
@@ -29,10 +32,21 @@ const CHAT_FIELDS = gql`
     lastMessageAt
     createdAt
     updatedAt
+    lastMessage {
+      ...ChatMessageFields
+    }
+  }
+  ${CHAT_MESSAGE_FIELDS}
+`;
+
+const CHAT_FIELDS = gql`
+  fragment ChatFields on ChatDto {
+    ...ChatListFields
     messages {
       ...ChatMessageFields
     }
   }
+  ${CHAT_LIST_FIELDS}
   ${CHAT_MESSAGE_FIELDS}
 `;
 
@@ -40,14 +54,14 @@ export const GET_MY_CHATS_QUERY = gql`
   query GetMyChats($input: PaginationInput!) {
     getMyChats(input: $input) {
       list {
-        ...ChatFields
+        ...ChatListFields
       }
       metaCounter {
         total
       }
     }
   }
-  ${CHAT_FIELDS}
+  ${CHAT_LIST_FIELDS}
 `;
 
 export const GET_HOTEL_CHATS_QUERY = gql`
@@ -62,14 +76,38 @@ export const GET_HOTEL_CHATS_QUERY = gql`
       statusFilter: $statusFilter
     ) {
       list {
-        ...ChatFields
+        ...ChatListFields
       }
       metaCounter {
         total
       }
     }
   }
-  ${CHAT_FIELDS}
+  ${CHAT_LIST_FIELDS}
+`;
+
+export const GET_OPERATOR_CHATS_QUERY = gql`
+  query GetOperatorChats(
+    $input: PaginationInput!
+    $scopeFilter: ChatScope
+    $statusFilter: ChatStatus
+    $hotelId: String
+  ) {
+    getOperatorChats(
+      input: $input
+      scopeFilter: $scopeFilter
+      statusFilter: $statusFilter
+      hotelId: $hotelId
+    ) {
+      list {
+        ...ChatListFields
+      }
+      metaCounter {
+        total
+      }
+    }
+  }
+  ${CHAT_LIST_FIELDS}
 `;
 
 export const GET_CHAT_QUERY = gql`
@@ -142,26 +180,6 @@ export const CLOSE_CHAT_MUTATION = gql`
 `;
 
 // ─── Admin queries ─────────────────────────────────────────────────────────────
-
-// Lightweight fragment for list views — excludes messages array for performance
-const CHAT_LIST_FIELDS = gql`
-  fragment ChatListFields on ChatDto {
-    _id
-    guestId
-    hotelId
-    bookingId
-    chatScope
-    supportTopic
-    sourcePath
-    assignedAgentId
-    chatStatus
-    unreadGuestMessages
-    unreadAgentMessages
-    lastMessageAt
-    createdAt
-    updatedAt
-  }
-`;
 
 export const GET_ALL_CHATS_ADMIN_QUERY = gql`
   query GetAllChatsAdmin($input: PaginationInput!, $statusFilter: ChatStatus) {

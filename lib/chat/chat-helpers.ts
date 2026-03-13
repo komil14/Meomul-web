@@ -21,6 +21,15 @@ export function avatarBg(id: string): string {
   return AVATAR_COLORS[id.charCodeAt(id.length - 1) % AVATAR_COLORS.length];
 }
 
+export function getGuestDisplayName(chat: ChatDto, fallback = "Guest"): string {
+  return chat.guestNick?.trim() || fallback;
+}
+
+export function getGuestAvatarLetter(chat: ChatDto, fallback = "G"): string {
+  const label = getGuestDisplayName(chat, fallback);
+  return label.charAt(0).toUpperCase() || fallback;
+}
+
 export function timeAgo(dateStr: string): string {
   const diffMs = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diffMs / 60000);

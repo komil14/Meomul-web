@@ -1,7 +1,7 @@
 import { getAccessToken } from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
 
-export type UploadImageTarget = "hotel" | "room";
+export type UploadImageTarget = "hotel" | "room" | "member" | "chat";
 
 function getUploadBaseUrl(): string {
   return typeof window !== "undefined" ? "/upload" : `${env.apiUrl}/upload`;

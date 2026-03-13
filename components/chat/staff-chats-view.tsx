@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   GET_HOTEL_CHATS_QUERY,
-  GET_MY_CHATS_QUERY,
+  GET_OPERATOR_CHATS_QUERY,
 } from "@/graphql/chat.gql";
 import { getAccessToken } from "@/lib/auth/session";
 import {
@@ -25,14 +25,18 @@ import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import {
   avatarBg,
+  getGuestAvatarLetter,
+  getGuestDisplayName,
 } from "@/lib/chat/chat-helpers";
 import type {
   ChatDto,
+  ChatGuestMemberType,
+  ChatScope,
   ChatStatus,
   GetHotelChatsQueryData,
   GetHotelChatsQueryVars,
-  GetMyChatsQueryData,
-  GetMyChatsQueryVars,
+  GetOperatorChatsQueryData,
+  GetOperatorChatsQueryVars,
 } from "@/types/chat";
 import type { HotelListItem } from "@/types/hotel";
 
@@ -44,7 +48,15 @@ const CHAT_STATUSES: ChatStatus[] = ["WAITING", "ACTIVE", "CLOSED"];
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function guestLabel(chat: ChatDto): string {
-  return `Guest ···${chat.guestId.slice(-6).toUpperCase()}`;
+  return getGuestDisplayName(chat);
+}
+
+function isAgentOriginSupportChat(chat: ChatDto): boolean {
+  return chat.guestMemberType === "AGENT" || chat.guestMemberType === "ADMIN" || chat.guestMemberType === "ADMIN_OPERATOR";
+}
+
+function getSupportSourceLabel(chat: ChatDto, copy: ReturnType<typeof getChatCopy>): string {
+  return isAgentOriginSupportChat(chat) ? copy.hotelStaff : copy.guest;
 }
 
 // ─── StatusBadge ──────────────────────────────────────────────────────────────
@@ -169,7 +181,9 @@ export function StaffChatsView({
   const isPageVisible = usePageVisible();
   const isAdmin = memberType === "ADMIN" || memberType === "ADMIN_OPERATOR";
 
-  const [activeTab, setActiveTab] = useState<"hotels" | "support">("hotels");
+  const [activeTab, setActiveTab] = useState<"hotels" | "support">(
+    isAdmin ? "support" : "hotels",
+  );
   const [selectedHotelId, setSelectedHotelId] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<ChatStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
@@ -183,6 +197,11 @@ export function StaffChatsView({
       setSelectedHotelId(availableHotels[0]._id);
     }
   }, [availableHotels, selectedHotelId]);
+
+  useEffect(() => {
+    setActiveTab(isAdmin ? "support" : "hotels");
+    setPage(1);
+  }, [isAdmin]);
 
   const filteredHotels = useMemo(() => {
     const q = hotelSearchQuery.trim().toLowerCase();
@@ -226,15 +245,19 @@ export function StaffChatsView({
     data: supportChatsData,
     loading: supportChatsLoading,
     refetch: refetchSupportChats,
-  } = useQuery<GetMyChatsQueryData, GetMyChatsQueryVars>(GET_MY_CHATS_QUERY, {
-    skip: activeTab !== "support",
-    variables: {
-      input: { page: 1, limit: 30, sort: "lastMessageAt", direction: -1 },
+  } = useQuery<GetOperatorChatsQueryData, GetOperatorChatsQueryVars>(
+    GET_OPERATOR_CHATS_QUERY,
+    {
+      skip: activeTab !== "support" || !isAdmin,
+      variables: {
+        input: { page: 1, limit: 30, sort: "lastMessageAt", direction: -1 },
+        scopeFilter: "SUPPORT" as ChatScope,
+      },
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+      pollInterval: isPageVisible && !socketConnected ? 120_000 : 0,
     },
-    fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-and-network",
-    pollInterval: isPageVisible && !socketConnected ? 120_000 : 0,
-  });
+  );
 
   useEffect(() => {
     if (!isPageVisible) {
@@ -286,9 +309,7 @@ export function StaffChatsView({
 
   const displayChats: ChatDto[] = useMemo(() => {
     if (activeTab === "support") {
-      return (supportChatsData?.getMyChats.list ?? []).filter(
-        (c) => c.chatScope === "SUPPORT",
-      );
+      return supportChatsData?.getOperatorChats.list ?? [];
     }
     return hotelChatsData?.getHotelChats.list ?? [];
   }, [activeTab, hotelChatsData, supportChatsData]);
@@ -299,6 +320,17 @@ export function StaffChatsView({
       : 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
   const loading = activeTab === "hotels" ? hotelChatsLoading : supportChatsLoading;
+  const supportChats = supportChatsData?.getOperatorChats.list ?? [];
+  const supportInboxTitle = copy.userSupportChats;
+  const hotelInboxTitle = copy.hotelStaffChats;
+  const userSupportChats = useMemo(
+    () => supportChats.filter((chat) => !isAgentOriginSupportChat(chat)),
+    [supportChats],
+  );
+  const agentSupportChats = useMemo(
+    () => supportChats.filter((chat) => isAgentOriginSupportChat(chat)),
+    [supportChats],
+  );
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -321,9 +353,67 @@ export function StaffChatsView({
       {/* ── Sidebar ── */}
       <aside className="flex flex-none flex-col border-b border-slate-200 bg-white lg:h-full lg:w-60 lg:border-b-0 lg:border-r">
 
-        {/* Admin: hotel search */}
         {isAdmin && (
-          <div className="hidden p-3 pb-2 lg:block">
+          <div className="flex-none border-b border-slate-100 p-3">
+            <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {supportInboxTitle}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("support");
+                setPage(1);
+              }}
+              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition lg:gap-2.5 lg:py-2.5 ${
+                activeTab === "support"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              <div
+                className={`hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg lg:flex ${
+                  activeTab === "support" ? "bg-white/20" : "bg-teal-100"
+                }`}
+              >
+                <Headset
+                  size={14}
+                  className={activeTab === "support" ? "text-white" : "text-teal-600"}
+                />
+              </div>
+              <Headset
+                size={14}
+                className={`lg:hidden ${activeTab === "support" ? "text-white" : "text-teal-500"}`}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{supportInboxTitle}</p>
+                <p
+                  className={`truncate text-[11px] ${
+                    activeTab === "support" ? "text-white/70" : "text-slate-400"
+                  }`}
+                >
+                  {copy.platformSupport}
+                </p>
+              </div>
+              {supportChats.length > 0 && (
+                <span
+                  className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    activeTab === "support"
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {supportChats.length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="hidden flex-none border-b border-slate-100 p-3 lg:block">
+            <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {hotelInboxTitle}
+            </p>
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 transition focus-within:border-slate-300 focus-within:bg-white">
               <Search size={13} className="flex-shrink-0 text-slate-400" />
               <input
@@ -345,9 +435,8 @@ export function StaffChatsView({
           </div>
         )}
 
-        {/* Hotel list */}
         <nav className="flex gap-1.5 overflow-x-auto p-3 lg:flex-1 lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden">
-          {hotelsLoading ? (
+          {!isAdmin && hotelsLoading ? (
             <>
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
@@ -369,35 +458,6 @@ export function StaffChatsView({
             ))
           )}
         </nav>
-
-        {/* Support tab */}
-        <div className="flex-none border-t border-slate-100 p-3">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("support");
-              setPage(1);
-            }}
-            className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-left transition
-              lg:w-full lg:gap-2.5 lg:py-2.5
-              ${activeTab === "support" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}
-          >
-            <div
-              className={`hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg lg:flex
-                ${activeTab === "support" ? "bg-white/20" : "bg-teal-100"}`}
-            >
-              <Headset
-                size={14}
-                className={activeTab === "support" ? "text-white" : "text-teal-600"}
-              />
-            </div>
-            <Headset
-              size={14}
-              className={`lg:hidden ${activeTab === "support" ? "text-white" : "text-teal-500"}`}
-            />
-            <span className="text-sm font-medium">{copy.support}</span>
-          </button>
-        </div>
       </aside>
 
       {/* ── Main panel ── */}
@@ -408,7 +468,7 @@ export function StaffChatsView({
           <div className="min-w-0 flex-1">
             <h2 className="truncate font-semibold text-slate-900">
               {activeTab === "support"
-                ? copy.supportTitle
+                ? supportInboxTitle
                 : (selectedHotel?.hotelTitle ?? copy.allHotels)}
             </h2>
             {activeTab === "hotels" && selectedHotel && (
@@ -473,7 +533,11 @@ export function StaffChatsView({
         )}
 
         {/* Chat list */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/30">
+        <div
+          className={`flex-1 bg-slate-50/30 ${
+            activeTab === "support" && isAdmin ? "overflow-hidden" : "overflow-y-auto"
+          }`}
+        >
 
           {/* Loading skeletons */}
           {loading && displayChats.length === 0 && (
@@ -515,16 +579,100 @@ export function StaffChatsView({
           )}
 
           {/* Chat items */}
-          {displayChats.length > 0 && (
+          {activeTab === "support" && isAdmin && displayChats.length > 0 && (
+            <div className="grid h-full min-h-0 gap-4 bg-slate-50/30 p-4 lg:grid-cols-2">
+              {[
+                {
+                  title: copy.userSupportChats,
+                  chats: userSupportChats,
+                },
+                {
+                  title: copy.hotelStaffChats,
+                  chats: agentSupportChats,
+                },
+              ]
+                .filter((section) => section.chats.length > 0)
+                .map((section) => (
+                  <div
+                    key={section.title}
+                    className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                  >
+                    <div className="flex flex-none items-center justify-between border-b border-slate-100 bg-slate-50/95 px-5 py-3 backdrop-blur">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        {section.title}
+                      </p>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-sm">
+                        {section.chats.length}
+                      </span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto divide-y divide-slate-50 bg-white">
+                      {section.chats.map((chat, i) => {
+                        const preview = getLastPreviewLabel(locale, chat);
+                        const time = formatChatTimeAgo(locale, chat.lastMessageAt);
+                        const unread = chat.unreadAgentMessages;
+                        const title = getGuestDisplayName(chat, copy.guest);
+
+                        return (
+                          <button
+                            key={chat._id}
+                            type="button"
+                            onClick={() => onSelectChat(chat._id)}
+                            className="flex w-full items-start gap-3.5 bg-white px-5 py-4 text-left transition hover:bg-slate-50"
+                            style={{
+                              animation: "staffChatFadeIn 0.2s ease-out both",
+                              animationDelay: `${i * 25}ms`,
+                            }}
+                          >
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-teal-500 text-sm font-bold text-white">
+                              {getGuestAvatarLetter(chat)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <span
+                                  className={`truncate text-sm font-semibold ${
+                                    unread > 0 ? "text-slate-900" : "text-slate-700"
+                                  }`}
+                                >
+                                  {title}
+                                </span>
+                                <span className="flex-shrink-0 text-[10px] text-slate-400">
+                                  {time}
+                                </span>
+                              </div>
+                              <div className="mt-0.5 flex items-center gap-2">
+                                <p
+                                  className={`flex-1 truncate text-xs ${
+                                    unread > 0
+                                      ? "font-medium text-slate-700"
+                                      : "text-slate-500"
+                                  }`}
+                                >
+                                  {`${getSupportSourceLabel(chat, copy)} · ${preview}`}
+                                </p>
+                                <StatusBadge status={chat.chatStatus} />
+                                {unread > 0 && (
+                                  <span className="flex-shrink-0 rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                    {unread > 99 ? "99+" : unread}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {activeTab !== "support" && displayChats.length > 0 && (
             <div className="divide-y divide-slate-50 bg-white">
               {displayChats.map((chat, i) => {
                 const preview = getLastPreviewLabel(locale, chat);
                 const time = formatChatTimeAgo(locale, chat.lastMessageAt);
                 const unread = chat.unreadAgentMessages;
-                const title =
-                  activeTab === "support"
-                    ? copy.supportTitle
-                    : guestLabel(chat);
+                const title = guestLabel(chat);
 
                 return (
                   <button
@@ -539,17 +687,9 @@ export function StaffChatsView({
                   >
                     {/* Avatar */}
                     <div
-                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
-                        activeTab === "support"
-                          ? "bg-teal-500"
-                          : avatarBg(chat.guestId)
-                      }`}
+                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${avatarBg(chat.guestId)}`}
                     >
-                      {activeTab === "support" ? (
-                        <Headset size={16} />
-                      ) : (
-                        chat.guestId.charAt(chat.guestId.length - 1).toUpperCase()
-                      )}
+                      {getGuestAvatarLetter(chat)}
                     </div>
 
                     {/* Content */}
@@ -574,7 +714,7 @@ export function StaffChatsView({
                               : "text-slate-500"
                           }`}
                         >
-                          {preview}
+                          {`${copy.hotelStaff} · ${preview}`}
                         </p>
                         <StatusBadge status={chat.chatStatus} />
                         {unread > 0 && (

@@ -86,6 +86,15 @@ function formatDateTime(value: string): string {
   });
 }
 
+function normalizeNotificationLink(link: string | null | undefined): string | null {
+  if (!link) return null;
+  const adminChatMatch = link.match(/^\/admin\/chats\/([^/?#]+)$/);
+  if (adminChatMatch) {
+    return `/chats/${adminChatMatch[1]}`;
+  }
+  return link;
+}
+
 
 /* ─── Detail drawer ────────────────────────────────────────────────────────── */
 
@@ -179,15 +188,15 @@ function NotificationDetailDrawer({
           </div>
 
           {/* link */}
-          {notification.link && (
+          {normalizeNotificationLink(notification.link) && (
             <a
-              href={notification.link}
+              href={normalizeNotificationLink(notification.link)!}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-sky-600 hover:text-sky-700 transition"
             >
               <ExternalLink size={14} />
-              {notification.link}
+              {normalizeNotificationLink(notification.link)}
             </a>
           )}
 

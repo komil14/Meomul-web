@@ -26,10 +26,10 @@ import {
   getChatCopy,
   getChatStatusLabel,
 } from "@/lib/chat/chat-i18n";
-import { env } from "@/lib/config/env";
 import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { uploadImageFile } from "@/lib/uploads/upload-image";
 import {
   confirmAction,
   confirmDanger,
@@ -37,6 +37,7 @@ import {
   successAlert,
 } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type {
   ClaimChatMutationData,
   ClaimChatMutationVars,
@@ -64,7 +65,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import { avatarBg } from "@/lib/chat/chat-helpers";
+import { avatarBg, getGuestDisplayName } from "@/lib/chat/chat-helpers";
 
 // ─── Hotel title query ────────────────────────────────────────────────────────
 
@@ -98,16 +99,6 @@ interface TypingEventPayload extends ChatRoomEventPayload {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const API_BASE = env.graphqlUrl.replace(/\/graphql\/?$/i, "");
-
-/** Turns a relative `uploads/...` path into an absolute API URL. */
-function resolveMediaUrl(url: string | null | undefined): string {
-  if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("//") || url.startsWith("blob:"))
-    return url;
-  return `${API_BASE}/${url}`;
-}
 
 const logBackgroundChatError = (context: string, error: unknown): void => {
   if (process.env.NODE_ENV !== "production") {
@@ -232,7 +223,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
   const isOperatorSide = !isUser;
-  const isAgent = memberType === "AGENT";
   const chatId =
     typeof router.query.chatId === "string" ? router.query.chatId : "";
 
@@ -242,9 +232,10 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const refocusAfterSendRef = useRef(false);
   const lastMarkedKeyRef = useRef("");
   const socketRef = useRef<Socket | null>(null);
   const remoteTypingTimeoutRef = useRef<number | null>(null);
@@ -338,8 +329,21 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesScrollRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    });
   }, [chat?.messages?.length]);
+
+  useEffect(() => {
+    if (sending || !refocusAfterSendRef.current) return;
+    refocusAfterSendRef.current = false;
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+  }, [sending]);
 
   // Track previous message count for animation
   useEffect(() => {
@@ -530,7 +534,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       e.currentTarget.closest("form")?.requestSubmit();
     }
@@ -548,8 +552,11 @@ const ChatThreadPage: NextPageWithAuth = () => {
         },
       });
       stopTypingSignal();
+      refocusAfterSendRef.current = true;
       setMessageInput("");
-      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
     } catch (mutationError) {
       await errorAlert(
         copy.sendMessage,
@@ -577,28 +584,10 @@ const ChatThreadPage: NextPageWithAuth = () => {
     }
     setUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const headers = new Headers();
-      const token = getAccessToken();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      const uploadUrl =
-        typeof window !== "undefined"
-          ? "/upload/image?target=chat"
-          : `${env.apiUrl}/upload/image?target=chat`;
-      const res = await fetch(uploadUrl, {
-        method: "POST",
-        headers,
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-      const json = (await res.json()) as { url: string };
+      const imageUrl = await uploadImageFile(file, "chat");
       await sendMessage({
         variables: {
-          input: { chatId: chat._id, messageType: "IMAGE", imageUrl: json.url },
+          input: { chatId: chat._id, messageType: "IMAGE", imageUrl },
         },
       });
     } catch (uploadError) {
@@ -646,11 +635,21 @@ const ChatThreadPage: NextPageWithAuth = () => {
   /** COMPUTED **/
 
   const canClaim = Boolean(
-    chat && isAgent && !chat.assignedAgentId && chat.chatStatus !== "CLOSED",
+    chat &&
+      isOperatorSide &&
+      !chat.assignedAgentId &&
+      chat.chatStatus !== "CLOSED",
   );
-  const canSend = Boolean(chat && chat.chatStatus !== "CLOSED");
+  const canSend = Boolean(
+    chat &&
+      chat.chatStatus !== "CLOSED" &&
+      (isUser || chat.assignedAgentId === member?._id),
+  );
   const canClose = Boolean(
-    chat && chat.chatStatus !== "CLOSED" && isOperatorSide,
+    chat &&
+      chat.chatStatus !== "CLOSED" &&
+      isOperatorSide &&
+      chat.assignedAgentId === member?._id,
   );
 
   const isSupportChat = chat?.chatScope === "SUPPORT";
@@ -663,8 +662,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const supportMeta =
     chat?.supportTopic?.trim() ||
     (chat?.sourcePath ? `${copy.contextFromPage}: ${chat.sourcePath}` : copy.platformSupport);
-  const incomingSenderLabel = isSupportChat ? copy.supportTeam : copy.hotelStaff;
   const hotelAvatarColor = avatarBg(chat?.hotelId ?? chat?._id ?? hotelTitle);
+  const guestName = chat ? getGuestDisplayName(chat, copy.guest) : copy.guest;
 
   const STATUS_CONFIG: Record<
     string,
@@ -717,7 +716,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
       `}</style>
 
       <main
-        className="-mx-3 -my-8 flex flex-col overflow-hidden sm:-mx-6 sm:-my-10"
+        className="-mx-3 -my-8 flex min-h-0 flex-col overflow-hidden sm:-mx-6 sm:-my-10"
         style={{ height: "calc(100svh - 57px)" }}
       >
         {/* ── Header ── */}
@@ -757,11 +756,15 @@ const ChatThreadPage: NextPageWithAuth = () => {
                     className={`text-xs ${statusCfg?.color ?? "text-slate-400"}`}
                   >
                     {getChatStatusLabel(locale, chat.chatStatus)}
-                    {isSupportChat
-                      ? ` · ${supportMeta}`
-                      : hotelLocation
-                        ? ` · ${hotelLocation}`
-                        : ""}
+                    {isOperatorSide
+                      ? isSupportChat
+                        ? ` · ${guestName}${supportMeta ? ` · ${supportMeta}` : ""}`
+                        : ` · ${guestName}${hotelLocation ? ` · ${hotelLocation}` : ""}`
+                      : isSupportChat
+                        ? ` · ${supportMeta}`
+                        : hotelLocation
+                          ? ` · ${hotelLocation}`
+                          : ""}
                   </p>
                   <span
                     title={
@@ -829,7 +832,10 @@ const ChatThreadPage: NextPageWithAuth = () => {
         )}
 
         {/* ── Messages area ── */}
-        <div className="flex-1 overflow-y-auto bg-slate-50">
+        <div
+          ref={messagesScrollRef}
+          className="min-h-0 flex-1 overflow-y-auto bg-slate-50"
+        >
           {/* Loading skeletons */}
           {loading && !chat && (
             <div className="flex flex-col gap-4 px-5 py-8">
@@ -872,6 +878,12 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 const isOwn =
                   (message.senderType === "GUEST" && isUser) ||
                   (message.senderType === "AGENT" && isOperatorSide);
+                const incomingSenderLabel =
+                  message.senderType === "GUEST"
+                    ? guestName
+                    : isSupportChat
+                      ? copy.supportTeam
+                      : copy.hotelStaff;
 
                 const prevMessage =
                   index > 0 ? (chat.messages ?? [])[index - 1] : null;
@@ -984,8 +996,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
                 </div>
               )}
 
-              {/* Scroll anchor */}
-              <div ref={messagesEndRef} />
             </div>
           )}
         </div>
@@ -996,7 +1006,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
             <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 py-3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
               <p className="text-sm text-slate-500">
-                {copy.closedNotice}
+                {canClaim ? copy.claimRequiredNotice : copy.closedNotice}
               </p>
             </div>
           ) : (
@@ -1057,7 +1067,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
               </div>
               {messageInput.trim() && (
                 <p className="mt-1.5 text-right text-[10px] text-slate-400">
-                  ⌘↩ to send
+                  Enter to send, Shift+Enter for a new line
                 </p>
               )}
             </form>

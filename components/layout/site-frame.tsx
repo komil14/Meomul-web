@@ -58,6 +58,15 @@ import {
 const UNREAD_POLL_INTERVAL_MS = 120000;
 const NOTIFICATION_POLL_INTERVAL_MS = 180000;
 
+const normalizeNotificationLink = (link: string | null | undefined): string | null => {
+  if (!link) return null;
+  const adminChatMatch = link.match(/^\/admin\/chats\/([^/?#]+)$/);
+  if (adminChatMatch) {
+    return `/chats/${adminChatMatch[1]}`;
+  }
+  return link;
+};
+
 // ─── Role-aware navigation ────────────────────────────────────────────────────
 
 const NAV_LINKS = {
@@ -432,8 +441,9 @@ function NotificationBellDrawer({
       }
     }
     setOpen(false);
-    if (item.link) {
-      void router.push(item.link);
+    const resolvedLink = normalizeNotificationLink(item.link);
+    if (resolvedLink) {
+      void router.push(resolvedLink);
     }
   };
 

@@ -12,6 +12,7 @@ import {
 import type { Socket } from "socket.io-client";
 import { useToast } from "@/components/ui/toast-provider";
 import {
+  CLAIM_CHAT_MUTATION,
   GET_CHAT_QUERY,
   MARK_CHAT_MESSAGES_AS_READ_MUTATION,
   SEND_MESSAGE_MUTATION,
@@ -22,14 +23,17 @@ import {
   formatChatTime,
   getChatCopy,
 } from "@/lib/chat/chat-i18n";
-import { env } from "@/lib/config/env";
 import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { uploadImageFile } from "@/lib/uploads/upload-image";
 import { errorAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
-import { avatarBg } from "@/lib/chat/chat-helpers";
+import { resolveMediaUrl } from "@/lib/utils/media-url";
+import { avatarBg, getGuestDisplayName } from "@/lib/chat/chat-helpers";
 import type {
+  ClaimChatMutationData,
+  ClaimChatMutationVars,
   GetChatQueryData,
   GetChatQueryVars,
   MarkChatMessagesAsReadMutationData,
@@ -85,16 +89,6 @@ interface TypingEventPayload extends ChatRoomEventPayload {
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
-
-const API_BASE = env.graphqlUrl.replace(/\/graphql\/?$/i, "");
-
-/** Turns a relative `uploads/...` path into an absolute API URL. */
-function resolveMediaUrl(url: string | null | undefined): string {
-  if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("//") || url.startsWith("blob:"))
-    return url;
-  return `${API_BASE}/${url}`;
-}
 
 function isSameDay(a: string, b: string): boolean {
   return new Date(a).toDateString() === new Date(b).toDateString();
@@ -224,6 +218,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const refocusAfterSendRef = useRef(false);
   const pendingImageRef = useRef<{ file: File; previewUrl: string } | null>(
     null,
   );
@@ -264,6 +259,11 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
     SendMessageMutationData,
     SendMessageMutationVars
   >(SEND_MESSAGE_MUTATION);
+
+  const [claimChat, { loading: claiming }] = useMutation<
+    ClaimChatMutationData,
+    ClaimChatMutationVars
+  >(CLAIM_CHAT_MUTATION);
 
   const [markRead] = useMutation<
     MarkChatMessagesAsReadMutationData,
@@ -316,6 +316,14 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat?.messages?.length]);
+
+  useEffect(() => {
+    if (sending || !refocusAfterSendRef.current) return;
+    refocusAfterSendRef.current = false;
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+  }, [sending]);
 
   // Track previous message count for animation
   useEffect(() => {
@@ -503,7 +511,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       e.currentTarget.closest("form")?.requestSubmit();
     }
@@ -521,8 +529,11 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
         },
       });
       stopTypingSignal();
+      refocusAfterSendRef.current = true;
       setMessageInput("");
-      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
     } catch (mutationError) {
       await errorAlert(
         copy.sendMessage,
@@ -561,28 +572,10 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
     if (!pendingImage || !chat) return;
     setUploadingImage(true);
     try {
-      const formData = new FormData();
-      formData.append("file", pendingImage.file);
-      const headers = new Headers();
-      const token = getAccessToken();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      const uploadUrl =
-        typeof window !== "undefined"
-          ? "/upload/image?target=chat"
-          : `${env.apiUrl}/upload/image?target=chat`;
-      const res = await fetch(uploadUrl, {
-        method: "POST",
-        headers,
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-      const json = (await res.json()) as { url: string };
+      const imageUrl = await uploadImageFile(pendingImage.file, "chat");
       await sendMessage({
         variables: {
-          input: { chatId: chat._id, messageType: "IMAGE", imageUrl: json.url },
+          input: { chatId: chat._id, messageType: "IMAGE", imageUrl },
         },
       });
       clearPendingImage();
@@ -593,9 +586,29 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
     }
   };
 
+  const onClaimChat = async () => {
+    if (!chat) return;
+    try {
+      await claimChat({ variables: { input: { chatId: chat._id } } });
+      await refetch();
+    } catch (mutationError) {
+      await errorAlert(copy.claim, getErrorMessage(mutationError));
+    }
+  };
+
   /** COMPUTED **/
 
-  const canSend = Boolean(chat && chat.chatStatus !== "CLOSED");
+  const canClaim = Boolean(
+    chat &&
+      isOperatorSide &&
+      !chat.assignedAgentId &&
+      chat.chatStatus !== "CLOSED",
+  );
+  const canSend = Boolean(
+    chat &&
+      chat.chatStatus !== "CLOSED" &&
+      (isUser || chat.assignedAgentId === member?._id),
+  );
 
   const isSupportChat = chat?.chatScope === "SUPPORT";
   const hotelTitle = isSupportChat
@@ -607,13 +620,17 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   const supportMeta =
     chat?.supportTopic?.trim() ||
     (chat?.sourcePath ? `${copy.contextFromPage}: ${chat.sourcePath}` : copy.platformSupport);
-  const incomingSenderLabel = isSupportChat ? copy.supportTeam : copy.hotelStaff;
   const hotelAvatarColor = avatarBg(chat?.hotelId ?? chat?._id ?? hotelTitle);
+  const guestName = chat ? getGuestDisplayName(chat, copy.guest) : copy.guest;
 
   const statusSubtitle = chat
     ? isSupportChat
-      ? supportMeta
-      : hotelLocation || (chat.chatStatus === "CLOSED" ? copy.closed : "")
+      ? isOperatorSide
+        ? `${guestName}${supportMeta ? ` · ${supportMeta}` : ""}`
+        : supportMeta
+      : isOperatorSide
+        ? `${guestName}${hotelLocation ? ` · ${hotelLocation}` : ""}`
+        : hotelLocation || (chat.chatStatus === "CLOSED" ? copy.closed : "")
     : null;
 
   return (
@@ -695,6 +712,18 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
           </div>
 
           {/* Expand to full page */}
+          {canClaim && (
+            <button
+              type="button"
+              onClick={() => {
+                void onClaimChat();
+              }}
+              disabled={claiming}
+              className="flex h-8 items-center justify-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-white transition hover:bg-sky-600 disabled:opacity-60"
+            >
+              {claiming ? copy.claiming : copy.claim}
+            </button>
+          )}
           <Link
             href={`/chats/${chatId}`}
             onClick={onClose}
@@ -767,6 +796,12 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
                 const isOwn =
                   (message.senderType === "GUEST" && isUser) ||
                   (message.senderType === "AGENT" && isOperatorSide);
+                const incomingSenderLabel =
+                  message.senderType === "GUEST"
+                    ? guestName
+                    : isSupportChat
+                      ? copy.supportTeam
+                      : copy.hotelStaff;
 
                 const prevMessage =
                   index > 0 ? (chat.messages ?? [])[index - 1] : null;
@@ -897,7 +932,7 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
             <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 py-3">
               <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
               <p className="text-sm text-slate-500">
-                {copy.closedNotice}
+                {canClaim ? copy.claimRequiredNotice : copy.closedNotice}
               </p>
             </div>
           ) : (

@@ -4,14 +4,10 @@ import type { ChangeEvent, FormEvent } from "react";
 import { Camera, Lock, X } from "lucide-react";
 import { useToast } from "@/components/ui/toast-provider";
 import { UPDATE_MEMBER_MUTATION } from "@/graphql/member.gql";
-import {
-  getAccessToken,
-  getSessionMember,
-  updateSessionMember,
-} from "@/lib/auth/session";
-import { env } from "@/lib/config/env";
+import { getSessionMember, updateSessionMember } from "@/lib/auth/session";
 import { useI18n } from "@/lib/i18n/provider";
 import { getProfileCopy } from "@/lib/profile/profile-i18n";
+import { uploadImageFile } from "@/lib/uploads/upload-image";
 import { getErrorMessage } from "@/lib/utils/error";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 
@@ -121,26 +117,8 @@ export function EditProfileModal({
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const headers = new Headers();
-      const token = getAccessToken();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      const uploadUrl =
-        typeof window !== "undefined"
-          ? "/upload/image?target=member"
-          : `${env.apiUrl}/upload/image?target=member`;
-      const res = await fetch(uploadUrl, {
-        method: "POST",
-        headers,
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const json = (await res.json()) as { url: string };
-      setImageUrl(json.url);
+      const uploadedUrl = await uploadImageFile(file, "member");
+      setImageUrl(uploadedUrl);
     } catch (err) {
       toast.error(copy.imageUploadFailed);
       console.error(err);

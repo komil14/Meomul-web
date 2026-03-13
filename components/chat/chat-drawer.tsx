@@ -3,9 +3,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Socket } from "socket.io-client";
 import {
+  CLAIM_CHAT_MUTATION,
   GET_CHAT_QUERY,
   GET_MY_CHATS_QUERY,
-  GET_MY_UNREAD_CHAT_COUNT_QUERY,
+  GET_OPERATOR_CHATS_QUERY,
   MARK_CHAT_MESSAGES_AS_READ_MUTATION,
   SEND_MESSAGE_MUTATION,
 } from "@/graphql/chat.gql";
@@ -22,13 +23,19 @@ import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import {
   avatarBg,
+  getGuestAvatarLetter,
+  getGuestDisplayName,
 } from "@/lib/chat/chat-helpers";
 import { getErrorMessage } from "@/lib/utils/error";
 import type {
+  ClaimChatMutationData,
+  ClaimChatMutationVars,
   GetChatQueryData,
   GetChatQueryVars,
   GetMyChatsQueryData,
   GetMyChatsQueryVars,
+  GetOperatorChatsQueryData,
+  GetOperatorChatsQueryVars,
   MarkChatMessagesAsReadMutationData,
   MarkChatMessagesAsReadMutationVars,
   MessageDto,
@@ -261,16 +268,16 @@ function ListView({
     pollInterval: isOpen && isPageVisible && !socketConnected ? 120000 : 0,
   });
 
-  const { data: agentUnreadData, refetch: refetchUnread } = useQuery<{ getMyUnreadChatCount: number }>(
-    GET_MY_UNREAD_CHAT_COUNT_QUERY,
-    {
-      skip: isUser || !isOpen,
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-and-network",
-      pollInterval: isOpen && isPageVisible && !socketConnected ? 120000 : 0,
-    },
-  );
-  const agentUnreadCount = agentUnreadData?.getMyUnreadChatCount ?? 0;
+  const { data: operatorChatsData, loading: operatorChatsLoading, refetch: refetchOperatorChats } = useQuery<
+    GetOperatorChatsQueryData,
+    GetOperatorChatsQueryVars
+  >(GET_OPERATOR_CHATS_QUERY, {
+    skip: isUser || !isOpen,
+    variables: { input: listInput },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+    pollInterval: isOpen && isPageVisible && !socketConnected ? 120000 : 0,
+  });
 
   const { data: hotelsData } = useQuery<GetHotelsQueryData, GetHotelsQueryVars>(
     GET_HOTELS_QUERY,
@@ -289,6 +296,9 @@ function ListView({
   }, [hotelsData]);
 
   const chats = chatsData?.getMyChats.list ?? [];
+  const operatorChats = operatorChatsData?.getOperatorChats.list ?? [];
+  const visibleChats = isUser ? chats : operatorChats;
+  const isListLoading = isUser ? chatsLoading : operatorChatsLoading;
 
   const STATUS_DOT: Record<string, string> = {
     ACTIVE: "bg-emerald-400",
@@ -310,7 +320,7 @@ function ListView({
         void refetchChats();
         return;
       }
-      void refetchUnread();
+      void refetchOperatorChats();
     };
 
     const handleConnect = (): void => {
@@ -336,7 +346,7 @@ function ListView({
       socketRef.current = null;
       setSocketConnected(false);
     };
-  }, [isOpen, isPageVisible, isUser, refetchChats, refetchUnread]);
+  }, [isOpen, isPageVisible, isUser, refetchChats, refetchOperatorChats]);
 
   return (
     <>
@@ -376,47 +386,8 @@ function ListView({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto">
-        {/* Non-user: staff mini-stats + link */}
-        {!isUser && (
-          <div className="flex flex-col gap-2 px-4 py-5">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-              <MessageSquare
-                size={15}
-                className="flex-shrink-0 text-slate-400"
-              />
-              <p className="flex-1 text-sm text-slate-600">
-                {agentUnreadCount > 0 ? (
-                  <>
-                    <span className="font-bold text-slate-900">
-                      {agentUnreadCount}
-                    </span>{" "}
-                    {copy.unreadConversations
-                      .replace("{{count}}", agentUnreadCount.toString())
-                      .replace("{{suffix}}", agentUnreadCount !== 1 ? "s" : "")}
-                  </>
-                ) : (
-                  copy.noUnreadConversations
-                )}
-              </p>
-              {agentUnreadCount > 0 && (
-                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-sky-500 px-1.5 text-[10px] font-bold text-white">
-                  {agentUnreadCount > 99 ? "99+" : agentUnreadCount}
-                </span>
-              )}
-            </div>
-            <Link
-              href="/chats"
-              onClick={onClose}
-              className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-            >
-              <ExternalLink size={13} />
-              {copy.openChatManagement}
-            </Link>
-          </div>
-        )}
-
-        {/* User: loading skeletons */}
-        {isUser && chatsLoading && chats.length === 0 && (
+        {/* Loading skeletons */}
+        {isListLoading && visibleChats.length === 0 && (
           <div className="divide-y divide-slate-50">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-3.5">
@@ -430,39 +401,52 @@ function ListView({
           </div>
         )}
 
-        {/* User: empty state */}
-        {isUser && !chatsLoading && chats.length === 0 && (
+        {/* Empty state */}
+        {!isListLoading && visibleChats.length === 0 && (
           <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
             <MessageSquare size={28} className="mb-3 text-slate-200" />
             <p className="font-semibold text-slate-700">{copy.noConversations}</p>
             <p className="mt-1.5 text-sm text-slate-400">
-              {copy.noConversationsDesc}
+              {isUser ? copy.noConversationsDesc : copy.noUnreadConversations}
             </p>
             <div className="mt-5 flex w-full flex-col gap-2">
-              <Link
-                href="/chats?openNew=1"
-                onClick={onClose}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-              >
-                <SquarePen size={13} />
-                {copy.newMessage}
-              </Link>
-              <Link
-                href="/chats?openNew=1&openSupport=1"
-                onClick={onClose}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                <Headset size={13} />
-                {copy.contactSupport}
-              </Link>
+              {isUser ? (
+                <>
+                  <Link
+                    href="/chats?openNew=1"
+                    onClick={onClose}
+                    className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  >
+                    <SquarePen size={13} />
+                    {copy.newMessage}
+                  </Link>
+                  <Link
+                    href="/chats?openNew=1&openSupport=1"
+                    onClick={onClose}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <Headset size={13} />
+                    {copy.contactSupport}
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  href="/chats"
+                  onClick={onClose}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+                >
+                  <ExternalLink size={13} />
+                  {copy.openChatManagement}
+                </Link>
+              )}
             </div>
           </div>
         )}
 
-        {/* User: chat list */}
-        {isUser && chats.length > 0 && (
+        {/* Chat list */}
+        {visibleChats.length > 0 && (
           <div className="divide-y divide-slate-50">
-            {chats.map((chat) => {
+            {visibleChats.map((chat) => {
               const isSupportChat = chat.chatScope === "SUPPORT";
               const hotel =
                 !isSupportChat && chat.hotelId
@@ -471,7 +455,10 @@ function ListView({
               const hotelName = isSupportChat
                 ? copy.supportTitle
                 : (hotel?.hotelTitle ?? copy.hotelSupport);
-              const unread = chat.unreadGuestMessages;
+              const guestName = getGuestDisplayName(chat, copy.guest);
+              const unread = isUser
+                ? chat.unreadGuestMessages
+                : chat.unreadAgentMessages;
               const preview = getLastPreviewLabel(locale, chat);
               const time = formatChatTimeAgo(locale, chat.lastMessageAt);
               const color = avatarBg(chat.hotelId ?? chat._id);
@@ -491,9 +478,9 @@ function ListView({
                       }`}
                     >
                       {isSupportChat ? (
-                        <Headset size={18} />
+                        isUser ? <Headset size={18} /> : getGuestAvatarLetter(chat)
                       ) : (
-                        hotelName.charAt(0)
+                        isUser ? hotelName.charAt(0) : getGuestAvatarLetter(chat)
                       )}
                     </div>
                     <span
@@ -513,7 +500,7 @@ function ListView({
                             : "font-semibold text-slate-800"
                         }`}
                       >
-                        {hotelName}
+                        {isUser ? hotelName : guestName}
                       </p>
                       <span
                         className={`flex-shrink-0 text-[10px] ${
@@ -533,7 +520,7 @@ function ListView({
                             : "text-slate-400"
                         }`}
                       >
-                        {preview}
+                        {isUser ? preview : `${hotelName} · ${preview}`}
                       </p>
                       {unread > 0 && (
                         <span className="flex min-w-[18px] flex-shrink-0 items-center justify-center rounded-full bg-sky-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
@@ -546,24 +533,25 @@ function ListView({
               );
             })}
 
-            {/* ── Sticky Contact Support entry ── */}
-            <Link
-              href="/chats?openNew=1&openSupport=1"
-              onClick={onClose}
-              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 active:bg-slate-100"
-            >
-              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-teal-500 text-white">
-                <Headset size={18} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-800">
-                  {copy.contactSupport}
-                </p>
-                <p className="mt-0.5 truncate text-xs text-slate-400">
-                  {copy.platformSupport}
-                </p>
-              </div>
-            </Link>
+            {isUser && (
+              <Link
+                href="/chats?openNew=1&openSupport=1"
+                onClick={onClose}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 active:bg-slate-100"
+              >
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-teal-500 text-white">
+                  <Headset size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-800">
+                    {copy.contactSupport}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-slate-400">
+                    {copy.platformSupport}
+                  </p>
+                </div>
+              </Link>
+            )}
           </div>
         )}
       </div>
@@ -592,11 +580,13 @@ function ThreadView({
   onBack: () => void;
   onClose: () => void;
 }) {
+  const member = useMemo(() => getSessionMember(), []);
   const [messageInput, setMessageInput] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const isPageVisible = usePageVisible();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const refocusAfterSendRef = useRef(false);
   const socketRef = useRef<Socket | null>(null);
   const lastMarkedRef = useRef("");
 
@@ -614,6 +604,11 @@ function ThreadView({
     SendMessageMutationData,
     SendMessageMutationVars
   >(SEND_MESSAGE_MUTATION);
+
+  const [claimChat, { loading: claiming }] = useMutation<
+    ClaimChatMutationData,
+    ClaimChatMutationVars
+  >(CLAIM_CHAT_MUTATION);
 
   const [markRead] = useMutation<
     MarkChatMessagesAsReadMutationData,
@@ -640,6 +635,14 @@ function ThreadView({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat?.messages?.length]);
+
+  useEffect(() => {
+    if (sending || !refocusAfterSendRef.current) return;
+    refocusAfterSendRef.current = false;
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+  }, [sending]);
 
   // Fallback polling when socket is disconnected
   useEffect(() => {
@@ -699,15 +702,39 @@ function ThreadView({
           input: { chatId: chat._id, messageType: "TEXT", content },
         },
       });
+      refocusAfterSendRef.current = true;
       setMessageInput("");
-      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+    } catch {
+      // silent — user can retry
+    }
+  };
+
+  const onClaimChat = async () => {
+    if (!chat) return;
+    try {
+      await claimChat({ variables: { input: { chatId: chat._id } } });
+      await refetch();
     } catch {
       // silent — user can retry
     }
   };
 
   const hotelColor = avatarBg(chatId);
-  const canSend = Boolean(chat && chat.chatStatus !== "CLOSED");
+  const guestName = chat ? getGuestDisplayName(chat, copy.guest) : copy.guest;
+  const canClaim = Boolean(
+    chat &&
+      !isUser &&
+      !chat.assignedAgentId &&
+      chat.chatStatus !== "CLOSED",
+  );
+  const canSend = Boolean(
+    chat &&
+      chat.chatStatus !== "CLOSED" &&
+      (isUser || chat.assignedAgentId === member?._id),
+  );
 
   return (
     <>
@@ -740,11 +767,19 @@ function ThreadView({
           </p>
           {chat && (
             <p className="text-[10px] text-slate-400">
-              {chat.chatStatus === "ACTIVE"
-                ? copy.active
-                : chat.chatStatus === "WAITING"
-                  ? copy.waiting
-                  : copy.closed}
+              {isUser
+                ? chat.chatStatus === "ACTIVE"
+                  ? copy.active
+                  : chat.chatStatus === "WAITING"
+                    ? copy.waiting
+                    : copy.closed
+                : `${guestName} · ${
+                    chat.chatStatus === "ACTIVE"
+                      ? copy.active
+                      : chat.chatStatus === "WAITING"
+                        ? copy.waiting
+                        : copy.closed
+                  }`}
             </p>
           )}
         </div>
@@ -757,6 +792,18 @@ function ThreadView({
         >
           <ExternalLink size={15} />
         </Link>
+        {canClaim && (
+          <button
+            type="button"
+            onClick={() => {
+              void onClaimChat();
+            }}
+            disabled={claiming}
+            className="flex h-8 items-center justify-center rounded-full bg-sky-500 px-3 text-xs font-semibold text-white transition hover:bg-sky-600 disabled:opacity-60"
+          >
+            {claiming ? copy.claiming : copy.claim}
+          </button>
+        )}
         <button
           type="button"
           onClick={onClose}
@@ -832,7 +879,7 @@ function ThreadView({
       <div className="flex-none border-t border-slate-200 bg-white px-3 py-2.5">
         {!canSend ? (
           <div className="rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-center text-xs text-slate-500">
-            {copy.closedNotice}{" "}
+            {canClaim ? copy.claimRequiredNotice : copy.closedNotice}{" "}
             <Link
               href={`/chats/${chatId}`}
               onClick={onClose}
@@ -854,7 +901,7 @@ function ThreadView({
                   el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
                 }}
                 onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     e.currentTarget.closest("form")?.requestSubmit();
                   }
