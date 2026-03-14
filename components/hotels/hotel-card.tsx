@@ -194,8 +194,8 @@ export const HotelCard = memo(function HotelCard({
           });
         }}
       >
-        <div className="flex gap-3 sm:hidden">
-          <div className="relative h-28 w-[42%] shrink-0 overflow-hidden rounded-[1.1rem] bg-slate-100">
+        <div className="flex gap-2.5 sm:hidden">
+          <div className="relative h-24 w-[38%] shrink-0 overflow-hidden rounded-[0.95rem] bg-slate-100">
             {coverImage ? (
               <Image
                 src={coverImage}
@@ -214,38 +214,38 @@ export const HotelCard = memo(function HotelCard({
               type="button"
               onClick={handleToggleSaved}
               disabled={togglingLike}
-              className={`absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-sm transition ${togglingLike ? "cursor-wait opacity-70" : "hover:bg-white"}`}
+              className={`absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/92 text-slate-700 shadow-sm transition ${togglingLike ? "cursor-wait opacity-70" : "hover:bg-white"}`}
               aria-label={isLiked ? "Remove saved hotel" : "Save hotel"}
             >
-              <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" className={`h-4 w-4 ${isLiked ? "text-rose-500" : ""}`} aria-hidden>
+              <svg viewBox="0 0 24 24" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" className={`h-3.5 w-3.5 ${isLiked ? "text-rose-500" : ""}`} aria-hidden>
                 <path d="m12 21-1.45-1.32C5.4 15.02 2 11.92 2 8.12 2 5.02 4.42 3 7.44 3c1.7 0 3.33.79 4.36 2.03C12.83 3.79 14.46 3 16.16 3 19.18 3 21.6 5.02 21.6 8.12c0 3.8-3.4 6.9-8.55 11.57z" />
               </svg>
             </button>
           </div>
-          <div className="min-w-0 flex-1 pr-2 pt-0.5">
-            <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 pr-1 pt-0.5">
+            <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="line-clamp-2 text-[0.98rem] font-semibold leading-snug text-slate-950">
+                <p className="line-clamp-2 text-[0.92rem] font-semibold leading-snug text-slate-950">
                   {hotel.hotelTitle}
                 </p>
-                <p className="mt-1 text-[13px] text-slate-500">
+                <p className="mt-0.5 line-clamp-1 text-[12px] text-slate-500">
                   {locationLabel}, South Korea
                 </p>
-                <p className="mt-0.5 text-[13px] text-slate-500">
+                <p className="mt-0.5 text-[12px] text-slate-500">
                   {hotel.hotelType.toLowerCase()}
                 </p>
               </div>
-              <span className="inline-flex shrink-0 items-center gap-1 pt-0.5 text-[12px] font-semibold text-slate-900">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3" aria-hidden>
+              <span className="inline-flex shrink-0 items-center gap-1 pt-0.5 text-[11px] font-semibold text-slate-900">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-2.5 w-2.5" aria-hidden>
                   <path d="M12 2l2.95 6.08 6.72.98-4.86 4.67 1.15 6.6L12 17.2l-5.96 3.13 1.15-6.6L2.33 9.06l6.72-.98L12 2z" />
                 </svg>
                 {ratingText}
               </span>
             </div>
-            <div className="mt-3 flex items-center justify-between gap-3 text-[12px] text-slate-500">
-              <span>{savedText} saved</span>
+            <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span className="truncate">{savedText} saved</span>
               {hotel.hotelImages.length > 1 ? (
-                <div className="mr-1 flex shrink-0 items-center gap-1.5" aria-hidden>
+                <div className="mr-0.5 flex shrink-0 items-center gap-1" aria-hidden>
                   {hotel.hotelImages.slice(0, 4).map((_, index) => (
                     <span
                       key={`${hotel._id}-dot-${index}`}

@@ -91,7 +91,7 @@ const httpLink = new HttpLink({
   credentials: "include",
 });
 
-export const createApolloClient = () => {
+export const createApolloClient = (options?: { headers?: Record<string, string> }) => {
   const cache = new InMemoryCache({
     typePolicies: {
       BookingDto: { keyFields: ["_id"] },
@@ -122,6 +122,16 @@ export const createApolloClient = () => {
         fetchPolicy: "network-only",
       },
     },
-    link: from([errorLink, retryLink, httpLink]),
+    link: from([
+      errorLink,
+      retryLink,
+      options?.headers
+        ? new HttpLink({
+            uri: env.graphqlHttpUrl,
+            credentials: "include",
+            headers: options.headers,
+          })
+        : httpLink,
+    ]),
   });
 };

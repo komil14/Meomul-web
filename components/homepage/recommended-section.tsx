@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
@@ -10,9 +9,24 @@ interface RecommendedSectionProps {
   cards: RecommendedCard[];
   rows: RecommendedCard[][];
   isPersonalizing: boolean;
+  debugInfo?: {
+    source: string;
+    listCount: number;
+    profileSource?: string | null;
+    strictCount?: number;
+    relaxedCount?: number;
+    generalCount?: number;
+    fallbackCount?: number;
+    matchedLocationCount?: number;
+  } | null;
 }
 
-export function RecommendedSection({ cards, rows, isPersonalizing }: RecommendedSectionProps) {
+export function RecommendedSection({
+  cards,
+  rows,
+  isPersonalizing,
+  debugInfo,
+}: RecommendedSectionProps) {
   const { t } = useI18n();
   const [activeCard, setActiveCard] = useState(1);
 
@@ -35,6 +49,18 @@ export function RecommendedSection({ cards, rows, isPersonalizing }: Recommended
         <p className={styles.signatureDescription}>
           {t("home_recommended_desc")}
         </p>
+        {process.env.NODE_ENV !== "production" && debugInfo ? (
+          <div className={styles.signatureDebugBox}>
+            <span>{`src=${debugInfo.source}`}</span>
+            <span>{`list=${debugInfo.listCount}`}</span>
+            <span>{`profile=${debugInfo.profileSource ?? "none"}`}</span>
+            <span>{`strict=${debugInfo.strictCount ?? 0}`}</span>
+            <span>{`relaxed=${debugInfo.relaxedCount ?? 0}`}</span>
+            <span>{`general=${debugInfo.generalCount ?? 0}`}</span>
+            <span>{`fallback=${debugInfo.fallbackCount ?? 0}`}</span>
+            <span>{`matchedLoc=${debugInfo.matchedLocationCount ?? 0}`}</span>
+          </div>
+        ) : null}
       </div>
 
       <div className={styles.signatureRows}>
@@ -53,11 +79,9 @@ export function RecommendedSection({ cards, rows, isPersonalizing }: Recommended
                 >
                   <Link href={`/hotels/${hotel._id}`} className={styles.signatureCardLink}>
                     {hotel.imageUrl ? (
-                      <Image
+                      <img
                         src={hotel.imageUrl}
                         alt={hotel.title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1180px) 50vw, 33vw"
                         className={styles.signatureCardImage}
                       />
                     ) : (

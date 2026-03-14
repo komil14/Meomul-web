@@ -65,3 +65,12 @@ export function getYouTubeEmbedUrl(value?: string | null): string {
 
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 }
+
+export function getYouTubeThumbnailUrl(value?: string | null): string {
+  const videoId = extractYouTubeVideoId(value);
+  if (!videoId) {
+    return "";
+  }
+
+  return `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
+}

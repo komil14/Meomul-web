@@ -172,15 +172,31 @@ export function HotelsSearchRow({
       }
     };
 
-    const handleScroll = () => updateDropdownPosition();
-    window.addEventListener("scroll", handleScroll, true);
-    window.addEventListener("resize", handleScroll);
+    let frameId: number | null = null;
+    const schedulePositionUpdate = () => {
+      if (frameId != null) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        updateDropdownPosition();
+      });
+    };
+
+    window.addEventListener("scroll", schedulePositionUpdate, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("resize", schedulePositionUpdate, {
+      passive: true,
+    });
 
     document.addEventListener("mousedown", handlePointerDown);
     return () => {
+      if (frameId != null) {
+        window.cancelAnimationFrame(frameId);
+      }
       document.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("scroll", handleScroll, true);
-      window.removeEventListener("resize", handleScroll);
+      window.removeEventListener("scroll", schedulePositionUpdate, true);
+      window.removeEventListener("resize", schedulePositionUpdate);
     };
   }, [showDropdown, updateDropdownPosition]);
 
@@ -233,10 +249,10 @@ export function HotelsSearchRow({
   return (
     <div
       ref={containerRef}
-      className="relative z-20 rounded-[1.5rem] border border-slate-200 bg-white p-1.5 sm:rounded-[1.75rem] sm:p-2"
+      className="relative z-20 rounded-[1.2rem] border border-slate-200 bg-white p-1.5 sm:rounded-[1.75rem] sm:p-2"
     >
-      <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <label className="flex-1 rounded-[1.15rem] border border-slate-200 bg-white px-3.5 py-2.5 sm:rounded-[1.3rem] sm:px-4 sm:py-3">
+      <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-2">
+        <label className="flex-1 rounded-[1rem] border border-slate-200 bg-white px-3 py-2 sm:rounded-[1.3rem] sm:px-4 sm:py-3">
           <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             {t("hotels_search_title")}
           </span>
@@ -246,18 +262,18 @@ export function HotelsSearchRow({
             onKeyDown={handleKeyDown}
             onFocus={handleFocus}
             placeholder={t("hotels_search_placeholder")}
-            className="mt-1 w-full bg-transparent text-[13px] font-medium text-slate-900 outline-none placeholder:text-slate-400 sm:text-sm"
+            className="mt-0.5 w-full bg-transparent text-[13px] font-medium text-slate-900 outline-none placeholder:text-slate-400 sm:mt-1 sm:text-sm"
           />
         </label>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1.5 md:flex md:items-center md:gap-2">
           <button
             type="button"
             onClick={() => {
               setShowDropdown(false);
               onSearch();
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-[1.15rem] bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-black md:min-w-[9.5rem] md:rounded-[1.3rem] md:px-5 md:py-4"
+            className="inline-flex items-center justify-center gap-2 rounded-[1rem] bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-black md:min-w-[9.5rem] md:rounded-[1.3rem] md:px-5 md:py-4"
           >
             <svg
               viewBox="0 0 24 24"
@@ -272,7 +288,7 @@ export function HotelsSearchRow({
             {t("hotels_search_button")}
           </button>
 
-          <label className="flex items-center gap-2 rounded-[1.15rem] border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 md:min-w-[13rem] md:rounded-[1.3rem] md:px-4 md:py-3">
+          <label className="flex items-center gap-2 rounded-[1rem] border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 md:min-w-[13rem] md:rounded-[1.3rem] md:px-4 md:py-3">
             <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 md:text-[11px]">
               {t("hotels_sort_label")}
             </span>

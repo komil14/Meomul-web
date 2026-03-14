@@ -1,6 +1,7 @@
 import type {
   HotelListItem,
   HotelLocation,
+  RecommendedHotelsV2Dto,
   ReviewDto,
   ReviewRatingsSummaryDto,
   RoomType,
@@ -78,6 +79,7 @@ export interface HomePageProps {
   initialFeaturedRatingsSummary: ReviewRatingsSummaryDto | null;
   initialTestimonials: TestimonialReviewEntry[];
   initialLastMinuteDeals: LastMinuteDealCard[];
+  initialRecommendationResult: RecommendedHotelsV2Dto | null;
   serverTodayIso: string;
   initialLoadError: string | null;
 }

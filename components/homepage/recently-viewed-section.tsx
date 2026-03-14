@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
@@ -53,11 +52,9 @@ export function RecentlyViewedSection() {
           <article key={`recent-hotel-${hotel.hotelId}`} className={styles.trendingCard} role="listitem">
             <Link href={`/hotels/${hotel.hotelId}`} className={styles.trendingCardLink}>
               {hotel.imageUrl ? (
-                <Image
+                <img
                   src={hotel.imageUrl}
                   alt={hotel.hotelTitle}
-                  fill
-                  sizes="(max-width: 640px) 88vw, (max-width: 1180px) 46vw, 28vw"
                   className={styles.trendingCardImage}
                 />
               ) : (

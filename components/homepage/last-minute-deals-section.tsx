@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
 import { useI18n } from "@/lib/i18n/provider";
@@ -47,11 +46,9 @@ export function LastMinuteDealsSection({ deals }: LastMinuteDealsSectionProps) {
           <article key={`deal-room-${deal.roomId}`} className={styles.dealCard} role="listitem">
             <Link href={`/rooms/${deal.roomId}`} className={styles.dealCardLink}>
               {deal.imageUrl ? (
-                <Image
+                <img
                   src={deal.imageUrl}
                   alt={`${deal.roomName} at ${deal.hotelTitle}`}
-                  fill
-                  sizes="(max-width: 640px) 88vw, (max-width: 1180px) 46vw, 28vw"
                   className={styles.dealCardImage}
                 />
               ) : (

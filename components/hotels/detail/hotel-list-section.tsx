@@ -52,7 +52,7 @@ export const HotelListSection = memo(function HotelListSection({
                 <HotelCard
                   hotel={entry}
                   trackingContext={trackingContext}
-                  imagePriority={index < 2}
+                  imagePriority={index === 0}
                   imageSizes="(max-width: 639px) 16rem, 18rem"
                 />
                 <RecommendationReasonPanel explanation={recommendationExplanations?.get(entry._id)} compact />
@@ -66,7 +66,7 @@ export const HotelListSection = memo(function HotelListSection({
                 <HotelCard
                   hotel={entry}
                   trackingContext={trackingContext}
-                  imagePriority={index < 2}
+                  imagePriority={index === 0}
                   imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 22rem"
                 />
                 <RecommendationReasonPanel explanation={recommendationExplanations?.get(entry._id)} />

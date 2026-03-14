@@ -1,6 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import type { GetServerSideProps } from "next";
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { EditorialGuidesSection } from "@/components/homepage/editorial-guides-section";
 import { HeroSection } from "@/components/homepage/hero-section";
@@ -17,7 +18,7 @@ import {
   GET_RECOMMENDED_HOTELS_V2_QUERY,
 } from "@/graphql/hotel.gql";
 import { createApolloClient } from "@/lib/apollo/client";
-import { getAccessToken } from "@/lib/auth/session";
+import { getSessionMember } from "@/lib/auth/session";
 import type { TranslationKey } from "@/lib/i18n/messages";
 import { useI18n } from "@/lib/i18n/provider";
 import { env } from "@/lib/config/env";
@@ -188,25 +189,47 @@ export default function HomePage({
   initialFeaturedRatingsSummary,
   initialTestimonials,
   initialLastMinuteDeals,
+  initialRecommendationResult,
   serverTodayIso,
   initialLoadError,
 }: HomePageProps) {
   const { locale, t } = useI18n();
-  const [hasAccessToken, setHasAccessToken] = useState(false);
+  const router = useRouter();
+  const [hasSession, setHasSession] = useState(Boolean(initialRecommendationResult));
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const showRecommendationDebug = router.query.debugRec === "1";
 
   const { data: recommendedData, loading: recommendedLoading } = useQuery<
     GetRecommendedHotelsV2QueryData,
     GetRecommendedHotelsV2QueryVars
   >(GET_RECOMMENDED_HOTELS_V2_QUERY, {
     variables: { limit: RECOMMENDED_GRID_LIMIT },
-    skip: !hasAccessToken,
+    skip: !hasSession,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
   });
 
   useEffect(() => {
-    setHasAccessToken(Boolean(getAccessToken()));
+    setHasSession(Boolean(getSessionMember()));
+    setHasHydrated(true);
   }, []);
+
+  const effectiveRecommendationResult = useMemo(() => {
+    if (!hasSession) {
+      return null;
+    }
+
+    if (!hasHydrated) {
+      return initialRecommendationResult;
+    }
+
+    return recommendedData?.getRecommendedHotelsV2 ?? initialRecommendationResult;
+  }, [
+    hasHydrated,
+    hasSession,
+    initialRecommendationResult,
+    recommendedData?.getRecommendedHotelsV2,
+  ]);
 
   // ─── Derived data ────────────────────────────────────────────────────────────
 
@@ -217,25 +240,24 @@ export default function HomePage({
 
   const recommendationSignals = useMemo(() => {
     const map = new Map<string, string>();
-    const explanations = hasAccessToken
-      ? (recommendedData?.getRecommendedHotelsV2.explanations ?? [])
-      : [];
+    const explanations = effectiveRecommendationResult?.explanations ?? [];
     explanations.forEach((exp) => {
       const signal = pickRecommendationSignal(exp, t);
       if (signal) map.set(exp.hotelId, signal);
     });
     return map;
-  }, [hasAccessToken, recommendedData?.getRecommendedHotelsV2.explanations, t]);
+  }, [
+    effectiveRecommendationResult?.explanations,
+    t,
+  ]);
 
   const recommendedCards = useMemo<RecommendedCard[]>(() => {
-    const personalized = hasAccessToken
-      ? (recommendedData?.getRecommendedHotelsV2.list ?? [])
-      : [];
-    const merged = uniqueHotelsById([
-      ...personalized,
-      ...initialTrendingHotels,
-      ...initialTopHotels,
-    ]).slice(0, RECOMMENDED_GRID_LIMIT);
+    const personalized = effectiveRecommendationResult?.list ?? [];
+    const merged = uniqueHotelsById(
+      personalized.length > 0
+        ? personalized
+        : [...initialTrendingHotels, ...initialTopHotels],
+    ).slice(0, RECOMMENDED_GRID_LIMIT);
     return merged.map((hotel) => ({
       _id: hotel._id,
       title: hotel.hotelTitle,
@@ -249,10 +271,9 @@ export default function HomePage({
         t("home_signal_fallback_quality"),
     }));
   }, [
-    hasAccessToken,
+    effectiveRecommendationResult?.list,
     initialTopHotels,
     initialTrendingHotels,
-    recommendedData?.getRecommendedHotelsV2.list,
     recommendationSignals,
     t,
   ]);
@@ -263,20 +284,50 @@ export default function HomePage({
     [recommendedCards],
   );
 
-  const trendingHotels = useMemo(() => {
-    const personalized = hasAccessToken
-      ? (recommendedData?.getRecommendedHotelsV2.list ?? [])
-      : [];
-    return uniqueHotelsById([
-      ...initialTrendingHotels,
-      ...personalized,
-      ...initialTopHotels,
-    ]).slice(0, TRENDING_RAIL_LIMIT);
+  const recommendationDebugInfo = useMemo(() => {
+    if (process.env.NODE_ENV === "production" || !hasSession || !showRecommendationDebug) {
+      return null;
+    }
+
+    const liveResult = hasHydrated ? recommendedData?.getRecommendedHotelsV2 : null;
+    const initialResult = initialRecommendationResult;
+    const effectiveResult = effectiveRecommendationResult;
+
+    return {
+      source: !hasHydrated
+        ? initialResult
+          ? "ssr"
+          : "none"
+        : liveResult
+          ? "client"
+          : initialResult
+            ? "ssr"
+            : "none",
+      listCount: effectiveResult?.list.length ?? 0,
+      profileSource: effectiveResult?.meta.profileSource ?? null,
+      strictCount: effectiveResult?.meta.strictStageCount ?? 0,
+      relaxedCount: effectiveResult?.meta.relaxedStageCount ?? 0,
+      generalCount: effectiveResult?.meta.generalStageCount ?? 0,
+      fallbackCount: effectiveResult?.meta.fallbackCount ?? 0,
+      matchedLocationCount: effectiveResult?.meta.matchedLocationCount ?? 0,
+    };
   }, [
-    hasAccessToken,
+    hasHydrated,
+    hasSession,
+    effectiveRecommendationResult,
+    initialRecommendationResult,
+    recommendedData?.getRecommendedHotelsV2,
+    showRecommendationDebug,
+  ]);
+
+  const trendingHotels = useMemo(() => {
+    return uniqueHotelsById([...initialTrendingHotels, ...initialTopHotels]).slice(
+      0,
+      TRENDING_RAIL_LIMIT,
+    );
+  }, [
     initialTopHotels,
     initialTrendingHotels,
-    recommendedData?.getRecommendedHotelsV2.list,
   ]);
 
   const valuePillars = useMemo<ValuePillar[]>(() => {
@@ -286,10 +337,14 @@ export default function HomePage({
           initialTopHotels.length
         : 0;
     const trendingLikes = trendingHotels.reduce((sum, h) => sum + (h.hotelLikes ?? 0), 0);
-    const reviewCount =
-      initialFeaturedRatingsSummary?.totalReviews ?? initialFeaturedReviews.length;
-    const meta = hasAccessToken ? recommendedData?.getRecommendedHotelsV2.meta : undefined;
-    const personalizationDetail = hasAccessToken
+    const reviewCount = Math.max(
+      0,
+      Number.isFinite(initialTotalVerifiedReviews)
+        ? initialTotalVerifiedReviews
+        : 0,
+    );
+    const meta = effectiveRecommendationResult?.meta;
+    const personalizationDetail = hasSession
       ? meta
         ? t("home_value_personal_detail_meta", {
             locations: meta.matchedLocationCount,
@@ -335,20 +390,21 @@ export default function HomePage({
       },
       {
         title: t("home_value_personal_title"),
-        metric: hasAccessToken
+        metric: hasSession
           ? t("home_value_personal_metric_signed_in")
           : t("home_value_personal_metric_signed_out"),
         detail: personalizationDetail,
       },
     ];
   }, [
-    hasAccessToken,
+    effectiveRecommendationResult?.meta,
+    hasSession,
     initialFeaturedReviews.length,
     initialFeaturedRatingsSummary,
     initialHotelInventoryTotal,
+    initialTotalVerifiedReviews,
     initialTopHotels,
     locale,
-    recommendedData?.getRecommendedHotelsV2.meta,
     t,
     trendingHotels,
   ]);
@@ -437,7 +493,7 @@ export default function HomePage({
 
   const canonicalBaseUrl = env.siteUrl.replace(/\/+$/, "");
   const canonicalUrl = `${canonicalBaseUrl}/`;
-  const metaTitle = hasAccessToken
+  const metaTitle = hasSession
     ? t("home_meta_title_signed_in")
     : t("home_meta_title");
   const metaDescription = t("home_meta_desc");
@@ -491,20 +547,29 @@ export default function HomePage({
             ratingsSummary={initialFeaturedRatingsSummary}
             totalVerifiedReviews={initialTotalVerifiedReviews}
           />
+
           <RecentlyViewedSection />
+
           <RecommendedSection
             cards={recommendedCards}
             rows={recommendedRows}
-            isPersonalizing={hasAccessToken && recommendedLoading}
+            isPersonalizing={hasSession && recommendedLoading}
+            debugInfo={recommendationDebugInfo}
           />
+
           <TrendingSection hotels={trendingHotels} />
+
           <ValuePillarsSection pillars={valuePillars} />
+
           <LastMinuteDealsSection deals={initialLastMinuteDeals} />
+
           <TestimonialsSection
             testimonials={initialTestimonials}
             totalVerifiedReviews={initialTotalVerifiedReviews}
           />
+
           <SubscriptionPlansSection />
+
           <EditorialGuidesSection cards={editorialGuideCards} />
         </div>
       </main>
@@ -524,7 +589,8 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async (cont
     );
   }
 
-  const client = createApolloClient();
+  const cookie = context.req?.headers.cookie;
+  const client = createApolloClient(cookie ? { headers: { cookie } } : undefined);
   const fallbackToday = new Date();
   const serverTodayIso = `${fallbackToday.getFullYear()}-${`${fallbackToday.getMonth() + 1}`.padStart(2, "0")}-${`${fallbackToday.getDate()}`.padStart(2, "0")}`;
 
@@ -566,6 +632,7 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async (cont
             imageUrl: resolveMediaUrl(deal.imageUrl),
             validUntil: String(deal.validUntil),
           })) ?? [],
+        initialRecommendationResult: feed?.recommendationResult ?? null,
         serverTodayIso,
         initialLoadError: null,
       },
@@ -581,6 +648,7 @@ export const getServerSideProps: GetServerSideProps<HomePageProps> = async (cont
         initialFeaturedRatingsSummary: null,
         initialTestimonials: [],
         initialLastMinuteDeals: [],
+        initialRecommendationResult: null,
         serverTodayIso,
         initialLoadError: "Failed to load homepage data right now.",
       },

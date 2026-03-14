@@ -4,16 +4,16 @@ interface HotelsResultsSkeletonProps {
 
 export function HotelsResultsSkeleton({ count = 6 }: HotelsResultsSkeletonProps) {
   return (
-    <div className="grid gap-x-4 gap-y-5 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid gap-x-3 gap-y-4 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-x-4 sm:gap-y-5">
       {Array.from({ length: count }).map((_, index) => (
         <div key={`hotel-skeleton-${index}`} className="bg-white" aria-hidden="true">
-          <div className="flex gap-3 sm:hidden">
-            <div className="h-28 w-[42%] shrink-0 animate-pulse rounded-[1.1rem] bg-slate-200" />
-            <div className="flex-1 space-y-3 pt-1">
+          <div className="flex gap-2.5 sm:hidden">
+            <div className="h-24 w-[38%] shrink-0 animate-pulse rounded-[1rem] bg-slate-200" />
+            <div className="flex-1 space-y-2.5 pt-1">
               <div className="h-4 w-5/6 animate-pulse rounded-full bg-slate-200" />
               <div className="h-3 w-2/3 animate-pulse rounded-full bg-slate-200" />
               <div className="h-3 w-1/2 animate-pulse rounded-full bg-slate-200" />
-              <div className="flex items-center justify-between pt-3">
+              <div className="flex items-center justify-between pt-2">
                 <div className="h-3 w-16 animate-pulse rounded-full bg-slate-200" />
                 <div className="flex gap-1.5">
                   {Array.from({ length: 4 }).map((_, dotIndex) => (

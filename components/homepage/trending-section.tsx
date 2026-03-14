@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
 import { useI18n } from "@/lib/i18n/provider";
@@ -31,11 +30,9 @@ export function TrendingSection({ hotels }: TrendingSectionProps) {
           <article key={`trending-hotel-${hotel._id}`} className={styles.trendingCard} role="listitem">
             <Link href={`/hotels/${hotel._id}`} className={styles.trendingCardLink}>
               {hotel.hotelImages[0] ? (
-                <Image
+                <img
                   src={resolveMediaUrl(hotel.hotelImages[0])}
                   alt={hotel.hotelTitle}
-                  fill
-                  sizes="(max-width: 640px) 88vw, (max-width: 1180px) 46vw, 28vw"
                   className={styles.trendingCardImage}
                 />
               ) : (

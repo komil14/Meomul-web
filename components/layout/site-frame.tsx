@@ -465,7 +465,7 @@ function NotificationBellDrawer({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl sm:w-96">
+        <div className="fixed left-3 right-3 top-[76px] z-50 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-10 sm:w-96">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <h3 className="text-sm font-semibold text-slate-900">
@@ -486,7 +486,7 @@ function NotificationBellDrawer({
           </div>
 
           {/* List */}
-          <div className="max-h-[340px] overflow-y-auto">
+          <div className="max-h-[min(58vh,340px)] overflow-y-auto">
             {loading && visible.length === 0 ? (
               <div className="space-y-3 p-4">
                 {[1, 2, 3].map((i) => (
@@ -734,8 +734,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
     member?.memberType === "ADMIN" ||
     member?.memberType === "ADMIN_OPERATOR";
   const handleLogout = () => {
-    void logoutSession();
-    void router.push("/auth/login");
+    void (async () => {
+      await logoutSession();
+      await router.replace("/auth/login");
+    })();
   };
 
   // Stable variable references prevent Apollo from re-subscribing on every render

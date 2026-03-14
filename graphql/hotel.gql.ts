@@ -740,6 +740,39 @@ export const GET_HOME_FEED_QUERY = gql`
         relaxedStageCount
         generalStageCount
       }
+      recommendationResult {
+        list {
+          _id
+          hotelTitle
+          hotelLocation
+          hotelType
+          hotelRating
+          hotelLikes
+          hotelImages
+        }
+        meta {
+          profileSource
+          onboardingWeight
+          behaviorWeight
+          matchedLocationCount
+          fallbackCount
+          strictStageCount
+          relaxedStageCount
+          generalStageCount
+        }
+        explanations {
+          hotelId
+          stage
+          fromFallback
+          matchedLocation
+          matchedType
+          matchedPrice
+          likedSimilar
+          matchedPurposes
+          matchedAmenities
+          signals
+        }
+      }
     }
   }
 `;

@@ -681,6 +681,7 @@ export interface HomeFeedDto {
   lastMinuteDeals: HomeLastMinuteDealDto[];
   testimonials: HomeTestimonialDto[];
   recommendationMeta?: RecommendationMetaDto | null;
+  recommendationResult?: RecommendedHotelsV2Dto | null;
 }
 
 export interface GetHomeTestimonialsQueryData {

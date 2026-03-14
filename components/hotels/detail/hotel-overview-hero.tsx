@@ -2,11 +2,11 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { ArrowLeft, Heart, Share, Star, X } from "lucide-react";
+import { ArrowLeft, Heart, PlayCircle, Share, Star, X } from "lucide-react";
 import { getHotelLocationLabelLocalized, getHotelTypeLabel } from "@/lib/hotels/hotels-i18n";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
-import { getYouTubeEmbedUrl } from "@/lib/utils/youtube";
+import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from "@/lib/utils/youtube";
 import type { HotelDetailItem } from "@/types/hotel";
 
 interface HotelOverviewHeroProps {
@@ -46,6 +46,7 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
   const { t } = useI18n();
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [playPrimaryYoutube, setPlayPrimaryYoutube] = useState(false);
   const locationLabel = getHotelLocationLabelLocalized(hotel.hotelLocation, t);
   const hotelTypeLabel = getHotelTypeLabel(hotel.hotelType, t);
   const starLabel =
@@ -69,6 +70,12 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
     }
     return null;
   }, [heroImage, heroVideo, hotel.hotelImages, hotel.hotelVideos]);
+  const primaryYoutubePoster = useMemo(() => {
+    if (primaryMedia?.kind !== "youtube") {
+      return "";
+    }
+    return getYouTubeThumbnailUrl(heroVideo || hotel.hotelVideos[0] || "");
+  }, [heroVideo, hotel.hotelVideos, primaryMedia]);
   const collageImages = useMemo(() => {
     const seen = new Set<string>();
     const primaryImageSrc = primaryMedia?.kind === "image" ? primaryMedia.src : null;
@@ -103,6 +110,10 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    setPlayPrimaryYoutube(false);
+  }, [primaryMedia?.kind, primaryMedia?.src]);
 
   useEffect(() => {
     if (!isGalleryOpen) {
@@ -171,13 +182,39 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
             <div className="relative bg-stone-100">
               <article className="relative min-h-[18rem] overflow-hidden bg-stone-100">
                 {primaryMedia.kind === "youtube" ? (
-                  <iframe
-                    src={primaryMedia.src}
-                    title={hotel.hotelTitle}
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    className="absolute inset-0 h-full w-full border-0"
-                  />
+                  playPrimaryYoutube ? (
+                    <iframe
+                      src={primaryMedia.src}
+                      title={hotel.hotelTitle}
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 h-full w-full border-0"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPlayPrimaryYoutube(true)}
+                      className="absolute inset-0 block h-full w-full overflow-hidden bg-stone-900"
+                      aria-label={t("hotel_detail_show_all_photos")}
+                    >
+                      {primaryYoutubePoster ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={primaryYoutubePoster}
+                          alt={hotel.hotelTitle}
+                          className="absolute inset-0 h-full w-full object-cover object-center"
+                          loading="eager"
+                        />
+                      ) : null}
+                      <span className="absolute inset-0 bg-black/30" />
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-white/92 px-4 py-2 text-sm font-semibold text-stone-950 shadow-sm">
+                          <PlayCircle className="h-4 w-4" />
+                          Play video
+                        </span>
+                      </span>
+                    </button>
+                  )
                 ) : primaryMedia.kind === "video" ? (
                   <video
                     key={primaryMedia.src}
@@ -283,13 +320,39 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
             <div className="grid gap-2 overflow-hidden rounded-[1.75rem] md:grid-cols-[minmax(0,1.18fr)_minmax(0,0.82fr)]">
               <article className="relative min-h-[32rem] overflow-hidden rounded-l-[1.75rem] bg-stone-100">
                 {primaryMedia.kind === "youtube" ? (
-                  <iframe
-                    src={primaryMedia.src}
-                    title={hotel.hotelTitle}
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    className="absolute inset-0 h-full w-full border-0"
-                  />
+                  playPrimaryYoutube ? (
+                    <iframe
+                      src={primaryMedia.src}
+                      title={hotel.hotelTitle}
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 h-full w-full border-0"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPlayPrimaryYoutube(true)}
+                      className="absolute inset-0 block h-full w-full overflow-hidden bg-stone-900"
+                      aria-label={hotel.hotelTitle}
+                    >
+                      {primaryYoutubePoster ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={primaryYoutubePoster}
+                          alt={hotel.hotelTitle}
+                          className="absolute inset-0 h-full w-full object-cover object-center"
+                          loading="eager"
+                        />
+                      ) : null}
+                      <span className="absolute inset-0 bg-black/30" />
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-white/92 px-4 py-2 text-sm font-semibold text-stone-950 shadow-sm">
+                          <PlayCircle className="h-4 w-4" />
+                          Play video
+                        </span>
+                      </span>
+                    </button>
+                  )
                 ) : primaryMedia.kind === "video" ? (
                   <video
                     key={primaryMedia.src}
@@ -347,13 +410,39 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
             <div className="relative overflow-hidden rounded-[1.75rem] bg-stone-100">
               <article className="relative min-h-[16rem] overflow-hidden bg-stone-100 sm:min-h-[22rem] lg:min-h-[30rem]">
                 {primaryMedia.kind === "youtube" ? (
-                  <iframe
-                    src={primaryMedia.src}
-                    title={hotel.hotelTitle}
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    className="absolute inset-0 h-full w-full border-0"
-                  />
+                  playPrimaryYoutube ? (
+                    <iframe
+                      src={primaryMedia.src}
+                      title={hotel.hotelTitle}
+                      allow="autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 h-full w-full border-0"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPlayPrimaryYoutube(true)}
+                      className="absolute inset-0 block h-full w-full overflow-hidden bg-stone-900"
+                      aria-label={hotel.hotelTitle}
+                    >
+                      {primaryYoutubePoster ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={primaryYoutubePoster}
+                          alt={hotel.hotelTitle}
+                          className="absolute inset-0 h-full w-full object-cover object-center"
+                          loading="eager"
+                        />
+                      ) : null}
+                      <span className="absolute inset-0 bg-black/30" />
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-white/92 px-4 py-2 text-sm font-semibold text-stone-950 shadow-sm">
+                          <PlayCircle className="h-4 w-4" />
+                          Play video
+                        </span>
+                      </span>
+                    </button>
+                  )
                 ) : primaryMedia.kind === "video" ? (
                   <video
                     key={primaryMedia.src}

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { formatHotelLocationLabel } from "@/lib/hotels/hotels-ui";
 import { useI18n } from "@/lib/i18n/provider";
@@ -28,11 +27,9 @@ export function EditorialGuidesSection({ cards }: EditorialGuidesSectionProps) {
           <article key={guide.id} className={styles.guideCard}>
             <Link href={guide.href} className={styles.guideCardLink}>
               {guide.imageUrl ? (
-                <Image
+                <img
                   src={guide.imageUrl}
                   alt={guide.title}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1180px) 50vw, 25vw"
                   className={styles.guideCardImage}
                 />
               ) : (

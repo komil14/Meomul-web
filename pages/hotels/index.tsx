@@ -173,7 +173,7 @@ export default function HotelsPage({
         appliedTotal={total}
       />
 
-      <main className={`space-y-3 sm:space-y-4 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
+      <main className={`space-y-2.5 sm:space-y-4 ${HOTELS_MOTION_INTENSITY_CLASS}`}>
         <ScrollReveal delayMs={20} className="relative z-50">
           <HotelsDiscoveryToolbar
             state={queryState}
@@ -194,7 +194,7 @@ export default function HotelsPage({
         {showInitialSkeleton ? <HotelsResultsSkeleton /> : null}
 
         {showEmptyState ? (
-          <div className="hover-lift rounded-[1.8rem] border border-slate-200 bg-white px-5 py-7 text-sm text-slate-600 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.28)]">
+          <div className="hover-lift rounded-[1.4rem] border border-slate-200 bg-white px-4 py-5 text-sm text-slate-600 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.28)] sm:rounded-[1.8rem] sm:px-5 sm:py-7">
             {t("hotels_empty")}
           </div>
         ) : null}
@@ -204,22 +204,22 @@ export default function HotelsPage({
             <ScrollReveal delayMs={40}>
               <div className="relative">
                 <div
-                  className={`grid gap-x-4 gap-y-5 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 transition duration-200 ${showResultsOverlay ? "opacity-75" : "opacity-100"}`}
+                  className={`grid gap-x-3 gap-y-4 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-x-4 sm:gap-y-5 transition duration-200 ${showResultsOverlay ? "opacity-75" : "opacity-100"}`}
                 >
                   {hotels.map((hotel, index) => (
                     <HotelCard
                       key={hotel._id}
                       hotel={hotel}
                       isInitiallyLiked={likedHotelIds.has(hotel._id)}
-                      imagePriority={index < 3}
+                      imagePriority={index === 0}
                       imageSizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1439px) 33vw, 25vw"
                     />
                   ))}
                 </div>
 
                 {showResultsOverlay ? (
-                  <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-[1.8rem] bg-white/28 p-3 backdrop-blur-[1.5px]">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 shadow-sm">
+                  <div className="pointer-events-none absolute inset-0 flex items-start justify-center rounded-[1.4rem] bg-white/28 p-2.5 backdrop-blur-[1.5px] sm:rounded-[1.8rem] sm:p-3">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600 shadow-sm sm:px-3 sm:text-xs sm:tracking-[0.14em]">
                       <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-sky-500" />
                       {t("hotels_refreshing")}
                     </div>
@@ -229,8 +229,8 @@ export default function HotelsPage({
             </ScrollReveal>
 
             <ScrollReveal delayMs={50}>
-              <div className="hover-lift rounded-[1.8rem] border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.28)] sm:px-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="hover-lift rounded-[1.4rem] border border-slate-200 bg-white px-4 py-3.5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.28)] sm:rounded-[1.8rem] sm:px-5 sm:py-4">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-slate-600">
                     {formatHotelsPaginationSummaryLocalized(
                       queryState.page,
@@ -249,7 +249,7 @@ export default function HotelsPage({
                           false,
                         );
                       }}
-                      className="min-h-11 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-2"
+                      className="min-h-10 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0"
                     >
                       {t("hotels_prev")}
                     </button>
@@ -266,7 +266,7 @@ export default function HotelsPage({
                           false,
                         );
                       }}
-                      className="min-h-11 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:py-2"
+                      className="min-h-10 rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0"
                     >
                       {t("hotels_next")}
                     </button>

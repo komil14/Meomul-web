@@ -187,9 +187,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.72rem;
-  color: var(--home-text-muted);
+  color: var(--home-text);
   font-size: 1.02rem;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.01em;
   animation: revealUp 820ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
 }
@@ -266,7 +266,7 @@
 }
 
 .reviewLabel {
-  color: var(--home-text);
+  color: #0f172a;
   font-size: 1.5rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -320,15 +320,16 @@
 .reviewMeta {
   display: grid;
   gap: 0.02rem;
-  color: var(--home-text-muted);
+  color: #334155;
   font-size: 0.98rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .stars {
   color: #3b82f6;
   font-size: 1.06rem;
   letter-spacing: 0.08em;
+  text-shadow: 0 1px 2px rgba(59, 130, 246, 0.16);
 }
 
 .bottomRow {
@@ -368,7 +369,10 @@
 }
 
 .watchImage {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  filter: brightness(0.78) saturate(0.94);
 }
 
 .watchFallback {
@@ -388,7 +392,7 @@
   font-size: 1rem;
   font-weight: 600;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.38);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.32) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.46) 100%);
 }
 
 .heroRight {
@@ -435,7 +439,7 @@
 .slideShade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.03) 35%, rgba(0, 0, 0, 0.5) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.12) 28%, rgba(0, 0, 0, 0.62) 100%);
 }
 
 .slideMeta {
@@ -456,13 +460,14 @@
 .slideTags span {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.28);
   color: #ffffff;
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.11em;
   padding: 0.22rem 0.52rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
 .slideMeta h3 {
@@ -470,12 +475,14 @@
   font-size: clamp(1.5rem, 2.6vw, 2.15rem);
   line-height: 1.1;
   letter-spacing: -0.01em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.32);
 }
 
 .slideMeta p {
   margin: 0.3rem 0 0;
   font-size: 0.92rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.96);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
 }
 
 .dots {
@@ -494,7 +501,7 @@
   height: 0.72rem;
   border-radius: 999px;
   border: 0;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.72);
   cursor: pointer;
   transition: width 220ms ease, background-color 220ms ease, transform 220ms ease;
   padding: 0;
@@ -547,6 +554,25 @@
   font-weight: 500;
 }
 
+.signatureDebugBox {
+  margin: 0.9rem auto 0;
+  max-width: 42rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.42rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: #52607a;
+}
+
+.signatureDebugBox span {
+  padding: 0.36rem 0.52rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
 .signatureRows {
   display: grid;
   gap: 1rem;
@@ -597,7 +623,12 @@
 }
 
 .signatureCardImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  filter: brightness(0.86) saturate(0.96);
   transition: transform 440ms cubic-bezier(0.22, 1, 0.36, 1), filter 320ms ease;
 }
 
@@ -610,7 +641,7 @@
 .signatureCardShade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04) 30%, rgba(0, 0, 0, 0.76) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14) 18%, rgba(0, 0, 0, 0.72) 100%);
   transition: background 300ms ease;
 }
 
@@ -642,21 +673,23 @@
 
 .signatureCardMeta {
   margin: 0;
-  color: rgba(241, 245, 249, 0.92);
+  color: rgba(255, 255, 255, 0.96);
   font-size: 0.88rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.34);
 }
 
 .signatureCardSignal {
   margin: 0.24rem 0 0;
-  color: rgba(241, 245, 249, 0.93);
+  color: rgba(255, 255, 255, 0.98);
   font-size: 1.02rem;
   line-height: 1.42;
   max-width: 32rem;
   opacity: 0;
   transform: translateY(8px);
   transition: opacity 220ms ease, transform 260ms ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.34);
 }
 
 .signatureCardCta {
@@ -694,7 +727,7 @@
 
 .signatureCard:is(:hover, :focus-within) .signatureCardShade,
 .signatureCardActive .signatureCardShade {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18) 22%, rgba(0, 0, 0, 0.78) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.26) 18%, rgba(0, 0, 0, 0.9) 100%);
 }
 
 .signatureCard:is(:hover, :focus-within) .signatureCardSignal,
@@ -787,7 +820,12 @@
 }
 
 .trendingCardImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  filter: brightness(0.86) saturate(0.96);
   transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), filter 300ms ease;
 }
 
@@ -800,7 +838,7 @@
 .trendingCardShade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 25%, rgba(0, 0, 0, 0.72) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14) 18%, rgba(0, 0, 0, 0.7) 100%);
   transition: background 280ms ease;
 }
 
@@ -831,11 +869,12 @@
 
 .trendingMeta {
   margin: 0;
-  color: rgba(241, 245, 249, 0.9);
+  color: rgba(255, 255, 255, 0.94);
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
 }
 
 .trendingStats {
@@ -843,9 +882,10 @@
   display: inline-flex;
   align-items: center;
   gap: 0.62rem;
-  color: rgba(241, 245, 249, 0.95);
+  color: rgba(255, 255, 255, 0.98);
   font-size: 0.86rem;
   font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
 }
 
 .trendingCard:is(:hover, :focus-within) .trendingCardImage {
@@ -853,7 +893,7 @@
 }
 
 .trendingCard:is(:hover, :focus-within) .trendingCardShade {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.16) 25%, rgba(0, 0, 0, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.24) 18%, rgba(0, 0, 0, 0.88) 100%);
 }
 
 .dealsSection {
@@ -938,7 +978,12 @@
 }
 
 .dealCardImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  filter: brightness(0.86) saturate(0.96);
   transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -951,7 +996,7 @@
 .dealCardShade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 25%, rgba(0, 0, 0, 0.76) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.14) 18%, rgba(0, 0, 0, 0.72) 100%);
   transition: background 280ms ease;
 }
 
@@ -981,11 +1026,12 @@
 
 .dealHotelMeta {
   margin: 0;
-  color: rgba(241, 245, 249, 0.9);
+  color: rgba(255, 255, 255, 0.94);
   font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.34);
 }
 
 .dealCardContent h3 {
@@ -998,9 +1044,10 @@
 
 .dealRoomMeta {
   margin: 0;
-  color: rgba(241, 245, 249, 0.95);
+  color: rgba(255, 255, 255, 0.98);
   font-size: 0.8rem;
   font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.34);
 }
 
 .dealPriceRow {
@@ -1025,19 +1072,21 @@
 }
 
 .dealOriginalPrice {
-  color: rgba(226, 232, 240, 0.9);
+  color: rgba(241, 245, 249, 0.96);
   font-size: 0.78rem;
   font-weight: 600;
   text-decoration: line-through;
   text-decoration-thickness: 1.6px;
-  text-decoration-color: rgba(226, 232, 240, 0.82);
+  text-decoration-color: rgba(241, 245, 249, 0.88);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
 .dealExpiry {
   margin: 0.08rem 0 0;
-  color: #bfdbfe;
+  color: #dbeafe;
   font-size: 0.74rem;
   font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
 }
 
 .dealCard:is(:hover, :focus-within) .dealCardImage {
@@ -1045,7 +1094,7 @@
 }
 
 .dealCard:is(:hover, :focus-within) .dealCardShade {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.18) 25%, rgba(0, 0, 0, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.26) 18%, rgba(0, 0, 0, 0.88) 100%);
 }
 
 .guidesSection {
@@ -1123,7 +1172,12 @@
 }
 
 .guideCardImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  filter: brightness(0.89) saturate(0.97);
   transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1136,7 +1190,7 @@
 .guideCardShade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.12) 20%, rgba(15, 23, 42, 0.86) 100%);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.12) 16%, rgba(2, 6, 23, 0.66) 100%);
   transition: background 240ms ease;
 }
 
@@ -1155,7 +1209,8 @@
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.92);
+  color: rgba(255, 255, 255, 0.94);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.34);
 }
 
 .guideCardContent h3 {
@@ -1169,11 +1224,12 @@
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.42;
-  color: rgba(226, 232, 240, 0.9);
+  color: rgba(255, 255, 255, 0.94);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.34);
 }
 
 .guideCardMeta {
@@ -1183,7 +1239,8 @@
   line-height: 1.35;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(191, 219, 254, 0.95);
+  color: rgba(219, 234, 254, 0.98);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.34);
 }
 
 .guideCardCta {
@@ -1193,14 +1250,15 @@
   gap: 0.28rem;
   width: fit-content;
   border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.62);
-  color: #e2e8f0;
+  border: 1px solid rgba(226, 232, 240, 0.4);
+  background: rgba(2, 6, 23, 0.68);
+  color: #f8fafc;
   padding: 0.3rem 0.54rem;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.11em;
   text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .guideCard:is(:hover, :focus-within) .guideCardImage {
@@ -1208,7 +1266,7 @@
 }
 
 .guideCard:is(:hover, :focus-within) .guideCardShade {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.16) 20%, rgba(2, 6, 23, 0.92) 100%);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.28) 16%, rgba(2, 6, 23, 0.94) 100%);
 }
 
 .valueSection {
@@ -1686,6 +1744,12 @@
     margin-right: 0;
   }
 
+  .signatureDebugBox {
+    justify-content: flex-start;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
   .signatureRows {
     gap: 0.86rem;
   }
@@ -1866,22 +1930,24 @@
 
 @media (max-width: 640px) {
   .shell {
-    width: calc(100vw - 1rem);
-    padding-top: 0.55rem;
+    width: 100%;
+    max-width: 100%;
+    padding: 0.45rem 0.4rem 0.9rem;
   }
 
   .navbar {
-    border-radius: 1.2rem;
-    padding: 0.74rem 0.8rem;
+    border-radius: 1rem;
+    padding: 0.68rem 0.8rem;
+    gap: 0.55rem;
   }
 
   .logoText {
-    font-size: 1.45rem;
+    font-size: 1.34rem;
   }
 
   .navLink {
-    font-size: 0.88rem;
-    padding: 0.34rem 0.62rem;
+    font-size: 0.82rem;
+    padding: 0.28rem 0.54rem;
   }
 
   .startButton {
@@ -1896,53 +1962,91 @@
     font-size: 1.04rem;
   }
 
+  .hero {
+    margin-top: 0.45rem;
+    gap: 0.72rem;
+  }
+
   .heroLeft {
+    order: 2;
     border-radius: 0.92rem;
-    padding: 1.1rem 1rem 0.95rem;
+    padding: 0.9rem 0.88rem 0.76rem;
   }
 
   .heroRight {
+    order: 1;
     border-radius: 0.92rem;
-    min-height: 23rem;
+    min-height: 14.6rem;
   }
 
   .title {
-    font-size: clamp(2.2rem, 14vw, 3.5rem);
-    margin-top: 0.95rem;
+    max-width: 100%;
+    font-size: clamp(1.88rem, 8.4vw, 2.44rem);
+    line-height: 0.94;
+    margin-top: 0.5rem;
   }
 
   .primaryRow {
-    margin-top: 1.2rem;
-    gap: 0.7rem;
+    margin-top: 0.72rem;
+    gap: 0.48rem;
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .serviceButton {
-    font-size: 1.12rem;
-    min-height: 2.5rem;
-    padding-left: 0.9rem;
+    font-size: 0.94rem;
+    min-height: 2.22rem;
+    padding-left: 0.78rem;
+    padding-right: 0.12rem;
+    gap: 0.38rem;
+    width: fit-content;
   }
 
   .serviceButtonArrow {
-    width: 2rem;
-    height: 2rem;
-    font-size: 1rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    font-size: 0.88rem;
+  }
+
+  .reviewWrap {
+    gap: 0.28rem;
+    width: 100%;
   }
 
   .reviewLabel {
-    font-size: 1.25rem;
+    font-size: 0.82rem;
+    letter-spacing: -0.01em;
   }
 
   .reviewMeta {
-    font-size: 0.86rem;
+    font-size: 0.73rem;
+    line-height: 1.2;
+  }
+
+  .avatarItem {
+    width: 1.36rem;
+    height: 1.36rem;
+    margin-left: -0.24rem;
+  }
+
+  .stars {
+    font-size: 0.84rem;
   }
 
   .bottomRow {
-    padding-top: 1.3rem;
+    padding-top: 0.68rem;
+    align-items: flex-start;
+    gap: 0.78rem;
+  }
+
+  .description {
+    max-width: none;
+    font-size: 0.86rem;
+    line-height: 1.42;
   }
 
   .watchBubble {
-    width: 4.5rem;
-    height: 4.5rem;
+    display: none;
   }
 
   .watchOverlay {
@@ -1950,68 +2054,106 @@
     gap: 0.2rem;
   }
 
+  .slideTags span:nth-child(n + 2) {
+    display: none;
+  }
+
+  .slideTags span {
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    padding: 0.18rem 0.42rem;
+  }
+
   .slideMeta {
-    left: 0.88rem;
-    right: 0.88rem;
-    bottom: 2rem;
+    left: 0.82rem;
+    right: 0.82rem;
+    bottom: 1.3rem;
+  }
+
+  .slideMeta h3 {
+    margin-top: 0.38rem;
+    font-size: 1.12rem;
   }
 
   .slideMeta p {
-    font-size: 0.78rem;
+    margin-top: 0.18rem;
+    font-size: 0.68rem;
   }
 
   .dot {
-    width: 0.56rem;
-    height: 0.56rem;
+    width: 0.42rem;
+    height: 0.42rem;
   }
 
   .dotActive {
-    width: 1.2rem;
+    width: 0.88rem;
   }
 
   .signatureSection {
-    margin-top: 0.82rem;
-    padding-bottom: 0.62rem;
+    margin-top: 0.68rem;
+    padding-bottom: 0.5rem;
   }
 
   .signatureTitle {
-    font-size: clamp(1.9rem, 12vw, 2.8rem);
+    font-size: clamp(1.72rem, 10.5vw, 2.34rem);
   }
 
   .signatureDescription {
-    font-size: 0.94rem;
+    font-size: 0.86rem;
+  }
+
+  .signatureDebugBox {
+    gap: 0.34rem;
+    font-size: 0.66rem;
+  }
+
+  .signatureDebugBox span {
+    padding: 0.3rem 0.44rem;
   }
 
   .signatureRows {
-    gap: 0.72rem;
+    gap: 0.56rem;
   }
 
   .signatureRow {
     grid-template-columns: 1fr;
-    gap: 0.72rem;
+    gap: 0.56rem;
   }
 
   .signatureCard,
   .signatureCardActive {
-    min-height: 14.8rem;
+    min-height: 11.9rem;
+  }
+
+  .signatureCardContent {
+    inset: auto 0.82rem 0.82rem;
+    gap: 0.18rem;
   }
 
   .signatureCardIndex {
-    font-size: 1.72rem;
+    font-size: 1.34rem;
+  }
+
+  .signatureCardContent h3 {
+    font-size: clamp(1.2rem, 6vw, 1.42rem);
   }
 
   .signatureCardMeta {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
   }
 
   .signatureCardSignal {
-    margin-top: 0.1rem;
-    font-size: 0.9rem;
+    margin-top: 0.04rem;
+    font-size: 0.76rem;
+    line-height: 1.28;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .signatureCardCta {
-    font-size: 0.92rem;
-    padding: 0.46rem 0.88rem;
+    display: none;
   }
 
   .trendingSection {
@@ -2151,86 +2293,6 @@
     padding: 0.26rem 0.5rem;
   }
 
-  .valueSection {
-    margin-top: 0.36rem;
-    margin-bottom: 0.38rem;
-    padding-top: 0.72rem;
-  }
-
-  .valueTitle {
-    font-size: clamp(1.34rem, 9vw, 1.74rem);
-  }
-
-  .valueGrid {
-    grid-template-columns: 1fr;
-    gap: 0.55rem;
-  }
-
-  .valueCard {
-    min-height: auto;
-    padding: 0.82rem 0.78rem;
-  }
-
-  .valueCardMetric {
-    font-size: 1.2rem;
-  }
-
-  .valueCardDetail {
-    font-size: 0.85rem;
-  }
-
-  .testimonialsSection {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-    padding-top: 0.6rem;
-  }
-
-  .testimonialsTitle {
-    font-size: clamp(1.9rem, 12vw, 2.8rem);
-  }
-
-  .testimonialsDescription {
-    font-size: 0.94rem;
-  }
-
-  .testimonialsTopRow {
-    display: block;
-  }
-
-  .testimonialsTrack {
-    --testimonial-card-width: minmax(16rem, 18rem);
-    gap: 0.64rem;
-    animation-duration: 46s;
-  }
-
-  .testimonialCard {
-    border-radius: 1rem;
-    min-height: 20rem;
-    padding: 0.92rem 0.88rem 0.84rem;
-    gap: 0.7rem;
-  }
-
-  .testimonialAvatar {
-    width: 2.7rem;
-    height: 2.7rem;
-  }
-
-  .testimonialReviewer h3 {
-    font-size: 0.57rem;
-  }
-
-  .testimonialReviewer p {
-    font-size: 0.62rem;
-  }
-
-  .testimonialStars {
-    font-size: 0.525rem;
-  }
-
-  .testimonialQuote {
-    font-size: clamp(0.62rem, 2.6vw, 0.86rem);
-    -webkit-line-clamp: 5;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

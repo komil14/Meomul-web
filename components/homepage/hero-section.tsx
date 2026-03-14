@@ -94,9 +94,10 @@ export function HeroSection({
     ? "/hotels"
     : `/hotels/${activeSlideData?._id ?? ""}`;
 
-  const reviewCount = totalVerifiedReviews > 0
-    ? totalVerifiedReviews
-    : (ratingsSummary?.totalReviews ?? featuredReviews.length);
+  const reviewCount = Math.max(
+    0,
+    Number.isFinite(totalVerifiedReviews) ? totalVerifiedReviews : 0,
+  );
   const reviewRating = ratingsSummary?.overallRating ?? activeSlideData?.rating ?? 0;
   const reviewStars = formatRatingStars(reviewRating);
 
@@ -173,11 +174,9 @@ export function HeroSection({
           </p>
           <Link href={activeSlideHref} className={styles.watchBubble}>
             {activeSlideData?.imageUrl ? (
-              <Image
+              <img
                 src={activeSlideData.imageUrl}
                 alt={activeSlideData.title}
-                fill
-                sizes="120px"
                 className={styles.watchImage}
               />
             ) : (
@@ -212,14 +211,25 @@ export function HeroSection({
                 tabIndex={isActive ? 0 : -1}
               >
                 {slide.imageUrl ? (
-                  <Image
-                    src={slide.imageUrl}
-                    alt={slide.title}
-                    fill
-                    priority={index === 0}
-                    sizes="(max-width: 767px) 100vw, (max-width: 991px) 720px, 900px"
-                    className={styles.slideImage}
-                  />
+                  isActive ? (
+                    <Image
+                      src={slide.imageUrl}
+                      alt={slide.title}
+                      fill
+                      priority
+                      fetchPriority="high"
+                      loading="eager"
+                      sizes="(max-width: 767px) 100vw, (max-width: 991px) 720px, 900px"
+                      className={styles.slideImage}
+                    />
+                  ) : (
+                    <img
+                      src={slide.imageUrl}
+                      alt={slide.title}
+                      className={styles.slideImage}
+                      loading="lazy"
+                    />
+                  )
                 ) : (
                   <div className={styles.slideFallback} />
                 )}

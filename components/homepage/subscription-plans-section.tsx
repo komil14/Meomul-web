@@ -121,17 +121,17 @@ export function SubscriptionPlansSection() {
         <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
           {t("home_subscriptions_title")}
         </h2>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
           {t("home_subscriptions_desc")}
         </p>
       </div>
 
       {/* Tier grid */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         {TIERS.map((tier) => (
           <div
             key={tier.id}
-            className={`relative flex flex-col rounded-2xl p-6 ${
+            className={`relative flex flex-col rounded-2xl p-3 sm:p-6 ${
               tier.popular
                 ? "border-2 border-slate-900 bg-white shadow-sm"
                 : "border border-slate-100 bg-white"
@@ -148,19 +148,19 @@ export function SubscriptionPlansSection() {
               className={tier.popular ? "text-slate-900" : "text-slate-300"}
             />
 
-            <p className="mt-3 text-base font-bold text-slate-900">
+            <p className="mt-2 text-sm font-bold text-slate-900 sm:mt-3 sm:text-base">
               {t(tier.labelKey)}
             </p>
 
             <p className="mt-1 flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-slate-900">{tier.price}</span>
-              <span className="text-xs text-slate-400">{t(tier.periodKey)}</span>
+              <span className="text-xl font-bold text-slate-900 sm:text-2xl">{tier.price}</span>
+              <span className="text-[11px] text-slate-400 sm:text-xs">{t(tier.periodKey)}</span>
             </p>
 
-            <ul className="mt-5 flex-1 space-y-2">
+            <ul className="mt-4 flex-1 space-y-1.5 sm:mt-5 sm:space-y-2">
               {tier.featureKeys.map((featureKey) => (
-                <li key={featureKey} className="flex items-start gap-2 text-sm text-slate-600">
-                  <Check size={13} className="mt-0.5 flex-shrink-0 text-emerald-500" />
+                <li key={featureKey} className="flex items-start gap-1.5 text-xs leading-5 text-slate-600 sm:gap-2 sm:text-sm">
+                  <Check size={12} className="mt-0.5 flex-shrink-0 text-emerald-500" />
                   {t(featureKey)}
                 </li>
               ))}
@@ -168,7 +168,7 @@ export function SubscriptionPlansSection() {
 
             <Link
               href={ctaHref}
-              className={`mt-6 block rounded-lg px-4 py-2 text-center text-sm font-medium transition ${
+              className={`mt-4 block rounded-lg px-3 py-2 text-center text-xs font-medium transition sm:mt-6 sm:px-4 sm:text-sm ${
                 tier.popular
                   ? "bg-slate-900 text-white hover:bg-slate-700"
                   : "border border-slate-200 text-slate-700 hover:border-slate-400"
