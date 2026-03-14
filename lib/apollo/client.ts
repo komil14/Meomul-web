@@ -94,6 +94,18 @@ const httpLink = new HttpLink({
 export const createApolloClient = (options?: { headers?: Record<string, string> }) => {
   const cache = new InMemoryCache({
     typePolicies: {
+      Query: {
+        fields: {
+          getMyLikes: {
+            keyArgs: ["likeGroup"],
+            merge: false,
+          },
+          getMyNotifications: {
+            keyArgs: ["unreadOnly", "limit"],
+            merge: false,
+          },
+        },
+      },
       BookingDto: { keyFields: ["_id"] },
       ChatDto: { keyFields: ["_id"] },
       Hotel: { keyFields: ["_id"] },

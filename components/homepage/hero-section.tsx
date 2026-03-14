@@ -219,7 +219,7 @@ export function HeroSection({
                       priority
                       fetchPriority="high"
                       loading="eager"
-                      sizes="(max-width: 767px) 100vw, (max-width: 991px) 720px, 900px"
+                      sizes="(max-width: 767px) calc(100vw - 1.5rem), (max-width: 991px) 720px, 900px"
                       className={styles.slideImage}
                     />
                   ) : (

@@ -231,7 +231,7 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
                     alt={hotel.hotelTitle}
                     fill
                     priority
-                    sizes="100vw"
+                    sizes="(max-width: 767px) calc(100vw - 1.5rem), 960px"
                     className="object-cover"
                   />
                 )}
@@ -459,7 +459,7 @@ export const HotelOverviewHero = memo(function HotelOverviewHero({
                     alt={hotel.hotelTitle}
                     fill
                     priority
-                    sizes="100vw"
+                    sizes="(max-width: 767px) calc(100vw - 1.5rem), 960px"
                     className="object-cover"
                   />
                 )}

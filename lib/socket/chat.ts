@@ -20,6 +20,9 @@ export const createChatSocket = (token: string | null): Socket => {
     autoConnect: true,
     withCredentials: true,
     transports: ["websocket", "polling"],
+    timeout: 5000,
+    reconnectionAttempts: 2,
+    reconnectionDelay: 1500,
     ...(token ? { auth: { token: `Bearer ${token}` } } : {}),
   });
 };

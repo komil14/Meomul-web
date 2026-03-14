@@ -53,6 +53,7 @@ import {
   Star,
   User,
   Users,
+  X,
 } from "lucide-react";
 
 const UNREAD_POLL_INTERVAL_MS = 120000;
@@ -465,24 +466,41 @@ function NotificationBellDrawer({
       </button>
 
       {open && (
-        <div className="fixed left-3 right-3 top-[76px] z-50 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-10 sm:w-96">
+        <>
+          <button
+            type="button"
+            aria-label="Close notifications"
+            className="fixed inset-0 z-40 bg-slate-950/20 backdrop-blur-[1px] sm:hidden"
+            onClick={() => setOpen(false)}
+          />
+          <div className="fixed left-3 right-3 top-[76px] z-50 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl animate-in slide-in-from-top-2 fade-in duration-200 sm:absolute sm:left-auto sm:right-0 sm:top-10 sm:w-96 sm:animate-none">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <h3 className="text-sm font-semibold text-slate-900">
               Notifications
             </h3>
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleMarkAllRead();
+                  }}
+                  className="flex items-center gap-1 text-xs font-medium text-sky-500 transition hover:text-sky-600"
+                >
+                  <CheckCheck size={13} />
+                  Mark all read
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => {
-                  void handleMarkAllRead();
-                }}
-                className="flex items-center gap-1 text-xs font-medium text-sky-500 transition hover:text-sky-600"
+                aria-label="Close notifications"
+                onClick={() => setOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 sm:hidden"
               >
-                <CheckCheck size={13} />
-                Mark all read
+                <X size={16} />
               </button>
-            )}
+            </div>
           </div>
 
           {/* List */}
@@ -556,7 +574,8 @@ function NotificationBellDrawer({
               </Link>
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

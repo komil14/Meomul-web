@@ -135,7 +135,7 @@ export const RoomHeroSection = memo(function RoomHeroSection({
                     alt={roomName}
                     fill
                     priority
-                    sizes="100vw"
+                    sizes="(max-width: 767px) calc(100vw - 1.5rem), 960px"
                     className="object-cover"
                   />
                 </article>
@@ -245,7 +245,7 @@ export const RoomHeroSection = memo(function RoomHeroSection({
                     alt={roomName}
                     fill
                     priority
-                    sizes="100vw"
+                    sizes="(max-width: 767px) calc(100vw - 1.5rem), (max-width: 1023px) calc(100vw - 3rem), 960px"
                     className="object-cover transition duration-300 group-hover:scale-[1.02]"
                   />
                 </article>
