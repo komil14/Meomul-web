@@ -31,6 +31,11 @@ interface AlertOptions {
   cancelText?: string;
   showCancel?: boolean;
   focusCancel?: boolean;
+  iconOverride?: {
+    icon: typeof CheckCircle2;
+    iconWrap: string;
+    iconColor: string;
+  };
 }
 
 interface ConfirmActionOptions {
@@ -38,6 +43,7 @@ interface ConfirmActionOptions {
   text?: string;
   confirmText?: string;
   cancelText?: string;
+  variant?: NoticeVariant;
 }
 
 interface ConfirmDangerOptions extends ConfirmActionOptions {
@@ -70,6 +76,7 @@ const TONE_STYLES: Record<
   {
     icon: typeof CheckCircle2;
     iconColor: string;
+    iconShell: string;
     confirmButton: string;
     destructive: boolean;
   }
@@ -77,6 +84,7 @@ const TONE_STYLES: Record<
   success: {
     icon: CheckCircle2,
     iconColor: "text-emerald-600",
+    iconShell: "bg-emerald-50/80 ring-1 ring-emerald-100",
     confirmButton:
       "border-slate-950 bg-slate-950 text-white hover:bg-slate-800",
     destructive: false,
@@ -84,6 +92,7 @@ const TONE_STYLES: Record<
   error: {
     icon: AlertTriangle,
     iconColor: "text-rose-600",
+    iconShell: "bg-rose-50 ring-1 ring-rose-200",
     confirmButton:
       "border-slate-950 bg-slate-950 text-white hover:bg-slate-800",
     destructive: true,
@@ -91,6 +100,7 @@ const TONE_STYLES: Record<
   info: {
     icon: Info,
     iconColor: "text-sky-600",
+    iconShell: "bg-sky-50/80 ring-1 ring-sky-100",
     confirmButton:
       "border-slate-950 bg-slate-950 text-white hover:bg-slate-800",
     destructive: false,
@@ -98,6 +108,7 @@ const TONE_STYLES: Record<
   question: {
     icon: Sparkles,
     iconColor: "text-slate-700",
+    iconShell: "bg-slate-100 ring-1 ring-slate-200",
     confirmButton:
       "border-slate-900 bg-slate-900 text-white hover:bg-slate-700",
     destructive: false,
@@ -105,16 +116,18 @@ const TONE_STYLES: Record<
   warning: {
     icon: ShieldAlert,
     iconColor: "text-rose-600",
+    iconShell:
+      "bg-rose-50 ring-1 ring-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.05)]",
     confirmButton:
-      "border-rose-600 bg-rose-600 text-white hover:bg-rose-500",
+      "border-rose-600 bg-rose-600 text-white hover:bg-rose-500 focus:ring-rose-200",
     destructive: true,
   },
 };
 
 const BASE_BUTTON_CLASS =
-  "inline-flex min-w-[7.5rem] items-center justify-center rounded-xl border px-4 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-slate-300";
+  "inline-flex min-w-[7.75rem] items-center justify-center rounded-[0.9rem] border px-4 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-slate-300";
 
-const CANCEL_BUTTON_CLASS = `${BASE_BUTTON_CLASS} border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50`;
+const CANCEL_BUTTON_CLASS = `${BASE_BUTTON_CLASS} border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50`;
 
 const DEFAULT_NOTICE_VARIANT: Record<
   Extract<AlertTone, "success" | "error" | "info">,
@@ -349,21 +362,21 @@ const resolveAlert = (options: AlertOptions): Promise<boolean> => {
     window.addEventListener("keydown", onKeyDown);
 
     const tone = TONE_STYLES[options.tone];
-    const Icon = tone.icon;
+    const Icon = options.iconOverride?.icon ?? tone.icon;
 
     root.render(
       createElement(
         "div",
         {
           className:
-            "fixed inset-0 z-[200] flex items-end justify-center bg-slate-950/42 px-0 py-0 sm:items-center sm:px-4 sm:py-6",
+            "fixed inset-0 z-[200] flex items-end justify-center bg-slate-950/36 px-0 py-0 sm:items-center sm:px-4 sm:py-6",
           onClick: () => handleClose(false),
         },
         createElement(
           "div",
           {
             className:
-              "relative w-full overflow-hidden rounded-t-[1.75rem] bg-white shadow-[0_18px_48px_-22px_rgba(15,23,42,0.35)] sm:max-w-[28rem] sm:rounded-[1rem]",
+              "relative w-full overflow-hidden rounded-t-[1.75rem] border border-slate-200/80 bg-white shadow-[0_20px_56px_-28px_rgba(15,23,42,0.28)] sm:max-w-[28rem] sm:rounded-[1rem]",
             onClick: (event: MouseEvent) => event.stopPropagation(),
           },
           createElement("div", {
@@ -374,7 +387,7 @@ const resolveAlert = (options: AlertOptions): Promise<boolean> => {
             "div",
             {
               className:
-                "flex items-center justify-between px-5 py-4 sm:px-6",
+                "flex items-center justify-between px-5 py-4 sm:px-6 sm:py-4.5",
             },
             createElement("div"),
             createElement(
@@ -391,10 +404,13 @@ const resolveAlert = (options: AlertOptions): Promise<boolean> => {
           ),
           createElement(
             "div",
-            { className: "px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-6 sm:pb-6" },
+            {
+              className:
+                "px-5 pb-[max(1.2rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 sm:pb-6",
+            },
             createElement(
               "div",
-              { className: "flex flex-col gap-5" },
+              { className: "flex flex-col gap-5 sm:gap-5.5" },
               createElement(
                 "div",
                 { className: "space-y-3 text-center" },
@@ -402,35 +418,52 @@ const resolveAlert = (options: AlertOptions): Promise<boolean> => {
                   ? createElement(
                       "div",
                       {
-                        className:
-                          "mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full border border-rose-100 bg-rose-50",
+                        className: `mx-auto inline-flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full ${
+                          options.iconOverride
+                            ? options.iconOverride.iconWrap
+                            : tone.iconShell
+                        }`,
                       },
-                      createElement(Icon, { size: 26, className: tone.iconColor }),
+                      createElement(Icon, {
+                        size: 30,
+                        className: options.iconOverride?.iconColor ?? tone.iconColor,
+                      }),
                     )
                   : createElement(
                       "div",
-                      {
-                        className: "inline-flex items-center gap-3",
-                      },
-                      createElement("img", {
-                        src: "/brand/meomul-mark-pin.svg",
-                        alt: "Meomul",
-                        className: "h-14 w-14 object-contain",
-                      }),
-                      createElement(
-                        "span",
-                        {
-                          className:
-                            "text-[1.08rem] font-semibold tracking-[0.24em] text-slate-950",
-                        },
-                        "MEOMUL",
-                      ),
+                      options.iconOverride
+                        ? {
+                            className: `mx-auto inline-flex h-[3.75rem] w-[3.75rem] items-center justify-center rounded-full ${options.iconOverride.iconWrap}`,
+                          }
+                        : {
+                            className: "inline-flex items-center gap-3",
+                          },
+                      options.iconOverride
+                        ? createElement(Icon, {
+                            size: 22,
+                            className: options.iconOverride.iconColor,
+                          })
+                        : createElement("img", {
+                            src: "/brand/meomul-mark-pin.svg",
+                            alt: "Meomul",
+                            className: "h-12 w-12 object-contain",
+                          }),
+                      options.iconOverride
+                        ? null
+                        : createElement(
+                            "span",
+                            {
+                              className:
+                                "text-[1.02rem] font-semibold tracking-[0.22em] text-slate-950",
+                            },
+                            "MEOMUL",
+                          ),
                     ),
                 createElement(
                   "h2",
                   {
                     className:
-                      "text-[1.24rem] font-semibold leading-tight text-slate-950 sm:text-[1.4rem]",
+                      "text-[1.14rem] font-semibold leading-tight tracking-tight text-slate-950 sm:text-[1.28rem]",
                   },
                   options.title,
                 ),
@@ -439,7 +472,7 @@ const resolveAlert = (options: AlertOptions): Promise<boolean> => {
                       "p",
                       {
                         className:
-                          "mx-auto max-w-[34ch] whitespace-pre-line text-[15px] leading-6 text-slate-600",
+                          "mx-auto max-w-[34ch] whitespace-pre-line text-[14px] leading-6 text-slate-600 sm:text-[14px]",
                       },
                       options.text,
                     )
@@ -448,7 +481,7 @@ const resolveAlert = (options: AlertOptions): Promise<boolean> => {
               createElement(
                 "div",
                 {
-                  className: `flex w-full border-t border-slate-200 pt-4 ${options.showCancel ? "flex-col-reverse gap-2 sm:flex-row sm:justify-center" : "justify-center"}`,
+                  className: `flex w-full border-t border-slate-200 pt-4 sm:pt-4.5 ${options.showCancel ? "flex-col-reverse gap-2.5 sm:flex-row sm:justify-center" : "justify-center"}`,
                 },
                 options.showCancel
                   ? createElement(
@@ -486,7 +519,21 @@ export const successAlert = async (
   text?: string,
   options?: NoticeOptions,
 ): Promise<void> => {
-  await resolveNotice("success", title, text, options);
+  const variant = options?.variant
+    ? NOTICE_VARIANT_STYLES[options.variant]
+    : null;
+  await resolveAlert({
+    tone: "success",
+    title,
+    text,
+    iconOverride: variant
+      ? {
+          icon: variant.icon,
+          iconWrap: variant.iconWrap,
+          iconColor: variant.iconColor,
+        }
+      : undefined,
+  });
 };
 
 export const errorAlert = async (
@@ -494,7 +541,21 @@ export const errorAlert = async (
   text?: string,
   options?: NoticeOptions,
 ): Promise<void> => {
-  await resolveNotice("error", title, text, options);
+  const variant = options?.variant
+    ? NOTICE_VARIANT_STYLES[options.variant]
+    : null;
+  await resolveAlert({
+    tone: "error",
+    title,
+    text,
+    iconOverride: variant
+      ? {
+          icon: variant.icon,
+          iconWrap: variant.iconWrap,
+          iconColor: variant.iconColor,
+        }
+      : undefined,
+  });
 };
 
 export const infoAlert = async (
@@ -502,7 +563,21 @@ export const infoAlert = async (
   text?: string,
   options?: NoticeOptions,
 ): Promise<void> => {
-  await resolveNotice("info", title, text, options);
+  const variant = options?.variant
+    ? NOTICE_VARIANT_STYLES[options.variant]
+    : null;
+  await resolveAlert({
+    tone: "info",
+    title,
+    text,
+    iconOverride: variant
+      ? {
+          icon: variant.icon,
+          iconWrap: variant.iconWrap,
+          iconColor: variant.iconColor,
+        }
+      : undefined,
+  });
 };
 
 export const confirmAction = async ({
@@ -510,6 +585,7 @@ export const confirmAction = async ({
   text,
   confirmText = "Confirm",
   cancelText = "Cancel",
+  variant,
 }: ConfirmActionOptions): Promise<boolean> =>
   resolveAlert({
     tone: "question",
@@ -518,6 +594,13 @@ export const confirmAction = async ({
     showCancel: true,
     confirmText,
     cancelText,
+    iconOverride: variant
+      ? {
+          icon: NOTICE_VARIANT_STYLES[variant].icon,
+          iconWrap: NOTICE_VARIANT_STYLES[variant].iconWrap,
+          iconColor: NOTICE_VARIANT_STYLES[variant].iconColor,
+        }
+      : undefined,
   });
 
 export const confirmDanger = async ({
@@ -526,6 +609,7 @@ export const confirmDanger = async ({
   warningText,
   confirmText = "Yes, continue",
   cancelText = "Cancel",
+  variant,
 }: ConfirmDangerOptions): Promise<boolean> => {
   const composedText = warningText
     ? `${text ? `${text}\n\n` : ""}${warningText}`
@@ -539,5 +623,12 @@ export const confirmDanger = async ({
     focusCancel: true,
     confirmText,
     cancelText,
+    iconOverride: variant
+      ? {
+          icon: NOTICE_VARIANT_STYLES[variant].icon,
+          iconWrap: NOTICE_VARIANT_STYLES[variant].iconWrap,
+          iconColor: NOTICE_VARIANT_STYLES[variant].iconColor,
+        }
+      : undefined,
   });
 };

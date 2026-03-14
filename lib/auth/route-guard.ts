@@ -1,5 +1,6 @@
 import type { SessionMember } from "@/types/auth";
 import { resolveOnboardingRedirect } from "@/lib/auth/onboarding-status";
+import { hasApprovedAgentAccess } from "@/lib/auth/host-access";
 import {
   clearAuthSession,
   getSessionMember,
@@ -59,7 +60,7 @@ export const resolveGuardRedirect = async (
   if (
     auth.requireApprovedHostAccess &&
     member.memberType === "AGENT" &&
-    member.hostAccessStatus !== "APPROVED"
+    !hasApprovedAgentAccess(member.hostAccessStatus)
   ) {
     return `${HOST_APPLICATION_PATH}?next=${encodeURIComponent(currentPath)}`;
   }

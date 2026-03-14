@@ -2,13 +2,13 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   GET_ALL_CHATS_ADMIN_QUERY,
   GET_CHAT_QUERY,
   REASSIGN_CHAT_MUTATION,
 } from "@/graphql/chat.gql";
 import { GET_ALL_MEMBERS_BY_ADMIN_QUERY } from "@/graphql/member.gql";
+import { errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { formatNumber, timeAgo } from "@/lib/utils/format";
@@ -82,7 +82,6 @@ function ChatDetailDrawer({
   chatId: string;
   onClose: () => void;
 }) {
-  const toast = useToast();
   const [newAgentId, setNewAgentId] = useState("");
 
   const { data, loading, refetch } = useQuery<
@@ -110,12 +109,17 @@ function ChatDetailDrawer({
     ReassignChatMutationData,
     ReassignChatMutationVars
   >(REASSIGN_CHAT_MUTATION, {
-    onCompleted: () => {
-      toast.success("Chat reassigned successfully");
+    onCompleted: async () => {
       setNewAgentId("");
       void refetch();
+      await successAlert("Chat reassigned", "The conversation is now assigned to the selected agent.", {
+        variant: "chat",
+      });
     },
-    onError: (err) => toast.error(getErrorMessage(err)),
+    onError: async (err) =>
+      errorAlert("We couldn’t reassign this chat", getErrorMessage(err), {
+        variant: "chat",
+      }),
   });
 
   return (

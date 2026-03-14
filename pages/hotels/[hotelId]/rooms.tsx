@@ -18,7 +18,7 @@ import {
   getViewTypeLabel,
 } from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
-import { successAlert, errorAlert } from "@/lib/ui/alerts";
+import { confirmAction, successAlert, errorAlert } from "@/lib/ui/alerts";
 import { formatCurrencyKrw } from "@/lib/utils/format";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import type {
@@ -498,9 +498,25 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           roomAmenities: form.roomAmenities,
           ...(imagesList.length > 0 && { roomImages: imagesList }),
         };
+        const confirmed = await confirmAction({
+          title: "Add this room",
+          text: "This room will be added to the hotel and become available in room management.",
+          confirmText: "Add room",
+          variant: "room",
+        });
+        if (!confirmed) return;
         await createRoom({ variables: { input } });
-        await successAlert(copy.roomAdded);
+        await successAlert("Room added to hotel", copy.roomAdded, {
+          variant: "room",
+        });
       } else if (panelMode === "edit" && editingRoom) {
+        const confirmed = await confirmAction({
+          title: "Save room updates",
+          text: "This will update the room configuration used for future bookings.",
+          confirmText: "Save room",
+          variant: "room",
+        });
+        if (!confirmed) return;
         const input: AgentRoomUpdateInput = {
           _id: editingRoom._id,
           roomName: form.roomName.trim(),
@@ -514,12 +530,16 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           roomImages: imagesList,
         };
         await updateRoom({ variables: { input } });
-        await successAlert(copy.roomUpdated);
+        await successAlert("Room details saved", copy.roomUpdated, {
+          variant: "room",
+        });
       }
       closePanel();
       void refetchRooms();
     } catch (err) {
-      await errorAlert(getErrorMessage(err));
+      await errorAlert("We couldn’t save this room", getErrorMessage(err), {
+        variant: "room",
+      });
     }
   };
 
@@ -594,7 +614,9 @@ const HotelRoomsPage: NextPageWithAuth = () => {
       });
       void refetchRooms();
     } catch (err) {
-      await errorAlert(getErrorMessage(err));
+      await errorAlert("We couldn’t update the room status", getErrorMessage(err), {
+        variant: "room",
+      });
     }
   };
 

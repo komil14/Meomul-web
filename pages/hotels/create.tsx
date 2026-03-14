@@ -12,7 +12,7 @@ import {
   getHotelTypeLabel,
 } from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
-import { successAlert } from "@/lib/ui/alerts";
+import { confirmAction, errorAlert, successAlert } from "@/lib/ui/alerts";
 import type {
   AmenitiesInput,
   CancellationPolicy,
@@ -666,10 +666,16 @@ const CreateHotelPage: NextPageWithAuth = () => {
       const hotel = result.data?.createHotel;
       if (hotel) {
         setCreated({ id: hotel._id, title: hotel.hotelTitle });
-        await successAlert(copy.registeredSuccess);
+        await successAlert("Hotel submitted for review", copy.registeredSuccess, {
+          variant: "hotel",
+        });
       }
     } catch (err) {
-      setFormError(getErrorMessage(err));
+      const message = getErrorMessage(err);
+      setFormError(message);
+      await errorAlert("We couldn’t submit this hotel", message, {
+        variant: "hotel",
+      });
     }
   };
 

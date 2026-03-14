@@ -1,12 +1,12 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useMemo, useState, useCallback } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   DELETE_NOTIFICATION_MUTATION,
   GET_ALL_NOTIFICATIONS_ADMIN_QUERY,
   MARK_AS_READ_MUTATION,
 } from "@/graphql/notification.gql";
+import { errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber, timeAgo } from "@/lib/utils/format";
 import type {
@@ -112,15 +112,19 @@ function NotificationDetailDrawer({
     DELETE_NOTIFICATION_MUTATION,
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const toast = useToast();
 
   const handleMarkRead = async () => {
     try {
       await markRead({ variables: { notificationId: notification._id } });
       onAction();
       onClose();
+      await successAlert("Notification marked as read", "This notification has been updated.", {
+        variant: "chat",
+      });
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert("We couldn’t update this notification", getErrorMessage(err), {
+        variant: "chat",
+      });
     }
   };
 
@@ -131,8 +135,13 @@ function NotificationDetailDrawer({
       });
       onAction();
       onClose();
+      await successAlert("Notification removed", "The notification has been deleted.", {
+        variant: "trash",
+      });
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert("We couldn’t delete this notification", getErrorMessage(err), {
+        variant: "chat",
+      });
     }
   };
 

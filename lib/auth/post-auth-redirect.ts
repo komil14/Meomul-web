@@ -1,4 +1,5 @@
 import type { AuthMember } from "@/types/auth";
+import { hasApprovedAgentAccess } from "@/lib/auth/host-access";
 import { buildOnboardingPath, resolveHasRecommendationProfile } from "@/lib/auth/onboarding-status";
 
 const ONBOARDING_REQUIRED_MEMBER_TYPE = "USER";
@@ -17,7 +18,7 @@ export const resolvePostAuthRedirect = async (authMember: AuthMember, redirectTa
 
   if (
     authMember.memberType === "AGENT" &&
-    authMember.hostAccessStatus !== "APPROVED" &&
+    !hasApprovedAgentAccess(authMember.hostAccessStatus) &&
     isHostIntentPath(safeTarget)
   ) {
     return `${HOST_APPLICATION_PATH}?next=${encodeURIComponent(safeTarget)}`;

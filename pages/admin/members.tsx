@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   DELETE_MEMBER_BY_ADMIN_MUTATION,
   GET_ALL_MEMBERS_BY_ADMIN_QUERY,
@@ -243,7 +242,6 @@ function InfoRow({
 /* ─── Main page ────────────────────────────────────────────────────────────── */
 
 const AdminMembersPage: NextPageWithAuth = () => {
-  const toast = useToast();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [hostAccessFilter, setHostAccessFilter] =
@@ -337,12 +335,13 @@ const AdminMembersPage: NextPageWithAuth = () => {
       try {
         await deleteMember({ variables: { memberId } });
         setConfirmDelete(null);
-        void refetch();
+        await refetch();
+        await successAlert("Member removed", "The member account was deleted.");
       } catch (err) {
-        toast.error(getErrorMessage(err));
+        await errorAlert("Delete member", getErrorMessage(err));
       }
     },
-    [deleteMember, refetch, toast],
+    [deleteMember, refetch],
   );
 
   const handleQuickApprove = useCallback(
@@ -350,16 +349,17 @@ const AdminMembersPage: NextPageWithAuth = () => {
       const application = pendingApplicationsByApplicantId.get(member._id);
       if (!application) {
         await errorAlert(
-          "Quick approve",
-          "No pending host application was found for this member.",
+          "No pending application found",
+          "This member no longer has a pending host application to review.",
         );
         return;
       }
 
       const confirmed = await confirmAction({
-        title: "Approve pending agent?",
-        text: `${member.memberNick} will get approved host access immediately.`,
-        confirmText: "Approve",
+        title: "Approve this pending agent",
+        text: `${member.memberNick} will immediately move into approved host access.`,
+        confirmText: "Approve agent",
+        variant: "profile",
       });
       if (!confirmed) return;
 
@@ -375,12 +375,14 @@ const AdminMembersPage: NextPageWithAuth = () => {
         });
         await Promise.all([refetch(), refetchPendingApplications()]);
         await successAlert(
-          "Pending agent approved",
+          "Agent access approved",
           `${member.memberNick} now has approved host access.`,
           { variant: "profile" },
         );
       } catch (mutationError) {
-        await errorAlert("Quick approve", getErrorMessage(mutationError));
+        await errorAlert("We couldn’t approve this agent", getErrorMessage(mutationError), {
+          variant: "profile",
+        });
       } finally {
         setQuickApprovingId(null);
       }

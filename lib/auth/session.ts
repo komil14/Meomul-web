@@ -154,6 +154,7 @@ export const ensureSessionForGuard = async (): Promise<SessionMember | null> => 
 // ── Refresh token (silent) ──────────────────────────────────────────────
 
 let _refreshInProgress: Promise<boolean> | null = null;
+let _lastRefreshFailureAt = 0;
 
 /**
  * Attempt a silent token refresh via the `refreshToken` GraphQL mutation.
@@ -167,6 +168,9 @@ let _refreshInProgress: Promise<boolean> | null = null;
  */
 export const silentRefreshAccessToken = (): Promise<boolean> => {
   if (_refreshInProgress) return _refreshInProgress;
+  if (Date.now() - _lastRefreshFailureAt < 3000) {
+    return Promise.resolve(false);
+  }
 
   _refreshInProgress = (async () => {
     try {
@@ -192,6 +196,7 @@ export const silentRefreshAccessToken = (): Promise<boolean> => {
       saveAuthSession(authMember);
       return true;
     } catch {
+      _lastRefreshFailureAt = Date.now();
       return false;
     } finally {
       _refreshInProgress = null;

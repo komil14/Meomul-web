@@ -2,13 +2,13 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   APPROVE_SUBSCRIPTION_MUTATION,
   DENY_SUBSCRIPTION_MUTATION,
 } from "@/graphql/member.gql";
 import { GET_SUBSCRIPTION_REQUESTS_QUERY } from "@/graphql/notification.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { timeAgo } from "@/lib/utils/format";
 import { Check, Crown, RefreshCw, X } from "lucide-react";
@@ -70,7 +70,6 @@ function ApproveModal({
   onClose: () => void;
   onApproved: () => void;
 }) {
-  const toast = useToast();
   const tier = parseTierFromMessage(request.message);
   const memberId = parseMemberIdFromLink(request.link);
   const [selectedTier, setSelectedTier] = useState(
@@ -89,19 +88,25 @@ function ApproveModal({
 
   const handleApprove = async () => {
     if (!memberId) {
-      toast.error("Could not resolve member ID from request.");
+      await errorAlert("No member found", "This request is missing the member link needed for approval.", {
+        variant: "subscription",
+      });
       return;
     }
     try {
       await approveSubscription({
         variables: { memberId, tier: selectedTier, durationDays },
       });
-      toast.success(
-        `Subscription approved — ${selectedTier} for ${durationDays} days.`,
+      await successAlert(
+        "Subscription activated",
+        `${selectedTier} is now active for ${durationDays} days.`,
+        { variant: "subscription" },
       );
       onApproved();
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert("We couldn’t activate this subscription", getErrorMessage(err), {
+        variant: "subscription",
+      });
     }
   };
 
@@ -210,7 +215,6 @@ function DenyModal({
   onClose: () => void;
   onDenied: () => void;
 }) {
-  const toast = useToast();
   const memberId = parseMemberIdFromLink(request.link);
   const [reason, setReason] = useState("");
 
@@ -223,17 +227,23 @@ function DenyModal({
 
   const handleDeny = async () => {
     if (!memberId) {
-      toast.error("Could not resolve member ID from request.");
+      await errorAlert("No member found", "This request is missing the member link needed to decline it.", {
+        variant: "subscription",
+      });
       return;
     }
     try {
       await denySubscription({
         variables: { memberId, reason: reason.trim() || undefined },
       });
-      toast.success("Subscription request denied.");
+      await successAlert("Subscription request declined", "The request has been declined.", {
+        variant: "subscription",
+      });
       onDenied();
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert("We couldn’t decline this request", getErrorMessage(err), {
+        variant: "subscription",
+      });
     }
   };
 

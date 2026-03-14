@@ -11,6 +11,7 @@ import { SubscriptionTab } from "@/components/profile/subscription-tab";
 import { BookingsTab } from "@/components/profile/bookings-tab";
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { GET_MEMBER_QUERY, GET_MY_HOST_APPLICATION_QUERY } from "@/graphql/member.gql";
+import { hasApprovedAgentAccess } from "@/lib/auth/host-access";
 import { getSessionMember, updateSessionMember } from "@/lib/auth/session";
 import { useI18n } from "@/lib/i18n/provider";
 import {
@@ -215,7 +216,7 @@ const ProfilePage: NextPageWithAuth = () => {
   const hostAccessStatus =
     member?.hostAccessStatus ?? sessionMember.hostAccessStatus ?? "NONE";
   const hasApprovedHostAccess =
-    memberType === "AGENT" && hostAccessStatus === "APPROVED";
+    memberType === "AGENT" && hasApprovedAgentAccess(hostAccessStatus);
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6">

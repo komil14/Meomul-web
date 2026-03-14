@@ -22,6 +22,7 @@ import {
   toDateTime,
 } from "@/lib/booking/booking-rules";
 import { getSessionMember } from "@/lib/auth/session";
+import { hasApprovedAgentAccess } from "@/lib/auth/host-access";
 import {
   formatNightsLabel,
   getPaymentMethodLabel,
@@ -30,6 +31,7 @@ import {
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { useI18n } from "@/lib/i18n/provider";
 import { ErrorNotice } from "@/components/ui/error-notice";
+import { confirmAction } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -749,7 +751,7 @@ const NewBookingPage: NextPageWithAuth = () => {
   // Auth
   const memberType = member?.memberType;
   const hostAccessStatus = member?.hostAccessStatus;
-  const isApprovedAgent = memberType === "AGENT" && hostAccessStatus === "APPROVED";
+  const isApprovedAgent = memberType === "AGENT" && hasApprovedAgentAccess(hostAccessStatus);
   const canCreateBooking =
     memberType === "USER" ||
     memberType === "AGENT" ||
@@ -1042,6 +1044,14 @@ const NewBookingPage: NextPageWithAuth = () => {
       setSubmitError(copy.bookingContextIncomplete);
       return;
     }
+    const confirmed = await confirmAction({
+      title: "Review booking details",
+      text: `${hotel.hotelTitle}\n${room.roomType} · ${checkInDate} to ${checkOutDate}\n${quantity} room · Estimated total ₩${formatNumber(estTotal)}`,
+      confirmText: copy.confirmBooking,
+      cancelText: copy.back,
+      variant: "booking",
+    });
+    if (!confirmed) return;
     try {
       const response = await createBooking({
         variables: {

@@ -77,6 +77,23 @@ export interface LogoutMutationData {
   };
 }
 
+export interface ResetPasswordInput {
+  memberNick: string;
+  memberPhone: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordMutationData {
+  resetPassword: {
+    success: boolean;
+    message: string;
+  };
+}
+
+export interface ResetPasswordMutationVars {
+  input: ResetPasswordInput;
+}
+
 export interface HostApplication {
   _id: string;
   applicantMemberId: string;

@@ -2,13 +2,13 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   DELETE_REVIEW_MUTATION,
   GET_ALL_REVIEWS_ADMIN_QUERY,
   UPDATE_REVIEW_STATUS_MUTATION,
 } from "@/graphql/review.gql";
 import { resolveImageUrl } from "@/lib/config/env";
+import { errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -101,15 +101,19 @@ function ReviewDetailDrawer({
     DELETE_REVIEW_MUTATION,
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const toast = useToast();
 
   const handleStatus = async (status: ReviewStatus) => {
     try {
       await updateStatus({ variables: { reviewId: review._id, status } });
       onStatusChanged();
       onClose();
+      await successAlert("Review status saved", `This review is now marked as ${status.toLowerCase()}.`, {
+        variant: "review",
+      });
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert("We couldn’t update this review", getErrorMessage(err), {
+        variant: "review",
+      });
     }
   };
 
@@ -118,8 +122,13 @@ function ReviewDetailDrawer({
       await deleteReview({ variables: { reviewId: review._id } });
       onStatusChanged();
       onClose();
+      await successAlert("Review removed", "The review has been removed from the platform.", {
+        variant: "trash",
+      });
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert("We couldn’t remove this review", getErrorMessage(err), {
+        variant: "review",
+      });
     }
   };
 

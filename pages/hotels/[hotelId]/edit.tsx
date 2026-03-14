@@ -11,7 +11,7 @@ import {
   getStayPurposeLabel,
 } from "@/lib/hotels/hotels-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
-import { successAlert, errorAlert } from "@/lib/ui/alerts";
+import { confirmAction, successAlert, errorAlert } from "@/lib/ui/alerts";
 import type {
   AmenitiesInput,
   AgentHotelUpdateInput,
@@ -414,10 +414,21 @@ const EditHotelPage: NextPageWithAuth = () => {
           fee: flexCheckOutFee ? Number(flexCheckOutFee) : 0,
         },
       };
+      const confirmed = await confirmAction({
+        title: "Save hotel updates",
+        text: "This will update your hotel details, policies, and media across the listing.",
+        confirmText: "Save changes",
+        variant: "hotel",
+      });
+      if (!confirmed) return;
       await updateHotel({ variables: { input } });
-      await successAlert(copy.hotelUpdated);
+      await successAlert("Hotel details saved", copy.hotelUpdated, {
+        variant: "hotel",
+      });
     } catch (err) {
-      await errorAlert(getErrorMessage(err));
+      await errorAlert("We couldn’t save these hotel changes", getErrorMessage(err), {
+        variant: "hotel",
+      });
     } finally {
       setSaving(false);
     }

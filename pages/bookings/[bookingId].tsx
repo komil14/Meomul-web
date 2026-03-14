@@ -16,6 +16,7 @@ import {
 } from "@/graphql/review.gql";
 import { GET_HOTEL_CARD_QUERY } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
+import { hasApprovedAgentAccess } from "@/lib/auth/host-access";
 import {
   formatBookingDate,
   formatGuestsLabel,
@@ -27,7 +28,7 @@ import {
   getPaymentStatusLabel,
 } from "@/lib/bookings/booking-i18n";
 import { useI18n } from "@/lib/i18n/provider";
-import { confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
+import { confirmAction, confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -439,7 +440,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
   const member = useMemo(() => getSessionMember(), []);
   const memberType = member?.memberType;
   const hostAccessStatus = member?.hostAccessStatus;
-  const isApprovedAgent = memberType === "AGENT" && hostAccessStatus === "APPROVED";
+  const isApprovedAgent = memberType === "AGENT" && hasApprovedAgentAccess(hostAccessStatus);
   const bookingId =
     typeof router.query.bookingId === "string" ? router.query.bookingId : "";
 
@@ -564,6 +565,13 @@ const BookingDetailPage: NextPageWithAuth = () => {
       );
       return;
     }
+    const confirmed = await confirmAction({
+      title: "Publish your review",
+      text: "This review will appear on the stay and help future guests decide with confidence.",
+      confirmText: copy.submitReview,
+      variant: "review",
+    });
+    if (!confirmed) return;
     try {
       const result = await createReview({
         variables: {
@@ -585,9 +593,12 @@ const BookingDetailPage: NextPageWithAuth = () => {
       await successAlert(
         copy.reviewSubmittedTitle,
         copy.reviewSubmittedBody,
+        { variant: "review" },
       );
     } catch (err) {
-      await errorAlert(copy.reviewFailedTitle, getErrorMessage(err));
+      await errorAlert(copy.reviewFailedTitle, getErrorMessage(err), {
+        variant: "review",
+      });
     }
   };
 
@@ -639,9 +650,12 @@ const BookingDetailPage: NextPageWithAuth = () => {
       await successAlert(
         copy.cancellationSuccessTitle,
         copy.cancellationSuccessBody.replace("{{code}}", booking.bookingCode),
+        { variant: "booking" },
       );
     } catch (err) {
-      await errorAlert(copy.cancellationFailedTitle, getErrorMessage(err));
+      await errorAlert(copy.cancellationFailedTitle, getErrorMessage(err), {
+        variant: "booking",
+      });
     }
   };
 

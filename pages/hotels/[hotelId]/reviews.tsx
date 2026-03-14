@@ -308,11 +308,15 @@ const HotelReviewsPage: NextPageWithAuth = () => {
           responseText: responseText.trim(),
         },
       });
-      await successAlert(copy.responsePosted);
+      await successAlert("Reply posted", copy.responsePosted, {
+        variant: "review",
+      });
       closeRespond();
       void refetchReviews();
     } catch (err) {
-      await errorAlert(getErrorMessage(err));
+      await errorAlert("We couldn’t post this reply", getErrorMessage(err), {
+        variant: "review",
+      });
     }
   };
 

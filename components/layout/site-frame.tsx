@@ -25,6 +25,7 @@ import {
   registerSessionChangeListener,
   unregisterSessionChangeListener,
 } from "@/lib/auth/session";
+import { hasApprovedAgentAccess } from "@/lib/auth/host-access";
 import {
   PROFILE_FALLBACK_IMAGE,
   resolveProfileImageUrl,
@@ -135,7 +136,7 @@ const ADMIN_PAGES = [
 function getNavLinks(member: SessionMember | null) {
   if (!member) return NAV_LINKS.guest;
   if (member.memberType === "USER") return NAV_LINKS.user;
-  if (member.memberType === "AGENT" && member.hostAccessStatus !== "APPROVED") {
+  if (member.memberType === "AGENT" && !hasApprovedAgentAccess(member.hostAccessStatus)) {
     return NAV_LINKS.pendingAgent;
   }
   if (member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR")
@@ -208,7 +209,7 @@ function UserAvatarMenu({
   const roleLabel =
     member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR"
       ? t("label_role_admin")
-      : member.memberType === "AGENT" && member.hostAccessStatus !== "APPROVED"
+      : member.memberType === "AGENT" && !hasApprovedAgentAccess(member.hostAccessStatus)
         ? "pending agent"
       : member.memberType.replace("_", " ").toLowerCase();
   const canAccessSettings = member.memberType !== "AGENT";
@@ -242,7 +243,7 @@ function UserAvatarMenu({
               <User size={14} className="text-slate-400" />
               {t("action_profile")}
             </Link>
-            {member.memberType === "AGENT" && member.hostAccessStatus !== "APPROVED" ? (
+            {member.memberType === "AGENT" && !hasApprovedAgentAccess(member.hostAccessStatus) ? (
               <Link
                 href="/host/apply"
                 onClick={() => setOpen(false)}
@@ -730,14 +731,19 @@ export function SiteFrame({ children }: PropsWithChildren) {
   // fetchPolicy:"cache-only" means no extra network request — it just reads
   // whatever the profile page already fetched and updates when the mutation fires.
   const { data: memberCacheData } = useQuery<{
-    getMember: { memberImage?: string | null };
+    getMember: {
+      memberImage?: string | null;
+      hostAccessStatus?: SessionMember["hostAccessStatus"];
+    };
   }>(GET_MEMBER_QUERY, { skip: !member, fetchPolicy: "cache-only" });
-  // Merge live image into member so both desktop and mobile avatars auto-update
-  const memberWithLiveImage = member
+  // Merge live profile fields into member so nav/avatar reflect profile updates immediately.
+  const memberWithLiveState = member
     ? {
         ...member,
         memberImage:
           memberCacheData?.getMember.memberImage ?? member.memberImage,
+        hostAccessStatus:
+          memberCacheData?.getMember.hostAccessStatus ?? member.hostAccessStatus,
       }
     : null;
 
@@ -757,11 +763,11 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const previousUnreadRef = useRef<number | null>(null);
   const hasPolledOnVisibleRef = useRef(false);
 
-  const navLinks = getNavLinks(member);
+  const navLinks = getNavLinks(memberWithLiveState ?? member);
   const isStaff =
-    member?.memberType === "AGENT" ||
-    member?.memberType === "ADMIN" ||
-    member?.memberType === "ADMIN_OPERATOR";
+    (memberWithLiveState ?? member)?.memberType === "AGENT" ||
+    (memberWithLiveState ?? member)?.memberType === "ADMIN" ||
+    (memberWithLiveState ?? member)?.memberType === "ADMIN_OPERATOR";
   const handleLogout = () => {
     void (async () => {
       await logoutSession();
@@ -991,7 +997,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
                 {notifBellButton}
                 {chatIconButton}
                 <UserAvatarMenu
-                  member={memberWithLiveImage ?? member}
+                  member={memberWithLiveState ?? member}
                   onLogout={handleLogout}
                   t={t}
                 />
@@ -1071,7 +1077,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
                 <div
                   className={`flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full ${ROLE_COLOR[member.memberType] ?? "bg-slate-500"} text-[11px] font-bold text-white`}
                 >
-                  {memberAvatar(memberWithLiveImage ?? member)}
+                  {memberAvatar(memberWithLiveState ?? member)}
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-base font-semibold text-slate-900">

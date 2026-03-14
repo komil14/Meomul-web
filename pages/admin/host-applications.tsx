@@ -226,9 +226,10 @@ const AdminHostApplicationsPage: NextPageWithAuth = () => {
 
   const handleApprove = async (application: HostApplication) => {
     const confirmed = await confirmAction({
-      title: "Approve host application?",
-      text: `${application.businessName} will move from pending agent to approved agent access.`,
-      confirmText: "Approve",
+      title: "Approve this host application",
+      text: `${application.businessName} will move from pending to approved host access.`,
+      confirmText: "Approve application",
+      variant: "subscription",
     });
     if (!confirmed) return;
 
@@ -242,9 +243,15 @@ const AdminHostApplicationsPage: NextPageWithAuth = () => {
         },
       });
       await refetch();
-      await successAlert("Host application approved", `${application.businessName} now has approved agent access.`);
+      await successAlert(
+        "Host application approved",
+        `${application.businessName} now has approved host access.`,
+        { variant: "subscription" },
+      );
     } catch (mutationError) {
-      await errorAlert("Approve host application", getErrorMessage(mutationError));
+      await errorAlert("We couldn’t approve this application", getErrorMessage(mutationError), {
+        variant: "subscription",
+      });
     }
   };
 
@@ -271,11 +278,14 @@ const AdminHostApplicationsPage: NextPageWithAuth = () => {
       setRejectModal(null);
       await refetch();
       await successAlert(
-        "Host application rejected",
-        `${rejectModal.application.businessName} was rejected.`,
+        "Host application declined",
+        `${rejectModal.application.businessName} was declined.`,
+        { variant: "subscription" },
       );
     } catch (mutationError) {
-      await errorAlert("Reject host application", getErrorMessage(mutationError));
+      await errorAlert("We couldn’t decline this application", getErrorMessage(mutationError), {
+        variant: "subscription",
+      });
     }
   };
 

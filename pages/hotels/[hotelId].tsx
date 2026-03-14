@@ -18,7 +18,7 @@ import { HotelRoomsSection } from "@/components/hotels/detail/hotel-rooms-sectio
 import { HotelThingsToKnowSection } from "@/components/hotels/detail/hotel-things-to-know-section";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
+import { confirmAction, errorAlert, infoAlert } from "@/lib/ui/alerts";
 import { GET_MY_CHATS_QUERY, START_CHAT_MUTATION } from "@/graphql/chat.gql";
 import { GET_HOTEL_DETAIL_QUERY, GET_ROOMS_BY_HOTEL_QUERY } from "@/graphql/hotel.gql";
 import { useHotelDetailPageData } from "@/lib/hooks/use-hotel-detail-page-data";
@@ -75,7 +75,6 @@ export default function HotelDetailPage({
 }: HotelDetailPageProps) {
   const { t } = useI18n();
   const router = useRouter();
-  const toast = useToast();
   const [member, setMember] =
     useState<ReturnType<typeof getSessionMember>>(null);
   useEffect(() => {
@@ -250,10 +249,18 @@ export default function HotelDetailPage({
 
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(pageUrl);
-        toast.success(`${t("hotel_detail_share_copied_title")} — ${t("hotel_detail_share_copied_body")}`);
+        await infoAlert(
+          t("hotel_detail_share_copied_title"),
+          t("hotel_detail_share_copied_body"),
+          { variant: "hotel" },
+        );
       }
     } catch {
-      toast.error(`${t("hotel_detail_share_failed_title")} — ${t("hotel_detail_share_failed_body")}`);
+      await errorAlert(
+        t("hotel_detail_share_failed_title"),
+        t("hotel_detail_share_failed_body"),
+        { variant: "hotel" },
+      );
     }
   };
 
@@ -526,6 +533,15 @@ export default function HotelDetailPage({
               void router.push(`/chats/${existingChat._id}`);
               return;
             }
+            const confirmed = await confirmAction({
+              title: "Contact this hotel",
+              text: t("hotel_detail_chat_initial_message", {
+                hotelTitle: hotel?.hotelTitle ?? t("hotel_type_hotel"),
+              }),
+              confirmText: t("hotel_detail_chat_cta"),
+              variant: "chat",
+            });
+            if (!confirmed) return;
             setStartingChat(true);
             try {
               const { data } = await startChat({
@@ -542,7 +558,9 @@ export default function HotelDetailPage({
                 void router.push(`/chats/${data.startChat._id}`);
               }
             } catch {
-              toast.error(t("hotel_detail_chat_error"));
+              await errorAlert("Could not start chat", t("hotel_detail_chat_error"), {
+                variant: "chat",
+              });
               setStartingChat(false);
             }
           }}

@@ -29,8 +29,8 @@ const HOST_ACCESS_BADGE: Record<
   { label: string; className: string }
 > = {
   NONE: {
-    label: "host access not started",
-    className: "border-slate-200 text-slate-500",
+    label: "approved agent",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
   },
   PENDING: {
     label: "pending agent",
