@@ -51,6 +51,7 @@ export function Footer() {
   const ACCOUNT_LINKS = [
     { label: t("footer_sign_in"), href: "/auth/login" },
     { label: t("footer_create_account"), href: "/auth/signup" },
+    { label: t("footer_become_host"), href: "/become-a-host" },
     { label: t("footer_my_bookings"), href: "/bookings" },
     { label: t("footer_profile_settings"), href: "/profile" },
   ];

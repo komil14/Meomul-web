@@ -1,4 +1,4 @@
-import type { MemberType } from "@/types/auth";
+import type { HostAccessStatus, MemberType } from "@/types/auth";
 import type { ChatStatus } from "@/types/chat";
 import type { MetaCounterDto, PaginationInput } from "@/types/hotel";
 
@@ -13,6 +13,7 @@ export interface AdminMemberItem {
   _id: string;
   memberType: MemberType;
   memberStatus: MemberStatus;
+  hostAccessStatus?: HostAccessStatus;
   memberPhone: string;
   memberNick: string;
   memberFullName?: string | null;

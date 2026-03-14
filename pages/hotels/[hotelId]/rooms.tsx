@@ -1331,6 +1331,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
 HotelRoomsPage.auth = {
   roles: ["AGENT", "ADMIN", "ADMIN_OPERATOR"],
+  requireApprovedHostAccess: true,
 };
 
 export default HotelRoomsPage;

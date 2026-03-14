@@ -73,6 +73,7 @@ const NAV_LINKS = {
   guest: [
     { href: "/", labelKey: "nav_home" },
     { href: "/hotels", labelKey: "nav_hotels" },
+    { href: "/become-a-host", labelKey: "nav_become_host" },
     { href: "/about", labelKey: "nav_about" },
     { href: "/support", labelKey: "nav_support" },
   ],
@@ -81,6 +82,13 @@ const NAV_LINKS = {
     { href: "/hotels", labelKey: "nav_hotels" },
     { href: "/bookings", labelKey: "nav_my_bookings" },
     { href: "/about", labelKey: "nav_about" },
+    { href: "/support", labelKey: "nav_support" },
+  ],
+  pendingAgent: [
+    { href: "/", labelKey: "nav_home" },
+    { href: "/hotels", labelKey: "nav_hotels" },
+    { href: "/hotels/manage", labelKey: "nav_my_hotels" },
+    { href: "/chats", labelKey: "nav_chats" },
     { href: "/support", labelKey: "nav_support" },
   ],
   staff: [
@@ -103,6 +111,11 @@ const NAV_LINKS = {
 
 const ADMIN_PAGES = [
   { href: "/admin/members", labelKey: "nav_admin_members", icon: Users },
+  {
+    href: "/admin/host-applications",
+    labelKey: "nav_admin_host_applications",
+    icon: ShieldCheck,
+  },
   { href: "/admin/hotels", labelKey: "nav_admin_hotels", icon: Building2 },
   { href: "/admin/rooms", labelKey: "nav_admin_rooms", icon: DoorOpen },
   { href: "/admin/reviews", labelKey: "nav_admin_reviews", icon: Star },
@@ -122,6 +135,9 @@ const ADMIN_PAGES = [
 function getNavLinks(member: SessionMember | null) {
   if (!member) return NAV_LINKS.guest;
   if (member.memberType === "USER") return NAV_LINKS.user;
+  if (member.memberType === "AGENT" && member.hostAccessStatus !== "APPROVED") {
+    return NAV_LINKS.pendingAgent;
+  }
   if (member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR")
     return NAV_LINKS.admin;
   return NAV_LINKS.staff;
@@ -192,6 +208,8 @@ function UserAvatarMenu({
   const roleLabel =
     member.memberType === "ADMIN" || member.memberType === "ADMIN_OPERATOR"
       ? t("label_role_admin")
+      : member.memberType === "AGENT" && member.hostAccessStatus !== "APPROVED"
+        ? "pending agent"
       : member.memberType.replace("_", " ").toLowerCase();
   const canAccessSettings = member.memberType !== "AGENT";
 
@@ -224,6 +242,16 @@ function UserAvatarMenu({
               <User size={14} className="text-slate-400" />
               {t("action_profile")}
             </Link>
+            {member.memberType === "AGENT" && member.hostAccessStatus !== "APPROVED" ? (
+              <Link
+                href="/host/apply"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+              >
+                <Building2 size={14} className="text-slate-400" />
+                Host application
+              </Link>
+            ) : null}
             {canAccessSettings ? (
               <Link
                 href="/settings/preferences"
@@ -668,6 +696,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const isHomeRoute = router.pathname === "/";
   const isHotelDetailRoute = router.pathname === "/hotels/[hotelId]";
   const isHotelsRoute = router.pathname === "/hotels";
+  const isBecomeHostRoute = router.pathname === "/become-a-host";
+  const isHostSignupRoute = router.pathname === "/host/signup";
+  const isHostApplyRoute = router.pathname === "/host/apply";
+  const isHostFlowRoute = isBecomeHostRoute || isHostSignupRoute || isHostApplyRoute;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
 
@@ -714,7 +746,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const canTrackUnread = hasValidSession;
   const isChatRoute =
     router.pathname === "/chats" || router.pathname === "/chats/[chatId]";
-  const showFloatingWidgets = !isChatRoute;
+  const showFloatingWidgets = !isChatRoute && !isHostFlowRoute;
   const isRoomDetailPage = router.pathname === "/rooms/[roomId]";
   const isNotificationsRoute = router.pathname === "/notifications";
   const shouldShowPriceLockWidget = true;
@@ -1172,8 +1204,10 @@ export function SiteFrame({ children }: PropsWithChildren) {
 
   return (
     <div className="min-h-screen w-screen overflow-x-clip">
-      {sharedHeader}
-      {isHomeRoute ? (
+      {isHostFlowRoute ? null : sharedHeader}
+      {isHostFlowRoute ? (
+        children
+      ) : isHomeRoute ? (
         children
       ) : isHotelDetailRoute ? (
         <div className="w-full px-3 pb-8 pt-0 sm:px-6 sm:py-10">{children}</div>
@@ -1204,7 +1238,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
         onClose={() => setIsChatPanelOpen(false)}
         unreadCount={unreadCount}
       />
-      <Footer />
+      {isHostFlowRoute ? null : <Footer />}
     </div>
   );
 }

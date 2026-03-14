@@ -47,7 +47,13 @@ export const isOnboardingRequiredMember = (
 
 export const isOnboardingExemptPath = (path: string): boolean => {
   const pathname = parsePathname(path);
-  return pathname === "/onboarding" || pathname.startsWith("/auth/") || pathname === "/403" || pathname === "/404";
+  return (
+    pathname === "/onboarding" ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/host/") ||
+    pathname === "/403" ||
+    pathname === "/404"
+  );
 };
 
 export const clearOnboardingCompletionCache = (): void => {

@@ -1,4 +1,5 @@
 import { useQuery } from "@apollo/client/react";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { ProfileHeader } from "@/components/profile/profile-sidebar";
@@ -9,7 +10,7 @@ import { LikesTab } from "@/components/profile/likes-tab";
 import { SubscriptionTab } from "@/components/profile/subscription-tab";
 import { BookingsTab } from "@/components/profile/bookings-tab";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { GET_MEMBER_QUERY } from "@/graphql/member.gql";
+import { GET_MEMBER_QUERY, GET_MY_HOST_APPLICATION_QUERY } from "@/graphql/member.gql";
 import { getSessionMember, updateSessionMember } from "@/lib/auth/session";
 import { useI18n } from "@/lib/i18n/provider";
 import {
@@ -17,8 +18,9 @@ import {
   getProfileCopy,
 } from "@/lib/profile/profile-i18n";
 import { getErrorMessage } from "@/lib/utils/error";
-import { Calendar, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, Building2, Calendar, MapPin, Phone } from "lucide-react";
 import type { NextPageWithAuth } from "@/types/page";
+import type { GetMyHostApplicationQueryData } from "@/types/auth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,7 @@ interface MemberDto {
   _id: string;
   memberType: string;
   memberStatus: string;
+  hostAccessStatus?: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
   memberPhone: string;
   memberNick: string;
   memberFullName?: string | null;
@@ -176,18 +179,32 @@ const ProfilePage: NextPageWithAuth = () => {
     fetchPolicy: "network-only",
     nextFetchPolicy: "cache-and-network",
   });
+  const { data: hostApplicationData } = useQuery<GetMyHostApplicationQueryData>(
+    GET_MY_HOST_APPLICATION_QUERY,
+    {
+      skip: !sessionMember,
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-and-network",
+    },
+  );
 
   const member = data?.getMember;
 
-  // Keep session storage in sync so the site-frame avatar also updates
+  // Keep session storage in sync so site-frame nav/account UI updates immediately.
   useEffect(() => {
     if (member) {
       const session = getSessionMember();
       if (
         session &&
-        (member.memberImage ?? null) !== (session.memberImage ?? null)
+        (
+          (member.memberImage ?? null) !== (session.memberImage ?? null) ||
+          (member.hostAccessStatus ?? "NONE") !== (session.hostAccessStatus ?? "NONE")
+        )
       ) {
-        updateSessionMember({ memberImage: member.memberImage ?? null });
+        updateSessionMember({
+          memberImage: member.memberImage ?? null,
+          hostAccessStatus: member.hostAccessStatus ?? "NONE",
+        });
       }
     }
   }, [member]);
@@ -195,6 +212,10 @@ const ProfilePage: NextPageWithAuth = () => {
   if (!sessionMember) return null;
 
   const memberType = member?.memberType ?? sessionMember.memberType;
+  const hostAccessStatus =
+    member?.hostAccessStatus ?? sessionMember.hostAccessStatus ?? "NONE";
+  const hasApprovedHostAccess =
+    memberType === "AGENT" && hostAccessStatus === "APPROVED";
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6">
@@ -229,7 +250,42 @@ const ProfilePage: NextPageWithAuth = () => {
         {loading && !member ? (
           <ProfileOverviewSkeleton />
         ) : member ? (
-          <ProfileOverview member={member} />
+          <div className="space-y-4">
+            <ProfileOverview member={member} />
+            {memberType === "AGENT" && !hasApprovedHostAccess && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Host Access
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                      {hasApprovedHostAccess
+                        ? "Hotel management is active"
+                        : memberType === "AGENT"
+                          ? "Host access is pending"
+                          : "Want to list your hotel?"}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {hostAccessStatus === "PENDING" || hostApplicationData?.getMyHostApplication?.status === "PENDING"
+                        ? "Your host application is pending admin review."
+                        : hostAccessStatus === "REJECTED" || hostApplicationData?.getMyHostApplication?.status === "REJECTED"
+                          ? "Your last host application was rejected. Review the note and reapply."
+                          : "Complete your host application before creating hotels on Meomul."}
+                    </p>
+                  </div>
+                  <Link
+                    href="/host/apply"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    <Building2 size={15} />
+                    Open host application
+                    <ArrowUpRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         ) : null}
       </div>
 

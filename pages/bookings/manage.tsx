@@ -2176,6 +2176,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
 StaffBookingManagementPage.auth = {
   roles: ["AGENT", "ADMIN", "ADMIN_OPERATOR"],
+  requireApprovedHostAccess: true,
 };
 
 export default StaffBookingManagementPage;

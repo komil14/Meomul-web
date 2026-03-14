@@ -438,6 +438,8 @@ const BookingDetailPage: NextPageWithAuth = () => {
   const router = useRouter();
   const member = useMemo(() => getSessionMember(), []);
   const memberType = member?.memberType;
+  const hostAccessStatus = member?.hostAccessStatus;
+  const isApprovedAgent = memberType === "AGENT" && hostAccessStatus === "APPROVED";
   const bookingId =
     typeof router.query.bookingId === "string" ? router.query.bookingId : "";
 
@@ -527,7 +529,7 @@ const BookingDetailPage: NextPageWithAuth = () => {
   const hotel = hotelData?.getHotel;
   const hotelCoverImage = resolveMediaUrl(hotel?.hotelImages[0]);
   const isStaff =
-    memberType === "AGENT" ||
+    isApprovedAgent ||
     memberType === "ADMIN" ||
     memberType === "ADMIN_OPERATOR";
   const isGuestOwner = Boolean(

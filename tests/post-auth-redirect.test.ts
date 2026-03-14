@@ -8,6 +8,7 @@ const buildAuthMember = (memberType: AuthMember["memberType"]): AuthMember => ({
   memberNick: "kamil",
   memberType,
   memberStatus: "ACTIVE",
+  hostAccessStatus: memberType === "AGENT" ? "APPROVED" : "NONE",
   memberAuthType: "EMAIL",
   memberPhone: "010-1111-2222",
   memberFullName: "Kamil",

@@ -5,6 +5,7 @@ const MEMBER_FIELDS = gql`
     _id
     memberType
     memberStatus
+    hostAccessStatus
     memberPhone
     memberNick
     memberFullName
@@ -69,6 +70,66 @@ export const CANCEL_SUBSCRIPTION_MUTATION = gql`
       success
     }
   }
+`;
+
+export const HOST_APPLICATION_FIELDS = gql`
+  fragment HostApplicationFields on HostApplicationDto {
+    _id
+    applicantMemberId
+    applicantMemberNick
+    businessName
+    businessDescription
+    contactPhone
+    businessEmail
+    intendedHotelName
+    intendedHotelLocation
+    hotelType
+    suitableFor
+    notes
+    status
+    reviewedByMemberId
+    reviewedByMemberNick
+    reviewNote
+    reviewedAt
+    createdAt
+    updatedAt
+  }
+`;
+
+export const GET_MY_HOST_APPLICATION_QUERY = gql`
+  query GetMyHostApplication {
+    getMyHostApplication {
+      ...HostApplicationFields
+    }
+  }
+  ${HOST_APPLICATION_FIELDS}
+`;
+
+export const REQUEST_HOST_APPLICATION_MUTATION = gql`
+  mutation RequestHostApplication($input: HostApplicationInput!) {
+    requestHostApplication(input: $input) {
+      ...HostApplicationFields
+    }
+  }
+  ${HOST_APPLICATION_FIELDS}
+`;
+
+export const GET_HOST_APPLICATIONS_BY_ADMIN_QUERY = gql`
+  query GetHostApplicationsByAdmin($statusFilter: HostApplicationStatus) {
+    getHostApplicationsByAdmin(statusFilter: $statusFilter) {
+      ...HostApplicationFields
+    }
+  }
+  ${HOST_APPLICATION_FIELDS}
+`;
+
+export const REVIEW_HOST_APPLICATION_MUTATION = gql`
+  mutation ReviewHostApplication($input: HostApplicationReviewInput!) {
+    reviewHostApplication(input: $input) {
+      ...HostApplicationFields
+    }
+  }
+  ${HOST_APPLICATION_FIELDS}
 `;
 
 // ─── Admin mutations ───────────────────────────────────────────────────────────

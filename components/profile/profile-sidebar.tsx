@@ -24,11 +24,34 @@ const TIER_LABEL: Record<string, string> = {
   ELITE: "Elite",
 };
 
+const HOST_ACCESS_BADGE: Record<
+  string,
+  { label: string; className: string }
+> = {
+  NONE: {
+    label: "host access not started",
+    className: "border-slate-200 text-slate-500",
+  },
+  PENDING: {
+    label: "pending agent",
+    className: "border-amber-200 bg-amber-50 text-amber-700",
+  },
+  APPROVED: {
+    label: "approved agent",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  REJECTED: {
+    label: "rejected agent",
+    className: "border-rose-200 bg-rose-50 text-rose-700",
+  },
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ProfileMember {
   _id: string;
   memberType: string;
+  hostAccessStatus?: string;
   memberNick: string;
   memberFullName?: string | null;
   memberImage?: string | null;
@@ -69,11 +92,14 @@ export function ProfileHeader({ member, loading, onEdit }: ProfileHeaderProps) {
   const sessionMember = useMemo(() => getSessionMember(), []);
 
   const memberType = member?.memberType ?? sessionMember?.memberType ?? "USER";
+  const hostAccessStatus =
+    member?.hostAccessStatus ?? sessionMember?.hostAccessStatus ?? "NONE";
   const memberNick = member?.memberNick ?? sessionMember?.memberNick ?? "";
   const initials = memberNick.slice(0, 2).toUpperCase();
   const avatarBg = AVATAR_BG[memberType] ?? "bg-slate-500";
   const tier = member?.subscriptionTier ?? "FREE";
   const tierLabel = TIER_LABEL[tier] ?? tier;
+  const hostAccessBadge = HOST_ACCESS_BADGE[hostAccessStatus] ?? HOST_ACCESS_BADGE.NONE;
   const memberSince = member
     ? formatProfileDate(locale, member.createdAt, "monthYear")
     : "";
@@ -148,6 +174,13 @@ export function ProfileHeader({ member, loading, onEdit }: ProfileHeaderProps) {
             <span className="rounded-full border border-slate-200 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
               {memberType.replace("_", " ").toLowerCase()}
             </span>
+            {memberType === "AGENT" ? (
+              <span
+                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${hostAccessBadge.className}`}
+              >
+                {hostAccessBadge.label}
+              </span>
+            ) : null}
             <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
               <Crown size={9} />
               {tierLabel}

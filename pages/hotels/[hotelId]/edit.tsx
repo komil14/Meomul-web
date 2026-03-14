@@ -933,6 +933,7 @@ const EditHotelPage: NextPageWithAuth = () => {
 
 EditHotelPage.auth = {
   roles: ["AGENT", "ADMIN", "ADMIN_OPERATOR"],
+  requireApprovedHostAccess: true,
 };
 
 export default EditHotelPage;

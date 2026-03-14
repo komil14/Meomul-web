@@ -19,6 +19,7 @@ const baseMember: SessionMember = {
   memberNick: "kamil",
   memberType: "USER",
   memberStatus: "ACTIVE",
+  hostAccessStatus: "NONE",
   memberAuthType: "EMAIL",
   memberPhone: "010-1111-2222",
   memberFullName: "Kamil",

@@ -9,6 +9,7 @@ import type { AuthRequirement } from "@/types/page";
 
 const DASHBOARD_PATH = "/dashboard";
 const FORBIDDEN_PATH = "/403";
+const HOST_APPLICATION_PATH = "/host/apply";
 
 const buildLoginPath = (nextPath: string): string => {
   const encodedPath = encodeURIComponent(nextPath);
@@ -53,6 +54,14 @@ export const resolveGuardRedirect = async (
 
   if (!auth.roles.includes(member.memberType)) {
     return FORBIDDEN_PATH;
+  }
+
+  if (
+    auth.requireApprovedHostAccess &&
+    member.memberType === "AGENT" &&
+    member.hostAccessStatus !== "APPROVED"
+  ) {
+    return `${HOST_APPLICATION_PATH}?next=${encodeURIComponent(currentPath)}`;
   }
 
   return null;

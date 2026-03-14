@@ -82,6 +82,24 @@ const LoginPage: NextPageWithAuth = () => {
         {t("auth_login_desc")}
       </p>
 
+      <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+          Host access
+        </p>
+        <h2 className="mt-2 text-lg font-semibold text-slate-900">
+          Want to list a hotel on Meomul?
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+          Start with a normal account, then apply for host access through the dedicated onboarding flow.
+        </p>
+        <Link
+          href="/become-a-host"
+          className="mt-4 inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+        >
+          Become a host
+        </Link>
+      </section>
+
       <form
         className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6"
         onSubmit={onSubmit}

@@ -8,6 +8,7 @@ export const LOGIN_MEMBER_MUTATION = gql`
       memberNick
       memberType
       memberStatus
+      hostAccessStatus
       memberAuthType
       memberPhone
       memberFullName
@@ -24,6 +25,7 @@ export const SIGNUP_MEMBER_MUTATION = gql`
       memberNick
       memberType
       memberStatus
+      hostAccessStatus
       memberAuthType
       memberPhone
       memberFullName
@@ -46,6 +48,7 @@ export const REFRESH_TOKEN_MUTATION = gql`
       memberNick
       memberType
       memberStatus
+      hostAccessStatus
       memberAuthType
       memberPhone
       memberFullName

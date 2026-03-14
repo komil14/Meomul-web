@@ -748,13 +748,15 @@ const NewBookingPage: NextPageWithAuth = () => {
 
   // Auth
   const memberType = member?.memberType;
+  const hostAccessStatus = member?.hostAccessStatus;
+  const isApprovedAgent = memberType === "AGENT" && hostAccessStatus === "APPROVED";
   const canCreateBooking =
     memberType === "USER" ||
     memberType === "AGENT" ||
     memberType === "ADMIN" ||
     memberType === "ADMIN_OPERATOR";
   const isStaffCreator =
-    memberType === "AGENT" ||
+    isApprovedAgent ||
     memberType === "ADMIN" ||
     memberType === "ADMIN_OPERATOR";
 
@@ -1223,7 +1225,7 @@ const NewBookingPage: NextPageWithAuth = () => {
   }
 
   // AGENT ownership guard — must own the hotel to create bookings here
-  if (memberType === "AGENT" && hotel.memberId !== member?._id) {
+  if (isApprovedAgent && hotel.memberId !== member?._id) {
     return (
       <main className="space-y-6">
         <Link

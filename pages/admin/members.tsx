@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client/react";
+import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useMemo, useState } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
@@ -6,9 +7,12 @@ import { useToast } from "@/components/ui/toast-provider";
 import {
   DELETE_MEMBER_BY_ADMIN_MUTATION,
   GET_ALL_MEMBERS_BY_ADMIN_QUERY,
+  GET_HOST_APPLICATIONS_BY_ADMIN_QUERY,
+  REVIEW_HOST_APPLICATION_MUTATION,
   UPDATE_MEMBER_BY_ADMIN_MUTATION,
 } from "@/graphql/member.gql";
 import { resolveImageUrl } from "@/lib/config/env";
+import { confirmAction, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -23,7 +27,14 @@ import type {
   UpdateMemberByAdminMutationData,
   UpdateMemberByAdminMutationVars,
 } from "@/types/admin";
-import type { MemberType } from "@/types/auth";
+import type {
+  GetHostApplicationsByAdminQueryData,
+  GetHostApplicationsByAdminQueryVars,
+  HostAccessStatus,
+  MemberType,
+  ReviewHostApplicationMutationData,
+  ReviewHostApplicationMutationVars,
+} from "@/types/auth";
 import type { PaginationInput } from "@/types/hotel";
 import type { NextPageWithAuth } from "@/types/page";
 import {
@@ -33,6 +44,7 @@ import {
   Eye,
   Heart,
   Loader2,
+  ArrowUpRight,
   Search,
   Shield,
   ShieldAlert,
@@ -41,6 +53,7 @@ import {
   Users,
   UsersRound,
   X,
+  Check,
 } from "lucide-react";
 
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
@@ -66,6 +79,15 @@ const TIER_COLOR: Record<SubscriptionTier, string> = {
   PREMIUM: "bg-violet-50 text-violet-700 border-violet-200",
   ELITE: "bg-amber-50 text-amber-700 border-amber-200",
 };
+
+const HOST_ACCESS_COLOR: Record<HostAccessStatus, string> = {
+  NONE: "bg-slate-50 text-slate-600 border-slate-200",
+  PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+  APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  REJECTED: "bg-rose-50 text-rose-700 border-rose-200",
+};
+
+type HostAccessFilter = "ALL" | HostAccessStatus;
 
 function formatDate(value: string): string {
   return new Date(value).toLocaleDateString("en-US", {
@@ -133,6 +155,7 @@ function EditMemberDrawer({
             <InfoRow label="Phone" value={member.memberPhone} />
             <InfoRow label="Full Name" value={member.memberFullName ?? "-"} />
             <InfoRow label="Type" value={member.memberType} />
+            <InfoRow label="Host Access" value={member.hostAccessStatus ?? "NONE"} />
             <InfoRow label="Joined" value={formatDate(member.createdAt)} />
             <InfoRow label="Points" value={formatNumber(member.memberPoints)} />
             <InfoRow label="Rank" value={member.memberRank.toFixed(1)} />
@@ -223,10 +246,13 @@ const AdminMembersPage: NextPageWithAuth = () => {
   const toast = useToast();
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [hostAccessFilter, setHostAccessFilter] =
+    useState<HostAccessFilter>("ALL");
   const [editingMember, setEditingMember] = useState<AdminMemberItem | null>(
     null,
   );
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [quickApprovingId, setQuickApprovingId] = useState<string | null>(null);
 
   const input = useMemo<PaginationInput>(
     () => ({ page, limit: PAGE_SIZE, sort: "createdAt", direction: -1 }),
@@ -242,26 +268,69 @@ const AdminMembersPage: NextPageWithAuth = () => {
     nextFetchPolicy: "cache-and-network",
   });
 
+  const { data: pendingApplicationsData, refetch: refetchPendingApplications } = useQuery<
+    GetHostApplicationsByAdminQueryData,
+    GetHostApplicationsByAdminQueryVars
+  >(GET_HOST_APPLICATIONS_BY_ADMIN_QUERY, {
+    variables: { statusFilter: "PENDING" },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+  });
+
   const [deleteMember, { loading: deleting }] = useMutation<
     DeleteMemberByAdminMutationData,
     DeleteMemberByAdminMutationVars
   >(DELETE_MEMBER_BY_ADMIN_MUTATION);
+
+  const [reviewHostApplication] = useMutation<
+    ReviewHostApplicationMutationData,
+    ReviewHostApplicationMutationVars
+  >(REVIEW_HOST_APPLICATION_MUTATION);
 
   const members = useMemo(() => data?.getAllMembersByAdmin.list ?? [], [data?.getAllMembersByAdmin.list]);
   const total = data?.getAllMembersByAdmin.metaCounter.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const filteredMembers = useMemo(() => {
-    if (!searchTerm.trim()) return members;
-    const q = searchTerm.toLowerCase();
-    return members.filter(
-      (m) =>
+    return members.filter((m) => {
+      const matchesHostAccess =
+        hostAccessFilter === "ALL" ||
+        (m.memberType === "AGENT" &&
+          (m.hostAccessStatus ?? "NONE") === hostAccessFilter);
+
+      if (!matchesHostAccess) return false;
+      if (!searchTerm.trim()) return true;
+
+      const q = searchTerm.toLowerCase();
+      return (
         m.memberNick.toLowerCase().includes(q) ||
         (m.memberFullName?.toLowerCase().includes(q) ?? false) ||
         m.memberPhone.includes(q) ||
-        m._id.includes(q),
-    );
-  }, [members, searchTerm]);
+        m._id.includes(q)
+      );
+    });
+  }, [hostAccessFilter, members, searchTerm]);
+
+  const pendingAgentCount = useMemo(
+    () =>
+      members.filter(
+        (member) =>
+          member.memberType === "AGENT" &&
+          (member.hostAccessStatus ?? "NONE") === "PENDING",
+      ).length,
+    [members],
+  );
+
+  const pendingApplicationsByApplicantId = useMemo(
+    () =>
+      new Map(
+        (pendingApplicationsData?.getHostApplicationsByAdmin ?? []).map((application) => [
+          application.applicantMemberId,
+          application,
+        ]),
+      ),
+    [pendingApplicationsData?.getHostApplicationsByAdmin],
+  );
 
   const handleDelete = useCallback(
     async (memberId: string) => {
@@ -274,6 +343,49 @@ const AdminMembersPage: NextPageWithAuth = () => {
       }
     },
     [deleteMember, refetch, toast],
+  );
+
+  const handleQuickApprove = useCallback(
+    async (member: AdminMemberItem) => {
+      const application = pendingApplicationsByApplicantId.get(member._id);
+      if (!application) {
+        await errorAlert(
+          "Quick approve",
+          "No pending host application was found for this member.",
+        );
+        return;
+      }
+
+      const confirmed = await confirmAction({
+        title: "Approve pending agent?",
+        text: `${member.memberNick} will get approved host access immediately.`,
+        confirmText: "Approve",
+      });
+      if (!confirmed) return;
+
+      try {
+        setQuickApprovingId(member._id);
+        await reviewHostApplication({
+          variables: {
+            input: {
+              applicationId: application._id,
+              status: "APPROVED",
+            },
+          },
+        });
+        await Promise.all([refetch(), refetchPendingApplications()]);
+        await successAlert(
+          "Pending agent approved",
+          `${member.memberNick} now has approved host access.`,
+          { variant: "profile" },
+        );
+      } catch (mutationError) {
+        await errorAlert("Quick approve", getErrorMessage(mutationError));
+      } finally {
+        setQuickApprovingId(null);
+      }
+    },
+    [pendingApplicationsByApplicantId, reviewHostApplication, refetch, refetchPendingApplications],
   );
 
   // count by type (from server)
@@ -304,7 +416,7 @@ const AdminMembersPage: NextPageWithAuth = () => {
       </section>
 
       {/* summary cards */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <SummaryCard
           label="Total"
           value={total}
@@ -329,22 +441,44 @@ const AdminMembersPage: NextPageWithAuth = () => {
           icon={<Shield size={20} />}
           tone="rose"
         />
+        <SummaryCard
+          label="Pending Agents"
+          value={pendingAgentCount}
+          icon={<ShieldAlert size={20} />}
+          tone="amber"
+          href="/admin/host-applications?status=PENDING"
+        />
       </section>
 
       {/* search + table */}
       <section className="rounded-2xl border border-slate-200 bg-white shadow-[0_2px_8px_-4px_rgba(15,23,42,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
-          <div className="relative w-full max-w-sm">
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, phone, or ID..."
-              className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-1 focus:ring-slate-400/20"
-            />
+          <div className="flex w-full max-w-2xl flex-col gap-3 md:flex-row">
+            <div className="relative w-full max-w-sm">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by name, phone, or ID..."
+                className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-1 focus:ring-slate-400/20"
+              />
+            </div>
+            <select
+              value={hostAccessFilter}
+              onChange={(e) =>
+                setHostAccessFilter(e.target.value as HostAccessFilter)
+              }
+              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 md:max-w-[220px]"
+            >
+              <option value="ALL">All host access</option>
+              <option value="NONE">Not started</option>
+              <option value="PENDING">Pending agents</option>
+              <option value="APPROVED">Approved agents</option>
+              <option value="REJECTED">Rejected agents</option>
+            </select>
           </div>
           <p className="text-xs text-slate-500">
             Showing {filteredMembers.length} of {total} members
@@ -391,6 +525,9 @@ const AdminMembersPage: NextPageWithAuth = () => {
                   </th>
                   <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                     Status
+                  </th>
+                  <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    Host access
                   </th>
                   <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                     Subscription
@@ -451,6 +588,48 @@ const AdminMembersPage: NextPageWithAuth = () => {
                       >
                         {m.memberStatus}
                       </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {m.memberType === "AGENT" ? (
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                              HOST_ACCESS_COLOR[m.hostAccessStatus ?? "NONE"]
+                            }`}
+                          >
+                            {m.hostAccessStatus ?? "NONE"}
+                          </span>
+                          {(m.hostAccessStatus ?? "NONE") === "PENDING" ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => void handleQuickApprove(m)}
+                                disabled={
+                                  quickApprovingId === m._id ||
+                                  !pendingApplicationsByApplicantId.has(m._id)
+                                }
+                                className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {quickApprovingId === m._id ? (
+                                  <Loader2 size={11} className="animate-spin" />
+                                ) : (
+                                  <Check size={11} />
+                                )}
+                                Approve
+                              </button>
+                              <Link
+                                href="/admin/host-applications?status=PENDING"
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 transition hover:text-slate-900"
+                              >
+                                Review
+                                <ArrowUpRight size={11} />
+                              </Link>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3.5">
                       <span
@@ -565,26 +744,30 @@ function SummaryCard({
   value,
   icon,
   tone,
+  href,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
-  tone: "sky" | "slate" | "violet" | "rose";
+  tone: "sky" | "slate" | "violet" | "rose" | "amber";
+  href?: string;
 }) {
   const bg: Record<string, string> = {
     sky: "bg-sky-50 border-sky-200",
     slate: "bg-white border-slate-200",
     violet: "bg-violet-50 border-violet-200",
     rose: "bg-rose-50 border-rose-200",
+    amber: "bg-amber-50 border-amber-200",
   };
   const iBg: Record<string, string> = {
     sky: "bg-sky-100 text-sky-600",
     slate: "bg-slate-100 text-slate-600",
     violet: "bg-violet-100 text-violet-600",
     rose: "bg-rose-100 text-rose-600",
+    amber: "bg-amber-100 text-amber-600",
   };
-  return (
-    <article className={`rounded-2xl border p-4 ${bg[tone]}`}>
+  const content = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -596,8 +779,27 @@ function SummaryCard({
         </div>
         <span className={`rounded-xl p-2.5 ${iBg[tone]}`}>{icon}</span>
       </div>
-    </article>
+      {href ? (
+        <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-slate-600">
+          Review applications
+          <ArrowUpRight size={12} />
+        </div>
+      ) : null}
+    </>
   );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={`block rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:border-slate-300 ${bg[tone]}`}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <article className={`rounded-2xl border p-4 ${bg[tone]}`}>{content}</article>;
 }
 
 AdminMembersPage.auth = {

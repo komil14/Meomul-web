@@ -175,7 +175,7 @@ export const silentRefreshAccessToken = (): Promise<boolean> => {
         credentials: "include", // sends httpOnly cookie
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `mutation RefreshToken { refreshToken { _id accessToken memberNick memberType memberStatus memberAuthType memberPhone memberFullName memberImage } }`,
+          query: `mutation RefreshToken { refreshToken { _id accessToken memberNick memberType memberStatus hostAccessStatus memberAuthType memberPhone memberFullName memberImage } }`,
         }),
       });
 

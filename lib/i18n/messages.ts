@@ -5,6 +5,7 @@ export interface MessageDictionary {
   nav_hotels: string;
   nav_about: string;
   nav_support: string;
+  nav_become_host: string;
   nav_my_bookings: string;
   nav_my_hotels: string;
   nav_bookings: string;
@@ -12,6 +13,7 @@ export interface MessageDictionary {
   nav_dashboard: string;
   nav_admin: string;
   nav_admin_members: string;
+  nav_admin_host_applications: string;
   nav_admin_hotels: string;
   nav_admin_rooms: string;
   nav_admin_reviews: string;
@@ -38,6 +40,7 @@ export interface MessageDictionary {
   footer_memberships: string;
   footer_sign_in: string;
   footer_create_account: string;
+  footer_become_host: string;
   footer_my_bookings: string;
   footer_profile_settings: string;
   footer_about_meomul: string;
@@ -792,6 +795,7 @@ const en: MessageDictionary = {
   nav_hotels: "Hotels",
   nav_about: "About",
   nav_support: "Support",
+  nav_become_host: "Become a Host",
   nav_my_bookings: "My Bookings",
   nav_my_hotels: "My Hotels",
   nav_bookings: "Bookings",
@@ -799,6 +803,7 @@ const en: MessageDictionary = {
   nav_dashboard: "Dashboard",
   nav_admin: "Admin",
   nav_admin_members: "Members",
+  nav_admin_host_applications: "Host Applications",
   nav_admin_hotels: "Hotels",
   nav_admin_rooms: "Rooms",
   nav_admin_reviews: "Reviews",
@@ -827,6 +832,7 @@ const en: MessageDictionary = {
   footer_memberships: "Memberships",
   footer_sign_in: "Sign In",
   footer_create_account: "Create Account",
+  footer_become_host: "Become a Host",
   footer_my_bookings: "My Bookings",
   footer_profile_settings: "Profile Settings",
   footer_about_meomul: "About Meomul",
@@ -1658,6 +1664,7 @@ const ko: MessageDictionary = {
   nav_hotels: "호텔",
   nav_about: "소개",
   nav_support: "지원",
+  nav_become_host: "호스트 되기",
   nav_my_bookings: "내 예약",
   nav_my_hotels: "내 호텔",
   nav_bookings: "예약 관리",
@@ -1665,6 +1672,7 @@ const ko: MessageDictionary = {
   nav_dashboard: "대시보드",
   nav_admin: "관리자",
   nav_admin_members: "회원",
+  nav_admin_host_applications: "호스트 신청",
   nav_admin_hotels: "호텔",
   nav_admin_rooms: "객실",
   nav_admin_reviews: "리뷰",
@@ -1692,6 +1700,7 @@ const ko: MessageDictionary = {
   footer_memberships: "멤버십",
   footer_sign_in: "로그인",
   footer_create_account: "계정 만들기",
+  footer_become_host: "호스트 되기",
   footer_my_bookings: "내 예약",
   footer_profile_settings: "프로필 설정",
   footer_about_meomul: "미어물 소개",
@@ -2059,6 +2068,7 @@ const ru: MessageDictionary = {
   nav_hotels: "Отели",
   nav_about: "О платформе",
   nav_support: "Поддержка",
+  nav_become_host: "Стать хостом",
   nav_my_bookings: "Мои бронирования",
   nav_my_hotels: "Мои отели",
   nav_bookings: "Бронирования",
@@ -2066,6 +2076,7 @@ const ru: MessageDictionary = {
   nav_dashboard: "Панель",
   nav_admin: "Админ",
   nav_admin_members: "Пользователи",
+  nav_admin_host_applications: "Заявки хоста",
   nav_admin_hotels: "Отели",
   nav_admin_rooms: "Номера",
   nav_admin_reviews: "Отзывы",
@@ -2094,6 +2105,7 @@ const ru: MessageDictionary = {
   footer_memberships: "Подписки",
   footer_sign_in: "Войти",
   footer_create_account: "Создать аккаунт",
+  footer_become_host: "Стать хостом",
   footer_my_bookings: "Мои бронирования",
   footer_profile_settings: "Настройки профиля",
   footer_about_meomul: "О Meomul",
@@ -2478,11 +2490,13 @@ const uz: MessageDictionary = {
   nav_dashboard: "Boshqaruv paneli",
   nav_admin: "Admin",
   nav_admin_members: "Foydalanuvchilar",
+  nav_admin_host_applications: "Host arizalari",
   nav_admin_hotels: "Mehmonxonalar",
   nav_admin_rooms: "Xonalar",
   nav_admin_reviews: "Sharhlar",
   nav_admin_notifications: "Bildirishnomalar",
   nav_admin_subscriptions: "Obunalar",
+  nav_become_host: "Host bo'lish",
   action_log_in: "Kirish",
   action_sign_up: "Ro'yxatdan o'tish",
   action_profile: "Profil",
@@ -2506,6 +2520,7 @@ const uz: MessageDictionary = {
   footer_memberships: "A'zoliklar",
   footer_sign_in: "Kirish",
   footer_create_account: "Hisob yaratish",
+  footer_become_host: "Host bo'lish",
   footer_my_bookings: "Mening bronlarim",
   footer_profile_settings: "Profil sozlamalari",
   footer_about_meomul: "Meomul haqida",
