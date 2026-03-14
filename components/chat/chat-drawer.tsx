@@ -616,8 +616,9 @@ function ThreadView({
   >(MARK_CHAT_MESSAGES_AS_READ_MUTATION);
 
   const chat = data?.getChat;
+  const isGuestParticipant = Boolean(chat && chat.guestId === member?._id);
   const unreadForMe = chat
-    ? isUser
+    ? isGuestParticipant
       ? chat.unreadGuestMessages
       : chat.unreadAgentMessages
     : 0;
@@ -726,14 +727,14 @@ function ThreadView({
   const guestName = chat ? getGuestDisplayName(chat, copy.guest) : copy.guest;
   const canClaim = Boolean(
     chat &&
-      !isUser &&
+      !isGuestParticipant &&
       !chat.assignedAgentId &&
       chat.chatStatus !== "CLOSED",
   );
   const canSend = Boolean(
     chat &&
       chat.chatStatus !== "CLOSED" &&
-      (isUser || chat.assignedAgentId === member?._id),
+      (isGuestParticipant || chat.assignedAgentId === member?._id),
   );
 
   return (
@@ -767,7 +768,7 @@ function ThreadView({
           </p>
           {chat && (
             <p className="text-[10px] text-slate-400">
-              {isUser
+              {isGuestParticipant
                 ? chat.chatStatus === "ACTIVE"
                   ? copy.active
                   : chat.chatStatus === "WAITING"
@@ -850,8 +851,8 @@ function ThreadView({
           <>
             {(chat.messages ?? []).map((message, index) => {
               const isOwn =
-                (message.senderType === "GUEST" && isUser) ||
-                (message.senderType === "AGENT" && !isUser);
+                (message.senderType === "GUEST" && isGuestParticipant) ||
+                (message.senderType === "AGENT" && !isGuestParticipant);
               const nextMessage =
                 index < (chat.messages ?? []).length - 1
                   ? (chat.messages ?? [])[index + 1]

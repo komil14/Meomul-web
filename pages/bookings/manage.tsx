@@ -27,6 +27,7 @@ import {
   infoAlert,
   successAlert,
 } from "@/lib/ui/alerts";
+import { lockBodyScroll } from "@/lib/ui/body-scroll-lock";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
 import type {
@@ -55,6 +56,8 @@ import type {
 import type { NextPageWithAuth } from "@/types/page";
 import {
   AlertTriangle,
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   SquarePen,
@@ -642,6 +645,347 @@ function PaymentStatusBadge({
   );
 }
 
+interface BookingPresentation {
+  guestName: string;
+  roomSummary: string;
+  nights: number;
+  hotelName: string;
+  nextActionLabel: string | null;
+  nextActionClass: string | null;
+  paymentLocked: boolean;
+  canCancel: boolean;
+}
+
+const getBookingPresentation = (
+  booking: BookingListItem,
+  copy: BookingManagementCopy,
+  locale: SupportedLocale,
+  hotelsMap: Map<string, HotelListItem>,
+): BookingPresentation => {
+  const guestName =
+    booking.rooms[0]?.guestName ||
+    `${copy.guestFallback} ···${booking.guestId.slice(-6).toUpperCase()}`;
+  const roomSummary = booking.rooms
+    .map((room) => `${room.quantity}× ${room.roomType}`)
+    .join(", ");
+  const nights = nightsBetween(booking.checkInDate, booking.checkOutDate);
+  const hotelName =
+    hotelsMap.get(booking.hotelId)?.hotelTitle ??
+    `${copy.hotelFallback} ···${booking.hotelId.slice(-4)}`;
+  const nextActionLabel = getNextActionLabel(locale, booking.bookingStatus);
+  const nextActionClass =
+    booking.bookingStatus === "PENDING" ||
+    booking.bookingStatus === "CONFIRMED" ||
+    booking.bookingStatus === "CHECKED_IN"
+      ? NEXT_ACTION_CLASS[booking.bookingStatus]
+      : null;
+  const paymentLocked =
+    booking.bookingStatus === "CANCELLED" ||
+    booking.bookingStatus === "NO_SHOW";
+  const canCancel =
+    booking.bookingStatus === "PENDING" ||
+    booking.bookingStatus === "CONFIRMED";
+
+  return {
+    guestName,
+    roomSummary,
+    nights,
+    hotelName,
+    nextActionLabel,
+    nextActionClass,
+    paymentLocked,
+    canCancel,
+  };
+};
+
+function BookingActionButtons({
+  booking,
+  locale,
+  copy,
+  nextActionLabel,
+  nextActionClass,
+  paymentLocked,
+  canCancel,
+  onOpenModal,
+}: {
+  booking: BookingListItem;
+  locale: SupportedLocale;
+  copy: BookingManagementCopy;
+  nextActionLabel: string | null;
+  nextActionClass: string | null;
+  paymentLocked: boolean;
+  canCancel: boolean;
+  onOpenModal: (type: "status" | "payment" | "cancel", bookingId: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {nextActionLabel && nextActionClass && (
+        <button
+          type="button"
+          onClick={() => onOpenModal("status", booking._id)}
+          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${nextActionClass}`}
+        >
+          {nextActionLabel}
+        </button>
+      )}
+      {booking.bookingStatus === "CONFIRMED" && (
+        <button
+          type="button"
+          onClick={() => onOpenModal("status", booking._id)}
+          className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-600 transition hover:bg-orange-100"
+          aria-label={copy.moreActions}
+        >
+          ⋯
+        </button>
+      )}
+      {!paymentLocked && (
+        <button
+          type="button"
+          onClick={() => onOpenModal("payment", booking._id)}
+          className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+        >
+          {copy.payAction}
+        </button>
+      )}
+      {canCancel && (
+        <button
+          type="button"
+          onClick={() => onOpenModal("cancel", booking._id)}
+          className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-500 transition hover:bg-rose-50"
+        >
+          {copy.cancelAction}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MobileBookingCard({
+  booking,
+  locale,
+  copy,
+  isAdmin,
+  memberType,
+  presentation,
+  onOpenModal,
+}: {
+  booking: BookingListItem;
+  locale: SupportedLocale;
+  copy: BookingManagementCopy;
+  isAdmin: boolean;
+  memberType: "USER" | "AGENT" | "ADMIN" | "ADMIN_OPERATOR" | undefined;
+  presentation: BookingPresentation;
+  onOpenModal: (type: "status" | "payment" | "cancel", bookingId: string) => void;
+}) {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          {memberType !== "ADMIN_OPERATOR" ? (
+            <Link
+              href={`/bookings/${booking._id}`}
+              className="font-mono text-xs font-semibold text-sky-600 hover:underline"
+            >
+              {booking.bookingCode}
+            </Link>
+          ) : (
+            <span className="font-mono text-xs font-semibold text-slate-700">
+              {booking.bookingCode}
+            </span>
+          )}
+          <p className="mt-1 text-[11px] text-slate-400">
+            {copy.createdOn.replace(
+              "{{date}}",
+              formatBookingDate(locale, booking.createdAt),
+            )}
+          </p>
+        </div>
+        <BookingStatusBadge status={booking.bookingStatus} locale={locale} />
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">
+            {presentation.guestName}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {presentation.roomSummary}
+          </p>
+        </div>
+
+        {isAdmin && (
+          <div className="rounded-xl bg-slate-50 px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              {copy.hotel}
+            </p>
+            <p className="mt-1 text-sm font-medium text-slate-700">
+              {presentation.hotelName}
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              {copy.dates}
+            </p>
+            <p className="mt-1 text-sm text-slate-700">
+              {formatBookingDate(locale, booking.checkInDate, "full")}
+            </p>
+            <p className="text-sm text-slate-700">
+              {formatBookingDate(locale, booking.checkOutDate, "full")}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              {formatNightsLabel(locale, presentation.nights)}
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              {copy.amount}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              ₩{formatNumber(booking.totalPrice)}
+            </p>
+            <div className="mt-1">
+              <PaymentStatusBadge status={booking.paymentStatus} locale={locale} />
+            </div>
+            {booking.paidAmount > 0 && (
+              <p className="mt-1 text-[11px] text-slate-400">
+                {copy.paid}: ₩{formatNumber(booking.paidAmount)}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <BookingActionButtons
+          booking={booking}
+          locale={locale}
+          copy={copy}
+          nextActionLabel={presentation.nextActionLabel}
+          nextActionClass={presentation.nextActionClass}
+          paymentLocked={presentation.paymentLocked}
+          canCancel={presentation.canCancel}
+          onOpenModal={onOpenModal}
+        />
+      </div>
+    </article>
+  );
+}
+
+function MobileHotelPicker({
+  open,
+  title,
+  selectedValue,
+  selectedLabel,
+  options,
+  onOpen,
+  onClose,
+  onSelect,
+}: {
+  open: boolean;
+  title: string;
+  selectedValue: string;
+  selectedLabel: string;
+  options: Array<{ value: string; label: string; hint?: string }>;
+  onOpen: () => void;
+  onClose: () => void;
+  onSelect: (value: string) => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const releaseScrollLock = lockBodyScroll();
+    return releaseScrollLock;
+  }, [open]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left shadow-sm transition hover:border-slate-300 sm:hidden"
+      >
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            {title}
+          </p>
+          <p className="truncate text-sm font-medium text-slate-900">
+            {selectedLabel}
+          </p>
+        </div>
+        <ChevronDown size={16} className="flex-shrink-0 text-slate-400" />
+      </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label={`Close ${title}`}
+            className="fixed inset-0 z-40 bg-slate-950/30 touch-none"
+            onClick={onClose}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[72vh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:hidden">
+            <div className="flex justify-center pt-3">
+              <div className="h-1 w-10 rounded-full bg-slate-200" />
+            </div>
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  {title}
+                </p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {selectedLabel}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 [touch-action:pan-y]">
+              {options.map((option) => {
+                const selected = option.value === selectedValue;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onSelect(option.value);
+                      onClose();
+                    }}
+                    className={`flex w-full items-start justify-between gap-3 rounded-2xl px-4 py-3 text-left transition ${
+                      selected
+                        ? "bg-slate-950 text-white"
+                        : "border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">
+                        {option.label}
+                      </p>
+                      {option.hint ? (
+                        <p className={`mt-0.5 text-xs ${selected ? "text-white/70" : "text-slate-400"}`}>
+                          {option.hint}
+                        </p>
+                      ) : null}
+                    </div>
+                    {selected ? (
+                      <Check size={16} className="mt-0.5 flex-shrink-0" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const StaffBookingManagementPage: NextPageWithAuth = () => {
@@ -668,6 +1012,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
   const [cancelReasonDraft, setCancelReasonDraft] = useState<string>("");
   const [cancelEvidenceDraft, setCancelEvidenceDraft] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [isHotelPickerOpen, setIsHotelPickerOpen] = useState(false);
 
   // Admin-specific filters
   const [adminHotelFilter, setAdminHotelFilter] = useState<string>("ALL");
@@ -770,6 +1115,21 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
   // Agent: selected hotel from URL param; "ALL" shows cross-hotel summary
   const selectedHotelId = isAgent ? hotelIdFromQuery || "ALL" : "";
+  const hotelPickerValue = isAgent ? selectedHotelId : adminHotelFilter;
+  const hotelPickerOptions = useMemo(
+    () => [
+      { value: "ALL", label: copy.allHotels },
+      ...availableHotels.map((hotel) => ({
+        value: hotel._id,
+        label: hotel.hotelTitle,
+        hint: `${hotel.hotelLocation} · ${hotel.hotelType}`,
+      })),
+    ],
+    [availableHotels, copy.allHotels],
+  );
+  const hotelPickerSelectedLabel =
+    hotelPickerOptions.find((option) => option.value === hotelPickerValue)?.label ??
+    copy.allHotels;
 
   useEffect(() => {
     if (!isAgent || hotelIdFromQuery) return;
@@ -824,21 +1184,21 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
     UpdateBookingStatusMutationData,
     UpdateBookingStatusMutationVars
   >(UPDATE_BOOKING_STATUS_MUTATION, {
-    refetchQueries: ["getAgentBookings", "getAllBookingsAdmin"],
+    refetchQueries: ["GetAgentBookings", "GetAllBookingsAdmin"],
   });
 
   const [updatePaymentStatus] = useMutation<
     UpdatePaymentStatusMutationData,
     UpdatePaymentStatusMutationVars
   >(UPDATE_PAYMENT_STATUS_MUTATION, {
-    refetchQueries: ["getAgentBookings", "getAllBookingsAdmin"],
+    refetchQueries: ["GetAgentBookings", "GetAllBookingsAdmin"],
   });
 
   const [cancelBookingByOperator] = useMutation<
     CancelBookingByOperatorMutationData,
     CancelBookingByOperatorMutationVars
   >(CANCEL_BOOKING_BY_OPERATOR_MUTATION, {
-    refetchQueries: ["getAgentBookings", "getAllBookingsAdmin"],
+    refetchQueries: ["GetAgentBookings", "GetAllBookingsAdmin"],
   });
 
   // ─── Derived data ─────────────────────────────────────────────────────────
@@ -1346,8 +1706,8 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
       {/* ── Page ── */}
       <main className="space-y-5">
         {/* Header */}
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+        <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               {copy.operations}
             </p>
@@ -1357,7 +1717,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
           </div>
           <Link
             href="/bookings/new"
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:w-auto sm:justify-start sm:py-2"
           >
             <SquarePen size={14} className="text-slate-500" />
             {copy.newBooking}
@@ -1365,11 +1725,31 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         </header>
 
         {/* Controls */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          {(isAgent || isAdmin) && (
+            <MobileHotelPicker
+              open={isHotelPickerOpen}
+              title={copy.hotel}
+              selectedValue={hotelPickerValue}
+              selectedLabel={hotelPickerSelectedLabel}
+              options={hotelPickerOptions}
+              onOpen={() => setIsHotelPickerOpen(true)}
+              onClose={() => setIsHotelPickerOpen(false)}
+              onSelect={(value) => {
+                if (isAgent) {
+                  pushManageQuery({ hotelId: value, page: 1 });
+                  return;
+                }
+                setAdminHotelFilter(value);
+              }}
+            />
+          )}
+
           {/* Agent: hotel selector */}
           {isAgent &&
             (hotelsLoading ? (
-              <div className="h-9 w-48 animate-pulse rounded-xl bg-slate-100" />
+              <div className="hidden h-9 w-48 animate-pulse rounded-xl bg-slate-100 sm:block" />
             ) : (
               <select
                 value={selectedHotelId}
@@ -1377,7 +1757,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                   pushManageQuery({ hotelId: e.target.value, page: 1 })
                 }
                 disabled={availableHotels.length === 0}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none ring-sky-400 transition focus:ring-2"
+                className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none ring-sky-400 transition focus:ring-2 sm:block"
               >
                 <option value="ALL">{copy.allHotels}</option>
                 {availableHotels.length === 0 && (
@@ -1398,7 +1778,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
               onChange={(e) => {
                 setAdminHotelFilter(e.target.value);
               }}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none ring-sky-400 transition focus:ring-2"
+              className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none ring-sky-400 transition focus:ring-2 sm:block"
             >
               <option value="ALL">{copy.allHotels}</option>
               {availableHotels.map((h) => (
@@ -1410,13 +1790,13 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
           )}
 
           {/* Booking code search */}
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition focus-within:border-slate-300">
+          <div className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm transition focus-within:border-slate-300 sm:w-auto sm:min-w-[11rem] sm:py-2">
             <Search size={13} className="flex-shrink-0 text-slate-400" />
             <input
               value={codeSearch}
               onChange={(e) => setCodeSearch(e.target.value)}
               placeholder={copy.searchCode}
-              className="w-28 bg-transparent text-xs text-slate-900 placeholder-slate-400 outline-none"
+              className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none sm:w-28 sm:text-xs"
             />
             {codeSearch && (
               <button
@@ -1430,7 +1810,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
           </div>
 
           {/* Status filter pills */}
-          <div className="flex flex-wrap gap-1.5">
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
             {(["ALL", ...BOOKING_STATUSES] as const).map((s) => {
               const isSelected = statusFilter === s;
               const dot =
@@ -1445,7 +1825,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                       page: 1,
                     })
                   }
-                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition sm:py-1.5 ${
                     isSelected
                       ? "bg-slate-900 text-white"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -1466,6 +1846,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
             })}
           </div>
         </div>
+        </div>
 
         {/* Errors */}
         {hotelsError && <ErrorNotice message={getErrorMessage(hotelsError)} />}
@@ -1475,7 +1856,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
         {/* Agent "All Hotels" summary view */}
         {isAgent && selectedHotelId === "ALL" && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               {copy.hotelsOverview}
             </p>
@@ -1495,7 +1876,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                 {availableHotels.map((h) => (
                   <div
                     key={h._id}
-                    className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3"
+                    className="flex flex-col gap-3 rounded-xl border border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                   >
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
@@ -1510,7 +1891,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                       onClick={() =>
                         pushManageQuery({ hotelId: h._id, page: 1 })
                       }
-                      className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400 sm:w-auto sm:py-1.5"
                     >
                       {copy.viewBookings} →
                     </button>
@@ -1524,7 +1905,56 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
         {/* Booking table */}
         {(!isAgent || selectedHotelId !== "ALL") && (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
+            <div className="space-y-3 p-3 sm:hidden">
+              {bookingsLoading &&
+                sourceBookings.length === 0 &&
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="h-4 w-28 animate-pulse rounded-full bg-slate-100" />
+                    <div className="h-12 animate-pulse rounded-xl bg-slate-100" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+                      <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+                    </div>
+                  </div>
+                ))}
+
+              {!bookingsLoading && !bookingsError && visibleBookings.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-12 text-center">
+                  <p className="font-semibold text-slate-700">
+                    {copy.noBookingsFound}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {!selectedHotelId && isAgent
+                      ? copy.selectHotelPrompt
+                      : copy.adjustFiltersPrompt}
+                  </p>
+                </div>
+              )}
+
+              {visibleBookings.map((booking) => (
+                <MobileBookingCard
+                  key={booking._id}
+                  booking={booking}
+                  locale={locale}
+                  copy={copy}
+                  isAdmin={isAdmin}
+                  memberType={memberType}
+                  presentation={getBookingPresentation(
+                    booking,
+                    copy,
+                    locale,
+                    hotelsMap,
+                  )}
+                  onOpenModal={openModal}
+                />
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-[680px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/80">
@@ -1592,32 +2022,12 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
                   {/* Booking rows */}
                   {visibleBookings.map((b, i) => {
-                    const guestName =
-                      b.rooms[0]?.guestName ||
-                      `${copy.guestFallback} ···${b.guestId.slice(-6).toUpperCase()}`;
-                    const roomSummary = b.rooms
-                      .map((r) => `${r.quantity}× ${r.roomType}`)
-                      .join(", ");
-                    const nights = nightsBetween(b.checkInDate, b.checkOutDate);
-                    const hotelName =
-                      hotelsMap.get(b.hotelId)?.hotelTitle ??
-                      `${copy.hotelFallback} ···${b.hotelId.slice(-4)}`;
-                    const nextActionLabel = getNextActionLabel(
+                    const presentation = getBookingPresentation(
+                      b,
+                      copy,
                       locale,
-                      b.bookingStatus,
+                      hotelsMap,
                     );
-                    const nextActionClass =
-                      b.bookingStatus === "PENDING" ||
-                      b.bookingStatus === "CONFIRMED" ||
-                      b.bookingStatus === "CHECKED_IN"
-                        ? NEXT_ACTION_CLASS[b.bookingStatus]
-                        : null;
-                    const paymentLocked =
-                      b.bookingStatus === "CANCELLED" ||
-                      b.bookingStatus === "NO_SHOW";
-                    const canCancel =
-                      b.bookingStatus === "PENDING" ||
-                      b.bookingStatus === "CONFIRMED";
 
                     return (
                       <tr
@@ -1653,10 +2063,10 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                         {/* Guest / Room */}
                         <td className="px-5 py-3.5">
                           <p className="text-sm font-medium text-slate-900">
-                            {guestName}
+                            {presentation.guestName}
                           </p>
                           <p className="mt-0.5 text-xs text-slate-400">
-                            {roomSummary}
+                            {presentation.roomSummary}
                           </p>
                         </td>
 
@@ -1664,7 +2074,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                         {isAdmin && (
                           <td className="px-5 py-3.5">
                             <p className="text-sm text-slate-700">
-                              {hotelName}
+                              {presentation.hotelName}
                             </p>
                           </td>
                         )}
@@ -1676,7 +2086,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                             {formatBookingDate(locale, b.checkOutDate, "full")}
                           </p>
                           <p className="mt-0.5 text-xs text-slate-400">
-                            {formatNightsLabel(locale, nights)}
+                            {formatNightsLabel(locale, presentation.nights)}
                           </p>
                         </td>
 
@@ -1708,49 +2118,16 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
                         {/* Actions */}
                         <td className="px-5 py-3.5">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {/* Status advance */}
-                            {nextActionLabel && nextActionClass && (
-                              <button
-                                type="button"
-                                onClick={() => openModal("status", b._id)}
-                                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${nextActionClass}`}
-                              >
-                                {nextActionLabel}
-                              </button>
-                            )}
-                            {/* No-show (for CONFIRMED with no next action button) */}
-                            {b.bookingStatus === "CONFIRMED" && (
-                              <button
-                                type="button"
-                                onClick={() => openModal("status", b._id)}
-                                className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-600 transition hover:bg-orange-100"
-                                aria-label={copy.moreActions}
-                              >
-                                ⋯
-                              </button>
-                            )}
-                            {/* Payment */}
-                            {!paymentLocked && (
-                              <button
-                                type="button"
-                                onClick={() => openModal("payment", b._id)}
-                                className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-                              >
-                                {copy.payAction}
-                              </button>
-                            )}
-                            {/* Cancel */}
-                            {canCancel && (
-                              <button
-                                type="button"
-                                onClick={() => openModal("cancel", b._id)}
-                                className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-500 transition hover:bg-rose-50"
-                              >
-                                {copy.cancelAction}
-                              </button>
-                            )}
-                          </div>
+                          <BookingActionButtons
+                            booking={b}
+                            locale={locale}
+                            copy={copy}
+                            nextActionLabel={presentation.nextActionLabel}
+                            nextActionClass={presentation.nextActionClass}
+                            paymentLocked={presentation.paymentLocked}
+                            canCancel={presentation.canCancel}
+                            onOpenModal={openModal}
+                          />
                         </td>
                       </tr>
                     );
@@ -1761,7 +2138,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+              <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <p className="text-xs text-slate-500">
                   {copy.pageSummary}{" "}
                   <span className="font-semibold text-slate-700">{page}</span> /{" "}
@@ -1770,12 +2147,12 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                   </span>{" "}
                   · {formatNumber(total)} {copy.totalSuffix}
                 </p>
-                <div className="flex gap-1.5">
+                <div className="flex w-full gap-2 sm:w-auto sm:gap-1.5">
                   <button
                     type="button"
                     disabled={page <= 1}
                     onClick={() => pushManageQuery({ page: page - 1 })}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-10 flex-1 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8 sm:flex-none"
                   >
                     <ChevronLeft size={14} />
                   </button>
@@ -1783,7 +2160,7 @@ const StaffBookingManagementPage: NextPageWithAuth = () => {
                     type="button"
                     disabled={page >= totalPages}
                     onClick={() => pushManageQuery({ page: page + 1 })}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-10 flex-1 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8 sm:flex-none"
                   >
                     <ChevronRight size={14} />
                   </button>

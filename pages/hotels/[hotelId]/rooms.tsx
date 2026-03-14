@@ -151,6 +151,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
   const { locale, t } = useI18n();
   const hotelId =
     typeof router.query.hotelId === "string" ? router.query.hotelId : "";
+  const hasHotelId = hotelId.length > 0;
   const copy =
     locale === "ko"
       ? {
@@ -462,15 +463,15 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
   const handleSubmit = async () => {
     if (!form.roomName.trim()) {
-      void errorAlert(copy.roomNameRequired);
+      await errorAlert(copy.roomNameRequired);
       return;
     }
     if (form.basePrice <= 0) {
-      void errorAlert(copy.basePriceRequired);
+      await errorAlert(copy.basePriceRequired);
       return;
     }
     if (form.maxOccupancy < 1) {
-      void errorAlert(copy.maxOccupancyRequired);
+      await errorAlert(copy.maxOccupancyRequired);
       return;
     }
 
@@ -498,7 +499,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           ...(imagesList.length > 0 && { roomImages: imagesList }),
         };
         await createRoom({ variables: { input } });
-        void successAlert(copy.roomAdded);
+        await successAlert(copy.roomAdded);
       } else if (panelMode === "edit" && editingRoom) {
         const input: AgentRoomUpdateInput = {
           _id: editingRoom._id,
@@ -513,13 +514,73 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           roomImages: imagesList,
         };
         await updateRoom({ variables: { input } });
-        void successAlert(copy.roomUpdated);
+        await successAlert(copy.roomUpdated);
       }
       closePanel();
       void refetchRooms();
     } catch (err) {
-      void errorAlert(getErrorMessage(err));
+      await errorAlert(getErrorMessage(err));
     }
+  };
+
+  useEffect(() => {
+    if (panelMode === "closed") {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [panelMode]);
+
+  const renderStatusControl = (
+    room: AgentRoomListItem,
+    className = "",
+  ) => {
+    const statusCfg = ROOM_STATUS_CONFIG[room.roomStatus];
+
+    return (
+      <div className={`relative ${className}`}>
+        <button
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition hover:opacity-80 ${statusCfg.className}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setStatusDropdownId(statusDropdownId === room._id ? null : room._id);
+          }}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass}`} />
+          {getRoomStatusLabel(room.roomStatus, t)}
+          <ChevronDown size={10} />
+        </button>
+
+        {statusDropdownId === room._id && (
+          <div
+            className="absolute right-0 top-full z-10 mt-2 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {EDITABLE_STATUSES.map((s) => {
+              const cfg = ROOM_STATUS_CONFIG[s];
+              return (
+                <button
+                  key={s}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold transition hover:bg-slate-50 ${
+                    room.roomStatus === s ? "bg-slate-50" : ""
+                  }`}
+                  onClick={() => void handleStatusChange(room, s)}
+                  disabled={updating}
+                >
+                  <span className={`h-2 w-2 rounded-full ${cfg.dotClass}`} />
+                  {getRoomStatusLabel(s, t)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleStatusChange = async (
@@ -533,7 +594,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
       });
       void refetchRooms();
     } catch (err) {
-      void errorAlert(getErrorMessage(err));
+      await errorAlert(getErrorMessage(err));
     }
   };
 
@@ -565,45 +626,64 @@ const HotelRoomsPage: NextPageWithAuth = () => {
 
       <main className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/hotels/${hotelId}/edit`}
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition"
-            >
-              <ArrowLeft size={15} />
-              {copy.editHotel}
-            </Link>
-            <Link
-              href={`/hotels/${hotelId}/reviews`}
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition"
-            >
-              <Star size={15} />
-              {copy.reviews}
-            </Link>
-            <span className="text-slate-300">/</span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                {copy.roomManagement}
-              </p>
-              <h1 className="mt-0.5 text-2xl font-semibold text-slate-900">
-                {hotel?.hotelTitle ?? "Hotel"}{" "}
-                {rooms.length > 0 && (
-                  <span className="text-lg font-normal text-slate-400">
-                    — {rooms.length} {copy.roomLabel}
-                    {rooms.length !== 1 ? "s" : ""}
+        <div className="rounded-[1.75rem] border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur-sm sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-0">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                {hasHotelId ? (
+                  <Link
+                    href={`/hotels/${hotelId}/edit`}
+                    className="inline-flex items-center gap-1.5 text-slate-500 transition hover:text-slate-900"
+                  >
+                    <ArrowLeft size={15} />
+                    {copy.editHotel}
+                  </Link>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-slate-300">
+                    <ArrowLeft size={15} />
+                    {copy.editHotel}
                   </span>
                 )}
-              </h1>
+                {hasHotelId ? (
+                  <Link
+                    href={`/hotels/${hotelId}/reviews`}
+                    className="inline-flex items-center gap-1.5 text-slate-500 transition hover:text-slate-900"
+                  >
+                    <Star size={15} />
+                    {copy.reviews}
+                  </Link>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-slate-300">
+                    <Star size={15} />
+                    {copy.reviews}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                  {copy.roomManagement}
+                </p>
+                <h1 className="mt-1 text-[1.65rem] font-semibold leading-tight text-slate-900 sm:text-2xl">
+                  {hotel?.hotelTitle ?? "Hotel"}
+                </h1>
+                {rooms.length > 0 ? (
+                  <p className="mt-1 text-sm text-slate-500 sm:text-base">
+                    {rooms.length} {copy.roomLabel}
+                    {rooms.length !== 1 ? "s" : ""}
+                  </p>
+                ) : null}
+              </div>
             </div>
+
+            <button
+              onClick={openCreate}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 sm:w-auto sm:rounded-full sm:px-4 sm:py-2.5"
+            >
+              <Plus size={15} />
+              {copy.addRoom}
+            </button>
           </div>
-          <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-          >
-            <Plus size={15} />
-            {copy.addRoom}
-          </button>
         </div>
 
         {/* Error */}
@@ -652,9 +732,98 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           </div>
         )}
 
+        {/* Mobile room cards */}
+        {rooms.length > 0 && (
+          <div className="space-y-3 sm:hidden">
+            {rooms.map((room, idx) => {
+              const thumbnail = room.roomImages?.[0];
+
+              return (
+                <article
+                  key={room._id}
+                  className="room-row rounded-[1.6rem] border border-slate-200 bg-white p-4 shadow-sm"
+                  style={{ animationDelay: `${idx * 0.04}s` }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="relative h-20 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-slate-100">
+                      {thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={resolveMediaUrl(thumbnail)}
+                          alt={room.roomName}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <BedDouble size={20} className="text-slate-300" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-semibold text-slate-900">
+                            {room.roomName}
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {getRoomTypeLabel(room.roomType, t)} ·{" "}
+                            {getBedTypeLabel(room.bedType, t)} × {room.bedCount}
+                          </p>
+                          {room.roomNumber ? (
+                            <p className="mt-1 text-xs text-slate-400">
+                              #{room.roomNumber}
+                            </p>
+                          ) : null}
+                        </div>
+                        {renderStatusControl(room, "shrink-0")}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                            {copy.pricePerNight}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {formatCurrencyKrw(room.basePrice)}
+                          </p>
+                          {room.weekendSurcharge > 0 ? (
+                            <p className="mt-0.5 text-[11px] text-slate-500">
+                              +{formatCurrencyKrw(room.weekendSurcharge)} {copy.weekend}
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                            {copy.maxGuests}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {room.maxOccupancy} {copy.guests}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-slate-500">
+                            {room.totalRooms} total
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => openEdit(room)}
+                    className="mt-3 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    {copy.editRoom}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+
         {/* Room table */}
         {rooms.length > 0 && (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:block">
             {/* Table header */}
             <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
               <span>{copy.room}</span>
@@ -667,7 +836,6 @@ const HotelRoomsPage: NextPageWithAuth = () => {
             {/* Rows */}
             {rooms.map((room, idx) => {
               const thumbnail = room.roomImages?.[0];
-              const statusCfg = ROOM_STATUS_CONFIG[room.roomStatus];
 
               return (
                 <div
@@ -724,49 +892,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
                   </span>
 
                   {/* Status badge + dropdown */}
-                  <div className="relative">
-                    <button
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition hover:opacity-80 ${statusCfg.className}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setStatusDropdownId(
-                          statusDropdownId === room._id ? null : room._id,
-                        );
-                      }}
-                    >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${statusCfg.dotClass}`}
-                      />
-                      {getRoomStatusLabel(room.roomStatus, t)}
-                      <ChevronDown size={10} />
-                    </button>
-
-                    {statusDropdownId === room._id && (
-                      <div
-                        className="absolute left-0 top-full z-10 mt-1 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {EDITABLE_STATUSES.map((s) => {
-                          const cfg = ROOM_STATUS_CONFIG[s];
-                          return (
-                            <button
-                              key={s}
-                              className={`flex w-full items-center gap-2 px-3 py-2 text-xs font-semibold transition hover:bg-slate-50 ${
-                                room.roomStatus === s ? "bg-slate-50" : ""
-                              }`}
-                              onClick={() => void handleStatusChange(room, s)}
-                              disabled={updating}
-                            >
-                              <span
-                                className={`h-2 w-2 rounded-full ${cfg.dotClass}`}
-                              />
-                              {getRoomStatusLabel(s, t)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  {renderStatusControl(room)}
 
                   {/* Edit button */}
                   <button
@@ -799,7 +925,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
           />
 
           {/* Panel */}
-          <div className="room-panel fixed right-0 top-0 z-50 flex h-full w-full max-w-[560px] flex-col bg-white shadow-2xl">
+          <div className="room-panel fixed right-0 top-0 z-50 flex h-full w-full max-w-[560px] flex-col overflow-hidden bg-white shadow-2xl">
             {/* Panel header */}
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
               <h2 className="font-semibold text-slate-900">
@@ -814,7 +940,7 @@ const HotelRoomsPage: NextPageWithAuth = () => {
             </div>
 
             {/* Panel body */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-6 [touch-action:pan-y]">
               {/* Basic Info */}
               <section className="space-y-4">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">

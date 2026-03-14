@@ -27,7 +27,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { createChatSocket } from "@/lib/socket/chat";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
 import { uploadImageFile } from "@/lib/uploads/upload-image";
-import { errorAlert } from "@/lib/ui/alerts";
+import { confirmAction, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { avatarBg, getGuestDisplayName } from "@/lib/chat/chat-helpers";
@@ -204,7 +204,6 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
   const isPageVisible = usePageVisible();
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
-  const isOperatorSide = !isUser;
 
   const [messageInput, setMessageInput] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
@@ -285,8 +284,9 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
     };
   }, []);
 
+  const isGuestParticipant = Boolean(chat && chat.guestId === member?._id);
   const unreadForMe = chat
-    ? isUser
+    ? isGuestParticipant
       ? chat.unreadGuestMessages
       : chat.unreadAgentMessages
     : 0;
@@ -542,20 +542,20 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
     }
   };
 
-  const onSelectImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onSelectImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
     const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!allowed.includes(file.type)) {
-      void errorAlert(
+      await errorAlert(
         copy.uploadImage,
         "Please select a JPEG, PNG, WebP, or GIF image.",
       );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      void errorAlert(copy.uploadImage, "Images must be under 10 MB.");
+      await errorAlert(copy.uploadImage, "Images must be under 10 MB.");
       return;
     }
     // Revoke previous preview URL if any
@@ -588,9 +588,16 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
 
   const onClaimChat = async () => {
     if (!chat) return;
+    const confirmed = await confirmAction({
+      title: "Claim this chat?",
+      text: copy.claim,
+      confirmText: copy.claim,
+    });
+    if (!confirmed) return;
     try {
       await claimChat({ variables: { input: { chatId: chat._id } } });
       await refetch();
+      await successAlert(copy.claim);
     } catch (mutationError) {
       await errorAlert(copy.claim, getErrorMessage(mutationError));
     }
@@ -600,14 +607,14 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
 
   const canClaim = Boolean(
     chat &&
-      isOperatorSide &&
+      !isGuestParticipant &&
       !chat.assignedAgentId &&
       chat.chatStatus !== "CLOSED",
   );
   const canSend = Boolean(
     chat &&
       chat.chatStatus !== "CLOSED" &&
-      (isUser || chat.assignedAgentId === member?._id),
+      (isGuestParticipant || chat.assignedAgentId === member?._id),
   );
 
   const isSupportChat = chat?.chatScope === "SUPPORT";
@@ -625,10 +632,10 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
 
   const statusSubtitle = chat
     ? isSupportChat
-      ? isOperatorSide
+      ? !isGuestParticipant
         ? `${guestName}${supportMeta ? ` · ${supportMeta}` : ""}`
         : supportMeta
-      : isOperatorSide
+      : !isGuestParticipant
         ? `${guestName}${hotelLocation ? ` · ${hotelLocation}` : ""}`
         : hotelLocation || (chat.chatStatus === "CLOSED" ? copy.closed : "")
     : null;
@@ -794,8 +801,8 @@ export function ChatThreadPopup({ chatId, onClose }: ChatThreadPopupProps) {
             <div className="space-y-0.5 px-4 py-5">
               {(chat.messages ?? []).map((message, index) => {
                 const isOwn =
-                  (message.senderType === "GUEST" && isUser) ||
-                  (message.senderType === "AGENT" && isOperatorSide);
+                  (message.senderType === "GUEST" && isGuestParticipant) ||
+                  (message.senderType === "AGENT" && !isGuestParticipant);
                 const incomingSenderLabel =
                   message.senderType === "GUEST"
                     ? guestName

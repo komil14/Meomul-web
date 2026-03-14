@@ -113,13 +113,13 @@ export const setOnboardingCompletionCachedValue = (memberId: string, value: bool
   setCachedOnboardingCompletion(memberId, value);
 };
 
-const fetchHasRecommendationProfile = async (accessToken: string): Promise<boolean | null> => {
+const fetchHasRecommendationProfile = async (): Promise<boolean | null> => {
   try {
     const response = await fetch(env.graphqlHttpUrl, {
       method: "POST",
+      credentials: "include",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
         query: ONBOARDING_PROFILE_QUERY,
@@ -144,7 +144,6 @@ const fetchHasRecommendationProfile = async (accessToken: string): Promise<boole
 
 export const resolveHasRecommendationProfile = async (
   memberId: string,
-  accessToken: string,
   options?: { forceRefresh?: boolean },
 ): Promise<boolean | null> => {
   if (!options?.forceRefresh) {
@@ -154,7 +153,7 @@ export const resolveHasRecommendationProfile = async (
     }
   }
 
-  const hasProfile = await fetchHasRecommendationProfile(accessToken);
+  const hasProfile = await fetchHasRecommendationProfile();
   if (hasProfile !== null) {
     setCachedOnboardingCompletion(memberId, hasProfile);
   }
@@ -165,7 +164,6 @@ export const resolveHasRecommendationProfile = async (
 export const resolveOnboardingRedirect = async (
   member: SessionMember | null,
   currentPath: string,
-  accessToken: string | null,
 ): Promise<string | null> => {
   if (!member || !isOnboardingRequiredMember(member)) {
     return null;
@@ -175,11 +173,7 @@ export const resolveOnboardingRedirect = async (
     return null;
   }
 
-  if (!accessToken) {
-    return null;
-  }
-
-  const hasProfile = await resolveHasRecommendationProfile(member._id, accessToken);
+  const hasProfile = await resolveHasRecommendationProfile(member._id);
   if (hasProfile === false) {
     return buildOnboardingPath(currentPath);
   }

@@ -134,14 +134,14 @@ function EditHotelDrawer({
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* thumbnail */}
           {hotel.hotelImages.length > 0 && (
-            <div className="overflow-hidden rounded-xl">
+            <div className="relative h-44 overflow-hidden rounded-xl">
               <Image
                 src={resolveImageUrl(hotel.hotelImages[0])}
                 alt={hotel.hotelTitle}
-                width={1200}
-                height={704}
+                fill
                 unoptimized
-                className="h-44 w-full object-cover"
+                sizes="(max-width: 768px) 100vw, 28rem"
+                className="object-cover"
               />
             </div>
           )}

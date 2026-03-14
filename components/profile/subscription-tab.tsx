@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useMemo } from "react";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   CANCEL_SUBSCRIPTION_MUTATION,
   GET_SUBSCRIPTION_STATUS_QUERY,
@@ -9,7 +8,7 @@ import {
 } from "@/graphql/member.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { useI18n } from "@/lib/i18n/provider";
-import { confirmDanger } from "@/lib/ui/alerts";
+import { confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { Check } from "lucide-react";
 
@@ -255,7 +254,6 @@ const TIER_LABEL: Record<string, string> = {
 export function SubscriptionTab() {
   const { locale } = useI18n();
   const copy = getSubscriptionCopy(locale);
-  const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
 
   const tiers = [
@@ -336,10 +334,14 @@ export function SubscriptionTab() {
     if (tierId === currentTier) return;
     try {
       await requestSubscription({ variables: { requestedTier: tierId } });
-      toast.success(copy.requestSubmitted);
+      await successAlert(copy.requestSubmitted, undefined, {
+        variant: "subscription",
+      });
       void refetch();
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert(copy.requestSubmitted, getErrorMessage(err), {
+        variant: "subscription",
+      });
     }
   };
 
@@ -352,10 +354,14 @@ export function SubscriptionTab() {
     if (!confirmed) return;
     try {
       await cancelSubscription();
-      toast.success(copy.cancelled);
+      await successAlert(copy.cancelled, undefined, {
+        variant: "subscription",
+      });
       void refetch();
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert(copy.cancelPlan, getErrorMessage(err), {
+        variant: "subscription",
+      });
     }
   };
 
@@ -455,9 +461,11 @@ export function SubscriptionTab() {
               {!isCurrent && (
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     if (isPending || hasAnyPending) {
-                      toast.error(copy.pendingExists);
+                      await errorAlert(copy.requestSubmitted, copy.pendingExists, {
+                        variant: "subscription",
+                      });
                       return;
                     }
                     void handleRequest(tier.id);

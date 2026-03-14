@@ -222,7 +222,6 @@ const ChatThreadPage: NextPageWithAuth = () => {
   const isPageVisible = usePageVisible();
   const memberType = member?.memberType;
   const isUser = memberType === "USER";
-  const isOperatorSide = !isUser;
   const chatId =
     typeof router.query.chatId === "string" ? router.query.chatId : "";
 
@@ -292,8 +291,9 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
   /** EFFECTS **/
 
+  const isGuestParticipant = Boolean(chat && chat.guestId === member?._id);
   const unreadForMe = chat
-    ? isUser
+    ? isGuestParticipant
       ? chat.unreadGuestMessages
       : chat.unreadAgentMessages
     : 0;
@@ -636,19 +636,19 @@ const ChatThreadPage: NextPageWithAuth = () => {
 
   const canClaim = Boolean(
     chat &&
-      isOperatorSide &&
+      !isGuestParticipant &&
       !chat.assignedAgentId &&
       chat.chatStatus !== "CLOSED",
   );
   const canSend = Boolean(
     chat &&
       chat.chatStatus !== "CLOSED" &&
-      (isUser || chat.assignedAgentId === member?._id),
+      (isGuestParticipant || chat.assignedAgentId === member?._id),
   );
   const canClose = Boolean(
     chat &&
       chat.chatStatus !== "CLOSED" &&
-      isOperatorSide &&
+      !isGuestParticipant &&
       chat.assignedAgentId === member?._id,
   );
 
@@ -756,7 +756,7 @@ const ChatThreadPage: NextPageWithAuth = () => {
                     className={`text-xs ${statusCfg?.color ?? "text-slate-400"}`}
                   >
                     {getChatStatusLabel(locale, chat.chatStatus)}
-                    {isOperatorSide
+                    {!isGuestParticipant
                       ? isSupportChat
                         ? ` · ${guestName}${supportMeta ? ` · ${supportMeta}` : ""}`
                         : ` · ${guestName}${hotelLocation ? ` · ${hotelLocation}` : ""}`
@@ -876,8 +876,8 @@ const ChatThreadPage: NextPageWithAuth = () => {
             <div className="space-y-0.5 px-4 py-5">
               {(chat.messages ?? []).map((message, index) => {
                 const isOwn =
-                  (message.senderType === "GUEST" && isUser) ||
-                  (message.senderType === "AGENT" && isOperatorSide);
+                  (message.senderType === "GUEST" && isGuestParticipant) ||
+                  (message.senderType === "AGENT" && !isGuestParticipant);
                 const incomingSenderLabel =
                   message.senderType === "GUEST"
                     ? guestName

@@ -2,11 +2,12 @@ import { useMutation } from "@apollo/client/react";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Camera, Lock, X } from "lucide-react";
-import { useToast } from "@/components/ui/toast-provider";
 import { UPDATE_MEMBER_MUTATION } from "@/graphql/member.gql";
 import { getSessionMember, updateSessionMember } from "@/lib/auth/session";
 import { useI18n } from "@/lib/i18n/provider";
 import { getProfileCopy } from "@/lib/profile/profile-i18n";
+import { lockBodyScroll } from "@/lib/ui/body-scroll-lock";
+import { errorAlert, successAlert } from "@/lib/ui/alerts";
 import { uploadImageFile } from "@/lib/uploads/upload-image";
 import { getErrorMessage } from "@/lib/utils/error";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -56,7 +57,6 @@ export function EditProfileModal({
 }: EditProfileModalProps) {
   const { locale } = useI18n();
   const copy = getProfileCopy(locale);
-  const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [nick, setNick] = useState(member.memberNick);
@@ -86,11 +86,8 @@ export function EditProfileModal({
   // Scroll-lock while open
   useEffect(() => {
     if (isOpen) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
+      const releaseScrollLock = lockBodyScroll();
+      return releaseScrollLock;
     }
   }, [isOpen]);
 
@@ -103,13 +100,19 @@ export function EditProfileModal({
     if (!file) return;
 
     if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-      toast.error(copy.imageTypeError);
+      await errorAlert(copy.profilePhoto, copy.imageTypeError, {
+        variant: "image",
+      });
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      toast.error(
+      await errorAlert(
+        copy.profilePhoto,
         copy.imageSizeError.replace("{{size}}", String(MAX_IMAGE_SIZE_MB)),
+        {
+          variant: "image",
+        },
       );
       if (fileRef.current) fileRef.current.value = "";
       return;
@@ -120,7 +123,9 @@ export function EditProfileModal({
       const uploadedUrl = await uploadImageFile(file, "member");
       setImageUrl(uploadedUrl);
     } catch (err) {
-      toast.error(copy.imageUploadFailed);
+      await errorAlert(copy.profilePhoto, copy.imageUploadFailed, {
+        variant: "image",
+      });
       console.error(err);
     } finally {
       setUploading(false);
@@ -132,7 +137,9 @@ export function EditProfileModal({
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!nick.trim() || nick.trim().length < 3) {
-      toast.error(copy.displayNameError);
+      await errorAlert(copy.displayName, copy.displayNameError, {
+        variant: "profile",
+      });
       return;
     }
 
@@ -156,7 +163,9 @@ export function EditProfileModal({
           },
         },
       });
-      toast.success(copy.profileUpdated);
+      await successAlert(copy.profileUpdated, undefined, {
+        variant: "profile",
+      });
       onClose();
     } catch (err) {
       // Rollback optimistic session update
@@ -167,7 +176,9 @@ export function EditProfileModal({
           memberImage: previousSession.memberImage ?? null,
         });
       }
-      toast.error(getErrorMessage(err));
+      await errorAlert(copy.editProfile, getErrorMessage(err), {
+        variant: "profile",
+      });
     }
   };
 

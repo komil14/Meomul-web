@@ -308,11 +308,11 @@ const HotelReviewsPage: NextPageWithAuth = () => {
           responseText: responseText.trim(),
         },
       });
-      void successAlert(copy.responsePosted);
+      await successAlert(copy.responsePosted);
       closeRespond();
       void refetchReviews();
     } catch (err) {
-      void errorAlert(getErrorMessage(err));
+      await errorAlert(getErrorMessage(err));
     }
   };
 

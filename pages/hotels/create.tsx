@@ -49,6 +49,18 @@ const LOCATIONS: HotelLocation[] = [
   "GANGNEUNG",
 ];
 
+const DEFAULT_LOCATION_COORDINATES: Record<HotelLocation, { lat: number; lng: number }> = {
+  SEOUL: { lat: 37.5665, lng: 126.978 },
+  BUSAN: { lat: 35.1796, lng: 129.0756 },
+  INCHEON: { lat: 37.4563, lng: 126.7052 },
+  DAEGU: { lat: 35.8714, lng: 128.6014 },
+  DAEJON: { lat: 36.3504, lng: 127.3845 },
+  GWANGJU: { lat: 35.1595, lng: 126.8526 },
+  JEJU: { lat: 33.4996, lng: 126.5312 },
+  GYEONGJU: { lat: 35.8562, lng: 129.2247 },
+  GANGNEUNG: { lat: 37.7519, lng: 128.8761 },
+};
+
 const CANCELLATION_OPTIONS: Array<{
   value: CancellationPolicy;
   label: string;
@@ -485,8 +497,6 @@ const CreateHotelPage: NextPageWithAuth = () => {
   const [subwayExit, setSubwayExit] = useState("");
   const [subwayLines, setSubwayLines] = useState("");
   const [walkingDistance, setWalkingDistance] = useState("");
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
   const [hotelDesc, setHotelDesc] = useState("");
   const [starRating, setStarRating] = useState(3);
   const [checkInTime, setCheckInTime] = useState("15:00");
@@ -553,16 +563,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
       setFormError(copy.addressRequired);
       return;
     }
-    const latNum = parseFloat(lat);
-    const lngNum = parseFloat(lng);
-    if (isNaN(latNum) || isNaN(lngNum)) {
-      setFormError(copy.gpsRequired);
-      return;
-    }
-    if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
-      setFormError(copy.gpsRequired);
-      return;
-    }
+    const coordinates = DEFAULT_LOCATION_COORDINATES[hotelLocation];
 
     const imageUrls = hotelImages.filter(Boolean);
     const videoUrls = hotelVideos.filter(Boolean);
@@ -617,7 +618,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
             detailedLocation: {
               city: hotelLocation,
               address: address.trim(),
-              coordinates: { lat: latNum, lng: lngNum },
+              coordinates,
               district: district.trim() || undefined,
               dong: dong.trim() || undefined,
               nearestSubway: nearestSubway.trim() || undefined,
@@ -665,7 +666,7 @@ const CreateHotelPage: NextPageWithAuth = () => {
       const hotel = result.data?.createHotel;
       if (hotel) {
         setCreated({ id: hotel._id, title: hotel.hotelTitle });
-        successAlert(copy.registeredSuccess);
+        await successAlert(copy.registeredSuccess);
       }
     } catch (err) {
       setFormError(getErrorMessage(err));
@@ -938,40 +939,6 @@ const CreateHotelPage: NextPageWithAuth = () => {
                     </label>
                   </div>
                 </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {copy.latitude} <span className="text-rose-500">*</span>
-                    </span>
-                    <input
-                      type="number"
-                      step="any"
-                      value={lat}
-                      onChange={(e) => setLat(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                      placeholder="37.5665"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {copy.longitude} <span className="text-rose-500">*</span>
-                    </span>
-                    <input
-                      type="number"
-                      step="any"
-                      value={lng}
-                      onChange={(e) => setLng(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                      placeholder="126.9780"
-                    />
-                  </label>
-                </div>
-                <p className="text-xs text-slate-400">
-                  {copy.findCoordinatesAt}{" "}
-                  <span className="font-medium">maps.google.com</span> →{" "}
-                  {copy.rightClickLocation}.
-                </p>
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">

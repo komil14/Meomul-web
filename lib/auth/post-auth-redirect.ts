@@ -12,7 +12,7 @@ export const resolvePostAuthRedirect = async (authMember: AuthMember, redirectTa
     return safeTarget;
   }
 
-  const hasProfile = await resolveHasRecommendationProfile(authMember._id, authMember.accessToken, {
+  const hasProfile = await resolveHasRecommendationProfile(authMember._id, {
     forceRefresh: true,
   });
   if (hasProfile === false) {

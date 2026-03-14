@@ -40,6 +40,10 @@ export interface ProfileCopy {
   yesterday: string;
   daysAgo: string;
   removeFromSaved: string;
+  removeSavedConfirmTitle: string;
+  removeSavedConfirmText: string;
+  removeSavedConfirmButton: string;
+  removeSavedSuccess: string;
   noSavedHotels: string;
   saveHotelHint: string;
   browseHotels: string;
@@ -112,6 +116,10 @@ const en: ProfileCopy = {
   yesterday: "yesterday",
   daysAgo: "{{count}} days ago",
   removeFromSaved: "Remove from saved",
+  removeSavedConfirmTitle: "Remove saved hotel?",
+  removeSavedConfirmText: "This hotel will be removed from your saved list.",
+  removeSavedConfirmButton: "Remove",
+  removeSavedSuccess: "Hotel removed from saved.",
   noSavedHotels: "No saved hotels",
   saveHotelHint: "Tap the heart icon on any hotel to save it here.",
   browseHotels: "Browse hotels",
@@ -184,6 +192,10 @@ const ko: ProfileCopy = {
   yesterday: "어제",
   daysAgo: "{{count}}일 전",
   removeFromSaved: "저장에서 제거",
+  removeSavedConfirmTitle: "저장한 호텔에서 제거할까요?",
+  removeSavedConfirmText: "이 호텔이 저장 목록에서 제거됩니다.",
+  removeSavedConfirmButton: "제거",
+  removeSavedSuccess: "저장한 호텔에서 제거되었습니다.",
   noSavedHotels: "저장한 호텔이 없습니다",
   saveHotelHint: "호텔의 하트 아이콘을 눌러 이곳에 저장하세요.",
   browseHotels: "호텔 둘러보기",
@@ -256,6 +268,10 @@ const ru: ProfileCopy = {
   yesterday: "вчера",
   daysAgo: "{{count}} дн. назад",
   removeFromSaved: "Убрать из сохраненного",
+  removeSavedConfirmTitle: "Убрать отель из сохраненного?",
+  removeSavedConfirmText: "Этот отель будет удален из вашего списка сохраненного.",
+  removeSavedConfirmButton: "Убрать",
+  removeSavedSuccess: "Отель удален из сохраненного.",
   noSavedHotels: "Нет сохраненных отелей",
   saveHotelHint: "Нажмите на значок сердца у любого отеля, чтобы сохранить его здесь.",
   browseHotels: "Смотреть отели",
@@ -328,6 +344,10 @@ const uz: ProfileCopy = {
   yesterday: "kecha",
   daysAgo: "{{count}} kun oldin",
   removeFromSaved: "Saqlangandan olib tashlash",
+  removeSavedConfirmTitle: "Mehmonxonani saqlangandan olib tashlaysizmi?",
+  removeSavedConfirmText: "Bu mehmonxona saqlanganlar ro'yxatidan olib tashlanadi.",
+  removeSavedConfirmButton: "Olib tashlash",
+  removeSavedSuccess: "Mehmonxona saqlangandan olib tashlandi.",
   noSavedHotels: "Saqlangan mehmonxonalar yo'q",
   saveHotelHint: "Istalgan mehmonxonadagi yurak belgisini bosib uni shu yerga saqlang.",
   browseHotels: "Mehmonxonalarni ko'rish",

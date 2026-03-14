@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CANCEL_PRICE_LOCK_MUTATION, GET_MY_PRICE_LOCK_QUERY, GET_MY_PRICE_LOCKS_QUERY } from "@/graphql/hotel.gql";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { lockBodyScroll } from "@/lib/ui/body-scroll-lock";
 import { confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { formatNumber } from "@/lib/utils/format";
@@ -72,8 +73,7 @@ export function PriceLockFab({
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const releaseScrollLock = lockBodyScroll();
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") {
@@ -84,7 +84,7 @@ export function PriceLockFab({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isGuestInfoOpen]);
@@ -168,11 +168,15 @@ export function PriceLockFab({
         ],
         awaitRefetchQueries: true,
       });
-      await successAlert("Lock cancelled", "Your price lock has been cancelled.");
+      await successAlert("Lock cancelled", "Your price lock has been cancelled.", {
+        variant: "lock",
+      });
     } catch (error) {
       const message = getErrorMessage(error);
       setActionError(message);
-      await errorAlert("Cancel failed", message);
+      await errorAlert("Cancel failed", message, {
+        variant: "lock",
+      });
     } finally {
       setCancellingId(null);
     }

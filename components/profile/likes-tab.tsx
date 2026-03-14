@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import { GET_MY_LIKES_QUERY } from "@/graphql/like.gql";
 import {
   GET_HOTEL_CARDS_QUERY,
@@ -11,6 +10,7 @@ import {
 } from "@/graphql/hotel.gql";
 import { getSessionMember } from "@/lib/auth/session";
 import { useI18n } from "@/lib/i18n/provider";
+import { confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
 import {
   formatProfileTimeAgo,
   getProfileCopy,
@@ -55,18 +55,32 @@ function LikedHotelItem({
 }) {
   const { locale } = useI18n();
   const copy = getProfileCopy(locale);
-  const toast = useToast();
   const [toggleLike, { loading: unliking }] = useMutation(TOGGLE_LIKE_MUTATION);
   const coverImage = resolveMediaUrl(hotel?.hotelImages[0]);
 
   const handleUnlike = async () => {
+    const confirmed = await confirmDanger({
+      title: copy.removeSavedConfirmTitle,
+      text: hotel.hotelTitle,
+      warningText: copy.removeSavedConfirmText,
+      confirmText: copy.removeSavedConfirmButton,
+      cancelText: copy.cancel,
+    });
+
+    if (!confirmed) return;
+
     try {
       await toggleLike({
         variables: { input: { likeGroup: "HOTEL", likeRefId: hotel._id } },
       });
       onUnliked(hotel._id);
+      await successAlert(copy.removeSavedSuccess, undefined, {
+        variant: "saved",
+      });
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert(copy.removeFromSaved, getErrorMessage(err), {
+        variant: "saved",
+      });
     }
   };
 

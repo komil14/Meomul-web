@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ErrorNotice } from "@/components/ui/error-notice";
-import { useToast } from "@/components/ui/toast-provider";
 import {
   DELETE_REVIEW_MUTATION,
   GET_MY_REVIEWS_QUERY,
@@ -16,7 +15,8 @@ import {
   formatProfileDate,
   getProfileCopy,
 } from "@/lib/profile/profile-i18n";
-import { confirmDanger } from "@/lib/ui/alerts";
+import { lockBodyScroll } from "@/lib/ui/body-scroll-lock";
+import { confirmDanger, errorAlert, successAlert } from "@/lib/ui/alerts";
 import { getErrorMessage } from "@/lib/utils/error";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
 import { ExternalLink, Pencil, Star, Trash2 } from "lucide-react";
@@ -177,7 +177,6 @@ function EditReviewModal({
 }) {
   const { locale } = useI18n();
   const copy = getProfileCopy(locale);
-  const toast = useToast();
   const [overallRating, setOverallRating] = useState(review.overallRating);
   const [title, setTitle] = useState(review.reviewTitle ?? "");
   const [text, setText] = useState(review.reviewText);
@@ -186,15 +185,15 @@ function EditReviewModal({
 
   // Lock body scroll while the modal is open
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    const releaseScrollLock = lockBodyScroll();
+    return releaseScrollLock;
   }, []);
 
   const handleSave = async () => {
     if (!text.trim() || text.trim().length < 10) {
-      toast.error(copy.reviewTooShort);
+      await errorAlert(copy.editReview, copy.reviewTooShort, {
+        variant: "review",
+      });
       return;
     }
     try {
@@ -208,10 +207,14 @@ function EditReviewModal({
           },
         },
       });
-      toast.success(copy.reviewUpdated);
+      await successAlert(copy.reviewUpdated, undefined, {
+        variant: "review",
+      });
       onSaved();
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert(copy.editReview, getErrorMessage(err), {
+        variant: "review",
+      });
     }
   };
 
@@ -307,7 +310,6 @@ const DIMS = [
 export function ReviewsTab() {
   const { locale } = useI18n();
   const copy = getProfileCopy(locale);
-  const toast = useToast();
   const member = useMemo(() => getSessionMember(), []);
   const [editing, setEditing] = useState<ReviewDto | null>(null);
   const [extraReviews, setExtraReviews] = useState<ReviewDto[]>([]);
@@ -394,11 +396,15 @@ export function ReviewsTab() {
     setDeletingId(reviewId);
     try {
       await deleteReviewMutation({ variables: { reviewId } });
-      toast.success(copy.reviewDeleted);
+      await successAlert(copy.reviewDeleted, undefined, {
+        variant: "trash",
+      });
       resetPagination();
       void refetch();
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      await errorAlert(copy.deleteReviewTitle, getErrorMessage(err), {
+        variant: "trash",
+      });
     } finally {
       setDeletingId(null);
     }

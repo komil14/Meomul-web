@@ -415,9 +415,9 @@ const EditHotelPage: NextPageWithAuth = () => {
         },
       };
       await updateHotel({ variables: { input } });
-      successAlert(copy.hotelUpdated);
+      await successAlert(copy.hotelUpdated);
     } catch (err) {
-      errorAlert(getErrorMessage(err));
+      await errorAlert(getErrorMessage(err));
     } finally {
       setSaving(false);
     }

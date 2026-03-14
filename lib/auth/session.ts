@@ -132,6 +132,25 @@ export const isTokenExpiringSoon = (thresholdMs = 5 * 60 * 1000): boolean => {
   return remaining > 0 && remaining <= thresholdMs;
 };
 
+export const ensureSessionForGuard = async (): Promise<SessionMember | null> => {
+  const currentMember = getSessionMember();
+
+  if (currentMember && getTokenRemainingMs() > 0) {
+    return currentMember;
+  }
+
+  const refreshed = await silentRefreshAccessToken();
+  if (refreshed) {
+    return getSessionMember();
+  }
+
+  if (currentMember) {
+    clearAuthSession();
+  }
+
+  return null;
+};
+
 // ── Refresh token (silent) ──────────────────────────────────────────────
 
 let _refreshInProgress: Promise<boolean> | null = null;
@@ -191,6 +210,7 @@ export const logoutSession = async (): Promise<void> => {
     // credentials: "include" sends the httpOnly access + refresh token cookies automatically
     await fetch(env.graphqlHttpUrl, {
       method: "POST",
+      keepalive: true,
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

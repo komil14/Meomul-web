@@ -20,11 +20,9 @@ import {
 import {
   getAccessToken,
   getSessionMember,
-  getTokenRemainingMs,
   isAuthenticated,
   logoutSession,
   registerSessionChangeListener,
-  silentRefreshAccessToken,
   unregisterSessionChangeListener,
 } from "@/lib/auth/session";
 import {
@@ -34,6 +32,7 @@ import {
 import { useI18n } from "@/lib/i18n/provider";
 import type { TranslationKey } from "@/lib/i18n/messages";
 import { usePageVisible } from "@/lib/hooks/use-page-visible";
+import { lockBodyScroll } from "@/lib/ui/body-scroll-lock";
 import { createNotificationSocket } from "@/lib/socket/notification";
 import type { SessionMember } from "@/types/auth";
 import type { GetMyUnreadChatCountQueryData } from "@/types/chat";
@@ -672,6 +671,12 @@ export function SiteFrame({ children }: PropsWithChildren) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const releaseScrollLock = lockBodyScroll();
+    return releaseScrollLock;
+  }, [isMobileMenuOpen]);
+
   // Refresh member on every route change (captures login/logout navigation)
   const [member, setMember] = useState<SessionMember | null>(null);
   useEffect(() => {
@@ -688,33 +693,6 @@ export function SiteFrame({ children }: PropsWithChildren) {
       unregisterSessionChangeListener();
     };
   }, []);
-
-  // ── Proactive token refresh ──
-  // When the access token is about to expire (≤ 2 min remaining), silently
-  // refresh it using the httpOnly refresh-token cookie. Checks every 30 s.
-  useEffect(() => {
-    if (!member) return;
-
-    const REFRESH_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes before expiry
-    const CHECK_INTERVAL_MS = 30_000; // check every 30 seconds
-
-    const tryRefresh = async () => {
-      if (!isAuthenticated()) return;
-      const remaining = getTokenRemainingMs();
-      if (remaining > 0 && remaining <= REFRESH_THRESHOLD_MS) {
-        const ok = await silentRefreshAccessToken();
-        if (ok) {
-          // Update local member state with refreshed data
-          setMember(getSessionMember());
-        }
-      }
-    };
-
-    // Check immediately on mount in case token is already expiring
-    void tryRefresh();
-    const interval = setInterval(() => void tryRefresh(), CHECK_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [member]);
 
   // Subscribe to Apollo cache for live memberImage updates when profile is saved.
   // fetchPolicy:"cache-only" means no extra network request — it just reads
@@ -808,7 +786,7 @@ export function SiteFrame({ children }: PropsWithChildren) {
     socket.on("connect", () => {
       socket.emit(
         "authenticate",
-        token ? { token: `Bearer ${token}` } : {},
+        {},
         (ack: { success: boolean; error?: string }) => {
           if (!ack?.success) {
             console.warn("[notification-socket] auth ACK failed:", ack?.error);
@@ -1043,11 +1021,18 @@ export function SiteFrame({ children }: PropsWithChildren) {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div
-          id="mobile-main-nav"
-          className="border-t border-slate-100 bg-white md:hidden"
-        >
-          <div className="min-h-[calc(100dvh-73px)] w-full overflow-y-auto px-4 py-5">
+        <>
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="fixed inset-x-0 bottom-0 top-[73px] z-40 bg-slate-950/20 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div
+            id="mobile-main-nav"
+            className="fixed inset-x-0 bottom-0 top-[73px] z-50 border-t border-slate-100 bg-white md:hidden"
+          >
+          <div className="h-full w-full overflow-y-auto overscroll-contain px-4 py-5 [touch-action:pan-y]">
             {/* Logged-in member card */}
             {member && (
               <div className="mb-5 flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3.5">
@@ -1179,7 +1164,8 @@ export function SiteFrame({ children }: PropsWithChildren) {
               )}
             </div>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </header>
   );

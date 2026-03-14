@@ -12,8 +12,8 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useToast } from "@/components/ui/toast-provider";
 import { useI18n } from "@/lib/i18n/provider";
+import { errorAlert, infoAlert } from "@/lib/ui/alerts";
 import { uploadVideoFile } from "@/lib/uploads/upload-video";
 import { getErrorMessage } from "@/lib/utils/error";
 import { resolveMediaUrl } from "@/lib/utils/media-url";
@@ -147,7 +147,6 @@ export function VideoCollectionField({
   description,
 }: VideoCollectionFieldProps) {
   const { locale } = useI18n();
-  const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -160,11 +159,15 @@ export function VideoCollectionField({
   const processFiles = async (files: File[]) => {
     if (files.length === 0) return;
     if (remainingSlots === 0) {
-      toast.error(copy.limitReached);
+      await errorAlert(copy.addVideos, copy.limitReached, {
+        variant: "video",
+      });
       return;
     }
 
     let didSkipForLimit = false;
+    let sawInvalidType = false;
+    let sawInvalidSize = false;
     const nextFiles = files.slice(0, remainingSlots);
     if (files.length > remainingSlots) {
       didSkipForLimit = true;
@@ -175,11 +178,11 @@ export function VideoCollectionField({
       const uploaded: string[] = [];
       for (const file of nextFiles) {
         if (!ACCEPTED_VIDEO_TYPES.has(file.type)) {
-          toast.error(copy.invalidType);
+          sawInvalidType = true;
           continue;
         }
         if (file.size > MAX_VIDEO_SIZE_BYTES) {
-          toast.error(copy.invalidSize);
+          sawInvalidSize = true;
           continue;
         }
 
@@ -190,11 +193,25 @@ export function VideoCollectionField({
       if (uploaded.length > 0) {
         onChange([...videos, ...uploaded]);
       }
+      if (sawInvalidType || sawInvalidSize) {
+        const message = sawInvalidType && sawInvalidSize
+          ? `${copy.invalidType} ${copy.invalidSize}`
+          : sawInvalidType
+            ? copy.invalidType
+            : copy.invalidSize;
+        await errorAlert(copy.addVideos, message, {
+          variant: "video",
+        });
+      }
       if (didSkipForLimit) {
-        toast.info(copy.partialLimit);
+        await infoAlert(copy.addVideos, copy.partialLimit, {
+          variant: "video",
+        });
       }
     } catch (error) {
-      toast.error(getErrorMessage(error) || copy.uploadFailed);
+      await errorAlert(copy.addVideos, getErrorMessage(error) || copy.uploadFailed, {
+        variant: "video",
+      });
     } finally {
       setUploading(false);
     }
@@ -216,11 +233,15 @@ export function VideoCollectionField({
       return;
     }
     if (remainingSlots === 0) {
-      toast.error(copy.limitReached);
+      void errorAlert(copy.addVideos, copy.limitReached, {
+        variant: "video",
+      });
       return;
     }
     if (!isYouTubeUrl(trimmed) || !getYouTubeEmbedUrl(trimmed)) {
-      toast.error(copy.invalidYoutube);
+      void errorAlert(copy.addVideos, copy.invalidYoutube, {
+        variant: "video",
+      });
       return;
     }
     onChange([...videos, trimmed]);

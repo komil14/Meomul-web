@@ -111,7 +111,9 @@ export const useRoomPriceLock = ({
 
   const onLockPrice = useCallback(async (): Promise<void> => {
     if (!canLockPrice || !room) {
-      await infoAlert("Price lock unavailable", "You cannot lock price for this room right now.");
+      await infoAlert("Price lock unavailable", "You cannot lock price for this room right now.", {
+        variant: "lock",
+      });
       return;
     }
 
@@ -139,11 +141,15 @@ export const useRoomPriceLock = ({
         ],
         awaitRefetchQueries: true,
       });
-      await successAlert("Price locked", `Your price is locked at ₩ ${formatNumber(lockRequestPrice)} for 30 minutes.`);
+      await successAlert("Price locked", `Your price is locked at ₩ ${formatNumber(lockRequestPrice)} for 30 minutes.`, {
+        variant: "lock",
+      });
     } catch (error) {
       const message = getErrorMessage(error);
       setLockActionError(message);
-      await errorAlert("Price lock failed", message);
+      await errorAlert("Price lock failed", message, {
+        variant: "lock",
+      });
     }
   }, [canLockPrice, lockPriceMutation, lockRequestPrice, room]);
 

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import {
   GET_HOTEL_CHATS_QUERY,
+  GET_MY_CHATS_QUERY,
   GET_OPERATOR_CHATS_QUERY,
 } from "@/graphql/chat.gql";
 import { getAccessToken } from "@/lib/auth/session";
@@ -35,6 +36,8 @@ import type {
   ChatStatus,
   GetHotelChatsQueryData,
   GetHotelChatsQueryVars,
+  GetMyChatsQueryData,
+  GetMyChatsQueryVars,
   GetOperatorChatsQueryData,
   GetOperatorChatsQueryVars,
 } from "@/types/chat";
@@ -57,6 +60,22 @@ function isAgentOriginSupportChat(chat: ChatDto): boolean {
 
 function getSupportSourceLabel(chat: ChatDto, copy: ReturnType<typeof getChatCopy>): string {
   return isAgentOriginSupportChat(chat) ? copy.hotelStaff : copy.guest;
+}
+
+function getPrimarySupportChats(chats: ChatDto[]): ChatDto[] {
+  if (chats.length === 0) return [];
+  const supportChats = chats.filter((chat) => chat.chatScope === "SUPPORT");
+  if (supportChats.length === 0) return [];
+  const sorted = [...supportChats].sort((a, b) => {
+    const aOpen = a.chatStatus !== "CLOSED";
+    const bOpen = b.chatStatus !== "CLOSED";
+    if (aOpen !== bOpen) return aOpen ? -1 : 1;
+    return (
+      new Date(b.lastMessageAt ?? 0).getTime() -
+      new Date(a.lastMessageAt ?? 0).getTime()
+    );
+  });
+  return [sorted[0]];
 }
 
 // ─── StatusBadge ──────────────────────────────────────────────────────────────
@@ -259,6 +278,20 @@ export function StaffChatsView({
     },
   );
 
+  const {
+    data: mySupportChatsData,
+    loading: mySupportChatsLoading,
+    refetch: refetchMySupportChats,
+  } = useQuery<GetMyChatsQueryData, GetMyChatsQueryVars>(GET_MY_CHATS_QUERY, {
+    skip: activeTab !== "support" || isAdmin,
+    variables: {
+      input: { page: 1, limit: 30, sort: "lastMessageAt", direction: -1 },
+    },
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-and-network",
+    pollInterval: isPageVisible && !socketConnected ? 120_000 : 0,
+  });
+
   useEffect(() => {
     if (!isPageVisible) {
       socketRef.current?.disconnect();
@@ -275,7 +308,11 @@ export function StaffChatsView({
     const handleDisconnect = () => setSocketConnected(false);
     const handleListUpdate = () => {
       if (activeTab === "support") {
-        void refetchSupportChats();
+        if (isAdmin) {
+          void refetchSupportChats();
+        } else {
+          void refetchMySupportChats();
+        }
         return;
       }
       if (selectedHotelId) {
@@ -299,8 +336,10 @@ export function StaffChatsView({
     };
   }, [
     activeTab,
+    isAdmin,
     isPageVisible,
     refetchHotelChats,
+    refetchMySupportChats,
     refetchSupportChats,
     selectedHotelId,
   ]);
@@ -309,20 +348,27 @@ export function StaffChatsView({
 
   const displayChats: ChatDto[] = useMemo(() => {
     if (activeTab === "support") {
-      return supportChatsData?.getOperatorChats.list ?? [];
+      return isAdmin
+        ? (supportChatsData?.getOperatorChats.list ?? [])
+        : getPrimarySupportChats(mySupportChatsData?.getMyChats.list ?? []);
     }
     return hotelChatsData?.getHotelChats.list ?? [];
-  }, [activeTab, hotelChatsData, supportChatsData]);
+  }, [activeTab, hotelChatsData, isAdmin, mySupportChatsData, supportChatsData]);
 
   const total =
     activeTab === "hotels"
       ? (hotelChatsData?.getHotelChats.metaCounter.total ?? 0)
       : 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
-  const loading = activeTab === "hotels" ? hotelChatsLoading : supportChatsLoading;
+  const loading =
+    activeTab === "hotels"
+      ? hotelChatsLoading
+      : isAdmin
+        ? supportChatsLoading
+        : mySupportChatsLoading;
   const supportChats = supportChatsData?.getOperatorChats.list ?? [];
-  const supportInboxTitle = copy.userSupportChats;
-  const hotelInboxTitle = copy.hotelStaffChats;
+  const supportInboxTitle = isAdmin ? copy.userSupportChats : copy.supportTitle;
+  const hotelInboxTitle = isAdmin ? copy.hotelStaffChats : copy.hotels;
   const userSupportChats = useMemo(
     () => supportChats.filter((chat) => !isAgentOriginSupportChat(chat)),
     [supportChats],
@@ -353,61 +399,59 @@ export function StaffChatsView({
       {/* ── Sidebar ── */}
       <aside className="flex flex-none flex-col border-b border-slate-200 bg-white lg:h-full lg:w-60 lg:border-b-0 lg:border-r">
 
-        {isAdmin && (
-          <div className="flex-none border-b border-slate-100 p-3">
-            <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              {supportInboxTitle}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("support");
-                setPage(1);
-              }}
-              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition lg:gap-2.5 lg:py-2.5 ${
-                activeTab === "support"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+        <div className="flex-none border-b border-slate-100 p-3">
+          <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            {supportInboxTitle}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("support");
+              setPage(1);
+            }}
+            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition lg:gap-2.5 lg:py-2.5 ${
+              activeTab === "support"
+                ? "bg-slate-900 text-white"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <div
+              className={`hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg lg:flex ${
+                activeTab === "support" ? "bg-white/20" : "bg-teal-100"
               }`}
             >
-              <div
-                className={`hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg lg:flex ${
-                  activeTab === "support" ? "bg-white/20" : "bg-teal-100"
-                }`}
-              >
-                <Headset
-                  size={14}
-                  className={activeTab === "support" ? "text-white" : "text-teal-600"}
-                />
-              </div>
               <Headset
                 size={14}
-                className={`lg:hidden ${activeTab === "support" ? "text-white" : "text-teal-500"}`}
+                className={activeTab === "support" ? "text-white" : "text-teal-600"}
               />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{supportInboxTitle}</p>
-                <p
-                  className={`truncate text-[11px] ${
-                    activeTab === "support" ? "text-white/70" : "text-slate-400"
-                  }`}
-                >
-                  {copy.platformSupport}
-                </p>
-              </div>
-              {supportChats.length > 0 && (
-                <span
-                  className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                    activeTab === "support"
-                      ? "bg-white/20 text-white"
-                      : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {supportChats.length}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
+            </div>
+            <Headset
+              size={14}
+              className={`lg:hidden ${activeTab === "support" ? "text-white" : "text-teal-500"}`}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{supportInboxTitle}</p>
+              <p
+                className={`truncate text-[11px] ${
+                  activeTab === "support" ? "text-white/70" : "text-slate-400"
+                }`}
+              >
+                {copy.platformSupport}
+              </p>
+            </div>
+            {displayChats.length > 0 && activeTab === "support" && (
+              <span
+                className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                  activeTab === "support"
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                {displayChats.length}
+              </span>
+            )}
+          </button>
+        </div>
 
         {isAdmin && (
           <div className="hidden flex-none border-b border-slate-100 p-3 lg:block">
@@ -663,6 +707,64 @@ export function StaffChatsView({
                     </div>
                   </div>
                 ))}
+            </div>
+          )}
+
+          {activeTab === "support" && !isAdmin && displayChats.length > 0 && (
+            <div className="divide-y divide-slate-50 bg-white">
+              {displayChats.map((chat, i) => {
+                const preview = getLastPreviewLabel(locale, chat);
+                const time = formatChatTimeAgo(locale, chat.lastMessageAt);
+                const unread = chat.unreadGuestMessages;
+                const title = chat.supportTopic?.trim() || copy.supportTitle;
+
+                return (
+                  <button
+                    key={chat._id}
+                    type="button"
+                    onClick={() => onSelectChat(chat._id)}
+                    className="flex w-full items-start gap-3.5 bg-white px-5 py-4 text-left transition hover:bg-slate-50"
+                    style={{
+                      animation: "staffChatFadeIn 0.2s ease-out both",
+                      animationDelay: `${i * 25}ms`,
+                    }}
+                  >
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-teal-500 text-sm font-bold text-white">
+                      <Headset size={15} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span
+                          className={`truncate text-sm font-semibold ${
+                            unread > 0 ? "text-slate-900" : "text-slate-700"
+                          }`}
+                        >
+                          {title}
+                        </span>
+                        <span className="flex-shrink-0 text-[10px] text-slate-400">
+                          {time}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <p
+                          className={`flex-1 truncate text-xs ${
+                            unread > 0 ? "font-medium text-slate-700" : "text-slate-500"
+                          }`}
+                        >
+                          {`${copy.supportTeam} · ${preview}`}
+                        </p>
+                        <StatusBadge status={chat.chatStatus} />
+                        {unread > 0 && (
+                          <span className="flex-shrink-0 rounded-full bg-sky-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
 

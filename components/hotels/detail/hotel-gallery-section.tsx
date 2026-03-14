@@ -164,10 +164,9 @@ export const HotelGallerySection = memo(function HotelGallerySection({
               <Image
                 src={activeMedia.src}
                 alt={`Hotel scene ${activeImageIndex + 1}`}
-                width={2200}
-                height={1400}
+                fill
                 sizes="100vw"
-                className="h-56 w-full object-cover transition duration-700 group-hover:scale-[1.02] sm:h-80 lg:h-[30rem]"
+                className="object-cover transition duration-700 group-hover:scale-[1.02]"
               />
             )}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
@@ -239,14 +238,15 @@ export const HotelGallerySection = memo(function HotelGallerySection({
                       </span>
                     </div>
                   ) : (
-                    <Image
-                      src={item.src}
-                      alt={`Scene thumbnail ${index + 1}`}
-                      width={320}
-                      height={220}
-                      sizes="100px"
-                      className="h-14 w-full object-cover transition duration-500 group-hover:scale-[1.04] sm:h-16"
-                    />
+                    <div className="relative h-14 w-full overflow-hidden sm:h-16">
+                      <Image
+                        src={item.src}
+                        alt={`Scene thumbnail ${index + 1}`}
+                        fill
+                        sizes="100px"
+                        className="object-cover transition duration-500 group-hover:scale-[1.04]"
+                      />
+                    </div>
                   )}
                   <span className="absolute bottom-1 right-1 rounded border border-white/40 bg-black/50 px-1 text-[9px] font-semibold text-white">
                     {String(index + 1).padStart(2, "0")}

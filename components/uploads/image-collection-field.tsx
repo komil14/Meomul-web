@@ -4,8 +4,8 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 import { GripVertical, ImagePlus, Loader2, MoveLeft, MoveRight, Trash2 } from "lucide-react";
-import { useToast } from "@/components/ui/toast-provider";
 import { useI18n } from "@/lib/i18n/provider";
+import { errorAlert, infoAlert } from "@/lib/ui/alerts";
 import { uploadImageFile } from "@/lib/uploads/upload-image";
 import type { UploadImageTarget } from "@/lib/uploads/upload-image";
 import { getErrorMessage } from "@/lib/utils/error";
@@ -132,7 +132,6 @@ export function ImageCollectionField({
   layout = "default",
 }: ImageCollectionFieldProps) {
   const { locale } = useI18n();
-  const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -148,11 +147,15 @@ export function ImageCollectionField({
       return;
     }
     if (remainingSlots === 0) {
-      toast.error(copy.limitReached);
+      await errorAlert(copy.addImages, copy.limitReached, {
+        variant: "image",
+      });
       return;
     }
 
     let didSkipForLimit = false;
+    let sawInvalidType = false;
+    let sawInvalidSize = false;
     const nextFiles = files.slice(0, remainingSlots);
     if (files.length > remainingSlots) {
       didSkipForLimit = true;
@@ -164,11 +167,11 @@ export function ImageCollectionField({
 
       for (const file of nextFiles) {
         if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-          toast.error(copy.invalidType);
+          sawInvalidType = true;
           continue;
         }
         if (file.size > MAX_IMAGE_SIZE_BYTES) {
-          toast.error(copy.invalidSize);
+          sawInvalidSize = true;
           continue;
         }
 
@@ -179,11 +182,25 @@ export function ImageCollectionField({
       if (uploaded.length > 0) {
         onChange([...images, ...uploaded]);
       }
+      if (sawInvalidType || sawInvalidSize) {
+        const message = sawInvalidType && sawInvalidSize
+          ? `${copy.invalidType} ${copy.invalidSize}`
+          : sawInvalidType
+            ? copy.invalidType
+            : copy.invalidSize;
+        await errorAlert(copy.addImages, message, {
+          variant: "image",
+        });
+      }
       if (didSkipForLimit) {
-        toast.info(copy.partialLimit);
+        await infoAlert(copy.addImages, copy.partialLimit, {
+          variant: "image",
+        });
       }
     } catch (error) {
-      toast.error(getErrorMessage(error) || copy.uploadFailed);
+      await errorAlert(copy.addImages, getErrorMessage(error) || copy.uploadFailed, {
+        variant: "image",
+      });
     } finally {
       setUploading(false);
     }

@@ -2,10 +2,8 @@ import type { SessionMember } from "@/types/auth";
 import { resolveOnboardingRedirect } from "@/lib/auth/onboarding-status";
 import {
   clearAuthSession,
-  getAccessToken,
   getSessionMember,
-  getTokenRemainingMs,
-  silentRefreshAccessToken,
+  ensureSessionForGuard,
 } from "@/lib/auth/session";
 import type { AuthRequirement } from "@/types/page";
 
@@ -22,19 +20,16 @@ export const resolveGuardRedirect = async (
   member: SessionMember | null,
   currentPath: string,
 ): Promise<string | null> => {
-  if (member && getTokenRemainingMs() === 0) {
-    const refreshed = await silentRefreshAccessToken();
-
-    if (refreshed) {
-      member = getSessionMember();
-    } else {
+  if (auth?.guestOnly || (auth?.roles && auth.roles.length > 0)) {
+    const resolvedMember = await ensureSessionForGuard();
+    if (!resolvedMember && member) {
       clearAuthSession();
-      member = null;
     }
+    member = resolvedMember;
   }
 
   if (member) {
-    const onboardingRedirect = await resolveOnboardingRedirect(member, currentPath, getAccessToken());
+    const onboardingRedirect = await resolveOnboardingRedirect(member, currentPath);
     if (onboardingRedirect) {
       return onboardingRedirect;
     }
