@@ -19,7 +19,9 @@ export const createChatSocket = (token: string | null): Socket => {
   return io(`${baseUrl}/chat`, {
     autoConnect: true,
     withCredentials: true,
-    transports: ["websocket", "polling"],
+    // In production behind Cloudflare/Caddy, polling-first is more reliable
+    // and still upgrades to websocket automatically when available.
+    transports: ["polling", "websocket"],
     timeout: 5000,
     reconnectionAttempts: 2,
     reconnectionDelay: 1500,

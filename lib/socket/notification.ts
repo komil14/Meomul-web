@@ -25,7 +25,7 @@ export const createNotificationSocket = (token: string | null): Socket => {
   return io(`${baseUrl}/notifications`, {
     autoConnect: true,
     withCredentials: true,
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
     timeout: 5000,
     reconnectionAttempts: 2,
     reconnectionDelay: 1500,

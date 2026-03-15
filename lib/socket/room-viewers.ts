@@ -24,7 +24,7 @@ export const createRoomViewersSocket = (token: string | null): Socket => {
   return io(`${baseUrl}/room-viewers`, {
     autoConnect: true,
     withCredentials: true,
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
     closeOnBeforeunload: true,
     ...(token ? { auth: { token: `Bearer ${token}` } } : {}),
   });
