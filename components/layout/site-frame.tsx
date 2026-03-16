@@ -732,18 +732,27 @@ export function SiteFrame({ children }: PropsWithChildren) {
   // whatever the profile page already fetched and updates when the mutation fires.
   const { data: memberCacheData } = useQuery<{
     getMember: {
+      _id: string;
       memberImage?: string | null;
       hostAccessStatus?: SessionMember["hostAccessStatus"];
     };
   }>(GET_MEMBER_QUERY, { skip: !member, fetchPolicy: "cache-only" });
+  const liveMemberMatchesSession =
+    !!member &&
+    memberCacheData?.getMember._id === member._id;
   // Merge live profile fields into member so nav/avatar reflect profile updates immediately.
   const memberWithLiveState = member
     ? {
         ...member,
         memberImage:
-          memberCacheData?.getMember.memberImage ?? member.memberImage,
+          liveMemberMatchesSession
+            ? memberCacheData?.getMember.memberImage ?? member.memberImage
+            : member.memberImage,
         hostAccessStatus:
-          memberCacheData?.getMember.hostAccessStatus ?? member.hostAccessStatus,
+          liveMemberMatchesSession
+            ? memberCacheData?.getMember.hostAccessStatus ??
+              member.hostAccessStatus
+            : member.hostAccessStatus,
       }
     : null;
 
