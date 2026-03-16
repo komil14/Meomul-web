@@ -4,7 +4,7 @@ import { env } from "@/lib/config/env";
 export type UploadVideoTarget = "hotel";
 
 function getUploadBaseUrl(): string {
-  return typeof window !== "undefined" ? "/upload" : `${env.apiUrl}/upload`;
+  return `${env.apiUrl}/upload`;
 }
 
 export async function uploadVideoFile(
