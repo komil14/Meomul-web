@@ -3,8 +3,11 @@ const isProduction =
 const isDev =
   typeof process !== "undefined" && process.env.NODE_ENV === "development";
 
-function requireEnv(name: string, fallback: string): string {
-  const value = process.env[name];
+function requireEnv(
+  name: string,
+  value: string | undefined,
+  fallback: string,
+): string {
   if (value) return value;
 
   if (isProduction && typeof window === "undefined") {
@@ -24,6 +27,7 @@ function requireEnv(name: string, fallback: string): string {
 
 const graphqlOriginUrl = requireEnv(
   "NEXT_PUBLIC_GRAPHQL_URL",
+  process.env.NEXT_PUBLIC_GRAPHQL_URL,
   "http://localhost:3001/graphql",
 );
 
@@ -33,11 +37,24 @@ export const env = {
     typeof window !== "undefined" ? "/graphql" : graphqlOriginUrl,
   chatSocketUrl: requireEnv(
     "NEXT_PUBLIC_CHAT_SOCKET_URL",
+    process.env.NEXT_PUBLIC_CHAT_SOCKET_URL,
     "http://localhost:3001",
   ),
-  apiUrl: requireEnv("NEXT_PUBLIC_API_URL", "http://localhost:3001"),
-  siteUrl: requireEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000"),
-  buildId: requireEnv("NEXT_PUBLIC_BUILD_ID", "dev"),
+  apiUrl: requireEnv(
+    "NEXT_PUBLIC_API_URL",
+    process.env.NEXT_PUBLIC_API_URL,
+    "http://localhost:3001",
+  ),
+  siteUrl: requireEnv(
+    "NEXT_PUBLIC_SITE_URL",
+    process.env.NEXT_PUBLIC_SITE_URL,
+    "http://localhost:3000",
+  ),
+  buildId: requireEnv(
+    "NEXT_PUBLIC_BUILD_ID",
+    process.env.NEXT_PUBLIC_BUILD_ID,
+    "dev",
+  ),
 } as const;
 
 /**
