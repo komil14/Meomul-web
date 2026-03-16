@@ -2,6 +2,7 @@ import { useMutation } from "@apollo/client/react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useMemo, useState } from "react";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { LOGIN_MEMBER_MUTATION } from "@/graphql/auth.gql";
 import { useI18n } from "@/lib/i18n/provider";
 import { resolvePostAuthRedirect } from "@/lib/auth/post-auth-redirect";
@@ -14,6 +15,9 @@ import type { NextPageWithAuth } from "@/types/page";
 interface LoginMemberMutationData {
   loginMember: AuthMember;
 }
+
+const fieldClassName =
+  "mt-2 h-14 w-full rounded-2xl border border-[#dddddd] bg-white px-4 text-[15px] text-[#222222] outline-none transition placeholder:text-[#8a8a8a] focus:border-[#222222] focus:ring-4 focus:ring-black/5";
 
 const LoginPage: NextPageWithAuth = () => {
   const { t } = useI18n();
@@ -76,86 +80,68 @@ const LoginPage: NextPageWithAuth = () => {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col justify-center">
-      <h1 className="text-3xl font-semibold text-slate-900">{t("auth_login_title")}</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        {t("auth_login_desc")}
-      </p>
+    <AuthShell
+      title={t("auth_login_title")}
+      description={t("auth_login_desc")}
+      form={
+        <form className="space-y-5" onSubmit={onSubmit}>
+          <label className="block">
+            <span className="text-sm font-medium text-[#222222]">
+              {t("auth_member_nick")}
+            </span>
+            <input
+              value={memberNick}
+              onChange={(event) => setMemberNick(event.target.value)}
+              className={fieldClassName}
+              autoComplete="username"
+              minLength={3}
+              maxLength={24}
+              placeholder="Nickname"
+              required
+            />
+          </label>
 
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-          Host access
-        </p>
-        <h2 className="mt-2 text-lg font-semibold text-slate-900">
-          Want to list a hotel on Meomul?
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Start with a normal account, then apply for host access through the dedicated onboarding flow.
-        </p>
-        <Link
-          href="/become-a-host"
-          className="mt-4 inline-flex items-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-        >
-          Become a host
-        </Link>
-      </section>
+          <label className="block">
+            <span className="text-sm font-medium text-[#222222]">
+              {t("auth_password")}
+            </span>
+            <input
+              type="password"
+              value={memberPassword}
+              onChange={(event) => setMemberPassword(event.target.value)}
+              className={fieldClassName}
+              autoComplete="current-password"
+              minLength={6}
+              maxLength={72}
+              placeholder="Password"
+              required
+            />
+          </label>
 
-      <form
-        className="mt-8 space-y-4 rounded-2xl border border-slate-200 bg-white p-6"
-        onSubmit={onSubmit}
-      >
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">
-            {t("auth_member_nick")}
-          </span>
-          <input
-            value={memberNick}
-            onChange={(event) => setMemberNick(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-900 transition focus:ring-2"
-            autoComplete="username"
-            minLength={3}
-            maxLength={24}
-            required
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-slate-700">
-            {t("auth_password")}
-          </span>
-          <input
-            type="password"
-            value={memberPassword}
-            onChange={(event) => setMemberPassword(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-slate-900 transition focus:ring-2"
-            autoComplete="current-password"
-            minLength={6}
-            maxLength={72}
-            required
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? t("auth_login_loading") : t("auth_login_submit")}
-        </button>
-      </form>
-
-      <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-600">
-        <Link href="/auth/signup" className="underline underline-offset-4">
-          {t("auth_create_account")}
-        </Link>
-        <Link
-          href="/auth/forgot-password"
-          className="underline underline-offset-4"
-        >
-          {t("auth_forgot_password")}
-        </Link>
-      </div>
-    </main>
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#2d2d2d_0%,#111111_100%)] px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? t("auth_login_loading") : t("auth_login_submit")}
+          </button>
+        </form>
+      }
+      footer={
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Link href="/auth/signup" className="font-medium text-[#222222] underline underline-offset-4">
+            {t("auth_create_account")}
+          </Link>
+          <span className="hidden text-[#cfcfcf] sm:inline">•</span>
+          <Link
+            href="/auth/forgot-password"
+            className="font-medium text-[#6a6a6a] underline underline-offset-4"
+          >
+            {t("auth_forgot_password")}
+          </Link>
+        </div>
+      }
+    />
   );
 };
 

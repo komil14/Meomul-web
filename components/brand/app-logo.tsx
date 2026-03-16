@@ -6,6 +6,8 @@ interface AppLogoProps {
   className?: string;
   inverted?: boolean;
   compact?: boolean;
+  markSize?: number;
+  textClassName?: string;
 }
 
 export function AppLogo({
@@ -13,22 +15,24 @@ export function AppLogo({
   className = "",
   inverted = false,
   compact = false,
+  markSize,
+  textClassName = "",
 }: AppLogoProps) {
   const textColor = inverted ? "text-white" : "text-slate-950";
-  const markSize = compact ? 36 : 44;
+  const resolvedMarkSize = markSize ?? (compact ? 36 : 44);
 
   return (
     <Link href={href} className={`inline-flex items-center gap-3 no-underline ${className}`}>
       <span
         className="relative inline-flex shrink-0 items-center justify-center overflow-hidden"
-        style={{ width: markSize, height: markSize }}
+        style={{ width: resolvedMarkSize, height: resolvedMarkSize }}
         aria-hidden="true"
       >
         <Image
           src="/brand/meomul-mark-pin.svg"
           alt=""
-          width={markSize}
-          height={markSize}
+          width={resolvedMarkSize}
+          height={resolvedMarkSize}
           className="h-full w-full object-contain"
         />
       </span>
@@ -36,7 +40,7 @@ export function AppLogo({
         <span
           className={`block font-semibold tracking-[0.22em] ${
             compact ? "text-[0.98rem]" : "text-[1.05rem]"
-          }`}
+          } ${textClassName}`}
         >
           MEOMUL
         </span>
